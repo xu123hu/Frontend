@@ -1,7 +1,10 @@
 /**
  * 统一 API 客户端
- * - 信封约定：{ code, message, data }，code === 0 成功，其余抛 ApiError
+ * - 信封约定：{ code, message, data, request_id }，code === 0 成功，其余抛 ApiError
  * - 401 自动清登并跳转登录页
+ * - 扩展（向后兼容）：自定义 headers / AbortSignal / Idempotency-Key / request_id / 204 与非 JSON 安全处理。
+ *        api.get/post/put/patch/del 签名与返回值保持原样（返回 envelope.data）；
+ *        新增 api.raw(method, path, opts) 返回 { data, status, request_id } 供教师端使用。
  */
 const BASE = '/api'
 const TOKEN_KEY = 'ma_token'
@@ -26,10 +29,6 @@ export function authHeaders() {
   return t ? { Authorization: `Bearer ${t}` } : {}
 }
 
-/**
- * 401 处理：SPA 内 router.push 跳登录（不整页刷新，保留路由状态）。
- * client 被 router 反向引用，故动态 import 避免循环依赖。
- */
 export function redirectLogin() {
   if (location.pathname.startsWith('/login')) return
   import('@/router').then(({ router }) => {
@@ -37,7 +36,7 @@ export function redirectLogin() {
   }).catch(() => { location.href = '/login' })
 }
 
-async function request(method, path, { body, query } = {}) {
+function buildUrl(path, query) {
   let url = BASE + path
   if (query) {
     const qs = new URLSearchParams()
@@ -47,13 +46,26 @@ async function request(method, path, { body, query } = {}) {
     const s = qs.toString()
     if (s) url += `?${s}`
   }
-  const headers = { ...authHeaders() }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  return url
+}
+
+/** 低层请求：返回 { data, status, request_id }；204/空 body 返回 data=undefined */
+async function requestRaw(method, path, { body, query, headers = {}, signal, idempotencyKey } = {}) {
+  const url = buildUrl(path, query)
+  const h = { ...authHeaders(), ...headers }
+  if (body !== undefined) h['Content-Type'] = 'application/json'
+  if (idempotencyKey) h['Idempotency-Key'] = idempotencyKey
 
   let res
   try {
-    res = await fetch(url, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined })
+    res = await fetch(url, {
+      method,
+      headers: h,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal,
+    })
   } catch (e) {
+    if (e?.name === 'AbortError') throw new ApiError(-2, '请求已取消')
     throw new ApiError(-1, '网络连接失败，请确认后端已启动')
   }
 
@@ -63,24 +75,36 @@ async function request(method, path, { body, query } = {}) {
     throw new ApiError(401, '登录已过期')
   }
 
-  let json
-  try { json = await res.json() } catch { throw new ApiError(res.status, `响应解析失败 (HTTP ${res.status})`) }
+  if (res.status === 204) {
+    return { data: undefined, status: res.status, request_id: res.headers.get('x-request-id') || '' }
+  }
 
-  // 统一信封
+  let json
+  try { json = await res.json() } catch {
+    if (res.ok) {
+      return { data: undefined, status: res.status, request_id: res.headers.get('x-request-id') || '' }
+    }
+    throw new ApiError(res.status, `响应解析失败 (HTTP ${res.status})`)
+  }
+
   if (json && typeof json.code !== 'undefined') {
-    if (json.code === 0) return json.data
+    if (json.code === 0) return { data: json.data ?? null, status: res.status, request_id: json.request_id || '' }
     throw new ApiError(json.code, json.message || '请求失败')
   }
-  // 非信封响应（FastAPI 默认错误格式 {"detail": "..."} 等）：HTTP 非 2xx 一律抛错，
-  // 供调用方识别 404/405 做新端点优雅降级
   if (!res.ok) throw new ApiError(res.status, json?.detail || `HTTP ${res.status}`)
-  return json
+  return { data: json, status: res.status, request_id: res.headers.get('x-request-id') || '' }
+}
+
+async function request(method, path, options) {
+  const r = await requestRaw(method, path, options)
+  return r.data
 }
 
 export const api = {
-  get: (path, query) => request('GET', path, { query }),
-  post: (path, body, query) => request('POST', path, { body, query }),
-  put: (path, body) => request('PUT', path, { body }),
-  patch: (path, body) => request('PATCH', path, { body }),
-  del: (path) => request('DELETE', path),
+  get: (path, query, opts) => request('GET', path, { ...opts, query }),
+  post: (path, body, query, opts) => request('POST', path, { ...opts, body, query }),
+  put: (path, body, opts) => request('PUT', path, { ...opts, body }),
+  patch: (path, body, opts) => request('PATCH', path, { ...opts, body }),
+  del: (path, opts) => request('DELETE', path, opts),
+  raw: (method, path, opts) => requestRaw(method, path, opts),
 }

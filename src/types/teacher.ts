@@ -235,3 +235,30 @@ export interface ButlerSceneInput {
   userMessage: string
   clientRequestId: string
 }
+/** 批改队列项与详情 */
+export interface GradingQueueItem {
+  submission_item_id: string
+  student_label: string
+  status: 'unprocessed' | 'low_confidence' | 'confirmed'
+  confidence: number
+  suggestion_score: number | null
+  teacher_final_score: number | null
+}
+
+export interface GradingDetail extends GradingQueueItem {
+  original_answer: string
+  scoring_standard: string
+  suggestion: GradingSuggestion | null
+}
+
+export interface BatchConfirmResult {
+  results: { submission_item_id: string; ok: boolean; error?: number }[]
+  failed: number
+}
+
+export interface UploadTicket {
+  resource_id: string
+  task_id?: string
+  upload_url?: string
+  status: 'uploading' | 'preprocessing' | 'ready' | 'failed'
+}
