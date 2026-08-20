@@ -27,9 +27,9 @@ describe('teacher router contract', () => {
   it('each teacher route lazy-loads a component', async () => {
     const routes = router.getRoutes().filter((r) => r.meta?.teacher)
     for (const r of routes) {
-      const loader = r.components?.default
+      const loader = r.components?.default as unknown as () => Promise<unknown> | undefined
       expect(typeof loader).toBe('function')
-      await expect(loader()).resolves.toBeTruthy()
+      await expect((loader as () => Promise<unknown>)()).resolves.toBeTruthy()
     }
   })
 })
