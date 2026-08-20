@@ -1,12 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
 
 const routes = [
   { path: '/login', name: 'login', component: () => import('@/pages/Login.vue'), meta: { public: true } },
-  // 默认进入学情总览（v4 首页）
-  { path: '/', redirect: '/overview' },
+  { path: '/', redirect: '/overview' }, // 角色具体首页由 guard 决定
 
-  /* ===== v4 页面（全部对齐 v4 愿景视觉） ===== */
+  /* ===== v4 学生页面（全部保留） ===== */
   { path: '/overview', component: () => import('@/pages/student/OverviewView.vue'), meta: { title: '学情总览' } },
   { path: '/dialog', component: () => import('@/pages/student/DialogView.vue'), meta: { title: '对话学习' } },
   { path: '/dialog/:id?', component: () => import('@/pages/student/DialogView.vue'), meta: { title: '对话学习' } },
@@ -21,6 +21,15 @@ const routes = [
   { path: '/resource', component: () => import('@/pages/student/ResourceView.vue'), meta: { title: '资源推荐' } },
   { path: '/profile', component: () => import('@/pages/student/ProfileView.vue'), meta: { title: '个人中心' } },
 
+  /* ===== M3 教师端：固定 7 个工作台（唯一 teacher 布局） ===== */
+  { path: '/teacher/today', name: 'teacher-today', component: () => import('@/pages/teacher/TeacherTodayView.vue'), meta: { teacher: true, scene: 'teacher.today', title: '今天' } },
+  { path: '/teacher/prep', name: 'teacher-prep', component: () => import('@/pages/teacher/TeacherPrepView.vue'), meta: { teacher: true, scene: 'teacher.prep', title: '备课' } },
+  { path: '/teacher/assign', name: 'teacher-assign', component: () => import('@/pages/teacher/TeacherAssignView.vue'), meta: { teacher: true, scene: 'teacher.assessment', title: '布置作业' } },
+  { path: '/teacher/grading', name: 'teacher-grading', component: () => import('@/pages/teacher/TeacherGradingView.vue'), meta: { teacher: true, scene: 'teacher.grading', title: '批改' } },
+  { path: '/teacher/classroom', name: 'teacher-classroom', component: () => import('@/pages/teacher/TeacherClassroomView.vue'), meta: { teacher: true, scene: 'teacher.classroom', title: '课堂' } },
+  { path: '/teacher/classes', name: 'teacher-classes', component: () => import('@/pages/teacher/TeacherClassesView.vue'), meta: { teacher: true, scene: 'teacher.class.insights', title: '班级' } },
+  { path: '/teacher/resources', name: 'teacher-resources', component: () => import('@/pages/teacher/TeacherResourcesView.vue'), meta: { teacher: true, scene: 'teacher.resources', title: '资源' } },
+
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
@@ -29,8 +38,18 @@ export const router = createRouter({
   routes,
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   if (to.meta.public) return true
   if (!getToken()) return { path: '/login', query: to.fullPath !== '/' ? { redirect: to.fullPath } : {} }
+
+  const auth = useAuthStore()
+  // 角色感知根入口：teacher → /teacher/today，否则 → /overview
+  if (to.path === '/') {
+    return auth.activeRole === 'teacher' ? { path: '/teacher/today' } : { path: '/overview' }
+  }
+  // 非 teacher 访问教师工作台 → 回到其合法首页
+  if (to.meta.teacher && auth.activeRole !== 'teacher') {
+    return { path: '/overview' }
+  }
   return true
 })

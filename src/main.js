@@ -2,27 +2,26 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import { router } from './router'
+import { resolveMockUser, isPreviewToken } from './config/mockIdentity'
 import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/github-dark.css'
 import './styles/tokens.css'
 import './styles/base.css'
 import './styles/v4.css'
+import './styles/teacher.css'
 
-// 本地预览便捷引导：mock 模式下预置一个学生会话令牌（仅预览用，不影响业务逻辑）
-// 真实后端模式（VITE_REAL_API=1）不预置，且清掉 mock 模式残留的预览令牌
-if (import.meta.env.VITE_REAL_API) {
-  if (localStorage.getItem('ma_token') === 'mock-token-preview') {
-    localStorage.removeItem('ma_token')
-    localStorage.removeItem('ma_user')
+// 本地预览便捷引导：只有 VITE_USE_MOCK=1 才预置 mock 身份（默认真实 API 模式绝不预置）。
+// VITE_MOCK_ROLE=teacher 预置教师；默认/student 保持学生。旧 VITE_REAL_API 遗留语义已由 VITE_USE_MOCK 取代。
+const useMock = import.meta.env.VITE_USE_MOCK === '1'
+const mockRole = (import.meta.env.VITE_MOCK_ROLE || 'student').toString()
+if (useMock) {
+  if (!localStorage.getItem('ma_token')) {
+    localStorage.setItem('ma_token', mockRole === 'teacher' ? 'mock-token-teacher-preview' : 'mock-token-preview')
+    try { localStorage.setItem('ma_user', JSON.stringify(resolveMockUser(mockRole))) } catch { /* ignore */ }
   }
-} else if (!localStorage.getItem('ma_token')) {
-  localStorage.setItem('ma_token', 'mock-token-preview')
-  try {
-    localStorage.setItem(
-      'ma_user',
-      JSON.stringify({ nickname: '小婷', roles: [{ role: 'student' }], grade: '高二（3）班' })
-    )
-  } catch { /* ignore */ }
+} else if (isPreviewToken(localStorage.getItem('ma_token'))) {
+  localStorage.removeItem('ma_token')
+  localStorage.removeItem('ma_user')
 }
 
 const app = createApp(App)
