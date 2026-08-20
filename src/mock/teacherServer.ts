@@ -60,6 +60,7 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
     if (seg[0] === '_mock' && seg[1] === 'teacher' && seg[2] === 'reset') { resetTeacherMock(); ok(res, { reset: true }); return true }
     if (!isTeacher) { fail(res, 403, 40301, 'role_denied'); return true }
   }
+  if (method === 'GET' && url === '/classes/mine') { ok(res, { items: TEACHER_CLASSES }); return true }
   if (seg[0] !== 'teacher') return false
 
   if (method === 'GET' && url === '/teacher/today') { ok(res, todayData()); return true }

@@ -4,7 +4,13 @@ import { useAuthStore } from '@/stores/auth'
 
 const routes = [
   { path: '/login', name: 'login', component: () => import('@/pages/Login.vue'), meta: { public: true } },
-  { path: '/', redirect: '/overview' }, // 角色具体首页由 guard 决定
+  { path: '/', redirect: () => {
+    try {
+      const u = JSON.parse(localStorage.getItem('ma_user') || 'null')
+      const active = u?.active_role || (u?.roles?.length === 1 ? u.roles[0].role : null)
+      return active === 'teacher' ? '/teacher/today' : '/overview'
+    } catch { return '/overview' }
+  } },
 
   /* ===== v4 学生页面（全部保留） ===== */
   { path: '/overview', component: () => import('@/pages/student/OverviewView.vue'), meta: { title: '学情总览' } },

@@ -28,6 +28,7 @@ test.describe('student regression (no white screen on mock)', () => {
     }, STUDENT_USER)
     await page.goto('/dialog')
     await page.waitForSelector('#app')
-    await expect(page.getByPlaceholder(/联网|搜索/i)).toHaveCount(0)
+    // 6A 联网按钮受 feature flag 控制（默认关闭时不渲染）
+    await expect(page.getByRole('button', { name: /联网/ })).toHaveCount(0)
   })
 })
