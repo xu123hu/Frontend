@@ -92,3 +92,39 @@
 }.tdr-ws-head h1 { margin: 0 0 4px; font-size: 20px; }
 .tdr-ws-desc { margin: 0; font-size: 13.5px; color: var(--ink2); }
 .muted { color: var(--ink3); }
+/* 来源引用 / 洞察卡 / 任务 / 对话框 / Artifact */
+.tdr-btn.slim { padding: 4px 10px; font-size: 12.5px; }
+.tsrc { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tsrc li { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12.5px; align-items: baseline; }
+.tsrc-kind { background: var(--bg2); color: var(--ink2); padding: 1px 6px; border-radius: 6px; font-size: 11px; }
+.tsrc-title { color: var(--ink2); }
+.tsrc-page { color: var(--ink3); }
+.tsrc-snippet { color: var(--ink3); flex-basis: 100%; }
+.tsrc-empty { font-size: 12.5px; }
+
+.tins { display: flex; flex-direction: column; gap: 8px; }
+.tins-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.tins-summary { margin: 0; font-size: 15px; }
+.tins-window { font-size: 11.5px; white-space: nowrap; }
+.tins-evidence { margin: 0; font-size: 13px; color: var(--ink2); line-height: 1.6; }
+.tins-conf { font-size: 12px; color: var(--warn-deep); }
+.tins-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.ttask { display: flex; align-items: center; gap: 8px; }
+.ttask-stage { font-size: 12.5px; color: var(--ink2); }
+
+.tdr-dialog { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(15,23,42,.4); z-index: 90; padding: 16px; }
+.tdr-dialog-card { background: var(--card); border-radius: var(--radius-lg); max-width: 420px; width: 100%; padding: 20px; box-shadow: var(--shadow-lg); }
+.tdr-dialog-title { margin: 0 0 8px; }
+.tdr-dialog-msg { margin: 0 0 16px; color: var(--ink2); font-size: 13.5px; line-height: 1.6; }
+.tdr-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.tartifact { display: flex; flex-direction: column; gap: 12px; }
+.tartifact-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tartifact-tags { display: flex; align-items: center; gap: 8px; }
+.tartifact-type { font-weight: 600; }
+.tartifact-ver { font-size: 12px; }
+.tartifact-time { font-size: 12px; }
+.tartifact-warn { display: block; }
+.tartifact-div { border: 0; border-top: 1px solid var(--line); margin: 0; }
+.tartifact-actions { display: flex; flex-wrap: wrap; gap: 8px; }
