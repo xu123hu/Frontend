@@ -14,6 +14,7 @@ import {
   today3, scoreTrend, featureEntries,
   classFeed, classHotErrors, resourceRecommend, assignmentsList,
 } from './data'
+import { handleTeacherApi } from './teacherServer'
 
 /* ================= 内存仓库 ================= */
 const conversations = seedConversations.map((c) => ({ ...c }))
@@ -229,7 +230,11 @@ export function mockApi(req, res, next) {
 
   const route = async () => {
     /* ---------- 认证 ---------- */
-    if (method === 'GET' && url === '/auth/me') return ok(res, { ...MOCK_USER })
+    if (method === 'GET' && url === '/auth/me') {
+    const authz = req.headers?.['authorization'] || ''
+    if (authz.includes('mock-token-teacher-preview')) return ok(res, { nickname: '王老师', roles: [{ role: 'teacher' }], active_role: 'teacher', grade: '' })
+    return ok(res, { ...MOCK_USER })
+  }
     if (method === 'POST' && url === '/auth/login') return json((b) => ok(res, { token: 'mock-token-' + Date.now(), user: { ...MOCK_USER } }))
     if (method === 'POST' && url === '/auth/login-by-code') return json((b) => ok(res, { token: 'mock-token-' + Date.now(), user: { ...MOCK_USER } }))
     if (method === 'POST' && url === '/auth/sms-code') return ok(res, { sent: true })
@@ -425,5 +430,8 @@ export function mockApi(req, res, next) {
     return fail(res, 404, 404, `mock 未实现：${method} ${url}`)
   }
 
-  route().catch((e) => fail(res, 500, 500, e?.message || 'mock 内部错误'))
+  handleTeacherApi(req, res).then((handled) => {
+    if (handled) return
+    route().catch((e) => fail(res, 500, 500, e?.message || 'mock 内部错误'))
+  })
 }
