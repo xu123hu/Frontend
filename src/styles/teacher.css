@@ -176,3 +176,10 @@
 .tfrm-actions { display: flex; gap: 8px; }
 .tedit { display: flex; flex-direction: column; gap: 8px; }
 .tedit textarea { border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 12.5px/1.5 var(--font-mono); min-height: 140px; resize: vertical; }
+/* ButlerPanel 对话样式 */
+.tbutler-msgs { display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; max-height: 52vh; }
+.tbutler-msg { display: flex; flex-direction: column; gap: 2px; }
+.tbutler-msg-role { font-size: 11px; color: var(--ink3); }
+.tbutler-msg-text { margin: 0; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; font-family: inherit; }
+.tbutler-msg.user .tbutler-msg-text { background: var(--brand-soft); border-radius: 10px; padding: 8px 10px; }
+.tbutler-msg.assistant .tbutler-msg-text { background: var(--bg2); border-radius: 10px; padding: 8px 10px; }
