@@ -1,0 +1,99 @@
+/* =========================================================================
+   v4 设计令牌 · 与《03_界面效果图景_v4.html》:root 完全一致（唯一视觉基准）
+   暖琥珀 + 灰蓝 + 红黄绿 + 蜜桃粉
+   ========================================================================= */
+:root {
+  --bg: #f8fafc; --bg2: #f1f5f9; --card: #ffffff; --ink: #0f172a; --ink2: #475569; --ink3: #94a3b8; --ink4: #cbd5e1;
+  --line: #e2e8f0; --line2: #f1f5f9;
+  --brand: #f59e0b; --brand2: #fb923c; --brand-deep: #b45309; --brand-soft: #fef3c7; --brand-faint: #fffbeb;
+  --peach: #fb7185; --peach-soft: #ffe4e6;
+  --ok: #16a34a; --ok-bg: #f0fdf4; --ok-border: #bbf7d0; --ok-deep: #15803d;
+  --warn: #d97706; --warn-bg: #fffbeb; --warn-border: #fde68a; --warn-deep: #92400e;
+  --err: #dc2626; --err-bg: #fef2f2; --err-border: #fecaca; --err-deep: #991b1b;
+  --purple: #7c3aed; --purple-soft: #f5f3ff; --purple-border: #ddd6fe;
+  --indigo: #4f46e5; --indigo-soft: #eef2ff;
+  --cyan: #0891b2; --cyan-soft: #ecfeff;
+  --radius: 12px; --radius-lg: 16px; --radius-xl: 22px;
+  --shadow: 0 1px 2px rgba(15,23,42,.04), 0 4px 16px rgba(15,23,42,.04);
+  --shadow-sm: 0 1px 3px rgba(15,23,42,.06);
+  --shadow-md: 0 4px 12px rgba(15,23,42,.08);
+  --shadow-lg: 0 10px 30px rgba(245,158,11,.18);
+  --transition: all .2s ease;
+  --font: "PingFang SC", "Microsoft YaHei", "Inter", -apple-system, sans-serif;
+  --font-num: "Inter", "SF Pro Display", system-ui, sans-serif;
+  --topbar-h: 60px;
+
+  /* ================================================================
+     原前端 token 别名 → v4 值
+     对话学习页组件（原逻辑 1:1 移植）通过这套映射自动对齐 v4 视觉
+     ================================================================ */
+  --primary: #f59e0b;              /* v4 brand */
+  --primary-hover: #d97706;        /* v4 warn */
+  --primary-active: #b45309;       /* v4 brand-deep */
+  --primary-subtle: #fef3c7;       /* v4 brand-soft */
+  --primary-border: #fde68a;       /* v4 warn-border */
+
+  --success: #16a34a; --success-subtle: #f0fdf4;
+  --warning: #d97706; --warning-subtle: #fffbeb;
+  --error: #dc2626; --error-subtle: #fef2f2;
+  --info: #4f46e5; --info-subtle: #eef2ff;
+  --cyan: #0891b2; --cyan-subtle: #ecfeff;
+
+  --bg-main: #f8fafc;              /* v4 bg */
+  --bg-white: #ffffff;             /* v4 card */
+  --bg-subtle: #f1f5f9;            /* v4 bg2 */
+  --bg-muted: #f1f5f9;
+
+  --text-primary: #0f172a;         /* v4 ink */
+  --text-secondary: #475569;       /* v4 ink2 */
+  --text-muted: #94a3b8;           /* v4 ink3 */
+  --text-disabled: #cbd5e1;        /* v4 ink4 */
+
+  --border: #e2e8f0;               /* v4 line */
+  --border-strong: #cbd5e1;
+  --border-subtle: #f1f5f9;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;               /* v4 radius */
+  --radius-lg: 16px;               /* v4 radius-lg */
+  --radius-xl: 22px;               /* v4 radius-xl */
+  --radius-full: 9999px;
+
+  --shadow-xs: 0 1px 2px rgba(15,23,42,.04), 0 4px 16px rgba(15,23,42,.04);
+  --shadow-sm: 0 1px 3px rgba(15,23,42,.06);
+  --shadow-md: 0 4px 12px rgba(15,23,42,.08);
+  --shadow-lg: 0 10px 30px rgba(245,158,11,.18);
+
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
+  --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-16: 64px;
+
+  --text-xs: 12px; --text-sm: 14px; --text-base: 16px; --text-lg: 18px; --text-xl: 20px;
+  --text-2xl: 24px; --text-3xl: 30px; --text-4xl: 36px;
+
+  --font-normal: 400; --font-medium: 500; --font-semibold: 600; --font-bold: 700;
+  --leading-tight: 1.25; --leading-normal: 1.5; --leading-relaxed: 1.625;
+
+  --font-sans: "PingFang SC", "Microsoft YaHei", "Inter", -apple-system, sans-serif;
+  --font-serif: "Times New Roman", "Songti SC", serif;
+  --font-mono: "SF Mono", "Monaco", "Consolas", monospace;
+  --font: var(--font-sans);
+
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-base: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition: all .2s ease;
+
+  --nav-w: 64px;
+  --code-bg: #0f172a;
+
+  /* 向后兼容别名（原组件引用） */
+  --primary-light: var(--primary-hover);
+  --secondary: var(--primary);
+  --accent-green: var(--success);
+  --accent-orange: var(--warning);
+  --accent-red: var(--error);
+  --accent-cyan: var(--cyan);
+  --glass-bg: var(--bg-white);
+  --glass-bg-strong: var(--bg-white);
+  --glass-border: var(--border);
+}

@@ -1,0 +1,36 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { fileURLToPath, URL } from 'node:url'
+import { mockApi } from './src/mock/server'
+
+// 默认：连真实后端（/api 代理到 127.0.0.1:8000）
+// 需要演示假数据时显式开启 mock：VITE_USE_MOCK=1 npm run dev（mock 中间件完整模拟 /api，代理不启用）
+const useMock = !!process.env.VITE_USE_MOCK
+// 兼容旧开关：VITE_REAL_API=1 无副作用（真实后端已是默认）
+const useRealApi = !useMock
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    useMock && {
+      name: 'mock-api-server',
+      configureServer(server) {
+        server.middlewares.use('/api', (req, res, next) => {
+          mockApi(req, res, next)
+        })
+      },
+    },
+  ].filter(Boolean),
+  resolve: {
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
+  server: {
+    port: 5176,
+    proxy: useRealApi
+      ? { '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true } }
+      : undefined,
+  },
+  build: {
+    chunkSizeWarningLimit: 1600,
+  },
+})

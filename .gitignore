@@ -1,0 +1,25 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+dist-*/
+dist.*/
+
+# 日志
+*.log
+
+# 本地检查/工作目录
+.preview-check/
+.workbuddy/
+
+# Vite 临时文件
+vite.config.js.timestamp-*.mjs
+*.timestamp-*.mjs
+
+# 环境与密钥（禁止提交）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
