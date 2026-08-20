@@ -34,6 +34,8 @@ export const agentApi = {
   activateMessage: (messageId) => api.post(`/agent/messages/${messageId}/activate`),
   memories: () => api.get('/agent/memories'),
   deleteMemory: (id) => api.del(`/agent/memories/${id}`),
+  // 平台功能地图 + 能力开关（阶段 6A）：capabilities.web_search_opt_in_enabled
+  features: () => api.get('/agent/features'),
 }
 
 /* ===== 文件 /api/files ===== */

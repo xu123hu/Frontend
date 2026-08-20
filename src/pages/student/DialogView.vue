@@ -95,6 +95,8 @@
         :tasks="upload.tasks"
         :rate-limited-until="upload.state.rateLimitedUntil"
         v-model:thinking="chat.thinkingOn.value"
+        v-model:webSearch="chat.webSearchOn.value"
+        :web-search-enabled="chat.webSearchOptInEnabled.value"
         @send="onSend"
         @stop="chat.stopStreaming"
         @pick-files="onPickFiles"
@@ -494,6 +496,8 @@ function onPickFiles({ files, isPhoto }) {
 /* ===== 生命周期 ===== */
 onMounted(async () => {
   await conv.load()
+  // 阶段 6A：加载能力开关（v2 未切流期间 web_search_opt_in_enabled=false，按钮隐藏）
+  chat.loadFeatures()
   const initId = String(route.params.id || '')
   if (initId) {
     await chat.openConversation(initId)

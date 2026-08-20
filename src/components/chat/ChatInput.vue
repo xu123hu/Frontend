@@ -46,6 +46,17 @@
           <UiIcon name="brain" :size="17" />
         </button>
 
+        <!-- 联网搜索开关（阶段 6A 预接线）：仅能力标志开启时渲染；单条请求授权，发送后复位 -->
+        <button
+          v-if="webSearchEnabled"
+          class="icon-btn ci-websearch"
+          :class="{ 'ci-websearch-on': webSearch }"
+          :title="webSearch ? '联网搜索：开（本次发送生效，发送后自动关闭）' : '联网搜索：关\n点击开启，本次发送将携带联网授权'"
+          @click="$emit('update:webSearch', !webSearch)"
+        >
+          <UiIcon name="search" :size="17" />
+        </button>
+
         <div class="flex-1"></div>
         <span v-if="attachLimited" class="ci-cool text-muted text-sm">操作频繁，稍后可传</span>
         <!-- 字数计数常驻右下角（轻量） -->
@@ -76,8 +87,10 @@ const props = defineProps({
   tasks: { type: Array, default: () => [] },
   rateLimitedUntil: { type: Number, default: 0 },
   thinking: { type: Boolean, default: true },
+  webSearch: { type: Boolean, default: false },
+  webSearchEnabled: { type: Boolean, default: false },
 })
-const emit = defineEmits(['send', 'stop', 'pickFiles', 'removeAttachment', 'retryAttachment', 'update:thinking'])
+const emit = defineEmits(['send', 'stop', 'pickFiles', 'removeAttachment', 'retryAttachment', 'update:thinking', 'update:webSearch'])
 
 const draft = ref('')
 const taRef = ref(null)
@@ -178,6 +191,12 @@ defineExpose({ insertText })
 .ci-count.warn { color: var(--warning); }
 .ci-thinking { opacity: 0.45; }
 .ci-thinking-on {
+  opacity: 1; color: var(--primary);
+  background: var(--primary-subtle);
+  box-shadow: inset 0 0 0 1px var(--primary-border);
+}
+.ci-websearch { opacity: 0.45; }
+.ci-websearch-on {
   opacity: 1; color: var(--primary);
   background: var(--primary-subtle);
   box-shadow: inset 0 0 0 1px var(--primary-border);

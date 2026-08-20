@@ -55,6 +55,21 @@ export function useChat({
   const thinkingOn = ref(localStorage.getItem('ma_thinking') === 'on')
   watch(thinkingOn, (v) => localStorage.setItem('ma_thinking', v ? 'on' : 'off'))
 
+  // 联网搜索授权（阶段 6A 预接线）：
+  // - webSearchOn：单条请求授权，默认关，发送后自动复位，不持久化；
+  // - webSearchOptInEnabled：能力开关（来自 /api/agent/features），
+  //   v2 未切流期间恒为 false，前端据此隐藏按钮；读取失败/缺字段回退 false。
+  const webSearchOn = ref(false)
+  const webSearchOptInEnabled = ref(false)
+  async function loadFeatures() {
+    try {
+      const d = await agentApi.features()
+      webSearchOptInEnabled.value = !!(d?.capabilities?.web_search_opt_in_enabled)
+    } catch {
+      webSearchOptInEnabled.value = false // fail-closed
+    }
+  }
+
   let currentStream = null // { abort, cmid, convId }
   let loadSeq = 0
   let titleTimer = null
@@ -332,6 +347,9 @@ export function useChat({
     // skills = 已解析的技能 id 数组；未显式给时经 hooks.resolveSkills 做 key→id 映射
     // （composable 不依赖技能配置，映射由视图侧注入）
     const skillIds = skills || hooks.resolveSkills?.(skillKeys) || []
+    // 联网授权先拍快照再复位：避免先复位后读取导致请求始终发送 false
+    const optedIn = webSearchOn.value
+    webSearchOn.value = false
     const payload = {
       message: text,
       context: {
@@ -341,6 +359,7 @@ export function useChat({
         ...(tutorAction ? { tutor_action: tutorAction } : {}),
         ...(skillIds.length ? { skills: skillIds } : {}),
         ...(sendThinking ? { thinking: thinkingOn.value } : {}),
+        ...(optedIn ? { web_search_opt_in: true } : {}),
       },
       ...(activeConvId.value ? { conversation_id: activeConvId.value } : {}),
       ...(attachments.length ? { attachments: attachments.map(({ file_id, kind }) => ({ file_id, kind })) } : {}),
@@ -537,6 +556,8 @@ export function useChat({
     conversations, convLoading, convHasMore, convQuery,
     activeConvId, messages, msgLoading,
     historyHasMore, historyLoading, streaming, thinkingOn,
+    // 联网搜索授权（阶段 6A 预接线）
+    webSearchOn, webSearchOptInEnabled, loadFeatures,
     // 会话
     loadConversations, searchConversations, loadMoreConversations,
     openConversation, loadOlderMessages,
