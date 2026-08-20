@@ -23,3 +23,7 @@ vite.config.js.timestamp-*.mjs
 !.env.example
 *.pem
 *.key
+
+# Playwright 运行产物
+test-results/
+playwright-report/
