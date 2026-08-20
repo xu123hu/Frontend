@@ -18,6 +18,6 @@
     "paths": { "@/*": ["src/*"] },
     "types": ["vitest/globals"]
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue", "src/**/*.js", "test/**/*.ts", "e2e/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue", "src/**/*.js", "test/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
