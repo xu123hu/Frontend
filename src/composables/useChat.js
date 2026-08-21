@@ -64,9 +64,13 @@ export function useChat({
   async function loadFeatures() {
     try {
       const d = await agentApi.features()
-      webSearchOptInEnabled.value = !!(d?.capabilities?.web_search_opt_in_enabled)
+      // 仅接受严格布尔 true；"false"/1/{}/[]/null/undefined/缺字段一律关闭
+      const enabled = d?.capabilities?.web_search_opt_in_enabled === true
+      webSearchOptInEnabled.value = enabled
+      if (!enabled) webSearchOn.value = false
     } catch {
       webSearchOptInEnabled.value = false // fail-closed
+      webSearchOn.value = false
     }
   }
 
@@ -347,8 +351,9 @@ export function useChat({
     // skills = 已解析的技能 id 数组；未显式给时经 hooks.resolveSkills 做 key→id 映射
     // （composable 不依赖技能配置，映射由视图侧注入）
     const skillIds = skills || hooks.resolveSkills?.(skillKeys) || []
-    // 联网授权先拍快照再复位：避免先复位后读取导致请求始终发送 false
-    const optedIn = webSearchOn.value
+    // 联网授权先拍快照再复位：必须同时满足能力开启 + 用户本次授权；
+    // 能力关闭时即便 webSearchOn 被程序性置 true 也不携带该字段
+    const optedIn = webSearchOptInEnabled.value === true && webSearchOn.value === true
     webSearchOn.value = false
     const payload = {
       message: text,
