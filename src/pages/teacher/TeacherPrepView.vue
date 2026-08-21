@@ -130,13 +130,17 @@ async function onArtifactAction(a: ArtifactAction) {
   if (a === 'confirm') {
     const ok = await confirm({ title: '确认教案', message: '确认后将视为正式教案，未确认前不会进入下游业务。', confirmText: '确认教案' })
     if (!ok) return
+    // artifactsApi.confirm 已解包返回 TeacherArtifact
     const res = await run('confirm:' + artifact.artifact_id, (key) => artifactsApi.confirm(artifact.artifact_id, key))
-    if (res?.data) { store.artifact = res.data; toast.success('教案已确认'); }
+    if (res) { store.artifact = res; toast.success('教案已确认'); }
     return
   }
   if (a === 'derive') {
-    const res = await run('slides:' + artifact.artifact_id, () => lessonsApi.createSlides(artifact.artifact_id))
-    if (res?.data?.task_id) { slidesTask.poll(res.data.task_id); toast.info('课件任务已启动'); }
+    // 课件为同步 slide_deck Artifact（审计 C-04 对齐：不再轮询任务）
+    const res = await run('slides:' + artifact.artifact_id, () => lessonsApi.createSlides(artifact.artifact_id, { version: artifact.version }))
+    if (res?.data) {
+      toast.success(`课件大纲已生成（${(res.data.content?.slides as unknown[])?.length ?? 0} 页），可到资源中查看`)
+    }
     return
   }
   if (a === 'archive') {

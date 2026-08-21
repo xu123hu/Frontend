@@ -12,14 +12,15 @@ export const useResourcesStore = defineStore('resources', {
   actions: {
     async fetch(signal?: AbortSignal) {
       this.loading = true; this.error = null
-      try { this.items = (await resourcesApi.list(signal)).data }
+      try { this.items = await resourcesApi.list(signal) }
       catch (e: any) { if (e?.code === -2) return; this.error = e?.message || '加载资源失败' }
       finally { this.loading = false }
     },
-    async upload(payload: unknown, signal?: AbortSignal) {
+    /** 上传（审计 C-04 对齐）：后端为 multipart UploadFile 端点，传 File 对象 */
+    async upload(file: File, signal?: AbortSignal) {
       this.loading = true; this.error = null
       try {
-        this.ticket = (await resourcesApi.upload(payload, undefined, signal)).data
+        this.ticket = await resourcesApi.upload(file, signal)
         return this.ticket
       } catch (e: any) { if (e?.code === -2) return null; this.error = e?.message || '上传失败'; throw e }
       finally { this.loading = false }

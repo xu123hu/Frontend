@@ -28,9 +28,9 @@ export const useLessonArtifactsStore = defineStore('lessonArtifacts', {
       this.saving = true
       this.error = null
       try {
-        const res = await artifactsApi.update(this.artifact.artifact_id, payload, signal)
-        this.artifact = res.data
-        return res.data
+        // artifactsApi.update 已解包返回最新 TeacherArtifact（含新版本号）
+        this.artifact = await artifactsApi.update(this.artifact.artifact_id, payload, signal)
+        return this.artifact
       } catch (e: any) {
         this.error = e?.message || '保存失败'
         throw e

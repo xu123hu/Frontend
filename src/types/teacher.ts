@@ -177,6 +177,10 @@ export interface GradingSuggestion {
   teacher_final_score: number | null
   teacher_feedback: string | null
   decision: 'draft' | 'accepted' | 'overridden'
+  /** 建议记录版本（确认时乐观锁校验） */
+  version?: number
+  /** 幂等重放标记（后端 batch/confirm 重放时为 true） */
+  replayed?: boolean
 }
 
 export type AssignmentStatus = 'draft' | 'published' | 'closed' | 'archived'

@@ -15,6 +15,13 @@
             <span v-if="streakDays > 0"><span class="num">{{ streakDays }}</span> 连击</span>
             <span v-else>开始第 1 天</span>
           </span>
+          <button
+            v-if="auth.roles.includes('teacher')"
+            class="topbar-btn"
+            type="button"
+            title="切换到教师端"
+            @click="switchToTeacher"
+          >教师端</button>
           <router-link to="/profile" class="user-chip" title="点击进入个人中心">
             <div class="avatar">{{ avatarChar }}</div>
             <div class="text">
@@ -203,6 +210,14 @@ const toast = useToastStore()
 const auth = useAuthStore()
 const conv = useConvStore()
 const skillStore = useSkillStore()
+
+/** 角色切换（学生 → 教师）：换发 JWT 后进入教师工作台 */
+async function switchToTeacher() {
+  try {
+    await auth.switchRole('teacher')
+    router.push('/teacher/today')
+  } catch { /* 未绑定教师角色时静默 */ }
+}
 
 const collapsed = ref(localStorage.getItem('ma_sidebar_collapsed') === '1')
 // v4 原文件实验室默认收起

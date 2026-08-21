@@ -69,6 +69,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useAssessmentStore } from '@/stores/teacher/assessment'
+import { artifactsApi } from '@/api/teacher/artifacts'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToastStore } from '@/stores/toast'
 import type { QuizSet, QuizQuestion } from '@/types/teacher'
@@ -110,9 +111,14 @@ async function confirmQuiz() {
   const ok = await confirm({ title: '确认题集', message: '确认后将据此创建作业草稿，学生暂不可见。', confirmText: '确认并创建' })
   if (!ok) return
   try {
-    await store.createAssignment({ class_id: store.quizArtifact?.class_id || null, title: kps.value + ' · 巩固练习', quiz_set: quiz.value })
+    // 后端契约：quiz_set Artifact 必须先 confirmed 才能创建作业草稿（审计 C-04 对齐）
+    if (store.quizArtifact && store.quizArtifact.status === 'draft') {
+      await artifactsApi.confirm(store.quizArtifact.artifact_id)
+      store.quizArtifact = { ...store.quizArtifact, status: 'confirmed' }
+    }
+    await store.createAssignment({ class_id: store.quizArtifact?.class_id || null, title: kps.value + ' · 巩固练习' })
     toast.success('作业草稿已创建')
-  } catch { toast.error('创建作业草稿失败') }
+  } catch (e: any) { toast.error(e?.message || '创建作业草稿失败') }
 }
 
 async function publish() {

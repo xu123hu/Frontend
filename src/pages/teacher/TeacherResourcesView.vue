@@ -47,13 +47,12 @@ import type { TeacherResource } from '@/types/teacher'
 
 const store = useResourcesStore()
 const toast = useToastStore()
-const selected = ref<{ name: string; type: string; size: number } | null>(null)
+const selected = ref<File | null>(null)
 
 const canUpload = computed(() => !!selected.value && !store.loading)
 
 function onPick(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  selected.value = file ? { name: file.name, type: file.type || 'unknown', size: file.size } : null
+  selected.value = (e.target as HTMLInputElement).files?.[0] ?? null
 }
 
 function sizeText(bytes: number) {
@@ -66,9 +65,10 @@ function sizeText(bytes: number) {
 async function uploadFile() {
   if (!selected.value) return
   try {
-    const ticket = await store.upload({ name: selected.value.name, file_type: selected.value.type, size_bytes: selected.value.size })
+    const ticket = await store.upload(selected.value)
     if (ticket?.resource_id) await store.preprocess(ticket.resource_id)
     selected.value = null
+    await store.fetch()
   } catch { toast.error('上传失败') }
 }
 

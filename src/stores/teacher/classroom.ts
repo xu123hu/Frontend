@@ -13,10 +13,15 @@ export const useClassroomStore = defineStore('classroom', {
     error: null as string | null,
   }),
   actions: {
+    /** 开/关使用不同幂等键（同键会被后端重放，导致无法关闭） */
     async setMode(classId: string, enabled: boolean, lessonId?: string, idempotencyKey?: string) {
       this.loading = true; this.error = null
       try {
-        this.mode = (await classroomApi.setMode(classId, { enabled, lesson_id: lessonId ?? undefined }, idempotencyKey ?? idem.keyFor(`mode:${classId}`))).data
+        this.mode = (await classroomApi.setMode(
+          classId,
+          { enabled, lesson_id: lessonId ?? undefined },
+          idempotencyKey ?? idem.keyFor(`mode:${classId}:${enabled ? 'on' : 'off'}`),
+        )).data
       } catch (e: any) { this.error = e?.message || '操作课堂模式失败'; throw e } finally { this.loading = false }
     },
     async fetchState(classId: string, signal?: AbortSignal) {

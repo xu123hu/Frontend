@@ -29,10 +29,21 @@ export const useAssessmentStore = defineStore('assessment', {
     patchQuiz(patch: Record<string, unknown>) {
       if (this.quizArtifact) this.quizArtifact.content = { ...this.quizArtifact.content, ...patch }
     },
-    async createAssignment(payload: unknown, idempotencyKey?: string) {
+    /** 创建作业草稿（审计 C-04 对齐）：后端要求 artifact_id + client_assignment_id；
+     *  视图传 quiz_set 内容，此处转为已确认 quiz_set Artifact 引用 */
+    async createAssignment(payload: any, idempotencyKey?: string) {
       this.error = null
       try {
-        this.assignment = (await assignmentsApi.create(payload, idempotencyKey ?? idem.keyFor('create:assignment'))).data
+        const artifactId = payload?.artifact_id || this.quizArtifact?.artifact_id
+        if (!artifactId) throw new Error('缺少题集草稿，请先生成并确认题集')
+        const body = {
+          class_id: payload?.class_id || this.quizArtifact?.class_id,
+          title: payload?.title || '巩固练习',
+          artifact_id: artifactId,
+          client_assignment_id: payload?.client_assignment_id || idem.keyFor(`assignment:${artifactId}`),
+          deadline: payload?.deadline ?? null,
+        }
+        this.assignment = (await assignmentsApi.create(body, idempotencyKey ?? body.client_assignment_id)).data
         return this.assignment
       } catch (e: any) { this.error = e?.message || '创建作业草稿失败'; throw e }
     },

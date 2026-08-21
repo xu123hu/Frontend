@@ -32,6 +32,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { classApi } from '@/api'
 import { classesApi } from '@/api/teacher/classes'
+import { lessonsApi } from '@/api/teacher/lessons'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToastStore } from '@/stores/toast'
 import ActionableInsightCard from '@/components/teacher/ActionableInsightCard.vue'
@@ -55,7 +56,7 @@ async function load(classScope: string) {
   error.value = null
   insights.value = [] // 切班级立即清空旧的 scope 缓存
   try {
-    insights.value = (await classesApi.insights(classScope, true, ac.signal)).data
+    insights.value = await classesApi.insights(classScope, true, ac.signal)
   } catch (e: any) {
     if (e?.code !== -2) error.value = e?.message || '加载失败'
   } finally { loading.value = false }
@@ -71,8 +72,27 @@ onMounted(async () => {
 async function onView(_ins: ActionableInsight) {
   toast.info('学生明细需在确认权限后展开')
 }
-async function onApply(_ins: ActionableInsight) {
-  const ok = await confirm({ title: '应用洞察', message: '将洞察写为教案草稿（不自动发布）。确认应用？', confirmText: '应用' })
-  if (ok) toast.success('已应用为教案草稿')
+
+/** 应用洞察（审计 I-08 修复）：真实调用 apply-insight 写入教案草稿新版本 */
+async function onApply(ins: ActionableInsight) {
+  const ok = await confirm({ title: '应用洞察', message: '将洞察写为教案草稿新版本（不自动发布）。确认应用？', confirmText: '应用' })
+  if (!ok) return
+  try {
+    // 取教师最近一份教案（优先草稿）
+    const lessons = await lessonsApi.list(classId.value || undefined)
+    const lesson = lessons.find((l) => l.status === 'draft') || lessons[0]
+    if (!lesson) {
+      toast.error('请先在「备课」中生成教案，再应用洞察')
+      return
+    }
+    await lessonsApi.applyInsight(lesson.artifact_id, {
+      insight_id: ins.insight_id,
+      version: lesson.version,
+    })
+    toast.success('已应用为教案草稿新版本')
+    if (classId.value) load(classId.value)
+  } catch (e: any) {
+    toast.error(e?.message || '应用洞察失败')
+  }
 }
 </script>

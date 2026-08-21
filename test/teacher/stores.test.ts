@@ -36,6 +36,13 @@ describe('assessment store', () => {
   beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks() })
   it('reuses the same idempotency key when publish is retried', async () => {
     const s = useAssessmentStore()
+    // 契约对齐：创建作业需先有已生成的 quiz_set Artifact
+    s.quizArtifact = {
+      artifact_id: 'q1', artifact_type: 'quiz_set', scene: 'teacher.assessment',
+      class_id: 'c1', owner_id: 't1', status: 'confirmed', version: 1,
+      content: { items: [] }, source_refs: [], warnings: [], degraded: false,
+      created_at: '', updated_at: '',
+    } as any
     ;(assignmentsApi.create as any).mockResolvedValue({ data: { assignment_id: 'a1', status: 'draft' } })
     ;(assignmentsApi.publish as any).mockResolvedValue({ data: { assignment_id: 'a1', status: 'published' } })
     await s.createAssignment({})
@@ -51,6 +58,13 @@ describe('grading store', () => {
   beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks() })
   it('reuses the same idempotency key for confirm retries', async () => {
     const s = useGradingStore()
+    // 契约对齐：确认需先有建议记录（suggestion_id + version）
+    s.detail = {
+      submission_item_id: 'i1', student_label: '作答 #001', status: 'unprocessed',
+      confidence: 0.8, suggestion_score: 8, teacher_final_score: null,
+      original_answer: '', scoring_standard: '',
+      suggestion: { suggestion_id: 's1', submission_item_id: 'i1', version: 1, decision: 'draft' },
+    } as any
     ;(gradingApi.confirm as any).mockResolvedValue({ data: { suggestion_id: 's1', decision: 'accepted' } })
     await s.confirm('i1', 'accept', 8)
     const firstKey = (gradingApi.confirm as any).mock.calls[0][2]
