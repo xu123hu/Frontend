@@ -65,7 +65,8 @@ async function doLogin() {
   try {
     await auth.login(phone.value, code.value || '123456')
     toast.success('登录成功，欢迎回来！')
-    router.push(route.query.redirect || '/overview')
+    // 经角色感知根路由分发：teacher → /teacher/today，否则 → /overview
+    router.push(route.query.redirect || '/')
   } catch (e) {
     toast.error(e?.message || '登录失败')
   } finally {
