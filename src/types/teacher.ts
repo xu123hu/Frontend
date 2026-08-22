@@ -147,7 +147,7 @@ export interface LessonPlanSection {
 
 export interface QuizQuestion {
   item_no: number
-  q_type: 'choice' | 'blank' | 'text' | 'solution'
+  q_type: 'choice' | 'blank' | 'solution'
   difficulty: 'easy' | 'medium' | 'hard'
   kp_code?: string
   kp_name?: string

@@ -101,7 +101,7 @@ function difficultySlots(total: number, difficulty?: Partial<Record<QuizDifficul
     easy: Math.max(0, difficulty?.easy || 0), medium: Math.max(0, difficulty?.medium || 0), hard: Math.max(0, difficulty?.hard || 0),
   }
   const sum = weights.easy + weights.medium + weights.hard
-  if (!sum) return [{ difficulty: 'medium' as const, requested: total }]
+  if (!sum) return [{ difficulty: 'any' as const, requested: total }]
   const raw = (Object.keys(weights) as QuizDifficulty[]).map((name) => ({ name, raw: total * weights[name] / sum }))
   const counts = Object.fromEntries(raw.map(({ name, raw: value }) => [name, Math.floor(value)])) as Record<QuizDifficulty, number>
   for (const { name } of [...raw].sort((a, b) => b.raw % 1 - a.raw % 1 || a.name.localeCompare(b.name)).slice(0, total - counts.easy - counts.medium - counts.hard)) counts[name] += 1
@@ -118,11 +118,19 @@ export function quizArtifact(
   const requestedCount = Math.max(1, Math.floor(count))
   const quota = normalizeQuizTypes(requestedCount, questionTypes)
   const planned = (Object.keys(quota.effective) as QuizType[]).flatMap((qType) => difficultySlots(quota.effective[qType], difficulty).flatMap((slot) =>
-    Array.from({ length: slot.requested }, () => ({ qType, difficulty: slot.difficulty })),
+    Array.from({ length: slot.requested }, () => ({ qType, requestedDifficulty: slot.difficulty, difficulty: slot.difficulty === 'any' ? 'medium' as const : slot.difficulty })),
   ))
-  const items = planned.slice(0, availableCount).map((slot, index) => ({
+  const remaining = [...planned]
+  const selected: typeof planned = []
+  while (selected.length < availableCount && remaining.length) {
+    for (const qType of ['choice', 'blank', 'text'] as QuizType[]) {
+      const index = remaining.findIndex((slot) => slot.qType === qType)
+      if (index >= 0 && selected.length < availableCount) selected.push(remaining.splice(index, 1)[0])
+    }
+  }
+  const items = selected.map((slot, index) => ({
     item_no: index + 1,
-    q_type: slot.qType,
+    q_type: slot.qType === 'text' ? 'solution' : slot.qType,
     difficulty: slot.difficulty,
     kp_code: kps[0] || 'MATH-003', kp_name: '函数单调性',
     question_text: `单调性巩固题 ${index + 1}：判断 f(x)=$x^3-3x$ 在 $[-2,2]$ 的单调区间？`,
@@ -134,7 +142,7 @@ export function quizArtifact(
     question_type: qType,
     difficulty: slot.difficulty,
     requested: slot.requested,
-    fulfilled: items.filter((item) => item.q_type === qType && item.difficulty === slot.difficulty).length,
+    fulfilled: items.filter((item) => item.q_type === (qType === 'text' ? 'solution' : qType) && (slot.difficulty === 'any' || item.difficulty === slot.difficulty)).length,
     relaxed: 0,
   })))
   const insufficient = items.length < requestedCount
@@ -148,7 +156,7 @@ export function quizArtifact(
       items,
       duplicated: 1,
       insufficient,
-      question_type_distribution: quota.effective,
+      question_type_distribution: items.reduce<Record<string, number>>((counts, item) => ({ ...counts, [item.q_type]: counts[item.q_type] + 1 }), { choice: 0, blank: 0, solution: 0 }),
     },
     source_refs: [],
     warnings: insufficient ? [`题库仅有 ${items.length}/${requestedCount} 道严格命中题，请调整知识点范围、题型或题量后再发布。`] : [],

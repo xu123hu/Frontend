@@ -42,7 +42,7 @@ export function makeQuizPreviewQuestions(items: QuizQuestion[]): QuizPreviewQues
     kp: String(item.kp_code || item.kp_name || '综合数学'),
     qType: item.q_type,
     difficultyLabel: item.difficulty === 'hard' ? '挑战' : item.difficulty === 'medium' ? '提升' : '基础',
-    score: item.q_type === 'solution' || item.q_type === 'text' ? 10 : 5,
+    score: item.q_type === 'solution' ? 10 : 5,
     difficulty: item.difficulty || 'medium',
     options: item.q_type === 'choice' ? previewOptions(item.options) : [],
     standardAnswer: String(item.answer || item.solution || '').trim() || null,

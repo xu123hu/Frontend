@@ -37,7 +37,7 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
       insufficient: true,
     })
     expect(insufficient.data.validation).toMatchObject({ requested_count: 8, available_count: 6 })
-    expect(insufficient.data.content.question_type_distribution).toEqual({ choice: 2, blank: 1, text: 5 })
+    expect(insufficient.data.content.question_type_distribution).toEqual({ choice: 2, blank: 1, solution: 3 })
     expect(insufficient.data.validation.slot_fulfillment).toEqual(expect.arrayContaining([
       expect.objectContaining({ question_type: 'choice', requested: expect.any(Number), fulfilled: expect.any(Number), relaxed: 0 }),
       expect.objectContaining({ question_type: 'text', difficulty: 'easy', requested: expect.any(Number), fulfilled: expect.any(Number), relaxed: 0 }),
@@ -58,7 +58,7 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
     const sufficient = await (await sufficientResponse).json()
     expect(sufficient.data.content).toMatchObject({ count: 6, insufficient: false })
     expect(sufficient.data.validation).toMatchObject({ requested_count: 6, available_count: 6 })
-    expect(sufficient.data.content.question_type_distribution).toEqual({ choice: 1, blank: 1, text: 4 })
+    expect(sufficient.data.content.question_type_distribution).toEqual({ choice: 1, blank: 1, solution: 4 })
     expect(sufficient.data).toMatchObject({ degraded: false, warnings: [] })
     await expect(page.getByText('A. 递增区间')).toBeVisible()
     await expect(page.getByText('标准答案：A')).toBeVisible()
