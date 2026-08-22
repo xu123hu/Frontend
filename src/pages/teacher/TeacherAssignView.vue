@@ -175,7 +175,7 @@
           <button class="t-btn primary lg" type="button" :disabled="generating" @click="generatePaper">
             {{ generating ? '生成中…' : '✨ 生成试卷' }}
           </button>
-          <button v-if="store.quizArtifact" class="t-btn lg" type="button" :disabled="store.publishing" @click="publishPaper">
+          <button v-if="store.quizArtifact" class="t-btn lg" type="button" :disabled="store.publishing || quizArtifactInsufficient" @click="publishPaper">
             {{ store.publishing ? '发布中…' : '确认并发布给学生' }}
           </button>
           <span class="t-tiny t-muted">生成后可逐题替换、调整难度</span>
@@ -227,6 +227,7 @@ import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { artifactsApi } from '@/api/teacher/artifacts'
 import { assignmentsApi } from '@/api/teacher/assignments'
+import { resolveScopeKnowledgePoints } from '@/domain/teacher/quizConfig'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import { useAssessmentStore } from '@/stores/teacher/assessment'
 import type { Assignment, QuizQuestion } from '@/types/teacher'
@@ -274,6 +275,7 @@ const form = reactive({
 
 const advancedOpen = ref(false)
 const generating = ref(false)
+const quizArtifactInsufficient = computed(() => store.quizArtifact?.content?.insufficient === true)
 
 // 难度比例
 const difficultyRatio = computed(() => {
@@ -329,7 +331,7 @@ async function generatePaper() {
   try {
     await store.generateQuiz({
       class_id: form.classId,
-      knowledge_points: ['MATH-002'],
+      knowledge_points: resolveScopeKnowledgePoints(form.scope),
       count: form.count,
       question_types: { choice, blank, text: Math.max(0, form.count - choice - blank) },
       difficulty: { easy: difficultyRatio.value.basic / 100, medium: difficultyRatio.value.medium / 100, hard: difficultyRatio.value.hard / 100 },
@@ -344,7 +346,7 @@ async function generatePaper() {
       score: item.q_type === 'solution' || item.q_type === 'text' ? 10 : 5,
       difficulty: item.difficulty || 'medium',
     }))
-    showToast?.(store.quizArtifact?.degraded ? '题库不足部分已用本地模板补齐，请确认后发布' : '试卷已生成，可确认发布')
+    showToast?.(quizArtifactInsufficient.value ? '题库严格命中题不足，请调整知识点范围、题型或题量后再生成' : '试卷已生成，可确认发布')
   } catch (e: any) { showToast?.(e?.message || store.error || '生成失败') }
   finally {
     generating.value = false
@@ -354,6 +356,10 @@ async function generatePaper() {
 async function publishPaper() {
   try {
     if (!store.quizArtifact) return
+    if (quizArtifactInsufficient.value) {
+      showToast?.('题库严格命中题不足，请调整知识点范围、题型或题量后再发布')
+      return
+    }
     store.quizArtifact = await artifactsApi.confirm(store.quizArtifact.artifact_id, `confirm:${store.quizArtifact.artifact_id}`)
     const type = typeOptions.find((item) => item.id === selectedType.value)
     await store.createAssignment({ class_id: form.classId, title: type?.title || '数学作业', artifact_id: store.quizArtifact.artifact_id })
