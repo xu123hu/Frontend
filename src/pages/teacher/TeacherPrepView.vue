@@ -160,7 +160,7 @@ import { artifactsApi } from '@/api/teacher/artifacts'
 import { lessonsApi } from '@/api/teacher/lessons'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import { useLessonArtifactsStore } from '@/stores/teacher/lessonArtifacts'
-import type { LessonTimelineItem } from '@/types/teacher'
+import type { LessonTimelineItem, TeacherArtifact } from '@/types/teacher'
 
 const router = useRouter()
 const ctx = useTeacherContextStore()
@@ -212,6 +212,7 @@ interface Suggestion {
 }
 
 const suggestions = ref<Suggestion[]>([])
+let classLoadSequence = 0
 
 // ---- 交互逻辑 ----
 async function selectSource(id: string) {
@@ -235,13 +236,16 @@ async function selectSource(id: string) {
 }
 
 async function onClassChange() {
-  const className = classes.value.find((item) => item.id === selectedClass.value)?.name || ''
-  ctx.setClass(selectedClass.value, className)
-  const previousArtifact = store.artifact
-  const previousSteps = [...lessonSteps.value]
+  const targetClassId = selectedClass.value
+  const requestSequence = ++classLoadSequence
+  const className = classes.value.find((item) => item.id === targetClassId)?.name || ''
+  ctx.setClass(targetClassId, className)
+  store.artifact = null
+  lessonSteps.value = []
   try {
-    const lessons = await lessonsApi.list(selectedClass.value)
-    const targetLesson = lessons.find((lesson) => lesson.class_id === selectedClass.value)
+    const lessons = await lessonsApi.list(targetClassId)
+    if (requestSequence !== classLoadSequence || selectedClass.value !== targetClassId) return
+    const targetLesson = lessons.find((lesson) => lesson.class_id === targetClassId)
     if (targetLesson) {
       store.artifact = targetLesson
       applyArtifact()
@@ -252,11 +256,10 @@ async function onClassChange() {
     lessonSteps.value = []
     showToast?.(`已切换到${className}`)
   } catch (e: any) {
-    // Keep the prior draft recoverable, but scope guards below make it inert
-    // until the teacher switches back or loads a lesson for the new class.
-    store.artifact = previousArtifact
-    lessonSteps.value = previousSteps
-    showToast?.(e?.message || '目标班级教案加载失败，已保留当前草稿')
+    if (requestSequence !== classLoadSequence || selectedClass.value !== targetClassId) return
+    store.artifact = null
+    lessonSteps.value = []
+    showToast?.(e?.message || '目标班级教案加载失败')
   }
 }
 
@@ -405,6 +408,7 @@ function generatePractice() {
 }
 
 function generateBoardOutline() {
+  if (!selectedClassArtifact()) return
   if (!lessonSteps.value.length) {
     showToast?.('请先生成教案')
     return
@@ -456,9 +460,17 @@ async function createLesson() {
     return
   }
   if (!selectedClass.value) return
+  store.artifact = null
+  lessonSteps.value = []
   await store.adapt({ class_id: selectedClass.value, topic: cleanTopic, requirements: requirements.value.trim(), duration_minutes: Math.max(1, Number(durationMinutes.value) || 45) })
+  const generated = store.artifact as TeacherArtifact | null
+  if (!generated || store.error || generated.class_id !== selectedClass.value) {
+    store.artifact = null
+    lessonSteps.value = []
+    if (store.error) showToast?.(store.error)
+    return
+  }
   applyArtifact()
-  if (store.error) showToast?.(store.error)
 }
 
 onMounted(async () => {

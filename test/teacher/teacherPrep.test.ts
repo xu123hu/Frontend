@@ -34,7 +34,10 @@ beforeEach(() => {
   apiGet.mockResolvedValue({ items: [{ id: 'class-1', name: '高一（1）班' }, { id: 'class-2', name: '高一（2）班' }] })
   listLessons.mockResolvedValue([])
   lessonStore.error = null
-  lessonStore.adapt.mockImplementation(async (payload) => { Object.assign(artifact, { class_id: payload.class_id, status: 'draft', content: { topic: payload.topic, timeline: artifact.content.timeline, duration_minutes: payload.duration_minutes } }) })
+  lessonStore.adapt.mockImplementation(async (payload) => {
+    Object.assign(artifact, { class_id: payload.class_id, status: 'draft', content: { topic: payload.topic, timeline: artifact.content.timeline, duration_minutes: payload.duration_minutes } })
+    lessonStore.artifact = artifact
+  })
   lessonStore.save.mockResolvedValue(artifact)
   setArtifact('draft')
 })
@@ -119,7 +122,7 @@ describe('TeacherPrepView topic-driven artifact workflow', () => {
     }
   })
 
-  it('switches class without adapting, clears an empty target, and keeps old data on target-load failure', async () => {
+  it('switches class without adapting and clears old data for an empty or failed target load', async () => {
     setArtifact('draft', [{ phase: '旧班活动', minutes: 12, activities: ['旧活动'] }])
     const wrapper = mountPrep()
     await flushPromises()
@@ -142,28 +145,96 @@ describe('TeacherPrepView topic-driven artifact workflow', () => {
     await flushPromises()
     await failedWrapper.get('select').setValue('class-2')
     await flushPromises()
-    expect(lessonStore.artifact).toBe(artifact)
-    expect(lessonStore.artifact.class_id).toBe('class-1')
+    expect(lessonStore.artifact).toBeNull()
+    expect(failedWrapper.text()).not.toContain('旧班活动')
     expect(lessonStore.adapt).not.toHaveBeenCalled()
   })
 
-  it('blocks save, confirm and PPT for a retained artifact from another class', async () => {
+  it('blocks every export or mutation for a foreign-class artifact', async () => {
     setArtifact('draft', [{ phase: '旧班活动', minutes: 12, activities: ['旧活动'] }], 'class-1')
-    listLessons.mockRejectedValueOnce(new Error('加载失败'))
     const wrapper = mountPrep()
     await flushPromises()
-    await wrapper.get('select').setValue('class-2')
-    await flushPromises()
+    await wrapper.get('[aria-label="课题"]').setValue('导数的概念')
+    await wrapper.get('form').trigger('submit')
+    artifact.class_id = 'class-2'
     const save = wrapper.findAll('button').find((button) => button.text().trim() === '保存草稿')!
     const confirmButton = wrapper.findAll('button').find((button) => button.text().trim() === '确认本节课')!
     const ppt = wrapper.findAll('button').find((button) => button.text().includes('生成PPT'))!
+    const word = wrapper.findAll('button').find((button) => button.text().includes('导出Word'))!
+    const board = wrapper.findAll('button').find((button) => button.text().includes('生成板书'))!
+    const originalFetch = globalThis.fetch
+    const originalCreate = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    globalThis.fetch = vi.fn() as any
+    URL.createObjectURL = vi.fn(() => 'blob:blocked')
+    URL.revokeObjectURL = vi.fn()
+    try {
     await save.trigger('click')
     await confirmButton.trigger('click')
     await ppt.trigger('click')
+    await word.trigger('click')
+    await board.trigger('click')
     expect(lessonStore.save).not.toHaveBeenCalled()
     expect(confirm).not.toHaveBeenCalled()
     expect(createSlides).not.toHaveBeenCalled()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled()
     expect(toast).toHaveBeenCalledWith('当前教案不属于所选班级，请先加载或生成该班级教案')
+    } finally {
+      globalThis.fetch = originalFetch
+      URL.createObjectURL = originalCreate
+      URL.revokeObjectURL = originalRevoke
+    }
+  })
+
+  it('ignores stale class-load resolve and reject so the latest class remains authoritative', async () => {
+    let resolveOlder!: (value: any[]) => void
+    let resolveLatest!: (value: any[]) => void
+    const older = new Promise<any[]>((resolve) => { resolveOlder = resolve })
+    const latest = new Promise<any[]>((resolve) => { resolveLatest = resolve })
+    listLessons.mockImplementationOnce(() => older).mockImplementationOnce(() => latest)
+    const wrapper = mountPrep()
+    await flushPromises()
+    await wrapper.get('select').setValue('class-2')
+    await wrapper.get('select').setValue('class-1')
+    resolveOlder([{ ...artifact, artifact_id: 'lesson-old', class_id: 'class-2', content: { timeline: [{ phase: '旧请求', minutes: 10, activities: ['A'] }] } }])
+    await flushPromises()
+    expect(lessonStore.artifact).toBeNull()
+    resolveLatest([{ ...artifact, artifact_id: 'lesson-new', class_id: 'class-1', content: { timeline: [{ phase: '最新请求', minutes: 10, activities: ['B'] }] } }])
+    await flushPromises()
+    expect(lessonStore.artifact?.artifact_id).toBe('lesson-new')
+    expect(wrapper.text()).toContain('最新请求')
+    let rejectStale!: (reason?: unknown) => void
+    let resolveFresh!: (value: any[]) => void
+    const staleReject = new Promise<any[]>((_resolve, reject) => { rejectStale = reject })
+    const fresh = new Promise<any[]>((resolve) => { resolveFresh = resolve })
+    listLessons.mockImplementationOnce(() => staleReject).mockImplementationOnce(() => fresh)
+    await wrapper.get('select').setValue('class-2')
+    await wrapper.get('select').setValue('class-1')
+    rejectStale(new Error('stale'))
+    await flushPromises()
+    expect(lessonStore.artifact).toBeNull()
+    resolveFresh([{ ...artifact, artifact_id: 'lesson-fresh', class_id: 'class-1', content: { timeline: [{ phase: '最终请求', minutes: 10, activities: ['C'] }] } }])
+    await flushPromises()
+    expect(lessonStore.artifact?.artifact_id).toBe('lesson-fresh')
+  })
+
+  it('clears an old same-class lesson when generating the new topic fails', async () => {
+    setArtifact('draft', [{ phase: '旧教案', minutes: 12, activities: ['旧活动'] }])
+    const wrapper = mountPrep()
+    await flushPromises()
+    await wrapper.get('[aria-label="课题"]').setValue('旧课题')
+    await wrapper.get('form').trigger('submit')
+    expect(wrapper.text()).toContain('旧教案')
+    lessonStore.adapt.mockImplementationOnce(async () => { lessonStore.error = '生成教案失败' })
+    await wrapper.get('[aria-label="课题"]').setValue('新课题')
+    await wrapper.get('form').trigger('submit')
+    expect(lessonStore.artifact).toBeNull()
+    expect(wrapper.text()).not.toContain('旧教案')
+    const save = wrapper.findAll('button').find((button) => button.text().trim() === '保存草稿')!
+    await save.trigger('click')
+    expect(lessonStore.save).not.toHaveBeenCalled()
   })
 
   it('writes edited activities back to the exact save payload and balances to the requested duration', async () => {

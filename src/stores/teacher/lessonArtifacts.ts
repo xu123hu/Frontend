@@ -15,11 +15,15 @@ export const useLessonArtifactsStore = defineStore('lessonArtifacts', {
     async adapt(payload: LessonAdaptRequest, signal?: AbortSignal) {
       this.loading = true
       this.error = null
+      // A new topic is a new draft attempt: never leave an older lesson
+      // visible or actionable while this request is pending or fails.
+      this.artifact = null
       try {
         const res = await lessonsApi.adapt(payload, signal)
         this.artifact = res.data
       } catch (e: any) {
         if (e?.code === -2) return
+        this.artifact = null
         this.error = e?.message || '生成教案失败'
       } finally { this.loading = false }
     },
