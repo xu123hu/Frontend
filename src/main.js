@@ -14,8 +14,11 @@ import './styles/teacher.css'
 // 本地预览便捷引导：只有 VITE_USE_MOCK=1 才预置 mock 身份（默认真实 API 模式绝不预置）。
 // VITE_MOCK_ROLE=teacher 预置教师；默认/student 保持学生。旧 VITE_REAL_API 遗留语义已由 VITE_USE_MOCK 取代。
 const useMock = import.meta.env.VITE_USE_MOCK === '1'
-const mockRole = (import.meta.env.VITE_MOCK_ROLE || 'student').toString()
+let mockRole = (import.meta.env.VITE_MOCK_ROLE || 'student').toString()
 if (useMock) {
+  try { mockRole = JSON.parse(localStorage.getItem('ma_user') || 'null')?.active_role || mockRole } catch { /* ignore */ }
+  document.cookie = `ma_mock_role=${mockRole}; path=/; SameSite=Lax`
+  document.cookie = 'ma_csrf=mock-csrf; path=/; SameSite=Lax'
   setAccessToken(mockRole === 'teacher' ? 'mock-token-teacher-preview' : 'mock-token-preview')
   try { localStorage.setItem('ma_user', JSON.stringify(resolveMockUser(mockRole))) } catch { /* ignore */ }
 }

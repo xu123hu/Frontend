@@ -34,7 +34,7 @@ describe('account security and identity administration', () => {
       global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
     })
     await wrapper.get('[data-action="approve"]').trigger('click')
-    expect(apiMocks.approve).toHaveBeenCalledWith('a1', expect.any(String), expect.any(String))
+    expect(apiMocks.approve).toHaveBeenCalledWith('a1', expect.any(String))
     expect(wrapper.text()).toContain('已通过')
   })
 })

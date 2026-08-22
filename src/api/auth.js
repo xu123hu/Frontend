@@ -37,11 +37,12 @@ export const securityApi = {
   deletionStatus: () => api.get('/identity/account/deletion'),
   cancelDeletion: (payload) => api.post('/identity/account/deletion/cancel', payload),
   reauthenticate: (payload) => api.post('/auth/reauth', payload),
+  sendReauthCode: (phone) => authApi.challengeSms(phone, 'admin_reauth'),
 }
 
 export const adminIdentityApi = {
   applications: (query = {}) => api.get('/admin/identity/applications', query),
-  approve: (id, note = '', reauth = '') => api.post(`/admin/identity/applications/${id}/approve`, { note }, null, { headers: reauth ? { 'X-Reauth-Proof': reauth } : {} }),
-  reject: (id, note = '', reauth = '') => api.post(`/admin/identity/applications/${id}/reject`, { note }, null, { headers: reauth ? { 'X-Reauth-Proof': reauth } : {} }),
-  requestMoreInfo: (id, note = '', reauth = '') => api.post(`/admin/identity/applications/${id}/request-more-info`, { note }, null, { headers: reauth ? { 'X-Reauth-Proof': reauth } : {} }),
+  approve: (id, note = '') => api.post(`/admin/identity/applications/${id}/approve`, { note }),
+  reject: (id, note = '') => api.post(`/admin/identity/applications/${id}/reject`, { note }),
+  requestMoreInfo: (id, note = '') => api.post(`/admin/identity/applications/${id}/request-more-info`, { note }),
 }
