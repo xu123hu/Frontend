@@ -34,13 +34,15 @@ describe('assessment mock contract', () => {
   })
 
   it('expands only the requested mock subtree and makes parent inventory auditable', () => {
-    const parent = quizArtifact(['MATH-001'], 3, { text: 3 })
+    const parent = quizArtifact(['MATH-002'], 3, { text: 3 })
     const parentItems = parent.content.items as any[]
-    expect(parent.validation?.expanded_knowledge_points).toEqual(['MATH-001', 'MATH-002', 'MATH-003'])
-    expect(parentItems.map((item) => item.kp_code)).toContain('MATH-002')
+    expect(parent.validation?.expanded_knowledge_points).toEqual(['MATH-002', 'MATH-003', 'MATH-004'])
+    expect(parentItems.map((item) => item.kp_code)).toContain('MATH-003')
 
     const leaf = quizArtifact(['MATH-003'], 3, { text: 3 })
     expect(leaf.validation?.expanded_knowledge_points).toEqual(['MATH-003'])
     expect((leaf.content.items as any[]).every((item) => item.kp_code === 'MATH-003')).toBe(true)
+
+    expect(quizArtifact(['MATH-001'], 1, { text: 1 }).validation?.expanded_knowledge_points).toEqual(['MATH-001'])
   })
 })

@@ -111,7 +111,7 @@ function difficultySlots(total: number, difficulty?: Partial<Record<QuizDifficul
 // Mock's minimal authoritative hierarchy mirrors the assessment contract:
 // requesting a parent may use descendants, while a leaf never widens upward.
 const mockAssessmentDescendants: Record<string, string[]> = {
-  'MATH-001': ['MATH-001', 'MATH-002', 'MATH-003'],
+  'MATH-002': ['MATH-002', 'MATH-003', 'MATH-004'],
 }
 
 function expandMockAssessmentKps(kps: string[]) {
