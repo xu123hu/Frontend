@@ -147,14 +147,18 @@ export interface LessonPlanSection {
 
 export interface QuizQuestion {
   item_no: number
-  q_type: 'choice' | 'blank' | 'text'
+  q_type: 'choice' | 'blank' | 'text' | 'solution'
   difficulty: 'easy' | 'medium' | 'hard'
   kp_code?: string
   kp_name?: string
   question_text: string
-  options?: string[]
-  answer?: string
-  answer_analysis?: string
+  hash?: string
+  options?: Record<string, string> | string[] | null
+  answer?: string | null
+  /** Compatibility with legacy solution-shaped quiz payloads. */
+  solution?: string | null
+  analysis?: string | null
+  answer_analysis?: string | null
 }
 
 export interface QuizSet {

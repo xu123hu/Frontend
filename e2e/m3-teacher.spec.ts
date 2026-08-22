@@ -37,6 +37,15 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
       insufficient: true,
     })
     expect(insufficient.data.validation).toMatchObject({ requested_count: 8, available_count: 6 })
+    expect(insufficient.data.content.question_type_distribution).toEqual({ choice: 2, blank: 1, text: 5 })
+    expect(insufficient.data.validation.slot_fulfillment).toEqual(expect.arrayContaining([
+      expect.objectContaining({ question_type: 'choice', requested: expect.any(Number), fulfilled: expect.any(Number), relaxed: 0 }),
+      expect.objectContaining({ question_type: 'text', difficulty: 'easy', requested: expect.any(Number), fulfilled: expect.any(Number), relaxed: 0 }),
+    ]))
+    const choice = insufficient.data.content.items.find((item: any) => item.q_type === 'choice')
+    expect(choice).toMatchObject({
+      options: { A: '递增区间' }, answer: 'A', analysis: expect.any(String), difficulty: expect.any(String),
+    })
     expect(insufficient.data).toMatchObject({ degraded: true })
     expect(insufficient.data.warnings).toContain('题库仅有 6/8 道严格命中题，请调整知识点范围、题型或题量后再发布。')
     await expect(page.getByRole('button', { name: '确认并发布给学生' })).toBeDisabled()
@@ -49,7 +58,11 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
     const sufficient = await (await sufficientResponse).json()
     expect(sufficient.data.content).toMatchObject({ count: 6, insufficient: false })
     expect(sufficient.data.validation).toMatchObject({ requested_count: 6, available_count: 6 })
+    expect(sufficient.data.content.question_type_distribution).toEqual({ choice: 1, blank: 1, text: 4 })
     expect(sufficient.data).toMatchObject({ degraded: false, warnings: [] })
+    await expect(page.getByText('A. 递增区间')).toBeVisible()
+    await expect(page.getByText('标准答案：A')).toBeVisible()
+    await expect(page.getByText(/解析：令 f/).first()).toBeVisible()
     await expect(page.getByRole('button', { name: '确认并发布给学生' })).toBeEnabled()
 
     const publishResponse = page.waitForResponse((response) =>

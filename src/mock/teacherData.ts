@@ -77,29 +77,78 @@ export function lessonArtifact(classId: string, topic: string, requirements: str
   }
 }
 
-export function quizArtifact(kps: string[], count: number): TeacherArtifact {
+type QuizType = 'choice' | 'blank' | 'text'
+type QuizDifficulty = 'easy' | 'medium' | 'hard'
+
+function normalizeQuizTypes(count: number, input?: Partial<Record<QuizType, number>>): { requested: Record<QuizType, number>, effective: Record<QuizType, number>, normalized: boolean } {
+  const requested: Record<QuizType, number> = {
+    choice: Math.max(0, Math.floor(input?.choice || 0)),
+    blank: Math.max(0, Math.floor(input?.blank || 0)),
+    text: Math.max(0, Math.floor(input?.text || 0)),
+  }
+  const effective = { ...requested }
+  const total = effective.choice + effective.blank + effective.text
+  if (total > count) throw new Error('question_type_quota_exceeds_count')
+  if (total === count) return { requested, effective, normalized: false }
+  const active = (Object.keys(effective) as QuizType[]).filter((type) => effective[type] > 0)
+  if (!active.length) return { requested, effective: { choice: 0, blank: 0, text: count }, normalized: true }
+  for (let index = 0; index < count - total; index += 1) effective[active[index % active.length]] += 1
+  return { requested, effective, normalized: true }
+}
+
+function difficultySlots(total: number, difficulty?: Partial<Record<QuizDifficulty, number>>) {
+  const weights: Record<QuizDifficulty, number> = {
+    easy: Math.max(0, difficulty?.easy || 0), medium: Math.max(0, difficulty?.medium || 0), hard: Math.max(0, difficulty?.hard || 0),
+  }
+  const sum = weights.easy + weights.medium + weights.hard
+  if (!sum) return [{ difficulty: 'medium' as const, requested: total }]
+  const raw = (Object.keys(weights) as QuizDifficulty[]).map((name) => ({ name, raw: total * weights[name] / sum }))
+  const counts = Object.fromEntries(raw.map(({ name, raw: value }) => [name, Math.floor(value)])) as Record<QuizDifficulty, number>
+  for (const { name } of [...raw].sort((a, b) => b.raw % 1 - a.raw % 1 || a.name.localeCompare(b.name)).slice(0, total - counts.easy - counts.medium - counts.hard)) counts[name] += 1
+  return (Object.keys(counts) as QuizDifficulty[]).filter((name) => counts[name] > 0).map((name) => ({ difficulty: name, requested: counts[name] }))
+}
+
+export function quizArtifact(
+  kps: string[],
+  count: number,
+  questionTypes?: Partial<Record<QuizType, number>>,
+  difficulty?: Partial<Record<QuizDifficulty, number>>,
+): TeacherArtifact {
   const availableCount = 6
   const requestedCount = Math.max(1, Math.floor(count))
-  const insufficient = requestedCount > availableCount
-  const items = Array.from({ length: Math.min(requestedCount, availableCount) }, (_, i) => ({
-    item_no: i + 1,
-    q_type: (['choice', 'blank', 'text'] as const)[i % 3],
-    difficulty: (['easy', 'medium', 'hard'] as const)[i % 3],
+  const quota = normalizeQuizTypes(requestedCount, questionTypes)
+  const planned = (Object.keys(quota.effective) as QuizType[]).flatMap((qType) => difficultySlots(quota.effective[qType], difficulty).flatMap((slot) =>
+    Array.from({ length: slot.requested }, () => ({ qType, difficulty: slot.difficulty })),
+  ))
+  const items = planned.slice(0, availableCount).map((slot, index) => ({
+    item_no: index + 1,
+    q_type: slot.qType,
+    difficulty: slot.difficulty,
     kp_code: kps[0] || 'MATH-003', kp_name: '函数单调性',
-    question_text: `单调性巩固题 ${i + 1}：判断 f(x)=$x^3-3x$ 在 $[-2,2]$ 的单调区间？`,
-    options: ['A', 'B', 'C', 'D'],
-    answer: 'B', answer_analysis: '令 f\'(x)=0 求分界点后列表判断。',
+    question_text: `单调性巩固题 ${index + 1}：判断 f(x)=$x^3-3x$ 在 $[-2,2]$ 的单调区间？`,
+    options: slot.qType === 'choice' ? { A: '递增区间', B: '递减区间', C: '无单调性', D: '恒为零' } : null,
+    answer: slot.qType === 'text' ? '求导并用导数符号判定单调区间。' : slot.qType === 'blank' ? 'x=1' : 'A',
+    analysis: '令 f\'(x)=0 求分界点后列表判断。',
   }))
+  const slotFulfillment = (Object.keys(quota.effective) as QuizType[]).flatMap((qType) => difficultySlots(quota.effective[qType], difficulty).map((slot) => ({
+    question_type: qType,
+    difficulty: slot.difficulty,
+    requested: slot.requested,
+    fulfilled: items.filter((item) => item.q_type === qType && item.difficulty === slot.difficulty).length,
+    relaxed: 0,
+  })))
+  const insufficient = items.length < requestedCount
   return {
     artifact_id: 'art-quiz-1', artifact_type: 'quiz_set', scene: 'teacher.assessment', class_id: 'c1',
     owner_id: 't1', status: 'draft', version: 1, engine: 'local',
     content: {
       knowledge_points: kps,
       count: requestedCount,
-      difficulty: { easy: 0.25, medium: 0.5, hard: 0.25 },
+      difficulty: difficulty || { easy: 0.25, medium: 0.5, hard: 0.25 },
       items,
       duplicated: 1,
       insufficient,
+      question_type_distribution: quota.effective,
     },
     source_refs: [],
     warnings: insufficient ? [`题库仅有 ${items.length}/${requestedCount} 道严格命中题，请调整知识点范围、题型或题量后再发布。`] : [],
@@ -110,6 +159,12 @@ export function quizArtifact(kps: string[], count: number): TeacherArtifact {
       bank_count: items.length,
       requested_count: requestedCount,
       available_count: items.length,
+      requested_question_type_distribution: quota.requested,
+      effective_question_type_distribution: quota.effective,
+      quota_normalized: quota.normalized,
+      expanded_knowledge_points: kps,
+      requested_difficulty_distribution: difficulty || {},
+      slot_fulfillment: slotFulfillment,
     },
     created_at: iso(), updated_at: iso(),
   }

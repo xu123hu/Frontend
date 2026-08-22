@@ -111,9 +111,13 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
   /* 出题 */
   if (method === 'POST' && url === '/teacher/quizzes/generate') {
     const b = await readBody(req)
-    const art = quizArtifact(b.knowledge_points || ['函数单调性'], b.count || 6)
-    art.artifact_id = nextId('art-quiz'); artifacts.set(art.artifact_id, art)
-    ok(res, art, 201); return true
+    try {
+      const art = quizArtifact(b.knowledge_points || ['函数单调性'], b.count || 6, b.question_types, b.difficulty)
+      art.artifact_id = nextId('art-quiz'); artifacts.set(art.artifact_id, art)
+      ok(res, art, 201); return true
+    } catch (error: any) {
+      fail(res, 422, 40001, error?.message || 'question_type_quota_exceeds_count'); return true
+    }
   }
 
   /* Artifact CRUD + 状态机 + 任务 */

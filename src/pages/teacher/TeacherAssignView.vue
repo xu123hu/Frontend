@@ -204,6 +204,11 @@
               <div class="qm">
                 {{ q.kp }} · {{ q.difficultyLabel }} · {{ q.score }}分
               </div>
+              <div v-if="q.options.length" class="t-small" style="margin-top: 6px">
+                <div v-for="option in q.options" :key="option.key">{{ option.key }}. {{ option.text }}</div>
+              </div>
+              <div v-if="q.standardAnswer" class="t-small" style="margin-top: 6px">标准答案：{{ q.standardAnswer }}</div>
+              <div class="t-small t-muted" style="margin-top: 4px">解析：{{ q.analysis }}</div>
             </div>
             <div>
               <button class="t-btn sm" type="button" @click="replaceQuestion(idx)">
@@ -228,6 +233,7 @@ import { api } from '@/api/client'
 import { artifactsApi } from '@/api/teacher/artifacts'
 import { assignmentsApi } from '@/api/teacher/assignments'
 import { resolveScopeKnowledgePoints } from '@/domain/teacher/quizConfig'
+import { makeQuizPreviewQuestions, type QuizPreviewQuestion } from '@/domain/teacher/quizPreview'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import { useAssessmentStore } from '@/stores/teacher/assessment'
 import type { Assignment, QuizQuestion } from '@/types/teacher'
@@ -301,16 +307,7 @@ const blueprint = ref<BlueprintRow[]>([
 ])
 
 // ---- 预览题目 ----
-interface PreviewQuestion {
-  id: string
-  text: string
-  kp: string
-  difficultyLabel: string
-  score: number
-  difficulty: 'easy' | 'medium' | 'hard'
-}
-
-const previewQuestions = ref<PreviewQuestion[]>([])
+const previewQuestions = ref<QuizPreviewQuestion[]>([])
 
 // ---- 交互逻辑 ----
 function selectType(id: string) {
@@ -337,15 +334,8 @@ async function generatePaper() {
       difficulty: { easy: difficultyRatio.value.basic / 100, medium: difficultyRatio.value.medium / 100, hard: difficultyRatio.value.hard / 100 },
       exclude_hashes: [],
     })
-    const items = (store.quizArtifact?.content?.items || []) as Array<any>
-    previewQuestions.value = items.map((item, index) => ({
-      id: String(item.hash || item.item_no || index),
-      text: String(item.question_text || ''),
-      kp: String(item.kp_code || '综合数学'),
-      difficultyLabel: item.difficulty === 'hard' ? '挑战' : item.difficulty === 'medium' ? '提升' : '基础',
-      score: item.q_type === 'solution' || item.q_type === 'text' ? 10 : 5,
-      difficulty: item.difficulty || 'medium',
-    }))
+    const items = (store.quizArtifact?.content?.items || []) as QuizQuestion[]
+    previewQuestions.value = makeQuizPreviewQuestions(items)
     showToast?.(quizArtifactInsufficient.value ? '题库严格命中题不足，请调整知识点范围、题型或题量后再生成' : '试卷已生成，可确认发布')
   } catch (e: any) { showToast?.(e?.message || store.error || '生成失败') }
   finally {
