@@ -259,6 +259,12 @@ export interface GradingDetail extends GradingQueueItem {
   original_answer: string
   file_id?: string | null
   scoring_standard: string
+  assignment_title?: string | null
+  question_text?: string | null
+  question_type?: string | null
+  options?: Record<string, string> | string[] | null
+  standard_answer?: string | null
+  answer_analysis?: string | null
   suggestion: GradingSuggestion | null
 }
 

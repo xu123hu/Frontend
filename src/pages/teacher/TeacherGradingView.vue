@@ -33,6 +33,23 @@
         </div>
 
         <div v-if="store.detail" class="t-paper">
+          <template v-if="store.detail.question_text">
+            <div v-if="store.detail.assignment_title" class="t-small t-muted">作业：{{ store.detail.assignment_title }}</div>
+            <div class="qtitle" style="margin-top: 12px;">题目{{ store.detail.question_type ? `（${store.detail.question_type}）` : '' }}</div>
+            <p style="white-space: pre-wrap; line-height: 1.8;">{{ store.detail.question_text }}</p>
+            <ul v-if="questionOptions.length" class="t-small" style="margin: 8px 0 16px; padding-left: 20px; line-height: 1.8;">
+              <li v-for="option in questionOptions" :key="option.key">{{ option.key }}. {{ option.value }}</li>
+            </ul>
+            <div class="t-card soft" style="margin-top: 16px;">
+              <div class="t-small t-strong">标准答案（仅教师可见）</div>
+              <p class="t-small" style="margin: 6px 0 0; white-space: pre-wrap;">{{ store.detail.standard_answer || '标准答案缺失，请人工复核。' }}</p>
+              <template v-if="store.detail.answer_analysis">
+                <div class="t-small t-strong" style="margin-top: 10px;">答案解析（仅教师可见）</div>
+                <p class="t-small" style="margin: 6px 0 0; white-space: pre-wrap;">{{ store.detail.answer_analysis }}</p>
+              </template>
+            </div>
+          </template>
+          <p v-else class="t-small t-muted">题目上下文缺失，请人工复核。</p>
           <div class="qtitle">评分标准</div>
           <p>{{ store.detail.scoring_standard }}</p>
           <div class="qtitle" style="margin-top: 24px;">作答内容</div>
@@ -104,6 +121,12 @@ const pendingCount = computed(() => store.queue.filter((item) => item.status !==
 const suggestedScore = computed(() => store.detail?.suggestion?.suggestion_score ?? '—')
 const confidenceText = computed(() => `${Math.round((store.detail?.suggestion?.confidence ?? 0) * 100)}%`)
 const canConfirm = computed(() => Boolean(store.detail?.suggestion?.suggestion_id))
+const questionOptions = computed(() => {
+  const options = store.detail?.options
+  if (Array.isArray(options)) return options.map((value, index) => ({ key: String.fromCharCode(65 + index), value }))
+  if (options && typeof options === 'object') return Object.entries(options).map(([key, value]) => ({ key, value }))
+  return []
+})
 
 watch(() => store.detail, (detail) => {
   finalScore.value = detail?.suggestion?.suggestion_score ?? detail?.teacher_final_score ?? null
