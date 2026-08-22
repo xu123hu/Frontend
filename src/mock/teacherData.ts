@@ -108,6 +108,16 @@ function difficultySlots(total: number, difficulty?: Partial<Record<QuizDifficul
   return (Object.keys(counts) as QuizDifficulty[]).filter((name) => counts[name] > 0).map((name) => ({ difficulty: name, requested: counts[name] }))
 }
 
+// Mock's minimal authoritative hierarchy mirrors the assessment contract:
+// requesting a parent may use descendants, while a leaf never widens upward.
+const mockAssessmentDescendants: Record<string, string[]> = {
+  'MATH-001': ['MATH-001', 'MATH-002', 'MATH-003'],
+}
+
+function expandMockAssessmentKps(kps: string[]) {
+  return [...new Set(kps.flatMap((kp) => mockAssessmentDescendants[kp] || [kp]))]
+}
+
 export function quizArtifact(
   kps: string[],
   count: number,
@@ -117,6 +127,7 @@ export function quizArtifact(
   const availableCount = 6
   const requestedCount = Math.max(1, Math.floor(count))
   const quota = normalizeQuizTypes(requestedCount, questionTypes)
+  const expandedKps = expandMockAssessmentKps(kps)
   const planned = (Object.keys(quota.effective) as QuizType[]).flatMap((qType) => difficultySlots(quota.effective[qType], difficulty).flatMap((slot) =>
     Array.from({ length: slot.requested }, () => ({ qType, requestedDifficulty: slot.difficulty, difficulty: slot.difficulty === 'any' ? 'medium' as const : slot.difficulty })),
   ))
@@ -132,7 +143,7 @@ export function quizArtifact(
     item_no: index + 1,
     q_type: slot.qType === 'text' ? 'solution' : slot.qType,
     difficulty: slot.difficulty,
-    kp_code: kps[0] || 'MATH-003', kp_name: '函数单调性',
+    kp_code: expandedKps[index % expandedKps.length] || 'MATH-003', kp_name: '函数单调性',
     question_text: `单调性巩固题 ${index + 1}：判断 f(x)=$x^3-3x$ 在 $[-2,2]$ 的单调区间？`,
     options: slot.qType === 'choice' ? { A: '递增区间', B: '递减区间', C: '无单调性', D: '恒为零' } : null,
     answer: slot.qType === 'text' ? '求导并用导数符号判定单调区间。' : slot.qType === 'blank' ? 'x=1' : 'A',
@@ -152,7 +163,7 @@ export function quizArtifact(
     content: {
       knowledge_points: kps,
       count: requestedCount,
-      difficulty: difficulty || { easy: 0.25, medium: 0.5, hard: 0.25 },
+      difficulty: difficulty || {},
       items,
       duplicated: 1,
       insufficient,
@@ -170,7 +181,7 @@ export function quizArtifact(
       requested_question_type_distribution: quota.requested,
       effective_question_type_distribution: quota.effective,
       quota_normalized: quota.normalized,
-      expanded_knowledge_points: kps,
+      expanded_knowledge_points: expandedKps,
       requested_difficulty_distribution: difficulty || {},
       slot_fulfillment: slotFulfillment,
     },

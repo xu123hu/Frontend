@@ -30,5 +30,17 @@ describe('assessment mock contract', () => {
       items.reduce((counts, item) => ({ ...counts, [item.q_type]: counts[item.q_type] + 1 }), { choice: 0, blank: 0, solution: 0 }),
     )
     expect(artifact.validation).toMatchObject({ requested_difficulty_distribution: {}, slot_fulfillment: expect.arrayContaining([expect.objectContaining({ difficulty: 'any' })]) })
+    expect(artifact.content.difficulty).toEqual({})
+  })
+
+  it('expands only the requested mock subtree and makes parent inventory auditable', () => {
+    const parent = quizArtifact(['MATH-001'], 3, { text: 3 })
+    const parentItems = parent.content.items as any[]
+    expect(parent.validation?.expanded_knowledge_points).toEqual(['MATH-001', 'MATH-002', 'MATH-003'])
+    expect(parentItems.map((item) => item.kp_code)).toContain('MATH-002')
+
+    const leaf = quizArtifact(['MATH-003'], 3, { text: 3 })
+    expect(leaf.validation?.expanded_knowledge_points).toEqual(['MATH-003'])
+    expect((leaf.content.items as any[]).every((item) => item.kp_code === 'MATH-003')).toBe(true)
   })
 })
