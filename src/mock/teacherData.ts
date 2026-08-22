@@ -95,17 +95,22 @@ export function quizArtifact(kps: string[], count: number): TeacherArtifact {
     owner_id: 't1', status: 'draft', version: 1, engine: 'local',
     content: {
       knowledge_points: kps,
-      count: items.length,
-      requested_count: requestedCount,
-      available_count: availableCount,
+      count: requestedCount,
       difficulty: { easy: 0.25, medium: 0.5, hard: 0.25 },
       items,
       duplicated: 1,
       insufficient,
     },
     source_refs: [],
-    warnings: insufficient ? [`题库严格命中题不足：请求 ${requestedCount} 题，当前可用 ${availableCount} 题。`] : [],
+    warnings: insufficient ? [`题库仅有 ${items.length}/${requestedCount} 道严格命中题，请调整知识点范围、题型或题量后再发布。`] : [],
     degraded: insufficient,
+    validation: {
+      question_count: items.length,
+      dedup: true,
+      bank_count: items.length,
+      requested_count: requestedCount,
+      available_count: items.length,
+    },
     created_at: iso(), updated_at: iso(),
   }
 }
@@ -125,7 +130,7 @@ export function gradingDetail(item: GradingQueueItem): GradingDetail & { suggest
     ...item,
     assignment_title: '函数的单调性巩固练习',
     question_text: '已知函数 f(x)=x³−3x，求其单调递增区间。',
-    question_type: '选择题',
+    question_type: 'choice',
     options: {
       A: '(-∞, -1) ∪ (1, +∞)',
       B: '(-1, 1)',

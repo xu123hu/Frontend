@@ -74,6 +74,8 @@ export interface TeacherArtifact {
   source_refs: SourceRef[]
   warnings: string[]
   degraded: boolean
+  /** 后端对产物生成/校验的结构化元数据；题集包含请求与可用题量。 */
+  validation?: ArtifactValidation
   engine?: string
   confirmed_by?: string | null
   confirmed_at?: string | null
@@ -266,6 +268,14 @@ export interface GradingDetail extends GradingQueueItem {
   standard_answer?: string | null
   answer_analysis?: string | null
   suggestion: GradingSuggestion | null
+}
+
+export interface ArtifactValidation extends Record<string, unknown> {
+  question_count?: number
+  dedup?: boolean
+  bank_count?: number
+  requested_count?: number
+  available_count?: number
 }
 
 export interface BatchConfirmResult {

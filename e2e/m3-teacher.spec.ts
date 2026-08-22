@@ -33,12 +33,12 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
     const insufficient = await (await insufficientResponse).json()
     expect(insufficient.data.content).toMatchObject({
       knowledge_points: ['MATH-003'],
+      count: 8,
       insufficient: true,
-      requested_count: 8,
-      available_count: 6,
     })
+    expect(insufficient.data.validation).toMatchObject({ requested_count: 8, available_count: 6 })
     expect(insufficient.data).toMatchObject({ degraded: true })
-    expect(insufficient.data.warnings).toContain('题库严格命中题不足：请求 8 题，当前可用 6 题。')
+    expect(insufficient.data.warnings).toContain('题库仅有 6/8 道严格命中题，请调整知识点范围、题型或题量后再发布。')
     await expect(page.getByRole('button', { name: '确认并发布给学生' })).toBeDisabled()
 
     await page.getByLabel('题量').fill('6')
@@ -47,7 +47,8 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
     )
     await page.getByRole('button', { name: '✨ 生成试卷' }).click()
     const sufficient = await (await sufficientResponse).json()
-    expect(sufficient.data.content).toMatchObject({ insufficient: false, requested_count: 6, available_count: 6 })
+    expect(sufficient.data.content).toMatchObject({ count: 6, insufficient: false })
+    expect(sufficient.data.validation).toMatchObject({ requested_count: 6, available_count: 6 })
     expect(sufficient.data).toMatchObject({ degraded: false, warnings: [] })
     await expect(page.getByRole('button', { name: '确认并发布给学生' })).toBeEnabled()
 
@@ -65,6 +66,7 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
     await page.goto('/teacher/grading')
 
     await expect(page.getByText('作业：函数的单调性巩固练习')).toBeVisible()
+    await expect(page.getByText('题目（choice）')).toBeVisible()
     await expect(page.getByText('已知函数 f(x)=x³−3x，求其单调递增区间。')).toBeVisible()
     await expect(page.getByText('A. (-∞, -1) ∪ (1, +∞)')).toBeVisible()
     await expect(page.getByText('标准答案（仅教师可见）')).toBeVisible()
@@ -78,6 +80,23 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
     await page.getByRole('button', { name: '接受建议并确认' }).click()
     const confirmation = await (await confirmationResponse).json()
     expect(confirmation.data.decision).toBe('accepted')
+  })
+
+  test('classroom mode toggles through the accessible pressed control', async ({ page }) => {
+    await presetMock(page, TEACHER_USER)
+    await page.goto('/teacher/classroom')
+
+    await expect(page.getByText('课堂模式未开启')).toBeVisible()
+    const modeToggle = page.locator('[aria-pressed="false"]')
+    await expect(modeToggle).toHaveCount(1)
+    const enabledResponse = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === '/api/teacher/classes/c1/classroom-mode'
+        && response.request().method() === 'POST',
+    )
+    await modeToggle.click()
+    const enabled = await (await enabledResponse).json()
+    expect(enabled.data.enabled).toBe(true)
+    await expect(page.getByText('课堂模式已开启')).toBeVisible()
   })
 
   test('student role cannot enter teacher workspace', async ({ page }) => {
