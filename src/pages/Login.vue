@@ -22,6 +22,7 @@
         <p v-if="error" class="error" role="alert">{{ error }}</p>
         <button class="btn btn-primary submit" :disabled="loading || !canSubmit">{{ loading ? '正在验证…' : '安全登录' }}</button>
       </form>
+      <p class="register"><RouterLink to="/account/password">忘记密码？</RouterLink> · <RouterLink to="/account/deletion/cancel">取消账号注销</RouterLink></p>
       <p class="register">第一次使用？<RouterLink to="/register">注册新账号</RouterLink></p>
       <p class="terms">登录即表示你同意平台服务协议与隐私政策。</p>
     </section>

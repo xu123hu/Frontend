@@ -231,31 +231,53 @@ export function mockApi(req, res, next) {
   const route = async () => {
     /* ---------- 认证 ---------- */
     const cookie = req.headers?.cookie || ''
-    const mockRole = /ma_mock_role=teacher/.test(cookie) ? 'teacher' : 'student'
-    const mockToken = mockRole === 'teacher' ? 'mock-token-teacher-preview' : 'mock-token-preview'
-    const mockIdentity = mockRole === 'teacher'
-      ? { id: 'mock-teacher', nickname: '王老师', status: 'active', onboarding_status: 'completed', roles: [{ role: 'teacher', status: 'approved', verified: true }], active_role: 'teacher', grade: '' }
-      : { id: 'mock-student', ...MOCK_USER, status: 'active', onboarding_status: 'completed', roles: [{ role: 'student', status: 'approved', verified: true }], active_role: 'student' }
+    const cookieValue = (name) => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`))?.[1] || ''
+    const mockRole = cookieValue('ma_mock_role') || 'student'
+    const mockState = cookieValue('ma_mock_state') || 'approved'
+    const mockDual = cookieValue('ma_mock_dual') === '1'
+    const mockToken = mockRole === 'student' ? 'mock-token-preview' : `mock-token-${mockRole}-preview`
+    const identities = {
+      admin: { id: 'mock-admin', nickname: '管理员', status: 'active', onboarding_status: 'completed', roles: [{ role: 'admin', status: 'approved', verified: true }], active_role: 'admin', grade: '' },
+      researcher: { id: 'mock-researcher', nickname: '陈研究员', status: 'active', onboarding_status: 'completed', roles: [{ role: 'researcher', status: 'approved', verified: true }], active_role: 'researcher', grade: '' },
+      teacher: { id: 'mock-teacher', nickname: '王老师', status: 'active', onboarding_status: 'completed', roles: [{ role: 'teacher', status: mockState, verified: mockState === 'approved' }], active_role: 'teacher', grade: '' },
+      student: { id: 'mock-student', ...MOCK_USER, status: 'active', onboarding_status: 'completed', roles: [{ role: 'student', status: 'approved', verified: true }, ...(mockDual ? [{ role: 'teacher', status: 'approved', verified: true }] : [])], active_role: 'student' },
+    }
+    const mockIdentity = identities[mockRole] || identities.student
     if (method === 'POST' && url === '/auth/token/refresh') return ok(res, { access_token: mockToken, expires_in: 900 })
     if (method === 'GET' && url === '/auth/me') {
       const authz = req.headers?.authorization || ''
-      return ok(res, authz.includes('mock-token-teacher-preview') ? {
-        id: 'mock-teacher', nickname: '王老师', status: 'active', onboarding_status: 'completed',
-        roles: [{ role: 'teacher', status: 'approved', verified: true }], active_role: 'teacher', grade: '',
-      } : {
-        id: 'mock-student', ...MOCK_USER, status: 'active', onboarding_status: 'completed',
-        roles: [{ role: 'student', status: 'approved', verified: true }], active_role: 'student',
-      })
+      const tokenRole = ['admin', 'researcher', 'teacher'].find((role) => authz.includes(`mock-token-${role}-preview`)) || 'student'
+      return ok(res, identities[tokenRole])
     }
     if (method === 'POST' && url === '/auth/challenges/sms') return ok(res, { challenge_id: 'mock-challenge', expires_in: 300, retry_after: 1, demo_code: '123456' })
     if (method === 'POST' && url === '/auth/login/sms') return json(() => ok(res, { access_token: 'mock-token-preview', expires_in: 900, onboarding_required: true, user: { id: 'new-student', nickname: '', status: 'active', onboarding_status: 'required', roles: [{ role: 'student', status: 'approved', verified: true }], active_role: 'student' } }))
     if (method === 'POST' && url === '/identity/onboarding/student') return ok(res, { onboarding_required: false })
     if (method === 'POST' && url === '/identity/role-applications') return json((b) => ok(res, { id: 'mock-application', role: b.role, status: 'pending' }))
     if (method === 'GET' && url === '/identity/role-applications/current') return ok(res, [{ id: 'mock-application', role: 'teacher', status: 'pending', organization_name: '示例中学' }])
+    if (method === 'POST' && url === '/auth/reauth') return ok(res, { reauthenticated: true, valid_for: 600 })
+    if (method === 'POST' && url === '/auth/password/reset') return ok(res, { password_reset: true })
+    if (method === 'POST' && url === '/auth/role/switch') return json((b) => ok(res, { access_token: b.role === 'student' ? 'mock-token-preview' : `mock-token-${b.role}-preview`, expires_in: 900 }))
+    if (method === 'GET' && url === '/auth/sessions') return ok(res, [
+      { id: 'current-session', device_name: 'Chrome · Windows', current: true, revoked: false, last_seen_at: '刚刚' },
+      { id: 'other-session', device_name: 'Firefox · macOS', current: false, revoked: false, last_seen_at: '昨天' },
+    ])
+    if (method === 'DELETE' && url === '/auth/sessions/other-session') return ok(res, { revoked: true })
+    if (method === 'POST' && url === '/auth/logout-all') return ok(res, { logged_out: true })
+    if (method === 'POST' && url === '/identity/phone/change') return ok(res, { phone: '13900000000', sessions_revoked: true })
+    if (method === 'POST' && url === '/identity/account/deletion') return ok(res, { status: 'cooling_off', execute_after: '2026-08-29T00:00:00Z' })
+    if (method === 'GET' && url === '/identity/account/deletion') return ok(res, null)
+    if (method === 'POST' && url === '/identity/account/deletion/cancel') return ok(res, { status: 'cancelled' })
+    if (method === 'GET' && url === '/admin/identity/applications') return ok(res, [
+      { id: 'teacher-application', role: 'teacher', status: 'pending', organization_name: '示例中学' },
+      { id: 'researcher-application', role: 'researcher', status: 'pending', organization_name: '示例研究院' },
+    ])
+    if (method === 'POST' && /^\/admin\/identity\/applications\/[^/]+\/(approve|reject|request-more-info)$/.test(url)) {
+      const status = url.endsWith('/approve') ? 'approved' : url.endsWith('/reject') ? 'rejected' : 'needs_more_info'
+      return ok(res, { status })
+    }
     if (method === 'POST' && url === '/auth/login') return json((b) => ok(res, { token: 'mock-token-' + Date.now(), user: { ...MOCK_USER } }))
     if (method === 'POST' && url === '/auth/login-by-code') return json((b) => ok(res, { token: 'mock-token-' + Date.now(), user: { ...MOCK_USER } }))
     if (method === 'POST' && url === '/auth/sms-code') return ok(res, { sent: true })
-    if (method === 'POST' && url === '/auth/role/switch') return ok(res, { ok: true })
 
     /* ---------- 会话 ---------- */
     if (method === 'GET' && url === '/agent/conversations') {

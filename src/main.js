@@ -19,7 +19,8 @@ if (useMock) {
   try { mockRole = JSON.parse(localStorage.getItem('ma_user') || 'null')?.active_role || mockRole } catch { /* ignore */ }
   document.cookie = `ma_mock_role=${mockRole}; path=/; SameSite=Lax`
   document.cookie = 'ma_csrf=mock-csrf; path=/; SameSite=Lax'
-  setAccessToken(mockRole === 'teacher' ? 'mock-token-teacher-preview' : 'mock-token-preview')
+  const mockToken = mockRole === 'student' ? 'mock-token-preview' : `mock-token-${mockRole}-preview`
+  setAccessToken(mockToken)
   try { localStorage.setItem('ma_user', JSON.stringify(resolveMockUser(mockRole))) } catch { /* ignore */ }
 }
 
