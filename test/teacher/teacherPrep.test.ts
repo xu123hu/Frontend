@@ -36,7 +36,7 @@ beforeEach(() => {
   lessonStore.error = null
   lessonStore.adapt.mockImplementation(async (payload) => {
     Object.assign(artifact, { class_id: payload.class_id, status: 'draft', content: { topic: payload.topic, timeline: artifact.content.timeline, duration_minutes: payload.duration_minutes } })
-    lessonStore.artifact = artifact
+    return { artifact, error: null }
   })
   lessonStore.save.mockResolvedValue(artifact)
   setArtifact('draft')
@@ -227,7 +227,7 @@ describe('TeacherPrepView topic-driven artifact workflow', () => {
     await wrapper.get('[aria-label="课题"]').setValue('旧课题')
     await wrapper.get('form').trigger('submit')
     expect(wrapper.text()).toContain('旧教案')
-    lessonStore.adapt.mockImplementationOnce(async () => { lessonStore.error = '生成教案失败' })
+    lessonStore.adapt.mockImplementationOnce(async () => ({ artifact: null, error: '生成教案失败' }))
     await wrapper.get('[aria-label="课题"]').setValue('新课题')
     await wrapper.get('form').trigger('submit')
     expect(lessonStore.artifact).toBeNull()
@@ -235,6 +235,67 @@ describe('TeacherPrepView topic-driven artifact workflow', () => {
     const save = wrapper.findAll('button').find((button) => button.text().trim() === '保存草稿')!
     await save.trigger('click')
     expect(lessonStore.save).not.toHaveBeenCalled()
+  })
+
+  it('keeps B after a pending A adapt resolves or rejects following a class change', async () => {
+    const target = { ...artifact, artifact_id: 'lesson-b', class_id: 'class-2', content: { timeline: [{ phase: 'B 教案', minutes: 10, activities: ['B'] }] } }
+    let resolveA!: (value: any) => void
+    const pendingA = new Promise((resolve) => { resolveA = resolve })
+    lessonStore.adapt.mockImplementationOnce(() => pendingA)
+    listLessons.mockResolvedValueOnce([target])
+    const wrapper = mountPrep()
+    await flushPromises()
+    await wrapper.get('[aria-label="课题"]').setValue('A 课题')
+    await wrapper.get('form').trigger('submit')
+    await wrapper.get('select').setValue('class-2')
+    await flushPromises()
+    expect(lessonStore.artifact?.artifact_id).toBe('lesson-b')
+    resolveA({ artifact: { ...artifact, artifact_id: 'lesson-a', class_id: 'class-1', content: { timeline: [{ phase: 'A 教案', minutes: 10, activities: ['A'] }] } }, error: null })
+    await flushPromises()
+    expect(lessonStore.artifact?.artifact_id).toBe('lesson-b')
+
+    wrapper.unmount()
+    let rejectA!: (reason?: unknown) => void
+    const rejectedA = new Promise((_resolve, reject) => { rejectA = reject })
+    lessonStore.adapt.mockImplementationOnce(() => rejectedA)
+    listLessons.mockResolvedValueOnce([target])
+    const rejectWrapper = mountPrep()
+    await flushPromises()
+    await rejectWrapper.get('[aria-label="课题"]').setValue('A 课题')
+    await rejectWrapper.get('form').trigger('submit')
+    await rejectWrapper.get('select').setValue('class-2')
+    await flushPromises()
+    rejectA(new Error('A 生成失败'))
+    await flushPromises()
+    expect(lessonStore.artifact?.artifact_id).toBe('lesson-b')
+  })
+
+  it('keeps B after a pending A recent-lesson lookup resolves or rejects following a class change', async () => {
+    const target = { ...artifact, artifact_id: 'source-b', class_id: 'class-2', content: { timeline: [{ phase: 'B 最近教案', minutes: 10, activities: ['B'] }] } }
+    let resolveA!: (value: any[]) => void
+    const pendingA = new Promise<any[]>((resolve) => { resolveA = resolve })
+    listLessons.mockImplementationOnce(() => pendingA).mockResolvedValueOnce([target])
+    const wrapper = mountPrep()
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text().includes('上次类似课'))!.trigger('click')
+    await wrapper.get('select').setValue('class-2')
+    await flushPromises()
+    resolveA([{ ...artifact, artifact_id: 'source-a', class_id: 'class-1', content: { timeline: [{ phase: 'A 最近教案', minutes: 10, activities: ['A'] }] } }])
+    await flushPromises()
+    expect(lessonStore.artifact?.artifact_id).toBe('source-b')
+
+    wrapper.unmount()
+    let rejectA!: (reason?: unknown) => void
+    const rejectedA = new Promise<any[]>((_resolve, reject) => { rejectA = reject })
+    listLessons.mockImplementationOnce(() => rejectedA).mockResolvedValueOnce([target])
+    const rejectWrapper = mountPrep()
+    await flushPromises()
+    await rejectWrapper.findAll('button').find((button) => button.text().includes('上次类似课'))!.trigger('click')
+    await rejectWrapper.get('select').setValue('class-2')
+    await flushPromises()
+    rejectA(new Error('A 最近教案失败'))
+    await flushPromises()
+    expect(lessonStore.artifact?.artifact_id).toBe('source-b')
   })
 
   it('writes edited activities back to the exact save payload and balances to the requested duration', async () => {

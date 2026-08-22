@@ -3,6 +3,11 @@ import { artifactsApi } from '@/api/teacher/artifacts'
 import { lessonsApi } from '@/api/teacher/lessons'
 import type { LessonAdaptRequest, TeacherArtifact } from '@/types/teacher'
 
+export interface LessonAdaptResult {
+  artifact: TeacherArtifact | null
+  error: string | null
+}
+
 export const useLessonArtifactsStore = defineStore('lessonArtifacts', {
   state: () => ({
     artifact: null as TeacherArtifact | null,
@@ -12,7 +17,7 @@ export const useLessonArtifactsStore = defineStore('lessonArtifacts', {
     error: null as string | null,
   }),
   actions: {
-    async adapt(payload: LessonAdaptRequest, signal?: AbortSignal) {
+    async adapt(payload: LessonAdaptRequest, signal?: AbortSignal): Promise<LessonAdaptResult> {
       this.loading = true
       this.error = null
       // A new topic is a new draft attempt: never leave an older lesson
@@ -20,11 +25,10 @@ export const useLessonArtifactsStore = defineStore('lessonArtifacts', {
       this.artifact = null
       try {
         const res = await lessonsApi.adapt(payload, signal)
-        this.artifact = res.data
+        return { artifact: res.data, error: null }
       } catch (e: any) {
-        if (e?.code === -2) return
-        this.artifact = null
-        this.error = e?.message || '生成教案失败'
+        if (e?.code === -2) return { artifact: null, error: null }
+        return { artifact: null, error: e?.message || '生成教案失败' }
       } finally { this.loading = false }
     },
     async save(payload: unknown, signal?: AbortSignal) {

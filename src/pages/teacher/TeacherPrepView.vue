@@ -212,7 +212,21 @@ interface Suggestion {
 }
 
 const suggestions = ref<Suggestion[]>([])
-let classLoadSequence = 0
+let operationEpoch = 0
+
+function beginOperation() {
+  operationEpoch += 1
+  return operationEpoch
+}
+
+function isCurrentOperation(epoch: number, targetClassId: string) {
+  return epoch === operationEpoch && selectedClass.value === targetClassId
+}
+
+function clearLessonState() {
+  store.artifact = null
+  lessonSteps.value = []
+}
 
 // ---- 交互逻辑 ----
 async function selectSource(id: string) {
@@ -223,11 +237,25 @@ async function selectSource(id: string) {
     return
   }
   if (id === 'last-lesson' && selectedClass.value) {
-    const lessons = await lessonsApi.list(selectedClass.value)
-    if (lessons.length) {
-      store.artifact = lessons[0]
-      applyArtifact()
-      showToast?.('已载入服务器中的最近教案')
+    const targetClassId = selectedClass.value
+    const epoch = beginOperation()
+    clearLessonState()
+    try {
+      const lessons = await lessonsApi.list(targetClassId)
+      if (!isCurrentOperation(epoch, targetClassId)) return
+      const targetLesson = lessons.find((lesson) => lesson.class_id === targetClassId)
+      if (targetLesson) {
+        store.artifact = targetLesson
+        applyArtifact()
+        showToast?.('已载入服务器中的最近教案')
+        return
+      }
+      await createLesson()
+      return
+    } catch (e: any) {
+      if (!isCurrentOperation(epoch, targetClassId)) return
+      clearLessonState()
+      showToast?.(e?.message || '最近教案加载失败')
       return
     }
   }
@@ -237,14 +265,13 @@ async function selectSource(id: string) {
 
 async function onClassChange() {
   const targetClassId = selectedClass.value
-  const requestSequence = ++classLoadSequence
+  const epoch = beginOperation()
   const className = classes.value.find((item) => item.id === targetClassId)?.name || ''
   ctx.setClass(targetClassId, className)
-  store.artifact = null
-  lessonSteps.value = []
+  clearLessonState()
   try {
     const lessons = await lessonsApi.list(targetClassId)
-    if (requestSequence !== classLoadSequence || selectedClass.value !== targetClassId) return
+    if (!isCurrentOperation(epoch, targetClassId)) return
     const targetLesson = lessons.find((lesson) => lesson.class_id === targetClassId)
     if (targetLesson) {
       store.artifact = targetLesson
@@ -252,13 +279,11 @@ async function onClassChange() {
       showToast?.(`已切换到${className}，已载入该班教案`)
       return
     }
-    store.artifact = null
-    lessonSteps.value = []
+    clearLessonState()
     showToast?.(`已切换到${className}`)
   } catch (e: any) {
-    if (requestSequence !== classLoadSequence || selectedClass.value !== targetClassId) return
-    store.artifact = null
-    lessonSteps.value = []
+    if (!isCurrentOperation(epoch, targetClassId)) return
+    clearLessonState()
     showToast?.(e?.message || '目标班级教案加载失败')
   }
 }
@@ -460,16 +485,26 @@ async function createLesson() {
     return
   }
   if (!selectedClass.value) return
-  store.artifact = null
-  lessonSteps.value = []
-  await store.adapt({ class_id: selectedClass.value, topic: cleanTopic, requirements: requirements.value.trim(), duration_minutes: Math.max(1, Number(durationMinutes.value) || 45) })
-  const generated = store.artifact as TeacherArtifact | null
-  if (!generated || store.error || generated.class_id !== selectedClass.value) {
-    store.artifact = null
-    lessonSteps.value = []
-    if (store.error) showToast?.(store.error)
+  const targetClassId = selectedClass.value
+  const epoch = beginOperation()
+  clearLessonState()
+  let result
+  try {
+    result = await store.adapt({ class_id: targetClassId, topic: cleanTopic, requirements: requirements.value.trim(), duration_minutes: Math.max(1, Number(durationMinutes.value) || 45) })
+  } catch (e: any) {
+    if (!isCurrentOperation(epoch, targetClassId)) return
+    clearLessonState()
+    showToast?.(e?.message || '生成教案失败')
     return
   }
+  if (!isCurrentOperation(epoch, targetClassId)) return
+  const generated = result.artifact as TeacherArtifact | null
+  if (!generated || result.error || generated.class_id !== targetClassId) {
+    clearLessonState()
+    if (result.error) showToast?.(result.error)
+    return
+  }
+  store.artifact = generated
   applyArtifact()
 }
 
