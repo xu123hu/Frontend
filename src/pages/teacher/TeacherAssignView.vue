@@ -334,7 +334,6 @@ async function generatePaper() {
       question_types: { choice, blank, text: Math.max(0, form.count - choice - blank) },
       difficulty: { easy: difficultyRatio.value.basic / 100, medium: difficultyRatio.value.medium / 100, hard: difficultyRatio.value.hard / 100 },
       exclude_hashes: [],
-      client_request_id: `quiz-${Date.now()}`,
     })
     const items = (store.quizArtifact?.content?.items || []) as Array<any>
     previewQuestions.value = items.map((item, index) => ({

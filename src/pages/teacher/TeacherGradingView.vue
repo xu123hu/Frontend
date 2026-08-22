@@ -40,6 +40,8 @@
           <div v-if="store.detail.file_id" class="t-card soft" style="margin-top: 20px;">
             <b>本题包含学生拍照原稿</b>
             <p class="t-small t-muted" style="margin-bottom: 0;">文件编号：{{ store.detail.file_id }}。评分建议已按低置信度转人工复核，不会自动记分。</p>
+            <img v-if="photoUrl" :src="photoUrl" alt="学生拍照原稿" style="display: block; max-width: 100%; max-height: 640px; margin-top: 12px; border-radius: 8px; object-fit: contain;" />
+            <p v-else class="t-small t-muted">正在加载原始照片…</p>
           </div>
         </div>
       </section>
@@ -83,8 +85,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, ref, watch } from 'vue'
+import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { authHeaders } from '@/api/client'
 import { useGradingStore } from '@/stores/teacher/grading'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 
@@ -95,6 +98,7 @@ const showToast = inject<(msg: string) => void>('showToast', () => {})
 const selectedId = ref('')
 const finalScore = ref<number | null>(null)
 const feedback = ref('')
+const photoUrl = ref('')
 
 const pendingCount = computed(() => store.queue.filter((item) => item.status !== 'confirmed').length)
 const suggestedScore = computed(() => store.detail?.suggestion?.suggestion_score ?? '—')
@@ -104,6 +108,20 @@ const canConfirm = computed(() => Boolean(store.detail?.suggestion?.suggestion_i
 watch(() => store.detail, (detail) => {
   finalScore.value = detail?.suggestion?.suggestion_score ?? detail?.teacher_final_score ?? null
   feedback.value = detail?.suggestion?.teacher_feedback || ''
+})
+
+watch(() => store.detail?.submission_item_id, async (submissionItemId) => {
+  if (photoUrl.value) URL.revokeObjectURL(photoUrl.value)
+  photoUrl.value = ''
+  if (!submissionItemId || !store.detail?.file_id) return
+  try {
+    const response = await fetch(`/api/teacher/grading/${submissionItemId}/file`, {
+      headers: authHeaders() as HeadersInit,
+    })
+    if (response.ok) photoUrl.value = URL.createObjectURL(await response.blob())
+  } catch {
+    photoUrl.value = ''
+  }
 })
 
 function statusText(status: string) {
@@ -160,5 +178,9 @@ onMounted(async () => {
     selectedId.value = first.submission_item_id
     await loadSelected()
   }
+})
+
+onUnmounted(() => {
+  if (photoUrl.value) URL.revokeObjectURL(photoUrl.value)
 })
 </script>
