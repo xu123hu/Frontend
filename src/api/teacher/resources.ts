@@ -49,4 +49,8 @@ export const resourcesApi = {
       idempotencyKey,
       signal,
     ),
+  publish: (resourceId: string, signal?: AbortSignal) =>
+    teacherPost<TeacherResource>(`/teacher/resources/${resourceId}/publish`, {}, undefined, signal),
+  unpublish: (resourceId: string, signal?: AbortSignal) =>
+    teacherPost<TeacherResource>(`/teacher/resources/${resourceId}/unpublish`, {}, undefined, signal),
 }

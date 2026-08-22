@@ -1,73 +1,136 @@
 <template>
-  <section class="tdr-ws" :aria-label="'今日'">
-    <header class="tdr-ws-head">
-      <h1>今日工作台</h1>
-      <p class="tdr-ws-desc">下一节课、待批、截止事项与可直接执行的动作。</p>
-    </header>
-
-    <div v-if="store.loading" class="tdr-ws-grid">
-      <div v-for="i in 3" :key="i" class="tdr-skeleton" style="height: 120px"></div>
+  <div id="page-today">
+    <div class="t-hello">
+      <h1>{{ greeting }}，{{ teacherName }}老师</h1>
+      <p v-if="store.loading">正在汇总真实教学数据…</p>
+      <p v-else>当前有 {{ gradingCount }} 份待批作答、{{ deadlines.length }} 项截止事项。</p>
     </div>
 
-    <template v-else>
-      <div v-if="store.error" class="tdr-banner err">{{ store.error }}</div>
+    <div v-if="store.error" class="t-card" style="color: var(--t-red); margin-bottom: 16px;">{{ store.error }}</div>
 
-      <div class="tdr-ws-grid">
-        <div class="tdr-card tcard">
-          <h3 class="tcard-title">下一节课</h3>
-          <p v-if="store.data?.next_lesson" class="tcard-big">{{ store.data.next_lesson.topic }}</p>
-          <p v-else class="tcard-empty muted">今天暂无排课</p>
+    <div class="t-today-layout">
+      <div class="t-col-left" style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+        <div v-if="nextLesson" class="t-card hero t-next-lesson">
+          <div class="t-lesson-top">
+            <div>
+              <div class="t-lesson-time">下一节课 · {{ formatTime(nextLesson.starts_at) }}</div>
+              <div class="t-lesson-name">{{ nextLesson.topic }}</div>
+              <div class="t-lesson-meta">{{ nextLesson.class_name || '当前班级' }}</div>
+            </div>
+            <span class="t-tag amber">待准备</span>
+          </div>
+          <div class="t-lesson-actions">
+            <button class="t-btn primary lg" type="button" @click="goPrep(nextLesson.class_id, nextLesson.class_name)">继续备课</button>
+            <button class="t-btn lg" type="button" @click="goAssign(nextLesson.class_id, nextLesson.class_name)">布置试卷</button>
+          </div>
         </div>
-        <div class="tdr-card tcard">
-          <h3 class="tcard-title">待批</h3>
-          <p class="tcard-big">{{ store.data?.grading_queue.count ?? 0 }} 份</p>
-          <button v-if="store.data?.grading_queue.count" class="tdr-btn" type="button" @click="router.push('/teacher/grading')">去批改</button>
-          <p v-else class="tcard-empty muted">当前没有待批</p>
+        <div v-else class="t-card">
+          <h2 style="margin-top: 0;">今天暂无已登记课程</h2>
+          <p class="t-muted">你仍可以进入备课中心创建教案和课件。</p>
+          <button class="t-btn primary" type="button" @click="goPrep()">开始备课</button>
         </div>
-        <div class="tdr-card tcard">
-          <h3 class="tcard-title">截止事项</h3>
-          <ul v-if="store.data?.deadlines.length" class="tdl">
-            <li v-for="d in store.data.deadlines" :key="d.id">{{ d.title }}<span class="muted"> · {{ d.due_at }}</span></li>
-          </ul>
-          <p v-else class="tcard-empty muted">暂无截止事项</p>
+
+        <div class="t-card">
+          <div class="t-section-title">
+            <h3>需要处理</h3>
+            <span class="sub">来自当前数据库</span>
+          </div>
+          <div class="t-task-list">
+            <div v-if="gradingCount" class="t-task-item">
+              <div class="t-task-icon" aria-hidden="true">✎</div>
+              <div class="t-task-main">
+                <div class="t">待确认作答</div>
+                <div class="m">预批改建议不会自动计入成绩，需要教师逐份确认</div>
+              </div>
+              <span class="t-task-count">{{ gradingCount }}</span>
+              <button class="t-btn sm primary" type="button" @click="router.push('/teacher/grading')">去批改</button>
+            </div>
+            <div v-for="deadline in deadlines" :key="deadline.id" class="t-task-item">
+              <div class="t-task-icon" aria-hidden="true">⏱</div>
+              <div class="t-task-main">
+                <div class="t">{{ deadline.title }}</div>
+                <div class="m">{{ deadline.kind }} · {{ formatDateTime(deadline.due_at) }}</div>
+              </div>
+            </div>
+            <p v-if="!gradingCount && !deadlines.length" class="t-muted">当前没有待处理事项。</p>
+          </div>
         </div>
       </div>
 
-      <div class="tdr-ws-block mt">
-        <div class="tdr-ws-h-row">
-          <h3 class="tdr-ws-h">可行动洞察</h3>
-          <span v-if="store.data?.degraded" class="tdr-badge degraded">数据源降级</span>
+      <div class="t-col-right" style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+        <div class="t-card hero t-butler-brief">
+          <div class="t-row" style="gap: 12px;">
+            <div class="t-butler-orb" aria-hidden="true">✦</div>
+            <div>
+              <h3>教学行动建议</h3>
+              <p>建议由班级数据确定性聚合产生；数据不足时不会生成虚构结论。</p>
+            </div>
+          </div>
+          <div v-if="insights.length" class="t-brief-list">
+            <div v-for="(insight, index) in insights" :key="insight.insight_id" class="t-brief-item">
+              <b class="t-spark">{{ index + 1 }}</b>
+              <span><b>{{ insight.summary }}</b><br>{{ insight.evidence }}</span>
+            </div>
+          </div>
+          <p v-else style="margin-bottom: 0;">暂无足够数据形成教学洞察。</p>
         </div>
-        <div v-if="!store.data?.actionable_insights.length" class="tdr-card">
-          <p class="tcard-empty muted">暂无新的可行动洞察（空数据不伪造成“全部完成”）。</p>
-        </div>
-        <div v-else class="tdr-ws-actions">
-          <ActionableInsightCard
-            v-for="ins in store.data.actionable_insights" :key="ins.insight_id"
-            :insight="ins" @view="onView" @apply="onApply"
-          />
+
+        <div class="t-card">
+          <div class="t-section-title"><h3>快捷工作入口</h3></div>
+          <div class="t-grade-buttons">
+            <button class="t-btn primary" type="button" @click="router.push('/teacher/prep')">备课与 PPT</button>
+            <button class="t-btn" type="button" @click="router.push('/teacher/assign')">出题并发布</button>
+            <button class="t-btn" type="button" @click="router.push('/teacher/resources')">教学资源</button>
+          </div>
         </div>
       </div>
-    </template>
-  </section>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTeacherTodayStore } from '@/stores/teacher/today'
-import ActionableInsightCard from '@/components/teacher/ActionableInsightCard.vue'
-import type { ActionableInsight } from '@/types/teacher'
+import { useTeacherContextStore } from '@/stores/teacher/context'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const store = useTeacherTodayStore()
+const context = useTeacherContextStore()
+const auth = useAuthStore()
 
-onMounted(() => { store.fetch() })
+const hour = new Date().getHours()
+const greeting = computed(() => hour < 11 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好')
+const teacherName = computed(() => auth.nickname || '教师')
+const nextLesson = computed(() => store.data?.next_lesson || null)
+const gradingCount = computed(() => store.data?.grading_queue?.count || 0)
+const deadlines = computed(() => store.data?.deadlines || [])
+const insights = computed(() => store.data?.actionable_insights || [])
 
-function onApply(_ins: ActionableInsight, action: string) {
-  if (action.includes('教案') || action.includes('备课')) router.push('/teacher/prep')
-  else if (action.includes('巩固题') || action.includes('出题')) router.push('/teacher/assign')
-  else router.push('/teacher/grading')
+function formatTime(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
-function onView(_ins: ActionableInsight) { router.push('/teacher/classes') }
+
+function formatDateTime(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function selectClass(classId?: string, className?: string) {
+  if (classId) context.setClass(classId, className || null)
+}
+
+function goPrep(classId?: string, className?: string) {
+  selectClass(classId, className)
+  router.push('/teacher/prep')
+}
+
+function goAssign(classId?: string, className?: string) {
+  selectClass(classId, className)
+  router.push('/teacher/assign')
+}
+
+onMounted(() => store.fetch())
 </script>

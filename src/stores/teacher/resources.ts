@@ -21,6 +21,7 @@ export const useResourcesStore = defineStore('resources', {
       this.loading = true; this.error = null
       try {
         this.ticket = await resourcesApi.upload(file, signal)
+        this.patchItem(this.ticket as unknown as TeacherResource)
         return this.ticket
       } catch (e: any) { if (e?.code === -2) return null; this.error = e?.message || '上传失败'; throw e }
       finally { this.loading = false }
@@ -34,6 +35,12 @@ export const useResourcesStore = defineStore('resources', {
       this.error = null
       try { this.patchItem((await resourcesApi.understand(id, undefined, signal)).data) }
       catch (e: any) { this.error = e?.message || '解析失败'; throw e }
+    },
+    async setPublished(id: string, published: boolean, signal?: AbortSignal) {
+      const response = published
+        ? await resourcesApi.publish(id, signal)
+        : await resourcesApi.unpublish(id, signal)
+      this.patchItem(response.data)
     },
     patchItem(r: TeacherResource) {
       const i = this.items.findIndex((x) => x.resource_id === r.resource_id)

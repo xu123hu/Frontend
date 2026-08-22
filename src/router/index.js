@@ -23,6 +23,7 @@ const routes = [
   { path: '/exam', component: () => import('@/pages/student/ExamView.vue'), meta: { title: '模拟考试' } },
   { path: '/class', component: () => import('@/pages/student/ClassView.vue'), meta: { title: '我的班级' } },
   { path: '/tasks', component: () => import('@/pages/student/TasksView.vue'), meta: { title: '课堂任务' } },
+  { path: '/tasks/:id', component: () => import('@/pages/student/AssignmentView.vue'), meta: { title: '作业作答' } },
   { path: '/dual', component: () => import('@/pages/student/DualView.vue'), meta: { title: '双师课堂' } },
   { path: '/resource', component: () => import('@/pages/student/ResourceView.vue'), meta: { title: '资源推荐' } },
   { path: '/profile', component: () => import('@/pages/student/ProfileView.vue'), meta: { title: '个人中心' } },

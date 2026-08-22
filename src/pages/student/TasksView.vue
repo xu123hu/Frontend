@@ -50,10 +50,12 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
 
 const toast = useToastStore()
+const router = useRouter()
 const activeTab = ref('todo')
 
 /* ---------- 任务列表（GET /api/student/assignments?status=all，客户端分类） ---------- */
@@ -141,7 +143,7 @@ const emptyText = computed(() => {
 })
 
 function startTask(t) {
-  toast.info(`${t.icon} 「${t.tt}」作答入口即将上线`)
+  router.push(`/tasks/${t.id}`)
 }
 function viewDetail(t, btn) {
   toast.info(`${btn}：${t.tt}`)

@@ -93,6 +93,7 @@ export const studentApi = {
   // F10 任务
   assignments: (status) => api.get('/student/assignments', status ? { status } : {}),
   assignmentDetail: (id) => api.get(`/student/assignments/${id}`),
+  assignmentResult: (id) => api.get(`/student/assignments/${id}/result`),
   // 闭环迭代13：练题中心首页推荐聚合（薄弱点+模拟卷+待复习+连击+今日一题）
   labRecommend: () => api.get('/student/lab/recommend'),
 }

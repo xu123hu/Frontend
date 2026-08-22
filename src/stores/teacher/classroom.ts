@@ -20,7 +20,7 @@ export const useClassroomStore = defineStore('classroom', {
         this.mode = (await classroomApi.setMode(
           classId,
           { enabled, lesson_id: lessonId ?? undefined },
-          idempotencyKey ?? idem.keyFor(`mode:${classId}:${enabled ? 'on' : 'off'}`),
+          idempotencyKey ?? idem.keyFor(`mode:${classId}:${enabled ? 'on' : 'off'}:${crypto.randomUUID()}`),
         )).data
       } catch (e: any) { this.error = e?.message || '操作课堂模式失败'; throw e } finally { this.loading = false }
     },

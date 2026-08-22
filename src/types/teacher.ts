@@ -228,6 +228,12 @@ export interface TeacherResource {
   task_id?: string | null
   error?: string | null
   pages?: { page: number; text?: string; snippet?: string }[]
+  slices?: { slice_id: string; text: string }[]
+  summary?: string
+  published?: boolean
+  degraded?: boolean
+  warnings?: string[]
+  download_url?: string
   created_at: string
 }
 
@@ -251,6 +257,7 @@ export interface GradingQueueItem {
 
 export interface GradingDetail extends GradingQueueItem {
   original_answer: string
+  file_id?: string | null
   scoring_standard: string
   suggestion: GradingSuggestion | null
 }

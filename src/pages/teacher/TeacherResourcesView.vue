@@ -1,79 +1,48 @@
 <template>
-  <section class="tdr-ws" :aria-label="'资源'">
-    <header class="tdr-ws-head">
-      <h1>资源</h1>
-      <p class="tdr-ws-desc">上传 → 解析/预处理 → 可检索；文档理解显示来源定位。</p>
-    </header>
-
-    <form class="tdr-card tfrm" @submit.prevent="uploadFile">
-      <div class="tfrm-row">
-        <div class="tfrm-field">
-          <label for="res-pick">选择文件</label>
-          <input id="res-pick" type="file" @change="onPick" :disabled="store.loading" />
-        </div>
-        <button class="tdr-btn primary" type="submit" :disabled="!canUpload">{{ store.loading ? '上传中…' : '上传并预处理' }}</button>
-      </div>
-      <div v-if="store.error" class="tdr-banner err">{{ store.error }}</div>
-    </form>
-
-    <div class="tdr-ws-block">
-      <h3 class="tdr-ws-h">材料</h3>
-      <div v-if="store.loading" class="tdr-skeleton" style="height: 80px"></div>
-      <div v-for="r in store.items" :key="r.resource_id" class="tlist-item">
-        <div class="tlist-main">
-          <span class="tlist-title">{{ r.name }}</span>
-          <span class="tlist-meta">{{ r.file_type }} · {{ sizeText(r.size_bytes) }}</span>
-          <div v-if="r.pages && r.pages.length" class="tlist-meta">来源定位：{{ r.pages.length }} 页/切片</div>
-        </div>
-        <div class="tlist-meta res-actions">
-          <span class="tdr-badge" :class="r.status">{{ r.status }}</span>
-          <div v-if="r.error" class="tdr-banner err">{{ r.error }}</div>
-          <div class="tfrm-actions">
-            <button v-if="r.status === 'ready'" class="tdr-btn slim" type="button" @click="understand(r)">理解文档</button>
-            <button v-if="r.status === 'failed'" class="tdr-btn slim" type="button" @click="preprocess(r)">重试预处理</button>
+  <div id="page-resources">
+    <div class="t-page-head">
+      <div class="t-page-title"><h1>资源工作台</h1><p>文件真实保存；外部 AI 不可用时，文本提取、切片与摘要走本地降级。</p></div>
+      <button class="t-btn primary lg" type="button" :disabled="store.loading" @click="fileInput?.click()">{{ store.loading ? '处理中…' : '+ 上传资料' }}</button>
+      <input ref="fileInput" type="file" hidden accept=".txt,.md,.docx,.pdf,.png,.jpg,.jpeg" @change="onPicked">
+    </div>
+    <div v-if="store.error" class="t-card" style="color:var(--t-red)">{{ store.error }}</div>
+    <div v-else-if="!store.loading && !store.items.length" class="t-card t-muted" style="text-align:center;padding:40px">暂无资源，点击“上传资料”开始。</div>
+    <div v-else class="t-resource-grid">
+      <div v-for="res in store.items" :key="res.resource_id" class="t-resource">
+        <div class="t-resource-cover"><span>{{ icon(res.file_type) }}</span></div>
+        <div class="t-resource-body">
+          <b>{{ res.name }}</b>
+          <p>{{ res.file_type }} · {{ formatSize(res.size_bytes) }} · {{ statusText(res.status) }}</p>
+          <p v-if="res.summary" class="t-small">{{ res.summary }}</p>
+          <p v-if="res.warnings?.length" class="t-tiny t-muted">{{ res.warnings.join('；') }}</p>
+          <div class="t-row" style="gap:6px;flex-wrap:wrap">
+            <button class="t-btn sm" @click="preprocess(res.resource_id)">本地预处理</button>
+            <button class="t-btn sm" @click="understand(res.resource_id)">生成摘要</button>
+            <button class="t-btn sm" @click="download(res)">下载</button>
+            <button class="t-btn sm" :class="res.published ? 'soft' : 'primary'" @click="togglePublish(res)">{{ res.published ? '取消发布' : '发布' }}</button>
           </div>
         </div>
       </div>
-      <div v-if="!store.loading && !store.items.length" class="tdr-card"><p class="tcard-empty muted">暂无材料，请上传文件。</p></div>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { inject, onMounted, ref } from 'vue'
+import { authHeaders } from '@/api/client'
 import { useResourcesStore } from '@/stores/teacher/resources'
-import { useToastStore } from '@/stores/toast'
 import type { TeacherResource } from '@/types/teacher'
 
 const store = useResourcesStore()
-const toast = useToastStore()
-const selected = ref<File | null>(null)
-
-const canUpload = computed(() => !!selected.value && !store.loading)
-
-function onPick(e: Event) {
-  selected.value = (e.target as HTMLInputElement).files?.[0] ?? null
-}
-
-function sizeText(bytes: number) {
-  if (!bytes) return '—'
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / 1024 / 1024).toFixed(1) + ' MB'
-}
-
-async function uploadFile() {
-  if (!selected.value) return
-  try {
-    const ticket = await store.upload(selected.value)
-    if (ticket?.resource_id) await store.preprocess(ticket.resource_id)
-    selected.value = null
-    await store.fetch()
-  } catch { toast.error('上传失败') }
-}
-
-async function preprocess(r: TeacherResource) { try { await store.preprocess(r.resource_id); toast.info('已重新提交预处理') } catch { toast.error('失败') } }
-async function understand(r: TeacherResource) { try { await store.understand(r.resource_id); toast.info('已提交文档理解') } catch { toast.error('失败') } }
-
-onMounted(() => { store.fetch() })
+const fileInput = ref<HTMLInputElement | null>(null)
+const showToast = inject<(msg: string) => void>('showToast', () => {})
+function formatSize(bytes: number) { if (bytes < 1024) return `${bytes || 0} B`; if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`; return `${(bytes / 1048576).toFixed(1)} MB` }
+function icon(type: string) { if (type.includes('pdf') || type.includes('word')) return '📄'; if (type.includes('image')) return '🖼'; return '📁' }
+function statusText(status: string) { return status === 'ready' ? '可用' : status === 'failed' ? '失败' : '处理中' }
+async function onPicked(event: Event) { const input = event.target as HTMLInputElement; const file = input.files?.[0]; input.value = ''; if (!file) return; try { await store.upload(file); showToast('上传成功，资源已可用') } catch (e: any) { showToast(e?.message || '上传失败') } }
+async function preprocess(id: string) { try { await store.preprocess(id); showToast('本地预处理完成') } catch (e: any) { showToast(e?.message || '预处理失败') } }
+async function understand(id: string) { try { await store.understand(id); showToast('本地摘要已生成') } catch (e: any) { showToast(e?.message || '理解失败') } }
+async function togglePublish(resource: TeacherResource) { try { const next = !resource.published; await store.setPublished(resource.resource_id, next); showToast(next ? '已发布' : '已取消发布') } catch (e: any) { showToast(e?.message || '操作失败') } }
+async function download(resource: TeacherResource) { const response = await fetch(resource.download_url || `/api/teacher/resources/${resource.resource_id}/download`, { headers: authHeaders() as HeadersInit }); if (!response.ok) return showToast('下载失败'); const url = URL.createObjectURL(await response.blob()); const link = document.createElement('a'); link.href = url; link.download = resource.name; link.click(); URL.revokeObjectURL(url) }
+onMounted(() => store.fetch())
 </script>
