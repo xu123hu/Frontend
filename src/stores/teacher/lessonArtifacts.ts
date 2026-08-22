@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { artifactsApi } from '@/api/teacher/artifacts'
 import { lessonsApi } from '@/api/teacher/lessons'
-import type { TeacherArtifact } from '@/types/teacher'
+import type { LessonAdaptRequest, TeacherArtifact } from '@/types/teacher'
 
 export const useLessonArtifactsStore = defineStore('lessonArtifacts', {
   state: () => ({
@@ -12,7 +12,7 @@ export const useLessonArtifactsStore = defineStore('lessonArtifacts', {
     error: null as string | null,
   }),
   actions: {
-    async adapt(payload: unknown, signal?: AbortSignal) {
+    async adapt(payload: LessonAdaptRequest, signal?: AbortSignal) {
       this.loading = true
       this.error = null
       try {

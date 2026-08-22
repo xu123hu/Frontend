@@ -15,6 +15,16 @@
       </div>
     </header>
 
+    <form class="t-card" style="margin-bottom: 16px" @submit.prevent="createLesson">
+      <div class="t-section-title"><div><h2>本节课设定</h2><span class="sub">填写课题、教学要求与课时后生成可编辑草稿</span></div></div>
+      <div class="t-grid" style="grid-template-columns: 1fr 1fr 120px; gap: 10px">
+        <label>课题<input v-model="topic" aria-label="课题" class="t-input" placeholder="例如：导数的概念" /></label>
+        <label>教学要求<input v-model="requirements" aria-label="教学要求" class="t-input" placeholder="例如：包含例题、练习与当堂检测" /></label>
+        <label>课时（分钟）<input v-model.number="durationMinutes" aria-label="课时分钟" class="t-input" type="number" min="1" /></label>
+      </div>
+      <div style="margin-top: 10px"><button class="t-btn primary" type="submit">生成教案草稿</button></div>
+    </form>
+
     <!-- 从哪里开始卡片 -->
     <div class="t-card" style="margin-bottom: 16px">
       <div class="t-section-title">
@@ -150,7 +160,7 @@ import { artifactsApi } from '@/api/teacher/artifacts'
 import { lessonsApi } from '@/api/teacher/lessons'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import { useLessonArtifactsStore } from '@/stores/teacher/lessonArtifacts'
-import type { LessonPlanSection } from '@/types/teacher'
+import type { LessonTimelineItem } from '@/types/teacher'
 
 const router = useRouter()
 const ctx = useTeacherContextStore()
@@ -161,6 +171,9 @@ const showToast = inject('showToast') as (msg: string) => void
 const selectedClass = ref('')
 const classes = ref<Array<{ id: string; name: string }>>([])
 const selectedSource = ref('last-lesson')
+const topic = ref('')
+const requirements = ref('')
+const durationMinutes = ref(45)
 
 interface SourceOption {
   id: string
@@ -182,6 +195,7 @@ interface LessonStep {
   tagText: string
   tagClass: string
   description: string
+  activities: string[]
   added?: boolean
 }
 
@@ -231,7 +245,7 @@ async function saveDraft() {
   if (!store.artifact) return createLesson()
   await store.save({
     version: store.artifact.version,
-    content: { ...store.artifact.content, timeline: lessonSteps.value.map((s) => ({ phase: s.title, minutes: stepDuration(s) || 5 })) },
+    content: { ...store.artifact.content, timeline: lessonSteps.value.map((s) => ({ phase: s.title, minutes: stepDuration(s) || 5, activities: s.activities })) },
   })
   showToast?.('草稿已保存到服务器')
 }
@@ -312,9 +326,14 @@ function adoptSuggestion(sug: Suggestion) {
 
 async function generateSlides() {
   try {
-    if (!store.artifact) await createLesson()
-    if (!store.artifact) return
-    if (store.artifact.status === 'draft') await confirmLesson()
+    if (!store.artifact) {
+      showToast?.('请先生成并确认教案后再生成 PPT')
+      return
+    }
+    if (store.artifact.status !== 'confirmed') {
+      showToast?.('请先确认教案后再生成 PPT')
+      return
+    }
     const slide = (await lessonsApi.createSlides(store.artifact.artifact_id, { version: store.artifact.version, style: '简洁课堂' })).data
     const url = String(slide.content.download_url || '')
     const response = await fetch(url, { headers: authHeaders() as HeadersInit })
@@ -371,17 +390,19 @@ function downloadBlob(blob: Blob, filename: string) {
 
 // ---- 生命周期 ----
 function applyArtifact() {
-  const timeline = (store.artifact?.content?.timeline || []) as Array<{ phase?: string; minutes?: number }>
+  const timeline = (store.artifact?.content?.timeline || []) as LessonTimelineItem[]
   let elapsed = 0
   lessonSteps.value = timeline.map((step, index) => {
     const minutes = Number(step.minutes || 5)
+    const activities = Array.isArray(step.activities) ? step.activities.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim()) : []
     const item = {
       id: `step-${index + 1}`,
       title: step.phase || `环节 ${index + 1}`,
       timeRange: `${elapsed}-${elapsed + minutes} min`,
       tagText: '本地草稿',
       tagClass: 'blue',
-      description: '可编辑教学环节，确认后生成 PPT。',
+      description: activities.join('；'),
+      activities,
     }
     elapsed += minutes
     return item
@@ -389,8 +410,13 @@ function applyArtifact() {
 }
 
 async function createLesson() {
+  const cleanTopic = topic.value.trim()
+  if (!cleanTopic) {
+    showToast?.('请填写课题')
+    return
+  }
   if (!selectedClass.value) return
-  await store.adapt({ class_id: selectedClass.value, topic: '函数的单调性', requirements: '包含例题、练习与课堂小结', duration_minutes: 45 })
+  await store.adapt({ class_id: selectedClass.value, topic: cleanTopic, requirements: requirements.value.trim(), duration_minutes: Math.max(1, Number(durationMinutes.value) || 45) })
   applyArtifact()
   if (store.error) showToast?.(store.error)
 }
@@ -402,7 +428,6 @@ onMounted(async () => {
     if (classes.value.length) {
       selectedClass.value = classes.value[0].id
       ctx.setClass(classes.value[0].id, classes.value[0].name)
-      await createLesson()
     }
   } catch (e: any) { showToast?.(e?.message || '班级加载失败') }
 })

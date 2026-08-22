@@ -161,6 +161,20 @@ export interface QuizQuestion {
   answer_analysis?: string | null
 }
 
+/** 教师备课生成请求；输入由备课页显式采集，不能由页面默认课题隐式补齐。 */
+export interface LessonAdaptRequest {
+  class_id: string
+  topic: string
+  requirements: string
+  duration_minutes: number
+}
+
+export interface LessonTimelineItem {
+  phase?: string
+  minutes?: number
+  activities?: string[]
+}
+
 export interface QuizSet {
   knowledge_points: string[]
   count: number
