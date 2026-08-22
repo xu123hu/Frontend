@@ -1,5 +1,5 @@
 import type {
-  ActionableInsight, GradingQueueItem, SourceRef, TeacherArtifact, TeacherResource, TeacherTodayData, VideoInsight,
+  ActionableInsight, GradingDetail, GradingQueueItem, SourceRef, TeacherArtifact, TeacherResource, TeacherTodayData, VideoInsight,
 } from '@/types/teacher'
 
 export const iso = (d: Date = new Date()) => d.toISOString()
@@ -78,11 +78,14 @@ export function lessonArtifact(classId: string, topic: string, requirements: str
 }
 
 export function quizArtifact(kps: string[], count: number): TeacherArtifact {
-  const items = Array.from({ length: Math.min(count, 6) }, (_, i) => ({
+  const availableCount = 6
+  const requestedCount = Math.max(1, Math.floor(count))
+  const insufficient = requestedCount > availableCount
+  const items = Array.from({ length: Math.min(requestedCount, availableCount) }, (_, i) => ({
     item_no: i + 1,
     q_type: (['choice', 'blank', 'text'] as const)[i % 3],
     difficulty: (['easy', 'medium', 'hard'] as const)[i % 3],
-    kp_code: 'DR-02', kp_name: kps[0] || '函数单调性',
+    kp_code: kps[0] || 'MATH-003', kp_name: '函数单调性',
     question_text: `单调性巩固题 ${i + 1}：判断 f(x)=$x^3-3x$ 在 $[-2,2]$ 的单调区间？`,
     options: ['A', 'B', 'C', 'D'],
     answer: 'B', answer_analysis: '令 f\'(x)=0 求分界点后列表判断。',
@@ -90,8 +93,20 @@ export function quizArtifact(kps: string[], count: number): TeacherArtifact {
   return {
     artifact_id: 'art-quiz-1', artifact_type: 'quiz_set', scene: 'teacher.assessment', class_id: 'c1',
     owner_id: 't1', status: 'draft', version: 1, engine: 'local',
-    content: { knowledge_points: kps, count: items.length, difficulty: { easy: 0.25, medium: 0.5, hard: 0.25 }, items, duplicated: 1, insufficient: items.length < count },
-    source_refs: [], warnings: [], degraded: false, created_at: iso(), updated_at: iso(),
+    content: {
+      knowledge_points: kps,
+      count: items.length,
+      requested_count: requestedCount,
+      available_count: availableCount,
+      difficulty: { easy: 0.25, medium: 0.5, hard: 0.25 },
+      items,
+      duplicated: 1,
+      insufficient,
+    },
+    source_refs: [],
+    warnings: insufficient ? [`题库严格命中题不足：请求 ${requestedCount} 题，当前可用 ${availableCount} 题。`] : [],
+    degraded: insufficient,
+    created_at: iso(), updated_at: iso(),
   }
 }
 
@@ -105,9 +120,20 @@ export function gradingQueue(): GradingQueueItem[] {
   ]
 }
 
-export function gradingDetail(item: GradingQueueItem) {
+export function gradingDetail(item: GradingQueueItem): GradingDetail & { suggestion: NonNullable<GradingDetail['suggestion']> } {
   return {
     ...item,
+    assignment_title: '函数的单调性巩固练习',
+    question_text: '已知函数 f(x)=x³−3x，求其单调递增区间。',
+    question_type: '选择题',
+    options: {
+      A: '(-∞, -1) ∪ (1, +∞)',
+      B: '(-1, 1)',
+      C: '(-∞, 1)',
+      D: '(-1, +∞)',
+    },
+    standard_answer: '(-∞, -1) ∪ (1, +∞)',
+    answer_analysis: '求导得到 f′(x)=3x²−3，并按临界点 -1、1 判断符号。',
     original_answer: `$f(x)=x^3-3x$ 的单调性：$f'(x)=3x^2-3$，令其为零得 $x=\\pm 1$，故在 $(-\\infty,-1)\\cup(1,+\\infty)$ 单调增，$(-1,1)$ 单调减。`,
     scoring_standard: '正确求导（3 分）、找到分界点（3 分）、写出单调区间（4 分）。',
     suggestion: {

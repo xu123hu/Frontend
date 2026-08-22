@@ -154,7 +154,7 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
 
   /* 批改 */
   if (seg[0] === 'teacher' && seg[1] === 'grading') {
-    if (method === 'GET' && url === '/teacher/grading/queue') { ok(res, gradingItems); return true }
+    if (method === 'GET' && url === '/teacher/grading/queue') { ok(res, { queue: gradingItems }); return true }
     if (method === 'POST' && url === '/teacher/grading/batch-confirm') {
       const b = await readBody(req)
       const results = (b.items || []).map((it: any) => ({ submission_item_id: it, ok: true, error: undefined }))
