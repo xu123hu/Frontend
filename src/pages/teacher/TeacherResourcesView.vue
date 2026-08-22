@@ -6,7 +6,7 @@
       <input ref="fileInput" type="file" hidden accept=".txt,.md,.docx,.pdf,.png,.jpg,.jpeg" @change="onPicked">
     </div>
     <div v-if="store.error" class="t-card" style="color:var(--t-red)">{{ store.error }}</div>
-    <div v-else-if="!store.loading && !store.items.length" class="t-card t-muted" style="text-align:center;padding:40px">暂无资源，点击“上传资料”开始。</div>
+    <div v-if="!store.loading && !store.items.length" class="t-card t-muted" style="text-align:center;padding:40px">暂无资源，点击“上传资料”开始。</div>
     <div v-else class="t-resource-grid">
       <div v-for="res in store.items" :key="res.resource_id" class="t-resource">
         <div class="t-resource-cover"><span>{{ icon(res.file_type) }}</span></div>
@@ -39,7 +39,7 @@ const showToast = inject<(msg: string) => void>('showToast', () => {})
 function formatSize(bytes: number) { if (bytes < 1024) return `${bytes || 0} B`; if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`; return `${(bytes / 1048576).toFixed(1)} MB` }
 function icon(type: string) { if (type.includes('pdf') || type.includes('word')) return '📄'; if (type.includes('image')) return '🖼'; return '📁' }
 function statusText(status: string) { return status === 'ready' ? '可用' : status === 'failed' ? '失败' : '处理中' }
-async function onPicked(event: Event) { const input = event.target as HTMLInputElement; const file = input.files?.[0]; input.value = ''; if (!file) return; try { await store.upload(file); showToast('上传成功，资源已可用') } catch (e: any) { showToast(e?.message || '上传失败') } }
+async function onPicked(event: Event) { const input = event.target as HTMLInputElement; const file = input.files?.[0]; input.value = ''; if (!file) return; if (file.size === 0) { showToast('文件内容为空，请选择非空文件'); return } try { await store.upload(file); showToast('上传成功，资源已可用') } catch (e: any) { showToast(e?.message || '上传失败') } }
 async function preprocess(id: string) { try { await store.preprocess(id); showToast('本地预处理完成') } catch (e: any) { showToast(e?.message || '预处理失败') } }
 async function understand(id: string) { try { await store.understand(id); showToast('本地摘要已生成') } catch (e: any) { showToast(e?.message || '理解失败') } }
 async function togglePublish(resource: TeacherResource) { try { const next = !resource.published; await store.setPublished(resource.resource_id, next); showToast(next ? '已发布' : '已取消发布') } catch (e: any) { showToast(e?.message || '操作失败') } }
