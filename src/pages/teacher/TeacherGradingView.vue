@@ -33,8 +33,8 @@
         </div>
 
         <div v-if="store.detail" class="t-paper">
+          <div v-if="store.detail.assignment_title" class="t-small t-muted">作业：{{ store.detail.assignment_title }}</div>
           <template v-if="store.detail.question_text">
-            <div v-if="store.detail.assignment_title" class="t-small t-muted">作业：{{ store.detail.assignment_title }}</div>
             <div class="qtitle" style="margin-top: 12px;">题目{{ store.detail.question_type ? `（${store.detail.question_type}）` : '' }}</div>
             <p style="white-space: pre-wrap; line-height: 1.8;">{{ store.detail.question_text }}</p>
             <ul v-if="questionOptions.length" class="t-small" style="margin: 8px 0 16px; padding-left: 20px; line-height: 1.8;">

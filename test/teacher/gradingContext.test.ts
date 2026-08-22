@@ -74,9 +74,9 @@ describe('TeacherGradingView question context', () => {
     expect(wrapper.text()).toContain('因为 x² ≥ 0，所以最小值为 0。')
   })
 
-  it('warns the teacher when persisted question context is unavailable', async () => {
+  it('keeps the assignment title visible when persisted question context is unavailable', async () => {
     gradingStore.detail = detail({
-      assignment_title: null,
+      assignment_title: '二次函数随堂作业',
       question_text: null,
       question_type: null,
       options: null,
@@ -86,6 +86,7 @@ describe('TeacherGradingView question context', () => {
     const wrapper = mount(TeacherGradingView)
     await nextTick()
 
+    expect(wrapper.text()).toContain('二次函数随堂作业')
     expect(wrapper.text()).toContain('题目上下文缺失，请人工复核。')
   })
 })
