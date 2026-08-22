@@ -234,49 +234,89 @@ async function selectSource(id: string) {
   showToast?.(`已选择「${src?.title}」作为起点`)
 }
 
-function onClassChange() {
+async function onClassChange() {
   const className = classes.value.find((item) => item.id === selectedClass.value)?.name || ''
   ctx.setClass(selectedClass.value, className)
-  showToast?.(`已切换到${className}`)
-  createLesson()
+  const previousArtifact = store.artifact
+  const previousSteps = [...lessonSteps.value]
+  try {
+    const lessons = await lessonsApi.list(selectedClass.value)
+    const targetLesson = lessons.find((lesson) => lesson.class_id === selectedClass.value)
+    if (targetLesson) {
+      store.artifact = targetLesson
+      applyArtifact()
+      showToast?.(`已切换到${className}，已载入该班教案`)
+      return
+    }
+    store.artifact = null
+    lessonSteps.value = []
+    showToast?.(`已切换到${className}`)
+  } catch (e: any) {
+    // Keep the prior draft recoverable, but scope guards below make it inert
+    // until the teacher switches back or loads a lesson for the new class.
+    store.artifact = previousArtifact
+    lessonSteps.value = previousSteps
+    showToast?.(e?.message || '目标班级教案加载失败，已保留当前草稿')
+  }
+}
+
+function selectedClassArtifact() {
+  const artifact = store.artifact
+  if (!artifact) {
+    showToast?.('请先生成该班教案')
+    return null
+  }
+  if (artifact.class_id !== selectedClass.value) {
+    showToast?.('当前教案不属于所选班级，请先加载或生成该班级教案')
+    return null
+  }
+  return artifact
 }
 
 async function saveDraft() {
-  if (!store.artifact) return createLesson()
+  const artifact = selectedClassArtifact()
+  if (!artifact) return
   await store.save({
-    version: store.artifact.version,
-    content: { ...store.artifact.content, timeline: lessonSteps.value.map((s) => ({ phase: s.title, minutes: stepDuration(s) || 5, activities: s.activities })) },
+    version: artifact.version,
+    content: { ...artifact.content, timeline: lessonSteps.value.map((s) => ({ phase: s.title, minutes: stepDuration(s) || 5, activities: s.activities })) },
   })
   showToast?.('草稿已保存到服务器')
 }
 
 async function confirmLesson() {
-  if (!store.artifact) await createLesson()
-  if (!store.artifact) return
-  store.artifact = await artifactsApi.confirm(store.artifact.artifact_id, `confirm:${store.artifact.artifact_id}`)
+  const artifact = selectedClassArtifact()
+  if (!artifact) return
+  store.artifact = await artifactsApi.confirm(artifact.artifact_id, `confirm:${artifact.artifact_id}`)
   showToast?.('本节课已确认，可生成正式 PPT')
 }
 
 function autoBalance() {
   if (!lessonSteps.value.length) return
-  const base = Math.floor(45 / lessonSteps.value.length)
+  const targetMinutes = Math.max(1, Number(durationMinutes.value) || Number(store.artifact?.content?.duration_minutes) || 45)
+  const base = Math.floor(targetMinutes / lessonSteps.value.length)
   let elapsed = 0
   lessonSteps.value.forEach((step, index) => {
-    const minutes = index === lessonSteps.value.length - 1 ? 45 - elapsed : base
+    const minutes = index === lessonSteps.value.length - 1 ? targetMinutes - elapsed : base
     step.timeRange = `${elapsed}-${elapsed + minutes} min`
     elapsed += minutes
   })
-  showToast?.('已将课堂环节自动平衡为 45 分钟')
+  showToast?.(`已将课堂环节自动平衡为 ${targetMinutes} 分钟`)
 }
 
 function editStep(step: LessonStep) {
   const value = window.prompt('编辑教学内容', step.description)
-  if (value !== null && value.trim()) step.description = value.trim()
+  if (value !== null && value.trim()) {
+    step.activities = [value.trim()]
+    step.description = step.activities.join('；')
+  }
 }
 
 function addMaterial(step: LessonStep) {
   const value = window.prompt('输入材料名称或使用说明', '')
-  if (value?.trim()) step.description = `${step.description}\n材料：${value.trim()}`
+  if (value?.trim()) {
+    step.activities = [...step.activities, `材料：${value.trim()}`]
+    step.description = step.activities.join('；')
+  }
 }
 
 function adjustTime(step: LessonStep) {
@@ -326,15 +366,13 @@ function adoptSuggestion(sug: Suggestion) {
 
 async function generateSlides() {
   try {
-    if (!store.artifact) {
-      showToast?.('请先生成并确认教案后再生成 PPT')
-      return
-    }
-    if (store.artifact.status !== 'confirmed') {
+    const artifact = selectedClassArtifact()
+    if (!artifact) return
+    if (artifact.status !== 'confirmed') {
       showToast?.('请先确认教案后再生成 PPT')
       return
     }
-    const slide = (await lessonsApi.createSlides(store.artifact.artifact_id, { version: store.artifact.version, style: '简洁课堂' })).data
+    const slide = (await lessonsApi.createSlides(artifact.artifact_id, { version: artifact.version, style: '简洁课堂' })).data
     const url = String(slide.content.download_url || '')
     const response = await fetch(url, { headers: authHeaders() as HeadersInit })
     if (!response.ok) throw new Error('PPT 下载失败')
@@ -350,11 +388,11 @@ async function generateSlides() {
 
 async function exportWord() {
   try {
-    if (!store.artifact) await createLesson()
-    if (!store.artifact) return
-    const response = await fetch(`/api/teacher/lessons/${store.artifact.artifact_id}/download`, { headers: authHeaders() as HeadersInit })
+    const artifact = selectedClassArtifact()
+    if (!artifact) return
+    const response = await fetch(`/api/teacher/lessons/${artifact.artifact_id}/download`, { headers: authHeaders() as HeadersInit })
     if (!response.ok) throw new Error('Word 教案下载失败')
-    downloadBlob(await response.blob(), `${String(store.artifact.content.topic || '课堂教案')}.docx`)
+    downloadBlob(await response.blob(), `${String(artifact.content.topic || '课堂教案')}.docx`)
     showToast?.('Word 教案已生成并开始下载')
   } catch (e: any) {
     showToast?.(e?.message || 'Word 教案生成失败')
@@ -407,6 +445,8 @@ function applyArtifact() {
     elapsed += minutes
     return item
   })
+  const artifactDuration = Number(store.artifact?.content?.duration_minutes)
+  if (Number.isFinite(artifactDuration) && artifactDuration > 0) durationMinutes.value = artifactDuration
 }
 
 async function createLesson() {
