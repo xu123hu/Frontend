@@ -1,7 +1,7 @@
 <template>
   <div id="page-today">
     <div class="t-hello">
-      <h1>{{ greeting }}，{{ teacherName }}老师</h1>
+      <h1>{{ greeting }}，{{ teacherName }}</h1>
       <p v-if="store.loading">正在汇总真实教学数据…</p>
       <p v-else>当前有 {{ gradingCount }} 份待批作答、{{ deadlines.length }} 项截止事项。</p>
     </div>
@@ -69,7 +69,7 @@
           <div v-if="insights.length" class="t-brief-list">
             <div v-for="(insight, index) in insights" :key="insight.insight_id" class="t-brief-item">
               <b class="t-spark">{{ index + 1 }}</b>
-              <span><b>{{ insight.summary }}</b><br>{{ insight.evidence }}</span>
+              <span><b>{{ insight.summary }}</b><br>{{ evidenceText(insight.evidence) }}</span>
             </div>
           </div>
           <p v-else style="margin-bottom: 0;">暂无足够数据形成教学洞察。</p>
@@ -102,11 +102,27 @@ const auth = useAuthStore()
 
 const hour = new Date().getHours()
 const greeting = computed(() => hour < 11 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好')
-const teacherName = computed(() => auth.nickname || '教师')
+const teacherName = computed(() => normalizeTeacherName(auth.user?.nickname))
 const nextLesson = computed(() => store.data?.next_lesson || null)
 const gradingCount = computed(() => store.data?.grading_queue?.count || 0)
 const deadlines = computed(() => store.data?.deadlines || [])
 const insights = computed(() => store.data?.actionable_insights || [])
+
+function normalizeTeacherName(value: unknown) {
+  const nickname = typeof value === 'string' ? value.trim() : ''
+  if (!nickname || nickname === '教师' || nickname === '同学') return '老师'
+  const name = nickname.replace(/(?:老师)+$/, '').trim()
+  return name ? `${name}老师` : '老师'
+}
+
+function evidenceText(value: unknown) {
+  if (typeof value !== 'string' || !value.trim()) return '暂无更多证据'
+  const evidence = value.trim()
+  if (/(?:^|[;；,，\s])[a-z][a-z0-9_]*\s*=/i.test(evidence)) {
+    return '证据格式待更新，暂不展示内部诊断字段。'
+  }
+  return evidence
+}
 
 function formatTime(value: string) {
   const date = new Date(value)
