@@ -1,68 +1,87 @@
 import { defineStore } from 'pinia'
-import { authApi } from '@/api'
-import { getToken, setToken, getCachedUser, setCachedUser } from '@/api/client'
+
+import { authApi } from '@/api/auth'
+import { clearAccessToken, setAccessToken } from '@/api/authSession'
+
+function deriveStatus(user) {
+  if (!user) return 'anonymous'
+  if (user.status === 'deletion_pending') return 'deletion_pending'
+  if (user.onboarding_status && user.onboarding_status !== 'completed') return 'onboarding'
+  const active = (user.roles || []).find((item) => item.role === user.active_role)
+  if (active && active.status !== 'approved') return 'pending_review'
+  return 'authenticated'
+}
 
 export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    token: getToken(),
-    user: getCachedUser(),
-  }),
+  state: () => ({ status: 'idle', user: null, bootstrapPromise: null }),
   getters: {
-    isLoggedIn: (s) => !!s.token,
-    roles: (s) => (s.user?.roles || []).map((r) => r.role),
-    isAdmin: (s) => (s.user?.roles || []).some((r) => r.role === 'admin'),
-    nickname: (s) => s.user?.nickname || '同学',
-    /**
-     * 当前角色。规则：
-     *  1) 优先 user.active_role；
-     *  2) 只有单个 role 时返回该 role；
-     *  3) 多个 role 但缺少 active_role 时返回 null（需调用 /auth/me 刷新或要求选择角色，禁止默认取 roles[0]）。
-     */
-    activeRole(s) {
-      const u = s.user
-      if (!u) return null
-      if (u.active_role) return u.active_role
-      const roles = (u.roles || []).map((r) => r.role).filter(Boolean)
-      if (roles.length === 0) return null
-      if (roles.length === 1) return roles[0]
-      return null
-    },
+    isLoggedIn: (state) => ['authenticated', 'onboarding', 'pending_review', 'deletion_pending'].includes(state.status),
+    approvedRoleBindings: (state) => (state.user?.roles || []).filter((item) => item.status === 'approved' || item.verified === true),
+    roles() { return this.approvedRoleBindings.map((item) => item.role) },
+    pendingRoles: (state) => (state.user?.roles || []).filter((item) => item.status && item.status !== 'approved').map((item) => item.role),
+    isAdmin() { return this.activeRole === 'admin' && this.roles.includes('admin') },
+    nickname: (state) => state.user?.nickname || '同学',
+    activeRole: (state) => state.user?.active_role || null,
   },
   actions: {
-    async smsCode(phone) { return authApi.smsCode(phone) },
-    async login(phone, code) {
-      const data = await authApi.login(phone, code)
-      this.token = data.token
-      this.user = data.user
-      setToken(data.token)
-      setCachedUser(data.user)
+    applyIdentity(user) {
+      this.user = user
+      this.status = deriveStatus(user)
+    },
+    async bootstrap() {
+      if (this.status !== 'idle' && this.status !== 'anonymous') return
+      if (this.bootstrapPromise) return this.bootstrapPromise
+      this.status = 'bootstrapping'
+      this.bootstrapPromise = (async () => {
+        try {
+          await authApi.refreshSession()
+          this.applyIdentity(await authApi.me())
+        } catch {
+          clearAccessToken()
+          this.user = null
+          this.status = 'anonymous'
+        } finally {
+          this.bootstrapPromise = null
+        }
+      })()
+      return this.bootstrapPromise
+    },
+    async loginSms(payload) {
+      const data = await authApi.loginSms(payload)
+      setAccessToken(data.access_token)
+      this.applyIdentity(data.user)
+      if (data.onboarding_required) this.status = 'onboarding'
       return data
     },
-    async loginByClassCode(inviteCode, nickname) {
-      const data = await authApi.loginByClassCode(inviteCode, nickname)
-      this.token = data.token
-      this.user = data.user
-      setToken(data.token)
-      setCachedUser(data.user)
+    async loginPassword(payload) {
+      const data = await authApi.loginPassword(payload)
+      setAccessToken(data.access_token)
+      this.applyIdentity(data.user)
       return data
     },
     async refreshMe() {
-      const me = await authApi.me()
-      this.user = { ...this.user, ...me }
-      setCachedUser(this.user)
-      return me
+      const user = await authApi.me()
+      this.applyIdentity(user)
+      return user
     },
     async switchRole(role) {
-      const data = await authApi.switchRole(role)
-      this.token = data.token
-      setToken(data.token)
+      await authApi.switchRole(role)
       await this.refreshMe()
     },
-    logout() {
-      this.token = ''
-      this.user = null
-      setToken('')
-      setCachedUser(null)
+    async logout() {
+      try { await authApi.logout() } finally {
+        clearAccessToken(); this.user = null; this.status = 'anonymous'
+      }
     },
+    async logoutAll() {
+      try { await authApi.logoutAll() } finally {
+        clearAccessToken(); this.user = null; this.status = 'anonymous'
+      }
+    },
+    async smsCode(phone) { return authApi.challengeSms(phone, 'login') },
+    async login(phone, code) {
+      return this.loginSms({ phone, code, challenge_id: 'legacy', remember: false })
+    },
+    async loginByClassCode() { throw new Error('班级码免密登录已停用') },
   },
 })

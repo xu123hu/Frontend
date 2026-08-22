@@ -6,8 +6,9 @@
  *        api.get/post/put/patch/del 签名与返回值保持原样（返回 envelope.data）；
  *        新增 api.raw(method, path, opts) 返回 { data, status, request_id } 供教师端使用。
  */
+import { clearAccessToken, getAccessToken, getCsrfToken, refreshAccessToken, setAccessToken } from './authSession'
+
 const BASE = '/api'
-const TOKEN_KEY = 'ma_token'
 const USER_KEY = 'ma_user'
 
 export class ApiError extends Error {
@@ -17,15 +18,15 @@ export class ApiError extends Error {
   }
 }
 
-export function getToken() { return localStorage.getItem(TOKEN_KEY) || '' }
-export function setToken(t) { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY) }
+export function getToken() { return getAccessToken() }
+export function setToken(t) { setAccessToken(t) }
 export function getCachedUser() {
   try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null') } catch { return null }
 }
 export function setCachedUser(u) { u ? localStorage.setItem(USER_KEY, JSON.stringify(u)) : localStorage.removeItem(USER_KEY) }
 
 export function authHeaders() {
-  const t = getToken()
+  const t = getAccessToken()
   return t ? { Authorization: `Bearer ${t}` } : {}
 }
 
@@ -50,11 +51,15 @@ function buildUrl(path, query) {
 }
 
 /** 低层请求：返回 { data, status, request_id }；204/空 body 返回 data=undefined */
-async function requestRaw(method, path, { body, query, headers = {}, signal, idempotencyKey } = {}) {
+async function requestRaw(method, path, { body, query, headers = {}, signal, idempotencyKey } = {}, retried = false) {
   const url = buildUrl(path, query)
   const h = { ...authHeaders(), ...headers }
   if (body !== undefined) h['Content-Type'] = 'application/json'
   if (idempotencyKey) h['Idempotency-Key'] = idempotencyKey
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    const csrf = getCsrfToken()
+    if (csrf && !h['X-CSRF-Token']) h['X-CSRF-Token'] = csrf
+  }
 
   let res
   try {
@@ -63,6 +68,7 @@ async function requestRaw(method, path, { body, query, headers = {}, signal, ide
       headers: h,
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal,
+      credentials: 'include',
     })
   } catch (e) {
     if (e?.name === 'AbortError') throw new ApiError(-2, '请求已取消')
@@ -70,7 +76,13 @@ async function requestRaw(method, path, { body, query, headers = {}, signal, ide
   }
 
   if (res.status === 401) {
-    setToken(''); setCachedUser(null)
+    if (!retried && path !== '/auth/token/refresh') {
+      try {
+        await refreshAccessToken()
+        return requestRaw(method, path, { body, query, headers, signal, idempotencyKey }, true)
+      } catch { /* terminal refresh failure below */ }
+    }
+    clearAccessToken(); setCachedUser(null)
     redirectLogin()
     throw new ApiError(401, '登录已过期')
   }
@@ -89,7 +101,9 @@ async function requestRaw(method, path, { body, query, headers = {}, signal, ide
 
   if (json && typeof json.code !== 'undefined') {
     if (json.code === 0) return { data: json.data ?? null, status: res.status, request_id: json.request_id || '' }
-    throw new ApiError(json.code, json.message || '请求失败')
+    const error = new ApiError(json.code, json.message || '请求失败')
+    error.errorKey = json.error_key || ''
+    throw error
   }
   if (!res.ok) throw new ApiError(res.status, json?.detail || `HTTP ${res.status}`)
   return { data: json, status: res.status, request_id: res.headers.get('x-request-id') || '' }

@@ -3,17 +3,9 @@
  * 页面组件只允许调用这里导出的函数，禁止散落 fetch。
  */
 import { api } from './client'
+export { authApi } from './auth'
 
 /* ===== 认证 /api/auth ===== */
-export const authApi = {
-  smsCode: (phone) => api.post('/auth/sms-code', { phone }),
-  login: (phone, code) => api.post('/auth/login', { phone, code }),
-  loginByClassCode: (invite_code, nickname) => api.post('/auth/login-by-code', { invite_code, nickname }),
-  me: () => api.get('/auth/me'),
-  switchRole: (role) => api.post('/auth/role/switch', { role }),
-  registerTeacher: (payload) => api.post('/auth/register/teacher', payload),
-  applyRole: (role, org_name = '') => api.post('/auth/role/apply', { role, org_name }),
-}
 
 /* ===== 智能体 /api/agent ===== */
 export const agentApi = {
