@@ -25,6 +25,23 @@
         <div class="t-metric"><div class="v" style="color: var(--t-amber);">{{ insights.length }}</div><div class="k">可行动洞察</div></div>
       </div>
 
+      <section v-if="visibleInviteCode" class="t-card class-invite" data-testid="class-invite-code">
+        <div>
+          <div class="class-invite-label">学生入班邀请码</div>
+          <code class="class-invite-value">{{ visibleInviteCode }}</code>
+          <p class="t-small t-muted">仅向本班创建教师展示，请通过可信渠道发送给学生。</p>
+        </div>
+        <div class="class-invite-action">
+          <button
+            class="t-btn sm"
+            type="button"
+            :aria-label="`复制班级邀请码 ${visibleInviteCode}`"
+            @click="copyInviteCode"
+          >复制邀请码</button>
+          <span v-if="copyStatus" class="t-small" role="status">{{ copyStatus }}</span>
+        </div>
+      </section>
+
       <div class="t-g2 t-grid" style="margin-bottom: 16px;">
         <section class="t-card">
           <div class="t-section-title">
@@ -83,7 +100,7 @@ import { classesApi } from '@/api/teacher/classes'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import type { ActionableInsight } from '@/types/teacher'
 
-interface ClassItem { id: string; name: string; myRole?: string; confirmed?: boolean }
+interface ClassItem { id: string; name: string; myRole?: string; confirmed?: boolean; inviteCode?: string | null }
 interface ClassMember {
   userId: string
   nickname?: string
@@ -100,15 +117,26 @@ const insights = ref<ActionableInsight[]>([])
 const selectedClassId = ref('')
 const loading = ref(false)
 const error = ref('')
+const copyStatus = ref('')
+let classRequestVersion = 0
 
 const currentClass = computed(() => classes.value.find((item) => item.id === selectedClassId.value))
+const visibleInviteCode = computed(() => {
+  const cls = currentClass.value
+  if (cls?.myRole !== 'teacher' || typeof cls.inviteCode !== 'string') return ''
+  return cls.inviteCode.trim()
+})
 const students = computed(() => members.value.filter((item) => item.memberRole === 'student' && item.confirmed))
 const pendingMembers = computed(() => members.value.filter((item) => !item.confirmed))
 
 async function loadClassData() {
   const cls = currentClass.value
   if (!cls) return
+  const requestVersion = ++classRequestVersion
   context.setClass(cls.id, cls.name)
+  members.value = []
+  insights.value = []
+  copyStatus.value = ''
   loading.value = true
   error.value = ''
   try {
@@ -116,21 +144,41 @@ async function loadClassData() {
       classApi.members(cls.id),
       classesApi.insights(cls.id, true),
     ])
+    if (requestVersion !== classRequestVersion || selectedClassId.value !== cls.id) return
     members.value = memberData?.items || []
     insights.value = insightData
   } catch (cause: any) {
+    if (requestVersion !== classRequestVersion || selectedClassId.value !== cls.id) return
     error.value = cause?.message || '班级数据加载失败'
     members.value = []
     insights.value = []
   } finally {
-    loading.value = false
+    if (requestVersion === classRequestVersion && selectedClassId.value === cls.id) loading.value = false
   }
 }
 
 function evidenceText(value: unknown) {
-  if (typeof value === 'string') return value
-  if (!value) return '暂无更多证据'
-  try { return JSON.stringify(value) } catch { return '证据格式无法展示' }
+  if (typeof value !== 'string' || !value.trim()) return '暂无更多证据'
+  const evidence = value.trim()
+  if (/(?:^|[;；,，\s])[a-z][a-z0-9_]*\s*=/i.test(evidence)) {
+    return '证据格式待更新，暂不展示内部诊断字段。'
+  }
+  return evidence
+}
+
+async function copyInviteCode() {
+  const code = visibleInviteCode.value
+  if (!code) return
+  try {
+    if (!navigator.clipboard?.writeText) {
+      copyStatus.value = '请手动选择邀请码复制'
+      return
+    }
+    await navigator.clipboard.writeText(code)
+    copyStatus.value = '邀请码已复制'
+  } catch {
+    copyStatus.value = '复制失败，请手动选择'
+  }
 }
 
 function go(path: string) {
@@ -148,10 +196,55 @@ onMounted(async () => {
       ? context.classId || ''
       : classes.value[0]?.id || ''
     if (selectedClassId.value) await loadClassData()
+    else loading.value = false
   } catch (cause: any) {
     error.value = cause?.message || '班级列表加载失败'
-  } finally {
     loading.value = false
   }
 })
 </script>
+
+<style scoped>
+.class-invite {
+  align-items: center;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.class-invite-label {
+  color: var(--t-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.class-invite-value {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.class-invite p {
+  margin: 6px 0 0;
+}
+
+.class-invite-action {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .class-invite {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .class-invite-action {
+    align-items: flex-start;
+  }
+}
+</style>
