@@ -28,3 +28,20 @@ export const authApi = {
   submitRoleApplication: (payload) => api.post('/identity/role-applications', payload),
   currentRoleApplications: () => api.get('/identity/role-applications/current'),
 }
+
+export const securityApi = {
+  sessions: () => api.get('/auth/sessions'),
+  revokeSession: (id) => api.del(`/auth/sessions/${id}`),
+  changePhone: (payload) => api.post('/identity/phone/change', payload),
+  requestDeletion: () => api.post('/identity/account/deletion'),
+  deletionStatus: () => api.get('/identity/account/deletion'),
+  cancelDeletion: (payload) => api.post('/identity/account/deletion/cancel', payload),
+  reauthenticate: (payload) => api.post('/auth/reauth', payload),
+}
+
+export const adminIdentityApi = {
+  applications: (query = {}) => api.get('/admin/identity/applications', query),
+  approve: (id, note = '', reauth = '') => api.post(`/admin/identity/applications/${id}/approve`, { note }, null, { headers: reauth ? { 'X-Reauth-Proof': reauth } : {} }),
+  reject: (id, note = '', reauth = '') => api.post(`/admin/identity/applications/${id}/reject`, { note }, null, { headers: reauth ? { 'X-Reauth-Proof': reauth } : {} }),
+  requestMoreInfo: (id, note = '', reauth = '') => api.post(`/admin/identity/applications/${id}/request-more-info`, { note }, null, { headers: reauth ? { 'X-Reauth-Proof': reauth } : {} }),
+}

@@ -1,0 +1,2 @@
+<template><nav class="admin-nav" aria-label="管理员导航"><RouterLink to="/admin/identity/applications">身份审核</RouterLink><RouterLink to="/account/security">账号安全</RouterLink><RouterLink to="/">返回工作台</RouterLink></nav></template>
+<style scoped>.admin-nav{display:flex;gap:8px}.admin-nav a{padding:8px 12px;border-radius:9px;color:var(--ink2);text-decoration:none}.admin-nav a.router-link-active{background:var(--brand-soft);color:var(--brand-deep);font-weight:700}</style>

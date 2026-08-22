@@ -1,6 +1,6 @@
 <template>
   <!-- 公共页面（登录）直接渲染；student 走 V4Layout；teacher 走 TeacherLayout -->
-  <V4Layout v-if="!route.meta.public && !route.meta.teacher" />
+  <V4Layout v-if="!route.meta.public && !route.meta.teacher && !route.meta.authFlow" />
   <TeacherLayout v-else-if="route.meta.teacher" />
   <router-view v-else />
   <ToastHost />

@@ -1,0 +1,27 @@
+import { describe, expect, it } from 'vitest'
+
+import { resolveAuthNavigation } from '@/router'
+
+const route = (path: string, meta: Record<string, unknown> = {}) => ({ path, fullPath: path, meta })
+
+describe('role-aware auth navigation', () => {
+  it('preserves deep links for anonymous users', () => {
+    expect(resolveAuthNavigation(route('/teacher/prep', { requiresRole: 'teacher' }), { status: 'anonymous' }))
+      .toEqual({ path: '/login', query: { redirect: '/teacher/prep' } })
+  })
+
+  it('routes onboarding, pending review, and deletion identities to their only allowed areas', () => {
+    expect(resolveAuthNavigation(route('/overview'), { status: 'onboarding' })).toEqual({ path: '/onboarding/student' })
+    expect(resolveAuthNavigation(route('/teacher/today'), { status: 'pending_review' })).toEqual({ path: '/identity/pending' })
+    expect(resolveAuthNavigation(route('/overview'), { status: 'deletion_pending' })).toEqual({ path: '/account/security' })
+  })
+
+  it('requires an approved active role for privileged workspaces', () => {
+    expect(resolveAuthNavigation(route('/teacher/today', { requiresRole: 'teacher' }), {
+      status: 'authenticated', activeRole: 'student', roles: ['student'],
+    })).toEqual({ path: '/overview' })
+    expect(resolveAuthNavigation(route('/admin/identity/applications', { requiresRole: 'admin' }), {
+      status: 'authenticated', activeRole: 'admin', roles: ['student', 'admin'],
+    })).toBe(true)
+  })
+})
