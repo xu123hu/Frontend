@@ -1762,3 +1762,8 @@
   }
   .t-assistant.open { animation: none; }
 }
+
+/* 备课环节内联编辑面板（替代 window.prompt） */
+.t-step-edit { margin-top: 10px; padding: 12px; border: 1px solid var(--t-line); border-radius: var(--t-radius-sm); background: var(--t-surface-2); display: flex; flex-direction: column; gap: 10px; }
+.t-edit-label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--t-ink-2); font-weight: 600; }
+.t-edit-label .t-input { font-weight: 400; }

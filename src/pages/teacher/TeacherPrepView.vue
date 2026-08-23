@@ -64,10 +64,28 @@
                 <span class="t-tag" :class="step.tagClass">{{ step.tagText }}</span>
               </div>
               <div class="t-step-body">{{ step.description }}</div>
-              <div class="t-step-tools">
-                <button class="t-ghost-link" type="button" @click="editStep(step)">编辑内容</button>
-                <button class="t-ghost-link" type="button" @click="addMaterial(step)">+ 添加材料</button>
-                <button class="t-ghost-link" type="button" @click="adjustTime(step)">调时长</button>
+
+              <!-- 内联编辑面板（替代 window.prompt） -->
+              <div v-if="editingStepId === step.id" class="t-step-edit">
+                <label class="t-edit-label">教学内容
+                  <textarea v-model="editDraft.description" rows="3" class="t-input" style="width:100%"></textarea>
+                </label>
+                <label class="t-edit-label">添加材料
+                  <input v-model="editDraft.material" class="t-input" style="width:100%" placeholder="材料名称或使用说明" @keyup.enter="saveStep(step)" />
+                </label>
+                <label class="t-edit-label">时长（分钟）
+                  <input v-model.number="editDraft.minutes" type="number" min="1" class="t-input" style="width:120px" />
+                </label>
+                <div class="t-row" style="gap: 8px; margin-top: 8px">
+                  <button class="t-btn sm primary" type="button" @click="saveStep(step)">保存</button>
+                  <button class="t-btn sm" type="button" @click="closeEdit">取消</button>
+                </div>
+              </div>
+
+              <div v-else class="t-step-tools">
+                <button class="t-ghost-link" type="button" @click="openEdit(step)">编辑</button>
+                <button class="t-ghost-link" type="button" @click="openEdit(step, 'material')">+ 添加材料</button>
+                <button class="t-ghost-link" type="button" @click="openEdit(step, 'time')">调时长</button>
                 <button class="t-ghost-link" type="button" @click="deleteStep(step, idx)">删除</button>
               </div>
             </div>
@@ -199,6 +217,10 @@ interface Suggestion {
 
 const suggestions = ref<Suggestion[]>([])
 
+// ---- 内联编辑状态（替代 window.prompt） ----
+const editingStepId = ref('')
+const editDraft = ref({ description: '', material: '', minutes: 5, focus: 'content' })
+
 // ---- 交互逻辑 ----
 async function selectSource(id: string) {
   selectedSource.value = id
@@ -255,23 +277,35 @@ function autoBalance() {
   showToast?.('已将课堂环节自动平衡为 45 分钟')
 }
 
-function editStep(step: LessonStep) {
-  const value = window.prompt('编辑教学内容', step.description)
-  if (value !== null && value.trim()) step.description = value.trim()
+function openEdit(step: LessonStep, focus?: 'material' | 'time') {
+  editingStepId.value = step.id
+  editDraft.value.description = step.description
+  editDraft.value.material = ''
+  editDraft.value.minutes = stepDuration(step) || 5
+  editDraft.value.focus = focus || 'content'
 }
 
-function addMaterial(step: LessonStep) {
-  const value = window.prompt('输入材料名称或使用说明', '')
-  if (value?.trim()) step.description = `${step.description}\n材料：${value.trim()}`
+function closeEdit() {
+  editingStepId.value = ''
+  editDraft.value.material = ''
 }
 
-function adjustTime(step: LessonStep) {
-  const value = window.prompt('输入该环节时长（分钟）', String(stepDuration(step)))
-  const minutes = Number(value)
-  if (!Number.isFinite(minutes) || minutes <= 0) return
-  const start = Number(step.timeRange.match(/\d+/)?.[0] || 0)
-  step.timeRange = `${start}-${start + Math.round(minutes)} min`
-  recalculateRanges()
+function saveStep(step: LessonStep) {
+  // 内容
+  if (editDraft.value.description.trim()) step.description = editDraft.value.description.trim()
+  // 附加材料
+  if (editDraft.value.material.trim()) {
+    step.description = `${step.description || ''}\n材料：${editDraft.value.material.trim()}`.trim()
+  }
+  // 时长
+  const minutes = Number(editDraft.value.minutes)
+  if (Number.isFinite(minutes) && minutes > 0) {
+    const start = Number(step.timeRange.match(/\d+/)?.[0] || 0)
+    step.timeRange = `${start}-${start + Math.round(minutes)} min`
+    recalculateRanges()
+  }
+  closeEdit()
+  showToast?.('已更新该环节')
 }
 
 function stepDuration(step: LessonStep) {
@@ -371,17 +405,23 @@ function downloadBlob(blob: Blob, filename: string) {
 
 // ---- 生命周期 ----
 function applyArtifact() {
-  const timeline = (store.artifact?.content?.timeline || []) as Array<{ phase?: string; minutes?: number }>
+  const content = (store.artifact?.content || {}) as Record<string, unknown>
+  // 服务端返回 sections（title/duration_minutes/activities），历史数据可能是 timeline（phase/minutes）
+  const sections = (content.sections ||
+    content.timeline ||
+    []) as Array<{ title?: string; phase?: string; duration_minutes?: number; minutes?: number; activities?: string[]; description?: string }>
   let elapsed = 0
-  lessonSteps.value = timeline.map((step, index) => {
-    const minutes = Number(step.minutes || 5)
+  lessonSteps.value = sections.map((s, index) => {
+    const minutes = Number(s.duration_minutes ?? s.minutes ?? 5)
+    const activities = Array.isArray(s.activities) ? s.activities.filter(Boolean) : []
     const item = {
       id: `step-${index + 1}`,
-      title: step.phase || `环节 ${index + 1}`,
+      title: s.title || s.phase || `环节 ${index + 1}`,
       timeRange: `${elapsed}-${elapsed + minutes} min`,
-      tagText: '本地草稿',
+      tagText: '可编辑',
       tagClass: 'blue',
-      description: '可编辑教学环节，确认后生成 PPT。',
+      description: activities.length ? activities.map((a) => `• ${a}`).join('\n') : String(s.description || '可编辑教学环节，确认后生成 PPT。'),
+      added: false,
     }
     elapsed += minutes
     return item

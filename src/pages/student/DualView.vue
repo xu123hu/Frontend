@@ -20,6 +20,24 @@
         >{{ c.title }}</span>
       </div>
 
+      <div v-if="current?.openmaic" class="openmaic-embed">
+        <div class="openmaic-head">
+          <span class="openmaic-title">{{ current.title }} · 交互双师课堂</span>
+          <span class="openmaic-tag">OpenMAIC</span>
+        </div>
+        <iframe
+          :key="current.openmaic.classroom_url"
+          :src="current.openmaic.classroom_url"
+          title="双师课堂"
+          allow="microphone; camera; autoplay; fullscreen"
+          allowfullscreen
+          loading="lazy"
+        ></iframe>
+        <div class="openmaic-hint">AI 主讲老师 + AI 助教实时授课，可随讲随问，课后自动巩固。</div>
+      </div>
+
+      <!-- 未绑定 OpenMAIC 课堂时的旧占位：绑定了则只显示真实 OpenMAIC 课堂 -->
+      <template v-else>
       <div class="dual-hero">
         <div class="dual-video">
           <div class="live-badge"><span class="pulse"></span> {{ statusLabel(current?.status) }}</div>
@@ -76,6 +94,7 @@
         </div>
         <button style="padding:10px 18px;background:var(--brand);color:#fff;border:none;border-radius:8px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;" @click="schedule">📅 排到练题中心</button>
       </div>
+      </template>
     </template>
   </div>
 </template>
@@ -206,5 +225,32 @@ onMounted(load)
   background: var(--card-bg, #fff);
   border: 1px dashed var(--line, #e5e7eb);
   border-radius: var(--radius-lg, 12px);
+}
+.openmaic-embed {
+  margin-bottom: 16px;
+  background: #fff;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  overflow: hidden;
+}
+.openmaic-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line, #eef1f5);
+  background: linear-gradient(135deg, var(--brand-faint, #f3f7ff), #fff);
+}
+.openmaic-title { font-size: 14px; font-weight: 800; color: var(--ink1, #1f2329); }
+.openmaic-tag {
+  margin-left: auto;
+  font-size: 11px; font-weight: 700; color: var(--brand, #3b7bff);
+  background: rgba(59,123,255,.1); padding: 2px 8px; border-radius: 999px;
+}
+.openmaic-embed iframe {
+  width: 100%; height: 62vh; min-height: 420px;
+  border: 0; display: block; background: #0f0f12;
+}
+.openmaic-hint {
+  padding: 8px 14px; font-size: 12px; color: var(--ink2, #646a73);
+  background: var(--brand-faint, #f6f9ff);
 }
 </style>

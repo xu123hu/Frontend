@@ -115,7 +115,18 @@ export interface ActionableInsight {
 }
 
 export interface TeacherTodayData {
-  next_lesson: { class_id: string; topic: string; class_name?: string; starts_at: string } | null
+  next_lesson: {
+    class_id: string
+    topic: string
+    class_name?: string
+    starts_at: string
+    /** 备课完成度（0-100），供"任务优先"首页展示 */
+    prep_completion?: number
+    /** 本节课还缺的材料/环节，供首页生成待办 */
+    missing_items?: string[]
+    /** 上课时长（分钟），供倒计时与节奏提示 */
+    duration_minutes?: number
+  } | null
   grading_queue: { count: number; action: string }
   deadlines: Deadline[]
   actionable_insights: ActionableInsight[]

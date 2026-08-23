@@ -29,6 +29,8 @@ export default defineConfig({
     proxy: useRealApi
       ? { '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true } }
       : undefined,
+    // research-repos 是克隆的参考仓库（工作材料，非本应用源码），不参与 Vite 监听，避免 full-reload 抖动
+    watch: { ignored: ['**/research-repos/**', '**/dist/**'] },
   },
   build: {
     chunkSizeWarningLimit: 1600,

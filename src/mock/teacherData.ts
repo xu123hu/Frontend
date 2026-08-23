@@ -11,23 +11,33 @@ export const TEACHER_CLASSES = [
 
 export function todayData(): TeacherTodayData {
   const now = Date.now()
+  // 现在是 08:00 前，下一节课 10:10（约 2 小时 12 分后）
+  const lessonAt = new Date(now + 2 * 3600e3 + 12 * 60e3)
   return {
-    next_lesson: { class_id: 'c1', topic: '函数的单调性', class_name: '高二（3）班', starts_at: iso(new Date(now + 2 * 3600e3)) },
-    grading_queue: { count: 5, action: 'open_grading' },
-    deadlines: [{ id: 'd1', kind: 'assignment', title: '导数巩固练习', due_at: iso(new Date(now + 86400e3)) }],
+    next_lesson: {
+      class_id: 'c1', topic: '导数与函数单调性', class_name: '高二（3）班',
+      starts_at: iso(lessonAt), prep_completion: 70, missing_items: ['边界反例', 'Exit Ticket'], duration_minutes: 45,
+    },
+    // 数量与批改队列保持一致（见 gradingQueue()）
+    grading_queue: { count: gradingQueue().length, action: 'open_grading' },
+    deadlines: [
+      { id: 'd1', kind: 'assignment', title: '导数巩固练习', due_at: iso(new Date(now + 86400e3)) },
+      { id: 'd2', kind: 'video', title: '参数分类讨论片段 · 7 人未完成', due_at: iso(new Date(now + 86400e3)) },
+      { id: 'd3', kind: 'grade_review', title: '成绩复核 1 条', due_at: iso(new Date(now + 86400e3)) },
+    ],
     actionable_insights: [
       {
         insight_id: 'ins-1', kind: 'mastery_drop',
-        summary: '高二（3）班函数单调性掌握度下降 8%',
-        evidence: '本周 23 次作答，正确率由 82% 降至 74%。',
+        summary: '17/46 人连续两次在参数边界 a=0 失分',
+        evidence: '昨晚作业 11 人、本周周测 13 人出现同类错误，其中 7 人重复出现；明天第 3 节正好讲导数分类讨论。',
         data_window: { from: iso(new Date(now - 7 * 86400e3)), to: iso() },
-        recommended_actions: ['应用到教案', '生成巩固题'],
+        recommended_actions: ['加入下节课', '出巩固题', '看典型作答'],
       },
       {
         insight_id: 'ins-2', kind: 'queue_pressure',
-        summary: '待批队列低置信度题目需人工复核',
-        evidence: '低置信度占比 2/5，OCR 与主观题建议需教师确认。',
-        data_window: { from: iso(new Date(now - 3 * 86400e3)), to: iso() },
+        summary: '导数周测待确认作答需要按题集中批阅',
+        evidence: '主观题需要逐份核对评分点；按题分批预计更快。',
+        data_window: { from: iso(new Date(now - 2 * 86400e3)), to: iso() },
         recommended_actions: ['去批改'],
       },
     ],

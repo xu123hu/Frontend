@@ -51,7 +51,7 @@
           <div class="t-section-title">
             <div>
               <h2>预批改建议</h2>
-              <div class="sub">置信度 {{ confidenceText }}</div>
+              <div class="sub">建议由评分标准分步核对生成，教师复核后生效</div>
             </div>
             <span class="t-tag" :class="store.detail.suggestion?.review_needed ? 'amber' : 'green'">
               {{ store.detail.suggestion?.review_needed ? '需要人工复核' : '可复核确认' }}
@@ -86,12 +86,13 @@
 
 <script setup lang="ts">
 import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { authHeaders } from '@/api/client'
 import { useGradingStore } from '@/stores/teacher/grading'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 
 const router = useRouter()
+const route = useRoute()
 const store = useGradingStore()
 const context = useTeacherContextStore()
 const showToast = inject<(msg: string) => void>('showToast', () => {})
@@ -102,8 +103,20 @@ const photoUrl = ref('')
 
 const pendingCount = computed(() => store.queue.filter((item) => item.status !== 'confirmed').length)
 const suggestedScore = computed(() => store.detail?.suggestion?.suggestion_score ?? '—')
-const confidenceText = computed(() => `${Math.round((store.detail?.suggestion?.confidence ?? 0) * 100)}%`)
 const canConfirm = computed(() => Boolean(store.detail?.suggestion?.suggestion_id))
+
+function normalizeQueryId(value: unknown): string {
+  if (Array.isArray(value)) return value[0] ?? ''
+  return typeof value === 'string' ? value : ''
+}
+
+/** URL 与当前份同步：`submission_item_id` 进入 query，刷新/分享/直接打开回到同一份 */
+watch(selectedId, (id) => {
+  const query = { ...route.query }
+  if (id) query.submission_item_id = id
+  else delete query.submission_item_id
+  router.replace({ query })
+})
 
 watch(() => store.detail, (detail) => {
   finalScore.value = detail?.suggestion?.suggestion_score ?? detail?.teacher_final_score ?? null
@@ -173,7 +186,11 @@ async function confirmOverride() {
 
 onMounted(async () => {
   await store.fetchQueue(context.classId || undefined)
-  const first = store.queue.find((item) => item.status !== 'confirmed') || store.queue[0]
+  const requested = normalizeQueryId(route.query.submission_item_id)
+  const requestedItem = requested ? store.queue.find((item) => item.submission_item_id === requested) : null
+  const first = requestedItem
+    || store.queue.find((item) => item.status !== 'confirmed')
+    || store.queue[0]
   if (first) {
     selectedId.value = first.submission_item_id
     await loadSelected()
