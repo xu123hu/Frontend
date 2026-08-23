@@ -1,39 +1,62 @@
 # Implementation Status — 智学数研教师端
 
+> 主入/出协议：工程 Agent 每轮增量更新本文件；架构 Agent 依此复验。当前进度：**Round 05（CURRENT_DIRECTIVE.md）**。
+
 ## Current Phase
-Phase 2–3 纵深施工（Review Round 03 Required Changes）：Teacher Today（任务优先）→ Assign（每题级编辑/替换/重生成）→ Grading（URL 持久化）→ Prep（去 prompt + 时间线修线）。核心改动已落地并通过构建 / 类型检查。
+Round 05（解堵核心环）收尾清单与 P1 执行中。RC-05-1/2/3/4 已绿；收尾清单 D1(题量诚实)/D2(草稿寻址)/发布门/预览学生端已完成并通过真实浏览器复验；RC-05-5(RD-1 教案结构化抽屉)已完成；RC-05-6(Butler)待下轮。
 
-## Completed（本轮实际完成）
-- 工作区建立：分支 `refactor/teacher-os`；`docs/teacher-refactor/` 骨架 + `reference-map.md`；`research-repos/` + `artifacts/teacher-refactor/`。
-- **RC-1 Today → 任务优先时间线**：重构为「下一节课 hero（时间/班级/课题/倒计时/备课准备度/缺失项）→ 上课前最值得做的N件事 → 教学行动建议（带依据+可执行动作）」。已接入 `useTeacherTodayStore`（/teacher/today）；mock `todayData()` 提供确定性数据。
-- **RC-2 Grading submission id 入 URL**：`watch(selectedId)` 同步 `?submission_item_id=<id>`，刷新后回到当前批改项；`normalizeQueryId` 兼容只读。已接入真实批改队列 store。
-- **RC-3 Assign 每题 Edit / Replace / Regenerate**：每题提供 编辑 / 换一题 / 重新生成 / 找相似题 / 锁定；新增内联编辑表单（题干/选项/答案/难度/分值/解析）+ 相似题候选挑选；锁定后禁止批量改动；修复总分计算不一致。
-- **Prep 去 `window.prompt()`**（Identity #13）：教学内容 / 添加材料 / 调时长三处均改为内联编辑面板（textarea + number + 保存/取消），`stepDuration` / `recalculateRanges` 复用课时区间。
-- **Bug 修复 A — Assign 换一题无效**：根因是 mock 生成的题目 `kp_code='DR-02'`，与本地候选题库 kp_code（MATH-10x）不匹配，`replacementCandidates` 恒为空。修复：`bankCandidatesFor()` 先按知识点精匹配，无匹配时按难度回退，保证换一题/重生成/找相似总有候选题。浏览器实测：`单调性巩固题 1：判断 f(x)=$x^3-3x$...` → `导数与单调性：下列函数中，在 (0,+∞) 上单调递增的是？`（PASS）。
-- **Bug 修复 B — Prep 时间线为空**：根因是 mock/后端 lesson artifact 返回 `content.sections`（title/duration_minutes/activities），而 `applyArtifact` 只读 `content.timeline` → 恒 0 环节。修复：`applyArtifact` 优先读 `sections`、兼容 `timeline`，映射为可编辑 LessonStep。
-- **工程清理 — research-repos 污染 Vite**：`research-repos/`（77MB 克隆仓库）位于前端根目录，被 Vite 监听触发持续 full-reload，导致 dev 会话不稳。修复：`vite.config.js` 加 `server.watch.ignored: ['**/research-repos/**','**/dist/**']`；`.gitignore` 排除 `research-repos/`。
+---
 
-## Browser Test & Screenshot Evidence（以 agent 报告为准）
-真实浏览器（mock 模式 VITE_USE_MOCK=1 + ma_mock_role=teacher）：
-- **Today**：渲染任务优先 hero + 备课准备度进度条 + 任务清单 + 教学行动建议（agent 报告 PASS）。
-- **Assign**：渲染场景卡 + 快速设置 + 题目列表 + 5 个每题动作按钮；**换一题实测改变题干**（见 Bug 修复 A，PASS）。
-- **Prep**：渲染「从哪里开始」+ 课堂时间线 + 教学建议侧栏（PASS）；时间线此前 0 环节（Bug B 已修）。
-- **Grading**：渲染批改区，空队列空态正常（PASS）。
-- 截图落盘：`artifacts/teacher-refactor/{today,prep,rc3-assign,grading}/*.png`。
+## Round 05 状态逐项诚实标记
 
-## Known Issues / Limitation
-- **浏览器 harness 的 mock cookie 未持久**：curl 直测 mock 已证实 `ma_mock_role=teacher` → `mock-token-teacher-preview` → `/auth/me` 返回王老师（teacher 角色）正确；但 browser_use 子代理每次 reload 后 `fetch('/api/auth/token/refresh')` 仍返回 student token，疑似其浏览器上下文 cookie 未随 reload 保留。故 **Prep 内联编辑的点击交互暂未能在真实浏览器重验**（代码已类型检查通过，逻辑为纯客户端 v-if/openEdit/saveStep）。后续可用 `server.watch.ignored` 修复后的稳定会话或真实后端重验。
-- prep 截图中 `today.png` 实为 Prep 页（0 环节态），命名被子代理混淆，作为 Bug B 佐证保留。
+| RC / 清单项 | 状态 | 证据 |
+|---|---|---|
+| RC-05-1 Mock 契约同构（B1） | ✅ | `teacherServer.ts` 批改队列返 `{queue}`；契约测试新增并通过（41 passed） |
+| RC-05-2 统一数据世界（B3） | ✅ | 李老师 / 高二（3）班 ·46 人 / 21 份待批 / 10:10–10:55 固定课表（`mockIdentity`+`server.js`+`teacherData`） |
+| RC-05-3 组卷真实链路（B2） | ✅ | 生成 POST 必发；每题四件套；换一题单题隔离实测通过 |
+| RC-05-3 **D1 题量诚实** | ✅ | 去掉 `Math.min(count,6)` 静默减题 cap（teacherData）；新增契约测试「count=8 必须足额 8 题」；前端不足态警示 + 发布门禁用 |
+| RC-05-3 **D2 草稿寻址** | ✅ | 生成成功 `router.replace` 写 `?artifact_id=`；进页读 query 经 `GET /teacher/artifacts/{id}` 恢复；浏览器刷新实测回到同一草稿 |
+| RC-05-3 **发布门证据** | ✅ | 浏览器三项实测：8/8 启用、9 请求/8 实际→禁用+“题库供题不足”警示、单题分值 0→禁用+“存在分值为 0”提示 |
+| RC-05-3 **预览学生端** | ✅ | 「👁 预览学生端」弹窗展示学生整卷（隐藏答案/解析），浏览器实测 PASS |
+| RC-05-4 批改 URL 寻址 + 红线清除 | ✅ | `?submission_item_id=` 入/读/推进；刷新回同一份；gallery 零 confidence 百分比；Enter=确认并推进；Today 深链直达首个未确认份 |
+| RC-05-5 RD-1 教案结构化抽屉 | ✅ | `content.segments[]`（LessonSegment schema）同步 types/mock；Prep 编辑面板升级为结构化抽屉（学习目标/核心问题/教师活动/学生活动/检查理解/教学内容/材料/时长）；旧 payload 兼容 |
+| RC-05-6 Butler 上下文冒烟 | ⏳ 未开工 | P1；下轮随 R06 执行 |
+
+## Changed Files（Round 05 收尾增量）
+- `src/mock/teacherData.ts`：`quizArtifact` 去掉 `Math.min(count,6)` → 按请求数足额供题（D1）。
+- `src/pages/teacher/TeacherAssignView.vue`：D2 草稿寻址（generate 写 `?artifact_id=` + 进页恢复）；发布一致性门（题数一致 + 每题分值>0 + 总分>0）；「预览学生端」弹窗；题库不足业务警示。
+- `src/pages/teacher/TeacherPrepView.vue`：RC-05-5 结构化抽屉模板（学习目标/核心问题/教师活动/学生活动/检查理解）。
+- `test/teacher/mockContract.test.ts`：新增 D1 题量诚实契约测试；lessons 契约断言升级为 RD-1 `segments` schema。
+- （RC-05-1/2/3 主体验证为上一轮所交，本文件一并纳账。）
+
+## Browser Test & Screenshot Evidence（真实 mock 浏览器）
+证据落盘：`artifacts/teacher-refactor/round-05/`
+- `assign-d1-count8.png`：请求 8 题 → 预览显示 **共 8 题**（无静默减题）。
+- `assign-d2-refresh-restored.png`：刷新后 `?artifact_id=art-quiz-*` 仍保留，草稿回到同一 8 题。
+- `assign-gate-count-mismatch-disabled.png`：题量改 9 请求 → 共 8 题 +「题库供题不足」警示 + 发布按钮 disabled。
+- `assign-gate-score-zero-disabled.png`：单题分值 0 →「存在分值为 0 或未设置的题目」+ 发布按钮 disabled。
+- `assign-preview-student-modal.png`：学生端预览弹窗（整卷、隐藏答案/解析）。
+- `assign-publish-enabled.png`：一致态下「确认并发布给学生」可用对照。
+- 网络证据：`POST /api/teacher/quizzes/generate`（生成）、`GET /api/teacher/artifacts/{id}`（刷新恢复）均已捕获。
 
 ## Tests
-- `npm run build`：PASS（teacher 各 chunk 正常产出）。
-- `npm run typecheck`：teacher 相关文件 0 错误；`src/pages/research/*` 存在 master 基线债务（ResearchEducation/ResearchVerify/ResearchWriting），与本轮无关、未处理。
+- `npm run test`（教师套件）：**41 passed / 0 failed**（9 文件，含新契约测试）。全仓基线 2 失败系 `test/auth/securityPages.test.ts`（AdminNav 测试环境未挂 router，架构师已裁决存量债、非本轮）。
+- `npm run typecheck`：教师域文件 **0 错误**；`src/pages/research/*` 存在 master 基线债务（ResearchEducation/ResearchVerify/ResearchWriting），非本轮、未改。
+- `npm run build`：PASS。
+- 禁用词自查 `rg "window\.prompt|window\.alert|alert\(|confidence" src/pages/teacher src/components/teacher`：仅注释提及 window.prompt（无真实调用）；grading 无 confidence 百分比上屏；Today 洞察卡「可信度 %」为业务语言（非批改域）。
 
-## Real API / Local Fallback
-- 后端 M3 已有 `/teacher/today`、`/teacher/grading/*`、`/teacher/quizzes/generate`。本轮在真实契约上推进。
-- 单题替换 / 找相似题当前走确定性本地候选集（`src/mock/questionBank.ts`，按 kp/难度/去重过滤），语义真实；待后端提供单题替换端点后切换为 adapter（见 TODO_BACKEND.md）。
+## Real API / Mock 状态
+- Mock：全教师端点响应形状与 `src/types/teacher.ts` 同构（契约测试保障）；供题已足额。
+- Real API：`/teacher/quizzes/generate`、`/teacher/artifacts/{id}`、`/teacher/today`、`/teacher/grading/*` 契约沿用既有告警；D2 刷新恢复依赖后端按 id 取回完整 artifact content（JSONB 直读，无新后端改动，符合 Do Not Change）。
+
+## Known Issues / Remaining（依优先级）
+1. **RC-05-6 Butler 冒烟**：未开工（P1 -> R06）。
+2. **assign / 组卷 mock 题干内容雷同**：mock 生成题为确定性占位（`单调性巩固题 N`，选项仅 ABCD），交互已验证、但题目内容品质仍"demo 感"。待 R06 用 student 题库（含高考题）真实取题 + 单题替换 adapter（见 TODO_BACKEND.md）。
+3. **RC-05-5 收尾缝隙**：`?focus={segment.id}` 直达高亮、intervention 的 linked_insight 证据链展示尚未在 UI 呈现（契约数据已就位）。
+4. `test/auth/securityPages.test.ts` 2 失败 + 科研端 3 文件 typecheck：存量债，架构师裁决不阻塞本轮（A5 基线以此为准）。
+5. 浏览器 harness mock cookie 持久化问题已因 `VITE_USE_MOCK=1 VITE_MOCK_ROLE=teacher` 启动规避（无需手动 cookie）。
 
 ## Next
-- 用稳定会话重验 Prep 内联编辑（截图）并补 today 页正确截图。
-- 提交本轮检查点至 `refactor/teacher-os`；更新 `REFACTOR_REPORT.md`。
-- 待架构师确认：备课结构化字段是否纳入教案产物数据模型（触碰 Do Not Change，需复批）。
+- 向架构师提交 `ARCHITECT_REVIEW_REQUEST.md`，并列：D1/D2/发布门/预览学生端/RC-05-5 已交证据；RC-05-6 与 mock 题干品质请裁决优先级。
+- 提交当前工作区至 `refactor/teacher-os`。
+- 待 R06：Butler 上下文冒烟、结构化环节聚焦/依据链 UI、mock 真实取题。

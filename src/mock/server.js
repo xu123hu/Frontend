@@ -239,7 +239,7 @@ export function mockApi(req, res, next) {
     const identities = {
       admin: { id: 'mock-admin', nickname: '管理员', status: 'active', onboarding_status: 'completed', roles: [{ role: 'admin', status: 'approved', verified: true }], active_role: 'admin', grade: '' },
       researcher: { id: 'mock-researcher', nickname: '陈研究员', status: 'active', onboarding_status: 'completed', roles: [{ role: 'researcher', status: 'approved', verified: true }], active_role: 'researcher', grade: '' },
-      teacher: { id: 'mock-teacher', nickname: '王老师', status: 'active', onboarding_status: 'completed', roles: [{ role: 'teacher', status: mockState, verified: mockState === 'approved' }], active_role: 'teacher', grade: '' },
+      teacher: { id: 'mock-teacher', nickname: '李老师', status: 'active', onboarding_status: 'completed', roles: [{ role: 'teacher', status: mockState, verified: mockState === 'approved' }], active_role: 'teacher', grade: '' },
       student: { id: 'mock-student', ...MOCK_USER, status: 'active', onboarding_status: 'completed', roles: [{ role: 'student', status: 'approved', verified: true }, ...(mockDual ? [{ role: 'teacher', status: 'approved', verified: true }] : [])], active_role: 'student' },
     }
     const mockIdentity = identities[mockRole] || identities.student

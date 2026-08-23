@@ -65,17 +65,33 @@
               </div>
               <div class="t-step-body">{{ step.description }}</div>
 
-              <!-- 内联编辑面板（替代 window.prompt） -->
+              <!-- 结构化抽屉（RD-1：替代 window.prompt；旧 payload 仅编辑内容/时长，结构化字段可后补） -->
               <div v-if="editingStepId === step.id" class="t-step-edit">
-                <label class="t-edit-label">教学内容
+                <label class="t-edit-label">本环节学习目标
+                  <textarea v-model="editDraft.learningObjective" rows="2" class="t-input" style="width:100%" placeholder="学生在本环节应达成的目标"></textarea>
+                </label>
+                <label class="t-edit-label">核心问题（一句话）
+                  <input v-model="editDraft.coreQuestion" class="t-input" style="width:100%" placeholder="驱动本环节先行的问题" />
+                </label>
+                <label class="t-edit-label">教师活动（讲授/提问/演示）
+                  <textarea v-model="editDraft.teacherAction" rows="2" class="t-input" style="width:100%" placeholder="本环节教师做什么"></textarea>
+                </label>
+                <label class="t-edit-label">学生活动（独立作答/讨论/演板）
+                  <textarea v-model="editDraft.studentAction" rows="2" class="t-input" style="width:100%" placeholder="本环节学生做什么"></textarea>
+                </label>
+                <label class="t-edit-label">检查理解方式
+                  <input v-model="editDraft.assessmentCheck" class="t-input" style="width:100%" placeholder="如何确认学生已理解（随堂问/限时练/演板）" />
+                </label>
+                <label class="t-edit-label">教学内容（主内容，含关键示例）
                   <textarea v-model="editDraft.description" rows="3" class="t-input" style="width:100%"></textarea>
                 </label>
-                <label class="t-edit-label">添加材料
+                <label class="t-edit-label">附加材料
                   <input v-model="editDraft.material" class="t-input" style="width:100%" placeholder="材料名称或使用说明" @keyup.enter="saveStep(step)" />
                 </label>
                 <label class="t-edit-label">时长（分钟）
                   <input v-model.number="editDraft.minutes" type="number" min="1" class="t-input" style="width:120px" />
                 </label>
+                <p v-if="step.legacy" class="t-tiny t-muted" style="margin: 2px 0 4px">该环节来自旧教案（仅自由文本），结构化字段空出可补填。</p>
                 <div class="t-row" style="gap: 8px; margin-top: 8px">
                   <button class="t-btn sm primary" type="button" @click="saveStep(step)">保存</button>
                   <button class="t-btn sm" type="button" @click="closeEdit">取消</button>
@@ -201,6 +217,17 @@ interface LessonStep {
   tagClass: string
   description: string
   added?: boolean
+  /** RD-1 结构化环节字段（additive/optional，旧 payload 可回退到 description） */
+  kind?: string
+  learningObjective?: string
+  teacherAction?: string
+  studentAction?: string
+  coreQuestion?: string
+  assessmentCheck?: string
+  linkedInsights?: string[]
+  locked?: boolean
+  /** 旧格式（仅 description）占位标记，用于抽屉无结构化字段时的编辑提示 */
+  legacy?: boolean
 }
 
 const lessonSteps = ref<LessonStep[]>([])
@@ -217,9 +244,12 @@ interface Suggestion {
 
 const suggestions = ref<Suggestion[]>([])
 
-// ---- 内联编辑状态（替代 window.prompt） ----
+// ---- 结构化抽屉状态（RD-1：目标/师生活动/核心问题/素材/检查理解/时长，替代 window.prompt） ----
 const editingStepId = ref('')
-const editDraft = ref({ description: '', material: '', minutes: 5, focus: 'content' })
+const editDraft = ref({
+  description: '', material: '', minutes: 5, focus: 'content' as string,
+  learningObjective: '', teacherAction: '', studentAction: '', coreQuestion: '', assessmentCheck: '',
+})
 
 // ---- 交互逻辑 ----
 async function selectSource(id: string) {
@@ -283,6 +313,11 @@ function openEdit(step: LessonStep, focus?: 'material' | 'time') {
   editDraft.value.material = ''
   editDraft.value.minutes = stepDuration(step) || 5
   editDraft.value.focus = focus || 'content'
+  editDraft.value.learningObjective = step.learningObjective || ''
+  editDraft.value.teacherAction = step.teacherAction || ''
+  editDraft.value.studentAction = step.studentAction || ''
+  editDraft.value.coreQuestion = step.coreQuestion || ''
+  editDraft.value.assessmentCheck = step.assessmentCheck || ''
 }
 
 function closeEdit() {
@@ -291,12 +326,19 @@ function closeEdit() {
 }
 
 function saveStep(step: LessonStep) {
-  // 内容
+  // 内容（主内容）
   if (editDraft.value.description.trim()) step.description = editDraft.value.description.trim()
-  // 附加材料
+  // 附加材料（RD-1：素材引用落到内容备注）
   if (editDraft.value.material.trim()) {
     step.description = `${step.description || ''}\n材料：${editDraft.value.material.trim()}`.trim()
   }
+  // RD-1 结构化字段（去空写回）
+  step.learningObjective = editDraft.value.learningObjective.trim() || undefined
+  step.teacherAction = editDraft.value.teacherAction.trim() || undefined
+  step.studentAction = editDraft.value.studentAction.trim() || undefined
+  step.coreQuestion = editDraft.value.coreQuestion.trim() || undefined
+  step.assessmentCheck = editDraft.value.assessmentCheck.trim() || undefined
+  step.legacy = false
   // 时长
   const minutes = Number(editDraft.value.minutes)
   if (Number.isFinite(minutes) && minutes > 0) {

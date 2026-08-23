@@ -165,15 +165,24 @@
 
         <div class="t-divider"></div>
 
+        <div v-if="insufficiencyHint" class="t-api-note warn" role="alert">
+          <b>题库供题不足</b>：本卷实际 {{ items.length }} 题（< 请求 {{ form.count }} 题）。请改用「换一题/找相似题」补齐，或在左侧降低题量后再发布。
+        </div>
+
         <div class="t-row t-between">
           <button class="t-btn primary lg" type="button" :disabled="generating" @click="generatePaper">
             {{ generating ? '生成中…' : '✨ 生成试卷' }}
           </button>
-          <button v-if="items.length" class="t-btn lg" type="button" :disabled="store.publishing" @click="publishPaper">
-            {{ store.publishing ? '发布中…' : '确认并发布给学生' }}
-          </button>
-          <span class="t-tiny t-muted">生成后逐题编辑、替换、锁定，再发布</span>
+          <div class="t-row" style="gap: 8px">
+            <button v-if="items.length" class="t-btn lg" type="button" @click="previewAsStudent">
+              👁 预览学生端
+            </button>
+            <button v-if="items.length" class="t-btn lg primary" type="button" :disabled="publishDisabled" :title="publishBlockReason" @click="publishPaper">
+              {{ store.publishing ? '发布中…' : '确认并发布给学生' }}
+            </button>
+          </div>
         </div>
+        <p v-if="publishDisabled && items.length" class="t-tiny t-warn" style="margin-top:6px">{{ publishBlockReason }}</p>
       </div>
 
       <!-- 右栏 - 试卷预览 -->
@@ -273,20 +282,51 @@
         </div>
       </div>
     </div>
+
+    <!-- 预览学生端：学生视角整卷，隐藏答案/解析 -->
+    <div v-if="studentPreviewOpen" class="t-modal-mask" @click.self="studentPreviewOpen = false">
+      <div class="t-modal" role="dialog" aria-modal="true" aria-label="学生端预览">
+        <div class="t-modal-head">
+          <div>
+            <h3>学生端预览</h3>
+            <span class="t-sub">学生将看到以下整卷（答案与解析不可见），可逐题作答后提交</span>
+          </div>
+          <button class="t-btn sm" type="button" @click="studentPreviewOpen = false">关闭</button>
+        </div>
+        <div class="t-modal-body">
+          <div class="t-spaper-head">
+            <b>{{ typeOptions.find((t) => t.id === selectedType)?.title || '数学练习' }}</b>
+            <span>{{ ctx.className }} · 共 {{ items.length }} 题 · {{ estimateMin }} 分钟</span>
+          </div>
+          <div v-for="(q, idx) in items" :key="q._key" class="t-spaper-q">
+            <div class="t-spaper-no">{{ idx + 1 }}</div>
+            <div class="t-spaper-body">
+              <div class="qt" v-html="latex(q.question_text)"></div>
+              <div v-if="q.q_type === 'choice' && q.options" class="t-spaper-opts">
+                <label v-for="(opt, oi) in q.options" :key="oi" class="t-spaper-opt">
+                  <span class="t-spaper-letter">{{ 'ABCD'[oi] }}</span>{{ opt }}
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { artifactsApi } from '@/api/teacher/artifacts'
 import { assignmentsApi } from '@/api/teacher/assignments'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import { useAssessmentStore } from '@/stores/teacher/assessment'
 import { MONOTONICITY_BANK, replacementCandidates, type BankQuestion } from '@/mock/questionBank'
-import type { Assignment, QuizQuestion } from '@/types/teacher'
+import type { Assignment, QuizQuestion, TeacherArtifact } from '@/types/teacher'
 
+const route = useRoute()
 const router = useRouter()
 const ctx = useTeacherContextStore()
 const store = useAssessmentStore()
@@ -331,6 +371,7 @@ const form = reactive({
 
 const advancedOpen = ref(false)
 const generating = ref(false)
+const studentPreviewOpen = ref(false)
 
 const difficultyRatio = computed(() => {
   const type = typeOptions.find((t) => t.id === selectedType.value)
@@ -374,6 +415,21 @@ const hasDuplicate = computed(() => {
 })
 const duplicateHint = computed(() => hasDuplicate.value ? '存在重复题，请用"换一题"替换' : '')
 
+// ---- 发布一致性门（RC-05-3 D1/发布门）：题数与设定一致 且 每题分值>0 且 总分>0 才可发布；任何不一致禁用并示因 ----
+const totalMismatch = computed(() => items.value.length !== form.count)
+const hasZeroScoreQ = computed(() => items.value.some((q) => !(q.score > 0)))
+const sumScoreMismatch = computed(() => items.value.length > 0 && totalScore.value <= 0)
+const insufficiencyHint = computed(() => items.value.length > 0 && totalMismatch.value)
+const publishBlockReason = computed(() => {
+  if (!items.value.length) return '请先生成试卷'
+  if (totalMismatch.value) return `设定 ${form.count} 题，实际 ${items.value.length} 题，请补齐后发布`
+  if (hasZeroScoreQ.value) return '存在分值为 0 或未设置的题目，请为每题设置分值'
+  if (sumScoreMismatch.value) return '总分为 0，请为题目设置分值'
+  if (store.publishing) return '正在发布…'
+  return ''
+})
+const publishDisabled = computed(() => !publishBlockReason.value ? false : true)
+
 function typeLabel(t?: string) {
   return t === 'choice' ? '选择' : t === 'blank' ? '填空' : t === 'text' ? '解答' : ''
 }
@@ -409,6 +465,45 @@ function selectType(id: string) {
   showToast?.(`已选择「${type?.title}」场景`)
 }
 
+// ---- 学生端预览：简单 LaTeX 转义（教研环境渲染粗粒度，非全量 KaTeX） ----
+function latex(text: string): string {
+  return String(text ?? '')
+    .replace(/\$\$([^$]+)\$\$/g, '<i>$1</i>')
+    .replace(/\$([^$]+)\$/g, '<i>$1</i>')
+}
+function previewAsStudent() { studentPreviewOpen.value = true }
+
+function restoreItemsFrom(raw: Array<Record<string, unknown>>) {
+  items.value = raw.map(toEditable)
+  editingIdx.value = -1
+  similarList.value = []
+}
+function anyArtifact() {
+  const content = store.quizArtifact?.content || {}
+  const arr = (Array.isArray(content.items) ? content.items : []) as Array<Record<string, unknown>>
+  if (arr.length) restoreItemsFrom(arr)
+}
+
+/** D2 草稿寻址：生成成功后把 artifact_id 写入 URL（history.replaceState），刷新可回同一草稿 */
+function writeArtifactUrl() {
+  const id = store.quizArtifact?.artifact_id
+  if (!id) return
+  if (route.query.artifact_id === id) return
+  router.replace({ query: { ...route.query, artifact_id: id } })
+}
+
+async function restoreDraft() {
+  const id = typeof route.query.artifact_id === 'string' ? route.query.artifact_id : ''
+  if (!id || items.value.length) return
+  try {
+    store.quizArtifact = (await artifactsApi.get(id)).data
+    anyArtifact()
+    if (items.value.length) showToast?.('已恢复上次草稿，可继续编辑或发布')
+  } catch (e: any) {
+    showToast?.(e?.message || '草稿恢复失败，请重新生成')
+  }
+}
+
 async function generatePaper() {
   if (generating.value || !form.classId) return
   generating.value = true
@@ -425,9 +520,8 @@ async function generatePaper() {
       exclude_hashes: [],
     })
     const raw = (store.quizArtifact?.content?.items || []) as Array<Record<string, unknown>>
-    items.value = raw.map(toEditable)
-    editingIdx.value = -1
-    similarList.value = []
+    restoreItemsFrom(raw)
+    writeArtifactUrl()
     showToast?.(store.quizArtifact?.degraded ? '题库不足部分已用本地模板补齐，请确认后发布' : '试卷已生成，可逐题调整')
   } catch (e: any) { showToast?.(e?.message || store.error || '生成失败') }
   finally { generating.value = false }
@@ -552,6 +646,7 @@ onMounted(async () => {
       form.classId = classes.value[0].id
       ctx.setClass(classes.value[0].id, classes.value[0].name)
     }
+    if (classes.value.length) await restoreDraft()
   } catch (e: any) { showToast?.(e?.message || '班级加载失败') }
 })
 </script>
@@ -581,4 +676,28 @@ onMounted(async () => {
 @media (max-width: 900px) {
   .t-optgrid, .t-editgrid { grid-template-columns: 1fr; }
 }
+
+/* ---- 发布一致性门 & 学生端预览（本组件局部，覆盖全局 .t-modal 的 display:none） ---- */
+.t-api-note { margin: 0 0 10px; padding: 9px 12px; border-radius: var(--t-radius-sm); font-size: 13px; line-height: 1.5; }
+.t-api-note.warn { background: rgba(244, 151, 52, .12); border: 1px solid var(--t-amber, #f49734); color: #7a4a0b; }
+.t-warn { color: #b4550d; }
+
+.t-modal-mask { position: fixed; inset: 0; background: rgba(15, 22, 38, .42); z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.t-modal { display: flex; flex-direction: column; background: #fff; border-radius: 18px; width: min(860px, 94vw); max-height: 84vh; box-shadow: 0 30px 90px rgba(0, 0, 0, .25); overflow: hidden; }
+.t-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--t-line); }
+.t-modal-head h3 { margin: 0; font-size: 16px; }
+.t-modal-head .t-sub { font-size: 12px; color: var(--t-ink-2); display: block; margin-top: 4px; }
+.t-modal-body { padding: 6px 18px 18px; overflow: auto; }
+
+.t-spaper-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 2px 8px; border-bottom: 2px solid #000; margin-bottom: 4px; }
+.t-spaper-head b { font-size: 15px; }
+.t-spaper-head span { font-size: 12px; color: var(--t-ink-2); }
+.t-spaper-q { display: flex; gap: 10px; padding: 10px 2px 4px; border-bottom: 1px dashed var(--t-line); }
+.t-spaper-no { flex: none; width: 22px; font-weight: 700; font-size: 13px; }
+.t-spaper-body { flex: 1; }
+.t-spaper-body .qt { font-size: 14px; line-height: 1.6; }
+.t-spaper-body :deep(i) { font-style: normal; font-family: 'Latin Modern', 'STIX', Georgia, serif; }
+.t-spaper-opts { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+.t-spaper-opt { display: flex; gap: 8px; font-size: 13px; cursor: pointer; }
+.t-spaper-letter { font-weight: 700; color: var(--t-ink-2); }
 </style>

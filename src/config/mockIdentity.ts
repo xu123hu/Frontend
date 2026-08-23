@@ -4,7 +4,7 @@ export const MOCK_TOKEN_TEACHER = 'mock-token-teacher-preview'
 
 export function resolveMockUser(mockRole: string): { nickname: string; roles: { role: string }[]; active_role: string; grade: string } {
   if (mockRole === 'teacher') {
-    return { nickname: '王老师', roles: [{ role: 'teacher' }], active_role: 'teacher', grade: '' }
+    return { nickname: '李老师', roles: [{ role: 'teacher' }], active_role: 'teacher', grade: '' }
   }
   return { nickname: '小婷', roles: [{ role: 'student' }], active_role: 'student', grade: '高二（3）班' }
 }

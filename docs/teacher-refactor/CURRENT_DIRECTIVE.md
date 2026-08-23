@@ -8,12 +8,34 @@
 
 ---
 
-## 在整体路线图中的位置
+## Round 05 中期核查（Architect 亲测 · 2026-08-23 深夜，证据在 artifacts/teacher-refactor/round-05-arch/）
 
-```
+V4 已交付 RC-05-1/2/4 与 RC-05-3 主体。我逐项亲测结果：
+
+| 项 | 判定 | 亲测证据 |
+|---|---|---|
+| RC-05-1 契约 | ✅ Verified | diff 亲读（teacherServer 返 `{queue}`）；亲跑 vitest：教师套件含新增 mockContract.test.ts 全过 |
+| RC-05-2 数据世界 | ✅ Verified | 浏览器亲证：李老师 / 徽标与任务均 21 / hero「10:10 · 高二（3）班 · 46 人」 |
+| RC-05-3 组卷 | 🔶 主体通，余 2 缺口 | ✅ 生成出 6 题卡+四件套（编辑/换一题/重新生成/找相似题）；✅ **换一题单题隔离实测通过**（第1题不变、第2题变化、总数不变）。❌ D1：设定 8 题实际渲染 6 题（mock `Math.min(count,6)` cap 残留于 teacherData，静默减题破坏蓝图一致性）；❌ D2：生成后 URL 无 `?artifact_id=`，刷新丢草稿 |
+| RC-05-4 批改 URL | ✅ Verified | `?submission_item_id=si-3` 直接打开精确定位且保持；队列 21 条；页面零 `%`（confidence 已清）；Enter 推进与 Today 深链代码亲读 |
+
+**测试基线（我亲跑）**：vitest 76 passed / 2 failed——2 失败均在 `test/auth/securityPages.test.ts`（AdminNav.vue:8 测试环境未挂 router，存量债，非教师域非 V4 造成）；typecheck 错误仅 3 个科研端文件（存量债，教师域 0 错）。
+
+**Round 05 收尾清单（V4 继续做，做完才算 A1–A5 全绿）**：
+1. **D1 题量诚实**：mock 供题按请求数给足；若题库真实不足，前端明示「题库实际供题 N（< 请求数 M）」业务提示并与发布门联动——禁止静默减题。
+2. **D2 草稿寻址**：生成成功后 `history.replaceState` 写 `?artifact_id=`；进入页面读 query 恢复草稿（我将以刷新实测验收）。
+3. **发布门证据**：构造题数/总分不一致态，截图【确认并发布】disabled；补【预览学生端】实测截图。
+4. P1（RC-05-5 RD-1 / RC-05-6 Butler）仍未开工，按原指令执行。
+5. 存量债裁决（Architect）：auth 2 测试失败 + 科研端 3 文件 typecheck **不属本轮、不阻塞验收**，但必须在 IMPLEMENTATION_STATUS.md Known Issues 显式记录，禁止 V4 顺手大改科研端。
+
+---
+
+## 原指令正文（Round 05）
+
+### 在整体路线图中的位置
 R05 解堵核心环（本轮）→ R06 闭环右半环（讲评回流/学情动作/结构化环节）→ R07 课堂 Session
 → R08 资源与效果验证 → R09 Golden Path 全链验收 → R10 真后端 Docker 联调
-```
+
 **本轮未完成前，禁止启动 R06+ 任何内容。**
 
 ## Current Goal（本轮唯一目标）

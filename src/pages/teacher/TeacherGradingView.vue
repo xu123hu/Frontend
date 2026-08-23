@@ -195,9 +195,21 @@ onMounted(async () => {
     selectedId.value = first.submission_item_id
     await loadSelected()
   }
+  window.addEventListener('keydown', onKeydown)
 })
+
+/** RC-05-4 #4：Enter = 确认并推进下一份（多行反馈框保持换行，不误触跳转） */
+function onKeydown(e: KeyboardEvent) {
+  if (e.key !== 'Enter') return
+  const target = e.target as HTMLElement | null
+  if (target?.tagName === 'TEXTAREA') return
+  if (!canConfirm.value || store.confirming) return
+  e.preventDefault()
+  void confirmAccept()
+}
 
 onUnmounted(() => {
   if (photoUrl.value) URL.revokeObjectURL(photoUrl.value)
+  window.removeEventListener('keydown', onKeydown)
 })
 </script>

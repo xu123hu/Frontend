@@ -1,5 +1,5 @@
 import type {
-  ActionableInsight, GradingQueueItem, SourceRef, TeacherArtifact, TeacherResource, TeacherTodayData, VideoInsight,
+  ActionableInsight, GradingQueueItem, LessonSegment, SourceRef, TeacherArtifact, TeacherResource, TeacherTodayData, VideoInsight,
 } from '@/types/teacher'
 
 export const iso = (d: Date = new Date()) => d.toISOString()
@@ -10,15 +10,17 @@ export const TEACHER_CLASSES = [
 ]
 
 export function todayData(): TeacherTodayData {
+  // SSOT（BUSINESS_OBJECTS §3）：下一节课 = 10:10–10:55 固定课表，不随运行时刻漂移
   const now = Date.now()
-  // 现在是 08:00 前，下一节课 10:10（约 2 小时 12 分后）
-  const lessonAt = new Date(now + 2 * 3600e3 + 12 * 60e3)
+  const lessonStarts = new Date()
+  lessonStarts.setHours(10, 10, 0, 0)
+  if (lessonStarts.getTime() < now) lessonStarts.setDate(lessonStarts.getDate() + 1) // 已过 10:10 则指向次日，保证课表面向"今天/下一次"
   return {
     next_lesson: {
-      class_id: 'c1', topic: '导数与函数单调性', class_name: '高二（3）班',
-      starts_at: iso(lessonAt), prep_completion: 70, missing_items: ['边界反例', 'Exit Ticket'], duration_minutes: 45,
+      class_id: 'c1', topic: '导数与函数单调性', class_name: '高二（3）班 · 46 人',
+      starts_at: iso(lessonStarts), prep_completion: 70, missing_items: ['边界反例', 'Exit Ticket'], duration_minutes: 45,
     },
-    // 数量与批改队列保持一致（见 gradingQueue()）
+    // 数量与批改队列保持一致（见 gradingQueue()，SSOT=21 份）
     grading_queue: { count: gradingQueue().length, action: 'open_grading' },
     deadlines: [
       { id: 'd1', kind: 'assignment', title: '导数巩固练习', due_at: iso(new Date(now + 86400e3)) },
@@ -69,26 +71,88 @@ export function classInsights(classId: string): ActionableInsight[] {
 
 export function lessonArtifact(classId: string, topic: string, requirements: string): TeacherArtifact {
   const refs: SourceRef[] = [{ kind: 'kb', ref: 'kb://resource/301', title: '教材示例', page: 12, snippet: '函数单调性定义与判定' }]
+  // 结构化环节：参照真实教案「环节 ×(教师活动|学生活动|分钟|设计意图|教学评价)」环节表（teacher-ground-truth/LESSON_REAL_WORLD.md）
+  const segments: LessonSegment[] = [
+    {
+      id: 'seg-1', title: '复习导入（认知冲突）', duration_min: 5, kind: 'import',
+      learning_objective: '回顾导数的几何意义与单调性定义，引出判定三次函数单调性的困难，形成认知冲突。',
+      teacher_action: '提问 y=x² 的单调性可用图像法/定义法判定，再抛出三次函数定义法繁琐、画不出图像，引发认知冲突。',
+      student_action: '独立判定二次函数单调性；尝试三次函数后遇到困难。',
+      core_question: '三次函数无法简便判定单调性，能否用导数解决？',
+      content: '复习导数的几何意义；从二次函数判定入手，引出三次函数判定的认知冲突。',
+      assessment_check: '观察学生能否说出"导数几何意义=切线斜率"。',
+      source: 'adapted', locked: false,
+    },
+    {
+      id: 'seg-2', title: '新知探究：导函数正负与单调性', duration_min: 10, kind: 'concept',
+      learning_objective: '通过具体函数图像，归纳出区间内 f\'(x)>0 单调递增、f\'(x)<0 单调递减、f\'(x)=0 常函数。',
+      teacher_action: '展示 4 个具体函数图像，引导学生从特殊到一般归纳；补充 f\'(x)=0 为常函数。',
+      student_action: '观察图像，小组讨论，猜想单调性与导数正负的关系。',
+      core_question: '单调性与导函数正负有何关系？该规律是否具有一般性？',
+      content: '通过 4 个函数图像观察导函数正负与单调性关系，归纳一般性结论。',
+      materials: [{ resource_id: 'r2', name: '函数单调性.pdf', usage: '课堂投影片 4 幅函数图像' }],
+      assessment_check: '随堂口头提问：f\'(x)>0 是否一定单调递增。',
+      source: 'adapted', locked: false,
+    },
+    {
+      id: 'seg-3', title: '理解新知：几何意义验证', duration_min: 5, kind: 'concept',
+      learning_objective: '用导数的几何意义（切线斜率方向）验证一般性结论。',
+      teacher_action: '用切线"左下右上/左上右下"方向演示验证结论。',
+      student_action: '在学案标注切线方向与单调性对应。',
+      core_question: '为什么切线斜率为正时函数递增？',
+      content: '用切线斜率方向验证单调性结论。',
+      assessment_check: '课堂练习 1（基础判定）。',
+      source: 'adapted', locked: false,
+    },
+    {
+      id: 'seg-4', title: '例题 1：求单调区间', duration_min: 10, kind: 'example',
+      learning_objective: '掌握"求定义域→求导→解f\'(x)>0/<0→写单调区间"的标准步骤。',
+      teacher_action: '示范例 1（由导函数符号画大致图像）；板书典型"漏定义域"错误，组织学生辨析。',
+      student_action: '独立完成例 1，对照标准步骤核对。',
+      core_question: '求单调区间时遗漏定义域会怎样？',
+      content: '例1（导函数符号画图像）、例2（求单调区间）；强调定义域是每步前提。',
+      materials: [{ resource_id: 'r1', name: '导数教案.docx', usage: '例题编号对照' }],
+      assessment_check: '随堂 2 题限时练。',
+      source: 'adapted', locked: false,
+    },
+    {
+      id: 'seg-5', title: '例题 2：参数边界分类讨论（本班痛点）', duration_min: 12, kind: 'intervention',
+      learning_objective: '掌握含参时对参数 a 分类讨论（a=0 边界），回应本班 17/46 人连续两次失分。',
+      teacher_action: '讲例 3（含参数求单调区间）时演示三段分类依据：二次项系数含参、驻点是否在定义域内、根的大小与分布；重点辨析 a=0。',
+      student_action: '7 名重复出错学生重点演板；全班核对 a=0 边界情况。',
+      core_question: '参数 a 为何要分 a=0 与 a≠0？',
+      content: '含参函数单调区间讨论：二次项系数是否为 0 → 判别式 → 两根大小。',
+      assessment_check: '限时 3 分钟独立完成一道含参题。',
+      linked_insights: ['ins-1'], // 依据 a=0 失分洞察（teacher-ground-truth/GRADING_REAL_WORLD.md 采分点映射）
+      source: 'ai_suggested', locked: false,
+    },
+    {
+      id: 'seg-6', title: '课堂小结', duration_min: 3, kind: 'summary',
+      learning_objective: '总结"求单调区间四步法"与"数形结合/从特殊到一般"思想方法。',
+      teacher_action: '师生共同总结算法步骤与方法思想。',
+      student_action: '各自复述四步法并修正笔记。',
+      core_question: '今天你学到了哪四步？',
+      content: '知识总结（四步法）+ 方法总结（数形结合）。',
+      assessment_check: '口头复述。',
+      source: 'template', locked: false,
+    },
+  ]
   return {
     artifact_id: 'art-lesson-1', artifact_type: 'lesson_plan', scene: 'teacher.prep', class_id: classId,
     owner_id: 't1', status: 'draft', version: 1, engine: 'local',
     content: {
       topic,
-      objectives: ['理解函数单调性的概念', '掌握单调性判定方法'],
-      sections: [
-        { title: '导入', duration_minutes: 5, activities: ['回顾二次函数图像', '提出增减趋势问题'] },
-        { title: '定义与判定', duration_minutes: 20, activities: ['讲解定义', '例题 1 单调性判定'] },
-        { title: '形成性检查', duration_minutes: 10, activities: ['随堂 2 题', '小组互评'] },
-        { title: '小结', duration_minutes: 10, activities: ['总结判定步骤', '布置作业'] },
-      ],
-      materials: [], assignment: '完成巩固练习 3 题',
+      objectives: ['理解函数单调性的概念', '掌握单调性判定方法', '会用导数求单调区间并讨论含参情形'],
+      segments,
+      materials: ['函数单调性.pdf', '导数教案.docx'], assignment: '完成巩固练习 3 题（基础 2 + 提升含参 1）',
     },
     source_refs: refs, warnings: requirements ? [] : ['未填写改编要求'], degraded: !requirements, created_at: iso(), updated_at: iso(),
   }
 }
 
 export function quizArtifact(kps: string[], count: number): TeacherArtifact {
-  const items = Array.from({ length: Math.min(count, 6) }, (_, i) => ({
+  // D1 题量诚实（RC-05-3）：mock 按请求数给足，禁止 Math.min 静默减题（破坏蓝图一致性）
+  const items = Array.from({ length: Math.max(1, count) }, (_, i) => ({
     item_no: i + 1,
     q_type: (['choice', 'blank', 'text'] as const)[i % 3],
     difficulty: (['easy', 'medium', 'hard'] as const)[i % 3],
@@ -105,14 +169,30 @@ export function quizArtifact(kps: string[], count: number): TeacherArtifact {
   }
 }
 
+// SSOT = 21 份待批（BUSINESS_OBJECTS §3）；Today 徽标与批改队列共用此单一数据源。
+
+// 确定性学生名单前 21：前 16 名未确认（含若干 low_confidence），后 5 名已确认（作为"已处理"锚点）
+const QUEUE_NAMES = [
+  '李昊', '王雨桐', '张子墨', '陈思睿', '刘一鸣', '赵欣怡', '孙可', '周宇航',
+  '吴欣然', '郑皓宇', '冯若彤', '蒋明轩', '韩露', '杨子航', '何静怡', '高天',
+  '林晓', '罗宇轩', '梁雪', '宋斌', '唐心怡',
+]
+
 export function gradingQueue(): GradingQueueItem[] {
-  return [
-    { submission_item_id: 'si-1', student_label: '同学 A', status: 'unprocessed', confidence: 0.95, suggestion_score: 8, teacher_final_score: null },
-    { submission_item_id: 'si-2', student_label: '同学 B', status: 'low_confidence', confidence: 0.45, suggestion_score: 3, teacher_final_score: null },
-    { submission_item_id: 'si-3', student_label: '同学 C', status: 'unprocessed', confidence: 0.9, suggestion_score: 3, teacher_final_score: null },
-    { submission_item_id: 'si-4', student_label: '同学 D', status: 'low_confidence', confidence: 0.4, suggestion_score: 1, teacher_final_score: null },
-    { submission_item_id: 'si-5', student_label: '同学 E', status: 'confirmed', confidence: 0.85, suggestion_score: 7, teacher_final_score: 7 },
-  ]
+  const confirmedIdx = [16, 17, 18, 19, 20]
+  return QUEUE_NAMES.map((name, i) => {
+    const confirmed = confirmedIdx.includes(i)
+    // 未确认份确定性分布：easy 高分 / 参数边界 a=0（与 a=0 洞察呼应）进入 low_confidence
+    const isLow = !confirmed && [1, 6, 9, 12, 14].includes(i)
+    return {
+      submission_item_id: `si-${i + 1}`,
+      student_label: name,
+      status: confirmed ? 'confirmed' : isLow ? 'low_confidence' : 'unprocessed',
+      confidence: confirmed ? 0.85 : isLow ? 0.42 : 0.92,
+      suggestion_score: confirmed ? [7, 8, 6, 9, 5][i % 5] : isLow ? 2 : [8, 9, 7, 10][i % 4],
+      teacher_final_score: confirmed ? [7, 8, 6, 9, 5][i % 5] : null,
+    }
+  })
 }
 
 export function gradingDetail(item: GradingQueueItem) {

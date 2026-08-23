@@ -102,6 +102,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTeacherTodayStore } from '@/stores/teacher/today'
 import { useTeacherContextStore } from '@/stores/teacher/context'
+import { useGradingStore } from '@/stores/teacher/grading'
 import { useAuthStore } from '@/stores/auth'
 import type { ActionableInsight } from '@/types/teacher'
 
@@ -164,7 +165,7 @@ const topTasks = computed<TaskRow[]>(() => {
     rows.push({
       key: 'grading', title: '批阅周测待确认作答', count: gc,
       reason: '主观题需教师逐份确认，按题分批更快',
-      action: '去批改', run: () => { context.setClass(nl?.class_id || null, nl?.class_name || null); router.push('/teacher/grading') },
+      action: '去批改', run: () => { context.setClass(nl?.class_id || null, nl?.class_name || null); goGradingDeepLink() },
     })
   }
   if (video) {
@@ -193,12 +194,22 @@ function goAssign(classId?: string, className?: string) {
   router.push('/teacher/assign')
 }
 
+/** RC-05-4 #5：挤批改深链直达首个未确认份，URL 携带其 submission_item_id（非列表页） */
+async function goGradingDeepLink() {
+  const gradingStore = useGradingStore()
+  await gradingStore.fetchQueue(context.classId || undefined)
+  const first = gradingStore.queue.find((item) => item.status !== 'confirmed') || gradingStore.queue[0]
+  const query: Record<string, string> = {}
+  if (first?.submission_item_id) query.submission_item_id = first.submission_item_id
+  router.push({ path: '/teacher/grading', query })
+}
+
 function runInsightAction(ins: ActionableInsight, label: string) {
   const classId = store.data?.next_lesson?.class_id
   const className = store.data?.next_lesson?.class_name
   if (label === '加入下节课' || label === '应用到教案') return goPrep(classId, className)
   if (label === '出巩固题' || label === '生成巩固题') return goAssign(classId, className)
-  if (label === '去批改') return router.push('/teacher/grading')
+  if (label === '去批改') return goGradingDeepLink()
   // 看依据 / 看典型作答 / 看名单 → 进入班级学情，证据在看依据处展示
   return router.push('/teacher/classes')
 }

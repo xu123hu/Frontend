@@ -154,6 +154,52 @@ export interface LessonPlanSection {
   activities: string[]
 }
 
+/** RD-1（modules/lesson-artifact.md）：教案产物结构化环节。全部字段 additive/optional；
+ *  旧 payload（仅 description）必须继续可渲染，禁止迁移破坏。 */
+export type LessonSegmentKind = 'import' | 'concept' | 'example' | 'practice' | 'check' | 'summary' | 'intervention'
+export type LessonSegmentSource = 'template' | 'adapted' | 'ai_suggested' | 'teacher_edited'
+
+export interface LessonMaterialRef {
+  resource_id: string
+  name: string
+  usage?: string
+}
+
+/** 对应真实教案「环节 ×(教师活动|学生活动|预计分钟|设计意图|教学评价)」环节表 */
+export interface LessonSegment {
+  id: string
+  title: string
+  duration_min?: number
+  kind: LessonSegmentKind
+  /** 本环节学习目标 */
+  learning_objective?: string
+  /** 教师活动（讲授/提问/演示） */
+  teacher_action?: string
+  /** 学生活动（独立作答/讨论/演板） */
+  student_action?: string
+  /** 核心问题（一句话） */
+  core_question?: string
+  /** 主内容（富文本，含 LaTeX；description 旧字段映射于此，读旧写新） */
+  content: string
+  /** 素材引用（可跳资源库） */
+  materials?: LessonMaterialRef[]
+  /** 检查理解方式 */
+  assessment_check?: string
+  /** 依据的 insight_id（支撑「AI 有依据」） */
+  linked_insights?: string[]
+  source?: LessonSegmentSource
+  /** AI 批量建议不得触碰（同 PPT 锁页语义） */
+  locked?: boolean
+}
+
+export interface LessonSegmentContent {
+  topic?: string
+  objectives?: string[]
+  segments: LessonSegment[]
+  materials?: string[]
+  assignment?: string
+}
+
 export interface QuizQuestion {
   item_no: number
   q_type: 'choice' | 'blank' | 'text'
