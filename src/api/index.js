@@ -158,6 +158,9 @@ export const adminApi = {
   getEmbedding: () => api.get('/admin/system/embedding'),
   putEmbedding: (payload) => api.put('/admin/system/embedding', payload),
   testEmbedding: () => api.post('/admin/system/embedding/test'),
+  // Butler 授权
+  getButler: () => api.get('/admin/system/butler'),
+  putButler: (payload) => api.put('/admin/system/butler', payload),
   // 工作流（10 个）
   workflows: () => api.get('/admin/workflows'),
   putWorkflow: (name, payload) => api.put(`/admin/workflows/${encodeURIComponent(name)}`, payload),

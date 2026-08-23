@@ -10,6 +10,7 @@ import './styles/tokens.css'
 import './styles/base.css'
 import './styles/v4.css'
 import './styles/teacher.css'
+import './styles/research.css'
 
 // 本地预览便捷引导：只有 VITE_USE_MOCK=1 才预置 mock 身份（默认真实 API 模式绝不预置）。
 // VITE_MOCK_ROLE=teacher 预置教师；默认/student 保持学生。旧 VITE_REAL_API 遗留语义已由 VITE_USE_MOCK 取代。

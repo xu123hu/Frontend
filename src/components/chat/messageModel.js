@@ -82,6 +82,7 @@ export function newAssistantMsg(clientMsgId) {
     createdAt: new Date().toISOString(),
     versions: null, // {index, count, ids[]} 兄弟版本元数据（count>1 时显示版本导航）
     action: null, // v1.4：open_page 功能直达（消息内跳转按钮卡，不再静默跳页）
+    degraded: null, // 阶段 6B：搜索降级提示 {error_code, message}
   }
 }
 
@@ -143,6 +144,13 @@ export function applySseEvent(msg, event, data, fx = {}) {
       break
     case 'badge':
       msg.badge = d.level || ''
+      break
+    case 'degraded':
+      // 阶段 6B：搜索降级提示（web_search 工具降级结果透传）
+      msg.degraded = {
+        error_code: d.error_code || '',
+        message: d.message || d.refuse_reason || '',
+      }
       break
     case 'file_parsed':
       msg.statuses.push({ stage: 'file', text: `文件《${d.filename || ''}》解析完成` })
@@ -229,6 +237,7 @@ export function fromHistory(item) {
     errorText: '',
     skillKeys: [],
     action: null, // v1.4：envelope.blocks 的 action 块还原（见下方循环）
+    degraded: null, // 阶段 6B：搜索降级提示（envelope.blocks 的 degraded 块还原）
   }
   for (const b of blocks) {
     if (!b || typeof b !== 'object') continue
@@ -254,6 +263,12 @@ export function fromHistory(item) {
       msg.notices.push(b.content || '')
     } else if (b.type === 'citation') {
       msg.citations = Array.isArray(b.items) ? b.items : []
+    } else if (b.type === 'degraded') {
+      // 阶段 6B：搜索降级提示块还原
+      msg.degraded = {
+        error_code: (b.data && b.data.error_code) || '',
+        message: (b.data && (b.data.message || b.data.refuse_reason)) || '',
+      }
     } else if (b.type === 'thinking') {
       // M2：envelope.blocks 末尾追加的 thinking 块（老契约通道，与新 item.thinking 并存去重）
       if (!msg.thinking) msg.thinking = b.content || ''

@@ -19,9 +19,11 @@ export const studentImmersive = [
 ]
 
 export const adminNav = [
+  { key: 'identity', icon: '🪪', title: '身份审核', to: '/admin/identity/applications' },
   { key: 'overview', icon: '📈', title: '总览', to: '/admin/overview' },
   { key: 'model', icon: '🤖', title: '模型配置', to: '/admin/model' },
   { key: 'xingchen', icon: '✨', title: '星辰与工作流', to: '/admin/xingchen' },
   { key: 'cloud-kb', icon: '☁️', title: '云知识库', to: '/admin/cloud-kb' },
   { key: 'kb-bench', icon: '🔍', title: '检索试验台', to: '/admin/kb-bench' },
+  { key: 'butler', icon: '🔐', title: 'Butler 授权', to: '/admin/butler' },
 ]

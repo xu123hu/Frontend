@@ -141,23 +141,19 @@
           暂不支持的内容类型：{{ b.type || '未知' }}
         </div>
 
-        <!-- 引用 citation chips -->
+        <!-- 引用来源卡片（阶段 6B：SourceCard 展示 title/url/snippet/retrieved_at，缺失字段回退 source） -->
         <div v-if="msg.citations.length" class="citations">
-          <div
+          <SourceCard
             v-for="c in msg.citations"
             :key="c.n"
-            class="cite-chip"
-            :class="{ open: expandedCite === c.n }"
-            @click="expandedCite = expandedCite === c.n ? 0 : c.n"
-          >
-            【{{ c.n }}】{{ c.source }}
-          </div>
-          <div v-if="currentCite" class="cite-detail">
-            <div><b>来源：</b>{{ currentCite.source }}</div>
-            <div v-if="currentCite.loc"><b>位置：</b>{{ currentCite.loc }}</div>
-            <div v-if="currentCite.chunk_id" class="cite-chunk"><b>切片：</b>{{ currentCite.chunk_id }}</div>
-          </div>
+            :c="c"
+            :open="expandedCite === c.n"
+            @toggle="expandedCite = expandedCite === c.n ? 0 : c.n"
+          />
         </div>
+
+        <!-- 搜索降级提示（阶段 6B：web_search 工具降级结果透传） -->
+        <div v-if="msg.degraded" class="degraded-bar">⚠️ {{ degradedText }}</div>
 
         <!-- 底部徽标行（tokens/耗时已挪入操作条 meta 的 title tooltip，不再常驻） -->
         <div v-if="hasFoot" class="msg-foot">
@@ -244,6 +240,7 @@ import QuizSetCard from './QuizSetCard.vue'
 import GenericCard from './GenericCard.vue'
 import SocraticCompleteCard from './SocraticCompleteCard.vue'
 import AttachmentThumb from './AttachmentThumb.vue'
+import SourceCard from './SourceCard.vue'
 import UiIcon from '@/components/common/UiIcon.vue'
 import { HINT_LEVEL_ZH, fmtHm } from './messageModel'
 import { skillByKey } from '@/config/skills'
@@ -259,7 +256,16 @@ const emit = defineEmits([
 ])
 
 const expandedCite = ref(0)
-const currentCite = computed(() => props.msg.citations.find((c) => c.n === expandedCite.value) || null)
+
+// 搜索降级文案（阶段 6B）：优先透传 message，否则按 error_code 映射
+const DEGRADED_ZH = {
+  confirmation_required: '本地知识库未检索到相关内容，联网搜索需先授权',
+}
+const degradedText = computed(() => {
+  const d = props.msg.degraded
+  if (!d) return ''
+  return d.message || DEGRADED_ZH[d.error_code] || '服务降级，已按本地知识库作答'
+})
 
 /* ===== 复制 ===== */
 const copied = ref(false)
@@ -476,17 +482,12 @@ function stageName(stage) {
 }
 
 .citations { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
-.cite-chip {
-  font-size: 11px; padding: 2px 10px; border-radius: var(--radius-full); cursor: pointer;
-  background: #EEF1FF; color: var(--primary); transition: all 0.15s;
-  max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+
+.degraded-bar {
+  margin-top: 10px; font-size: 12px; color: #92400e;
+  background: var(--warn-bg); border: 1px solid var(--warn-border);
+  border-radius: var(--radius-sm); padding: 6px 10px; line-height: 1.6;
 }
-.cite-chip:hover, .cite-chip.open { background: var(--primary); color: #fff; }
-.cite-detail {
-  width: 100%; margin-top: 4px; padding: 8px 12px; font-size: 12px; color: var(--text-secondary);
-  background: #f8fafc; border-radius: var(--radius-sm); border: 1px solid var(--border);
-}
-.cite-chunk { word-break: break-all; }
 
 .msg-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 

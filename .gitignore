@@ -27,3 +27,6 @@ vite.config.js.timestamp-*.mjs
 # Playwright 运行产物
 test-results/
 playwright-report/
+
+# merge backup dir
+.merge-backup/
