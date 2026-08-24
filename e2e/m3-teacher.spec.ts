@@ -51,19 +51,15 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
     await expect(page.getByText('作业已发布')).toBeVisible()
   })
 
-  test('grading: low-confidence item requires confirm and override', async ({ page }) => {
+  test('grading: question-focused workspace requires an explicit teacher decision', async ({ page }) => {
     await presetMock(page, TEACHER_USER)
-    await page.goto('/teacher/grading')
-    await expect(page.getByRole('button', { name: '低置信度' })).toBeVisible()
-    await page.getByRole('button', { name: '低置信度' }).click()
-    await expect(page.getByText('同学 B')).toBeVisible()
-    await page.getByText('同学 B').click()
-    await expect(page.getByText('批改详情')).toBeVisible()
-    await expect(page.getByText(/OCR 不清或低置信度/)).toBeVisible()
-    await page.locator('#g-score').fill('3')
-    await page.getByRole('button', { name: '按我的分数确认' }).click()
-    await page.getByRole('button', { name: '确认', exact: true }).click()
-    await expect(page.getByText('已确认正式结果')).toBeVisible()
+    await page.goto('/teacher/grading?submission_item_id=si-2')
+    await expect(page.getByRole('heading', { name: '函数的单调性', exact: true })).toBeVisible()
+    await expect(page.getByText('正确求导')).toBeVisible()
+    await page.getByRole('button', { name: '教师明确给分' }).click()
+    await page.getByLabel('最终得分').fill('3')
+    await page.getByRole('button', { name: '确认并下一份', exact: true }).click()
+    await expect(page.getByText('教师确认已写入')).toBeVisible()
   })
 
   test('classroom: start mode with confirmation', async ({ page }) => {

@@ -18,13 +18,13 @@ export const serverWorkspaceFixture = {
       questions: [{ item_no: 1, label: '第 1 题', question_text: '已知 f(x)=x^3-3x，讨论函数的单调性。' }],
     },
     queue: [
-      { submission_item_id: 'si-1', anonymous_label: '作答 #001', state: 'ungraded', manual_review: false },
-      { submission_item_id: 'si-2', anonymous_label: '作答 #002', state: 'review', manual_review: true },
-      { submission_item_id: 'si-3', anonymous_label: '作答 #003', state: 'ungraded', manual_review: false },
+      { submission_item_id: 'si-1', anonymous_label: '匿名作答 #001', state: 'ungraded', manual_review: false },
+      { submission_item_id: 'si-2', anonymous_label: '匿名作答 #002', state: 'review', manual_review: true },
+      { submission_item_id: 'si-3', anonymous_label: '匿名作答 #003', state: 'ungraded', manual_review: false },
     ],
     selected: {
       submission_item_id: 'si-2',
-      work: { original_answer: 'f′(x)=3x²−3，x=-1,1 是分界点。', file_id: null },
+      work: { original_answer: "$f(x)=x^3-3x$ 的单调性：$f'(x)=3x^2-3$，令其为零得 $x=\\pm 1$，故在 $(-\\infty,-1)\\cup(1,+\\infty)$ 单调增，$(-1,1)$ 单调减。", file_id: null },
       scoring: {
         max_score: 10,
         rubric_status: 'ready',

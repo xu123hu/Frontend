@@ -60,7 +60,7 @@ function gradingWorkspace(selectedId: string | null, status: string) {
   const queue = gradingItems
     .map((item, index) => ({
       submission_item_id: item.submission_item_id,
-      anonymous_label: '作答 #' + String(index + 1).padStart(3, '0'),
+      anonymous_label: '匿名作答 #' + String(index + 1).padStart(3, '0'),
       state: workspaceState(item),
       manual_review: gradingReviews.get(item.submission_item_id) === 'pending',
     }))
@@ -71,6 +71,7 @@ function gradingWorkspace(selectedId: string | null, status: string) {
   const selectedIndex = selected ? queue.findIndex((item) => item.submission_item_id === selected.submission_item_id) : -1
   const item = selected ? gradingItems.find((candidate) => candidate.submission_item_id === selected.submission_item_id) : null
   const detail = item ? gradingDetail(item) : null
+  const sourceFileId = selected?.submission_item_id === 'si-4' ? 'scan-si-4' : null
   const following = selectedIndex >= 0 ? [...queue.slice(selectedIndex + 1), ...queue.slice(0, selectedIndex)] : []
   const nextUngraded = following.find((entry) => entry.state !== 'confirmed')
   const confirmed = queue.filter((entry) => entry.state === 'confirmed').length
@@ -95,7 +96,7 @@ function gradingWorkspace(selectedId: string | null, status: string) {
     queue,
     selected: detail && selected ? {
       submission_item_id: selected.submission_item_id,
-      work: { original_answer: detail.original_answer, file_id: null },
+      work: { original_answer: detail.original_answer, file_id: sourceFileId },
       scoring: {
         max_score: 10,
         rubric_status: 'ready',
@@ -120,7 +121,7 @@ function gradingWorkspace(selectedId: string | null, status: string) {
         feedback: detail.suggestion?.teacher_feedback ?? null,
         decision: detail.suggestion?.decision ?? null,
       },
-      fixture_id: 'derivative-solution',
+      fixture_id: sourceFileId ? 'handwritten-scan' : 'derivative-solution',
       source_ref: 'docs/teacher-v2/references/grading/TEST_INPUT_CORPUS.md',
     } : null,
     navigation: {
@@ -242,6 +243,10 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
       const selectedId = query.get('submission_item_id')
       const status = query.get('status') || 'all'
       ok(res, gradingWorkspace(selectedId, status)); return true
+    }
+    if (method === 'GET' && seg[2] && seg[3] === 'file') {
+      if (seg[2] === 'si-4') { fail(res, 503, 50310, 'source_file_temporarily_unavailable'); return true }
+      fail(res, 404, 40400, 'file_not_found'); return true
     }
     if (method === 'POST' && url === '/teacher/grading/batch-confirm') {
       const b = await readBody(req)

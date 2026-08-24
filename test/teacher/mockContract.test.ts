@@ -157,4 +157,14 @@ describe('mock 教师端点契约同构（RC-05-1）', () => {
     expect(queueEntry).toMatchObject({ manual_review: true, state: 'review' })
     expect(workspace.body.data.selected.confirmed_decision).toBeNull()
   })
+
+  it('grading workspace keeps a scoped source-file failure visible instead of fabricating a preview', async () => {
+    const workspace = await call('GET', '/teacher/grading/workspace?class_id=c1&assignment_id=a1&item_no=1&submission_item_id=si-4')
+    expect(workspace.statusCode).toBe(200)
+    expect(workspace.body.data.selected.work.file_id).toBe('scan-si-4')
+
+    const file = await call('GET', '/teacher/grading/si-4/file')
+    expect(file.statusCode).toBe(503)
+    expect(file.body.code).toBe(50310)
+  })
 })

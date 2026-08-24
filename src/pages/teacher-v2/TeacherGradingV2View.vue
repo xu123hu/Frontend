@@ -54,6 +54,8 @@ import SubmissionWorkViewer from '@/features/teacher-grading-v2/components/Submi
 import type { WorkspaceFilter } from '@/features/teacher-grading-v2/contracts'
 import { useGradingWorkspaceStore } from '@/stores/teacher/gradingWorkspace'
 
+defineOptions({ name: 'TeacherGradingV2View' })
+
 const route = useRoute()
 const router = useRouter()
 const store = useGradingWorkspaceStore()
@@ -132,9 +134,9 @@ onUnmounted(revokeFile)
 </script>
 
 <style scoped>
-.grading-v2 { max-width:1600px; margin:0 auto; padding:24px; color:#1c304a; }
-.grading-v2__workspace { overflow:hidden; border:1px solid #cdd9e6; border-radius:16px; background:#fff; box-shadow:0 12px 32px rgba(28,59,92,.12); }
-.grading-v2__body { display:grid; grid-template-columns:minmax(184px,.75fr) minmax(410px,1.9fr) minmax(280px,1fr); min-height:570px; }
+.grading-v2 { box-sizing:border-box; height:calc(100vh - 68px); max-width:1600px; margin:0 auto; padding:24px; color:#1c304a; }
+.grading-v2__workspace { display:flex; height:100%; flex-direction:column; overflow:hidden; border:1px solid #cdd9e6; border-radius:16px; background:#fff; box-shadow:0 12px 32px rgba(28,59,92,.12); }
+.grading-v2__body { display:grid; flex:1; min-height:0; overflow:hidden; grid-template-columns:minmax(184px,.75fr) minmax(410px,1.9fr) minmax(280px,1fr); }
 .grading-v2__state { max-width:600px; margin:80px auto; padding:28px; border:1px solid #d7e2ed; border-radius:14px; background:#fff; color:#597086; line-height:1.7; text-align:center; }
 .grading-v2__state h1 { margin:0 0 8px; color:#1c3452; font-size:21px; }
 .grading-v2__state p { margin:0 0 16px; }
@@ -142,5 +144,5 @@ onUnmounted(revokeFile)
 .grading-v2__state--error, .grading-v2__error { color:#8d2533; }
 .grading-v2__notice, .grading-v2__error { margin:0; padding:9px 18px; background:#edf7ff; color:#295f8d; font-size:13px; }
 .grading-v2__error { background:#fff0f2; }
-@media (max-width: 920px) { .grading-v2 { padding:14px; } .grading-v2__body { grid-template-columns:1fr; } }
+@media (max-width: 920px) { .grading-v2 { height:auto; min-height:calc(100vh - 68px); padding:14px; } .grading-v2__workspace { height:auto; } .grading-v2__body { display:grid; overflow:visible; grid-template-columns:1fr; } }
 </style>

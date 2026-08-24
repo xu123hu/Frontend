@@ -61,7 +61,7 @@ function updateFeedback(event: Event) { emit('update:feedback', (event.target as
 </script>
 
 <style scoped>
-.rubric-panel { min-width:0; border-left:1px solid #dbe4ef; background:#f9fbfd; color:#243950; }
+.rubric-panel { min-width:0; min-height:0; overflow:auto; border-left:1px solid #dbe4ef; background:#f9fbfd; color:#243950; }
 .rubric-panel section { padding:18px; border-bottom:1px solid #dbe4ef; }
 .rubric-panel h2 { margin:0 0 10px; color:#1b314d; font-size:14px; }
 .rubric-panel__eyebrow { margin:0 0 5px; color:#65758a; font-size:12px; font-weight:800; letter-spacing:.04em; }

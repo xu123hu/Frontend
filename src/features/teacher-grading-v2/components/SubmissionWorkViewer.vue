@@ -16,7 +16,7 @@
     </section>
     <section class="work-viewer__answer">
       <p>作答内容</p>
-      <pre v-if="selection.work.originalAnswer">{{ selection.work.originalAnswer }}</pre>
+      <LatexText v-if="selection.work.originalAnswer" class="work-viewer__answer-text" :text="selection.work.originalAnswer" />
       <div v-else class="work-viewer__empty">该作答没有可用的文本内容，请依据原始文件人工核对。</div>
     </section>
     <section v-if="selection.work.fileId" class="work-viewer__file">
@@ -31,6 +31,7 @@
 </template>
 
 <script setup lang="ts">
+import LatexText from '@/components/LatexText.vue'
 import type { WorkspaceContext, WorkspaceSelection } from '../contracts'
 
 defineProps<{
@@ -44,7 +45,7 @@ defineEmits<{ 'retry-file': [] }>()
 </script>
 
 <style scoped>
-.work-viewer { min-width:0; padding:24px 28px 30px; background:#fff; }
+.work-viewer { min-width:0; min-height:0; overflow:auto; padding:24px 28px 30px; background:#fff; }
 .work-viewer__heading { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; padding-bottom:18px; border-bottom:1px solid #e4eaf1; }
 .work-viewer__eyebrow, .work-viewer__question p, .work-viewer__answer p, .work-viewer__file p { margin:0 0 6px; color:#64758b; font-size:12px; font-weight:800; letter-spacing:.04em; }
 .work-viewer h2 { margin:0; color:#172c48; font-size:20px; }
@@ -53,7 +54,8 @@ defineEmits<{ 'retry-file': [] }>()
 .work-viewer__question strong { font-size:16px; font-weight:650; }
 .work-viewer__options { padding-left:22px; margin:11px 0 0; color:#40536a; }
 .work-viewer__answer { padding-top:20px; }
-.work-viewer__answer pre { min-height:210px; margin:0; padding:18px; overflow:auto; border:1px solid #dae4ef; border-radius:10px; background:#fbfcfe; color:#172c48; white-space:pre-wrap; font:15px/1.85 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.work-viewer__answer-text { display:block; min-height:210px; box-sizing:border-box; padding:18px; border:1px solid #dae4ef; border-radius:10px; background:#fbfcfe; color:#172c48; white-space:pre-wrap; font:15px/1.85 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.work-viewer__answer-text :deep(.katex) { font-size:1.03em; }
 .work-viewer__empty { padding:18px; border:1px dashed #b8c6d6; border-radius:10px; color:#5c6e83; background:#fbfcfe; }
 .work-viewer__file { margin-top:18px; padding:14px; border:1px solid #dae4ef; border-radius:10px; background:#f7faff; }
 .work-viewer__file small { color:#61738b; }

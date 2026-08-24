@@ -31,18 +31,19 @@ defineEmits<{ select: [submissionItemId: string] }>()
 
 function stateLabel(state: SubmissionQueueEntry['state'], manualReview: boolean): string {
   if (state === 'confirmed') return '已确认'
-  if (manualReview || state === 'review') return '待复看'
+  if (manualReview) return '人工复看'
+  if (state === 'review') return '待复看'
   return '待批改'
 }
 </script>
 
 <style scoped>
-.submission-queue { min-width:0; background:#f5f8fc; border-right:1px solid #dbe4ef; }
+.submission-queue { display:flex; min-width:0; min-height:0; flex-direction:column; background:#f5f8fc; border-right:1px solid #dbe4ef; }
 .submission-queue__head { display:flex; align-items:center; justify-content:space-between; padding:18px 17px 14px; border-bottom:1px solid #dbe4ef; }
 .submission-queue__head p { margin:0; color:#162d4b; font-size:14px; font-weight:800; }
 .submission-queue__head small { color:#63738a; font-size:12px; }
 .submission-queue__head > span { display:grid; place-items:center; width:24px; height:24px; border-radius:50%; background:#dcecff; color:#174f88; font-size:12px; font-weight:800; }
-.submission-queue__list { list-style:none; padding:8px; margin:0; display:grid; gap:5px; overflow:auto; max-height:calc(100vh - 286px); }
+.submission-queue__list { min-height:0; flex:1; list-style:none; padding:8px; margin:0; display:grid; gap:5px; overflow:auto; }
 .submission-queue__list button { display:flex; width:100%; align-items:center; justify-content:space-between; gap:8px; border:1px solid transparent; border-radius:9px; padding:11px 10px; background:transparent; color:#263b57; text-align:left; cursor:pointer; font:inherit; }
 .submission-queue__list button:hover { background:#e9f1fb; }
 .submission-queue__list button.is-selected { border-color:#78a9de; background:#fff; box-shadow:0 2px 6px rgba(25,63,102,.08); }
