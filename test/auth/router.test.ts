@@ -24,4 +24,15 @@ describe('role-aware auth navigation', () => {
       status: 'authenticated', activeRole: 'admin', roles: ['student', 'admin'],
     })).toBe(true)
   })
+
+  it('routes an approved researcher root to the research workspace', () => {
+    expect(resolveAuthNavigation(route('/'), {
+      status: 'authenticated', activeRole: 'researcher', roles: ['researcher'],
+    })).toEqual({ path: '/research' })
+  })
+
+  it('keeps needs-more-info identities out of the student home', () => {
+    expect(resolveAuthNavigation(route('/overview'), { status: 'needs_more_info' }))
+      .toEqual({ path: '/identity/pending' })
+  })
 })
