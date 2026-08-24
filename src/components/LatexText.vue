@@ -16,6 +16,30 @@ const props = defineProps({
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
 const escapeHtml = (s) => s.replace(/[&<>"]/g, (ch) => ESCAPES[ch])
 
+const BARE_TEX_REPLACEMENTS = [
+  [/\\(?:d?frac)\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)'],
+  [/\\sqrt\{([^{}]*)\}/g, '√($1)'],
+  [/\\(?:rightarrow|to)\b/g, '→'],
+  [/\\(?:leq|le)\b/g, '≤'],
+  [/\\(?:geq|ge)\b/g, '≥'],
+  [/\\neq\b/g, '≠'],
+  [/\\infty\b/g, '∞'],
+  [/\\pm\b/g, '±'],
+  [/\\mp\b/g, '∓'],
+  [/\\cup\b/g, '∪'],
+  [/\\cap\b/g, '∩'],
+  [/\\times\b/g, '×'],
+  [/\\cdot\b/g, '·'],
+  [/\\(?:left|right)\b/g, ''],
+]
+
+function renderPlainText(value) {
+  let result = escapeHtml(value)
+  for (const [pattern, replacement] of BARE_TEX_REPLACEMENTS) result = result.replace(pattern, replacement)
+  // Keep a malformed or uncommon command readable without exposing source syntax.
+  return result.replace(/\\([A-Za-z]+)/g, '$1')
+}
+
 /**
  * 轻量渲染内核：不走 marked 全管线，仅把 $...$/$$...$$ 段交给 KaTeX，
  * 其余文本转义直出。嵌套/碎片化 $ 先经 mergeNestedMath 归一化（与 MarkdownView 同规则）。
@@ -28,7 +52,13 @@ function renderLatex(src) {
   const n = s.length
   while (i < n) {
     if (s[i] === '\\' && s[i + 1] === '$') { out += '$'; i += 2; continue } // \$ 按字面美元符
-    if (s[i] !== '$') { out += escapeHtml(s[i]); i += 1; continue }
+    if (s[i] !== '$') {
+      const next = s.indexOf('$', i)
+      const end = next === -1 ? n : next
+      out += renderPlainText(s.slice(i, end))
+      i = end
+      continue
+    }
     const block = s[i + 1] === '$'
     const close = block ? s.indexOf('$$', i + 2) : s.indexOf('$', i + 1)
     if (close === -1) { out += '$'; i += 1; continue } // 未闭合：$ 按字面输出

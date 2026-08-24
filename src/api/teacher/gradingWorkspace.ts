@@ -15,8 +15,6 @@ function queryFor(input: GradingWorkspaceQuery): Record<string, string | number>
 export const gradingWorkspaceApi = {
   get: (query: GradingWorkspaceQuery, signal?: AbortSignal) =>
     teacherGet<unknown>('/teacher/grading/workspace', queryFor(query), signal),
-  suggest: (submissionItemId: string, payload: unknown, signal?: AbortSignal) =>
-    teacherPost<unknown>('/teacher/grading/' + submissionItemId + '/suggest', payload, undefined, signal),
   confirm: (submissionItemId: string, payload: ConfirmWorkspaceDecision & { suggestion_id: string; version: number }, idempotencyKey: string, signal?: AbortSignal) =>
     teacherPost<unknown>('/teacher/grading/' + submissionItemId + '/confirm', {
       suggestion_id: payload.suggestion_id,

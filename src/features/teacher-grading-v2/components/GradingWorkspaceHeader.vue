@@ -3,9 +3,10 @@
     <div class="workspace-header__identity">
       <p class="workspace-header__eyebrow">{{ context.class?.label || '批改范围受限' }}</p>
       <h1>{{ context.assignment?.title || '批改工作台' }}</h1>
-      <p class="workspace-header__question">
-        {{ context.question ? '第 ' + context.question.itemNo + ' 题 · ' + context.question.questionText : '请选择已发布作业中的题目' }}
-      </p>
+      <LatexText
+        class="workspace-header__question"
+        :text="context.question ? '第 ' + context.question.itemNo + ' 题 · ' + context.question.questionText : '请选择已发布作业中的题目'"
+      />
     </div>
     <div class="workspace-header__tools">
       <div class="workspace-header__progress" aria-label="批改进度">
@@ -26,6 +27,7 @@
 </template>
 
 <script setup lang="ts">
+import LatexText from '@/components/LatexText.vue'
 import type { WorkspaceContext, WorkspaceFilter } from '../contracts'
 
 defineProps<{ context: WorkspaceContext }>()
@@ -41,7 +43,7 @@ function changeFilter(event: Event) {
 .workspace-header { display:flex; justify-content:space-between; gap:24px; align-items:flex-start; padding:22px 26px; background:#13233d; color:#f8fbff; border-radius:16px 16px 0 0; }
 .workspace-header__eyebrow { margin:0 0 6px; color:#a9c5ed; font-size:13px; font-weight:700; letter-spacing:.04em; }
 .workspace-header h1 { margin:0; font-size:24px; line-height:1.25; }
-.workspace-header__question { max-width:720px; margin:9px 0 0; color:#d7e5f8; line-height:1.6; }
+.workspace-header__question { display:block; max-width:720px; margin:9px 0 0; color:#d7e5f8; line-height:1.6; }
 .workspace-header__tools { display:flex; align-items:center; gap:18px; flex-shrink:0; }
 .workspace-header__progress { min-width:104px; text-align:right; color:#d7e5f8; font-size:13px; }
 .workspace-header__progress strong { color:#fff; font-size:24px; }

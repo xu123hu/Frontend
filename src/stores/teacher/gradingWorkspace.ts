@@ -91,19 +91,6 @@ export const useGradingWorkspaceStore = defineStore('gradingWorkspace', {
         throw error
       } finally { this.actionPending = false }
     },
-    async refreshSuggestion(payload: unknown = {}) {
-      const selected = this.workspace?.selected
-      if (!selected) throw new Error('未选择待批作答')
-      this.actionPending = true
-      this.error = null
-      try {
-        await gradingWorkspaceApi.suggest(selected.submissionItemId, payload)
-        return await this.load({ submissionItemId: selected.submissionItemId })
-      } catch (error: unknown) {
-        this.error = messageOf(error, '刷新评分建议失败')
-        throw error
-      } finally { this.actionPending = false }
-    },
     loadFile(submissionItemId: string, signal?: AbortSignal) {
       return gradingWorkspaceApi.file(submissionItemId, signal)
     },

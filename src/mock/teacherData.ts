@@ -204,7 +204,7 @@ export function gradingQueue(): GradingQueueItem[] {
 export function gradingDetail(item: GradingQueueItem) {
   return {
     ...item,
-    original_answer: `$f(x)=x^3-3x$ 的单调性：$f'(x)=3x^2-3$，令其为零得 $x=\\pm 1$，故在 $(-\\infty,-1)\\cup(1,+\\infty)$ 单调增，$(-1,1)$ 单调减。`,
+    original_answer: `f(x)=x^3-3x 的单调性：f'(x)=3x^2-3，令其为零得 x=\\pm 1，故在 (-\\infty,-1)\\cup(1,+\\infty) 单调增，(-1,1) 单调减。`,
     scoring_standard: '正确求导（3 分）、找到分界点（3 分）、写出单调区间（4 分）。',
     suggestion: {
       suggestion_id: `sug-${item.submission_item_id}`, submission_item_id: item.submission_item_id,

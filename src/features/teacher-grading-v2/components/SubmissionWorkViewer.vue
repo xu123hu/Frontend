@@ -9,9 +9,11 @@
     </div>
     <section class="work-viewer__question">
       <p>题目</p>
-      <strong>{{ question?.questionText || '题干暂不可用' }}</strong>
+      <LatexText class="work-viewer__question-text" :text="question?.questionText || '题干暂不可用'" />
       <ol v-if="question?.options?.length" class="work-viewer__options">
-        <li v-for="(option, index) in question.options" :key="option">{{ String.fromCharCode(65 + index) }}. {{ option }}</li>
+        <li v-for="(option, index) in question.options" :key="option">
+          <LatexText :text="String.fromCharCode(65 + index) + '. ' + option" />
+        </li>
       </ol>
     </section>
     <section class="work-viewer__answer">
@@ -51,7 +53,7 @@ defineEmits<{ 'retry-file': [] }>()
 .work-viewer h2 { margin:0; color:#172c48; font-size:20px; }
 .work-viewer__source { padding:5px 8px; border-radius:999px; background:#eef5ff; color:#3972aa; font-size:11px; font-weight:700; }
 .work-viewer__question { padding:20px 0; border-bottom:1px solid #e4eaf1; color:#1f334d; line-height:1.7; }
-.work-viewer__question strong { font-size:16px; font-weight:650; }
+.work-viewer__question-text { display:block; font-size:16px; font-weight:650; }
 .work-viewer__options { padding-left:22px; margin:11px 0 0; color:#40536a; }
 .work-viewer__answer { padding-top:20px; }
 .work-viewer__answer-text { display:block; min-height:210px; box-sizing:border-box; padding:18px; border:1px solid #dae4ef; border-radius:10px; background:#fbfcfe; color:#172c48; white-space:pre-wrap; font:15px/1.85 ui-monospace, SFMono-Regular, Consolas, monospace; }

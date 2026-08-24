@@ -70,9 +70,9 @@ Open assignment/question
 ## V2 evidence record — 2026-08-24
 
 - Browser evidence: `artifacts/teacher-v2/grading/v2-ready-1366x768.png`, `v2-ready-1440x900.png`, `v2-review-refresh.png`, and `v2-file-error.png`.
-- V2 browser command: `PW_PORT=5192 npx playwright test e2e/teacher-grading-v2.spec.ts --project=chromium --workers=1` — **3 passed**.
-- Full teacher contracts: frontend `test/teacher` — **66 passed**; backend Workspace/review plus existing grading regression — **25 passed**.
+- V2 browser command: `PW_PORT=5194 npx playwright test e2e/teacher-grading-v2.spec.ts --project=chromium --workers=1` — **3 passed**.
+- Full teacher contracts: frontend `test/teacher` — **67 passed**; backend Workspace/review, grading, and assignment-materialization regression — **43 passed**.
 - The route loader for `/teacher/grading` now resolves only `TeacherGradingV2View.vue`; `TeacherGradingView.vue`, the Legacy grading API wrapper, and the Legacy store have no modifications in this branch.
 - The full `e2e/m3-teacher.spec.ts` suite has a separately reproduced, non-Grading failure at `/teacher/today` (missing “今日工作台”); the updated grading journey itself passes. This is not used to claim a clean whole-teacher-suite result.
 - The visual hard-gate verdict and region-by-region comparison are recorded in [`COMPARISON.md`](../../../../artifacts/teacher-v2/grading/COMPARISON.md).
-- The original-work surface renders senior-high-math TeX through the existing sanitized math renderer; it does not expose raw commands such as `\\pm` or `\\infty`. The Workspace API supplies `匿名作答 #001`-style labels to make the blind-grading purpose explicit.
+- The original-work surface renders senior-high-math TeX through the existing sanitized math renderer; it does not expose raw commands such as `\\pm` or `\\infty`, including when a source omits `$...$` delimiters. The Workspace API supplies `匿名作答 #001`-style labels to make the blind-grading purpose explicit. A reviewed source rubric is materialized from `QuestionBank.annotate_meta` without invention, and teacher overrides above the persisted `max_score` are rejected before formal score/mastery writes.
