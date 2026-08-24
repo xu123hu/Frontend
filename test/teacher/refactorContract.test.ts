@@ -81,6 +81,18 @@ describe('班级 V2 接管：真实花名册和证据驱动的教学去向', () 
   })
 })
 
+describe('课堂 V2 接管：状态联动优先，未接入事件不得伪造图表', () => {
+  it('正式课堂路由使用持久化课堂模式，并如实显示视频源状态', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherClassroomView.vue'), 'utf8')
+    const api = readFileSync(resolve(process.cwd(), 'src/api/teacher/classroom.ts'), 'utf8')
+    expect(view).toContain('课堂状态与学生端联动')
+    expect(api).toContain('classroom-mode')
+    expect(view).toContain('视频事件源尚未接入')
+    expect(view).not.toContain('t-tabs')
+    expect(view).not.toContain('t-control-card')
+  })
+})
+
 describe('教学建议：班级数据不足时按知识点给通用建议（不显示"数据不足"）', () => {
   it('知识点命中即返回非空建议，且依据为课标/教法非虚构班级统计', () => {
     const advices = suggestionsForKnowledgePoints(['函数的单调性'], 4)

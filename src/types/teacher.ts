@@ -268,9 +268,17 @@ export interface ClassroomModeState {
 }
 
 export interface VideoInsight {
-  aggregate_engagement: number | null
-  segments: VideoSegment[]
-  actions: ActionableInsight[]
+  class_id?: string
+  lesson_id?: string | null
+  /** Defined only when an actual classroom/video event source supplies it. */
+  participation?: Record<string, unknown>
+  timeline_events?: unknown[]
+  actionable_recommendations?: unknown[]
+  reason?: string
+  /** Legacy mock fields remain optional while the formal endpoint uses the fields above. */
+  aggregate_engagement?: number | null
+  segments?: VideoSegment[]
+  actions?: ActionableInsight[]
   degraded: boolean
 }
 
