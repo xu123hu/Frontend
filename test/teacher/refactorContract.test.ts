@@ -57,6 +57,19 @@ describe('教师个人中心 V2：只读身份与脱敏模型状态', () => {
   })
 })
 
+describe('备课 V2 接管：真实来源优先，降级模板不得冒充正式课件', () => {
+  it('正式备课路由只从教师资源选择输入，并阻止基础草稿生成正式 PPT', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherPrepView.vue'), 'utf8')
+    expect(view).toContain('来源材料')
+    expect(view).toContain('来源引用')
+    expect(view).toContain('source_resource_ids')
+    expect(view).toContain('基础草稿')
+    expect(view).toContain('不能生成正式 PPT')
+    expect(view).not.toContain("@/mock/teachingAdvice")
+    expect(view).not.toContain("return '导数与函数单调性'")
+  })
+})
+
 describe('教学建议：班级数据不足时按知识点给通用建议（不显示"数据不足"）', () => {
   it('知识点命中即返回非空建议，且依据为课标/教法非虚构班级统计', () => {
     const advices = suggestionsForKnowledgePoints(['函数的单调性'], 4)
