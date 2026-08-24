@@ -1,9 +1,22 @@
 // 本轮重构契约测试（教学建议退化为知识点建议；作业出题真实化）。
 // 直接断言行为，避免回归："数据不足空态"、"巩固题 N 占位"、"答案恒写死"、"足额不足额"。
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { suggestionsForKnowledgePoints } from '@/mock/teachingAdvice'
 import { buildQuizSet } from '@/mock/questionBank'
 import { quizArtifact } from '@/mock/teacherData'
+
+describe('批改 V2 接管：证据优先工作区', () => {
+  it('正式教师批改路由不再回退为顶部选择器和 #001 匿名表单', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherGradingView.vue'), 'utf8')
+    expect(view).toContain('原始作答证据')
+    expect(view).toContain('评分依据与教师决策')
+    expect(view).toContain('确认记入正式成绩')
+    expect(view).not.toContain('<select')
+    expect(view).not.toContain('student_label }}')
+  })
+})
 
 describe('教学建议：班级数据不足时按知识点给通用建议（不显示"数据不足"）', () => {
   it('知识点命中即返回非空建议，且依据为课标/教法非虚构班级统计', () => {

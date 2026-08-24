@@ -320,6 +320,11 @@ export interface GradingDetail extends GradingQueueItem {
   original_answer: string
   file_id?: string | null
   scoring_standard: string
+  /** Persisted quiz evidence returned by the teacher grading detail endpoint. */
+  question_text?: string | null
+  question_type?: string | null
+  standard_answer?: string | null
+  answer_analysis?: string | null
   suggestion: GradingSuggestion | null
 }
 
