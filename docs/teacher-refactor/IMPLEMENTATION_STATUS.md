@@ -19,18 +19,22 @@ Round 05（解堵核心环）收尾清单与 P1 执行中。RC-05-1/2/3/4 已绿
 | RC-05-3 **发布门证据** | ✅ | 浏览器三项实测：8/8 启用、9 请求/8 实际→禁用+“题库供题不足”警示、单题分值 0→禁用+“存在分值为 0”提示 |
 | RC-05-3 **预览学生端** | ✅ | 「👁 预览学生端」弹窗展示学生整卷（隐藏答案/解析），浏览器实测 PASS |
 | RC-05-4 批改 URL 寻址 + 红线清除 | ✅ | `?submission_item_id=` 入/读/推进；刷新回同一份；gallery 零 confidence 百分比；Enter=确认并推进；Today 深链直达首个未确认份 |
-| RC-05-5 RD-1 教案结构化抽屉 | ✅ | `content.segments[]`（LessonSegment schema）同步 types/mock；Prep 编辑面板升级为结构化抽屉（学习目标/核心问题/教师活动/学生活动/检查理解/教学内容/材料/时长）；旧 payload 兼容 |
-| RC-05-6 Butler 上下文冒烟 | ⏳ 未开工 | P1；下轮随 R06 执行 |
+| RC-05-5 RD-1 教案结构化抽屉 | ✅（R05-fix 后） | 初版误标完成被 Architect 复验纠正（时间线 0 环节，`applyArtifact` 仅读 sections）。已按 R05-fix 修复：`segments||sections||timeline` 三级回退接通；补浏览器证据 `prep-timeline-6segments-45min.png` 等三张。Architect 将亲测验收 |
+| RC-05-6 Butler 上下文冒烟 | ⏳ 未开工 | 架构师裁决并入 R06 P0；本轮明确不做 |
 
 ## Changed Files（Round 05 收尾增量）
 - `src/mock/teacherData.ts`：`quizArtifact` 去掉 `Math.min(count,6)` → 按请求数足额供题（D1）。
-- `src/pages/teacher/TeacherAssignView.vue`：D2 草稿寻址（generate 写 `?artifact_id=` + 进页恢复）；发布一致性门（题数一致 + 每题分值>0 + 总分>0）；「预览学生端」弹窗；题库不足业务警示。
+- `src/pages/teacher/TeacherPrepView.vue`（R05-fix）：`applyArtifact()` 三级回退 `segments||sections||timeline` 并映射 LessonSegment 全部结构化字段（duration_min→时长、kind→环节标签/配色、目标/核心问题/师生活动/检查理解→抽屉、materials→素材计数、linked_insights 暂存不渲染）；`createLesson()` 不再硬编码 topic（新增 `resolveTopic()` 取同班最近教案真实 topic，空则回落默认）。
+- `test/teacher/mockContract.test.ts`：lessons 契约断言补强化（Σsegments.duration_min=45、topic 断言、结构化字段）。
 - `src/pages/teacher/TeacherPrepView.vue`：RC-05-5 结构化抽屉模板（学习目标/核心问题/教师活动/学生活动/检查理解）。
 - `test/teacher/mockContract.test.ts`：新增 D1 题量诚实契约测试；lessons 契约断言升级为 RD-1 `segments` schema。
 - （RC-05-1/2/3 主体验证为上一轮所交，本文件一并纳账。）
 
 ## Browser Test & Screenshot Evidence（真实 mock 浏览器）
 证据落盘：`artifacts/teacher-refactor/round-05/`
+- `prep-timeline-6segments-45min.png`（R05-fix）：备课时间线 **6 环节 · 共 45 分钟**（5+10+5+10+12+3）。
+- `prep-drawer-open.png`（R05-fix）：结构化抽屉打开态，五字段可见可编辑。
+- `prep-duration-update.png`（R05-fix）：第 2 环节时长 10→6 后，顶部总时 45→41 **实时更新**。
 - `assign-d1-count8.png`：请求 8 题 → 预览显示 **共 8 题**（无静默减题）。
 - `assign-d2-refresh-restored.png`：刷新后 `?artifact_id=art-quiz-*` 仍保留，草稿回到同一 8 题。
 - `assign-gate-count-mismatch-disabled.png`：题量改 9 请求 → 共 8 题 +「题库供题不足」警示 + 发布按钮 disabled。
@@ -50,13 +54,13 @@ Round 05（解堵核心环）收尾清单与 P1 执行中。RC-05-1/2/3/4 已绿
 - Real API：`/teacher/quizzes/generate`、`/teacher/artifacts/{id}`、`/teacher/today`、`/teacher/grading/*` 契约沿用既有告警；D2 刷新恢复依赖后端按 id 取回完整 artifact content（JSONB 直读，无新后端改动，符合 Do Not Change）。
 
 ## Known Issues / Remaining（依优先级）
-1. **RC-05-6 Butler 冒烟**：未开工（P1 -> R06）。
-2. **assign / 组卷 mock 题干内容雷同**：mock 生成题为确定性占位（`单调性巩固题 N`，选项仅 ABCD），交互已验证、但题目内容品质仍"demo 感"。待 R06 用 student 题库（含高考题）真实取题 + 单题替换 adapter（见 TODO_BACKEND.md）。
-3. **RC-05-5 收尾缝隙**：`?focus={segment.id}` 直达高亮、intervention 的 linked_insight 证据链展示尚未在 UI 呈现（契约数据已就位）。
-4. `test/auth/securityPages.test.ts` 2 失败 + 科研端 3 文件 typecheck：存量债，架构师裁决不阻塞本轮（A5 基线以此为准）。
-5. 浏览器 harness mock cookie 持久化问题已因 `VITE_USE_MOCK=1 VITE_MOCK_ROLE=teacher` 启动规避（无需手动 cookie）。
+1. **RC-05-6 Butler 冒烟**：架构师裁决并入 R06 P0，本轮不做。
+2. **assign / 组卷 mock 题干内容雷同**：架构师已裁决 R06 P0（同题 f(x)=x³-3x、选项 ABCD 占位，交互对但内容不可信）→ 用研库/学生题库（含高考题）真实取题 + 单题替换 adapter。见 TODO_BACKEND.md。
+3. **saveDraft 二次保存形态**：`saveDraft` 把时间线写回 `content.timeline`（保留原 segments），因 applyArtifact 优先 segments，二次保存对结构化字段的编辑不会经 timeline 回流。属雕刻级缝隙，非本轮 BL-1 范围（BL-1 仅"接线断裂致 0 环节"），已记录待 R06 随结构化归档一起规整。
+4. **旧 payload（仅 sections/timeline）兼容**：`applyArtifact` 已含 `|| sections || timeline` 回退（代码级验证，additive）；因 mock 现直接产出 segments，需 Architect 用历史 artifact 亲测该回退分支。
+5. **RC-05-5 收尾缝隙**（R06）：`?focus={segment.id}` 直达高亮、intervention 的 linked_insights 证据链 UI（数据已暂存于 lessonSteps，未渲染）。
+6. 存量债（`test/auth/securityPages.test.ts` 2 失败 + 科研端 3 文件 typecheck）按架构师裁决不阻塞本轮（A5 基线）。
 
 ## Next
-- 向架构师提交 `ARCHITECT_REVIEW_REQUEST.md`，并列：D1/D2/发布门/预览学生端/RC-05-5 已交证据；RC-05-6 与 mock 题干品质请裁决优先级。
-- 提交当前工作区至 `refactor/teacher-os`。
-- 待 R06：Butler 上下文冒烟、结构化环节聚焦/依据链 UI、mock 真实取题。
+- 提交 R05-fix 修复（BL-1 + P-2）至 `refactor/teacher-os`。
+- 请 Architect 亲测 R05-fix 验收 6 条（含旧 payload 回退分支）与组卷 mock 题库/Butler 的 R06 排期。经 Architect 复验通过后 Round 05 关账，进入 R06。

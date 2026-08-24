@@ -104,7 +104,8 @@ describe('mock 教师端点契约同构（RC-05-1）', () => {
     const art = res.body.data as TeacherArtifact
     expect(art.artifact_type).toBe('lesson_plan')
     expect(art.content).toHaveProperty('segments')
-    const segs = (art.content.segments ?? []) as Array<{ id?: string; title?: string; duration_min?: number; teacher_action?: string; student_action?: string; learning_objective?: string }>
+    expect(art.content.topic).toBe('导数与函数单调性')
+    const segs = (art.content.segments ?? []) as Array<{ id?: string; title?: string; duration_min?: number; teacher_action?: string; student_action?: string; learning_objective?: string; kind?: string }>
     expect(segs.length).toBeGreaterThan(0)
     segs.forEach((s) => {
       expect(typeof s.id).toBe('string')
@@ -113,6 +114,9 @@ describe('mock 教师端点契约同构（RC-05-1）', () => {
       expect(typeof s.teacher_action).toBe('string')
       expect(typeof s.student_action).toBe('string')
     })
+    // 验收#1 护栏：分段时长之和 = 45（5+10+5+10+12+3=45），供时间线「共 N 分钟」实时求和
+    const total = segs.reduce((sum, s) => sum + Number(s.duration_min ?? 5), 0)
+    expect(total).toBe(45)
   })
 
   it('artifacts CRUD 返回信封 {code, message, data} 形状', async () => {

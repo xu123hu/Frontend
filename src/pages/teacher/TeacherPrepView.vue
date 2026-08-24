@@ -446,33 +446,71 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 // ---- 生命周期 ----
+// RD-1 环节类型标签与配色（仅使用既有 .t-tag 配色：blue/green/red/amber/violet/peach）
+const KIND_LABELS: Record<string, string> = {
+  import: '复习导入', concept: '新知探究', example: '例题精讲', practice: '当堂练习',
+  check: '检查理解', summary: '课堂小结', intervention: '干预/复习',
+}
+const KIND_CLASS: Record<string, string> = {
+  import: 'violet', concept: 'blue', example: 'peach', practice: 'green',
+  check: 'amber', summary: 'violet', intervention: 'red',
+}
+
 function applyArtifact() {
   const content = (store.artifact?.content || {}) as Record<string, unknown>
-  // 服务端返回 sections（title/duration_minutes/activities），历史数据可能是 timeline（phase/minutes）
-  const sections = (content.sections ||
-    content.timeline ||
-    []) as Array<{ title?: string; phase?: string; duration_minutes?: number; minutes?: number; activities?: string[]; description?: string }>
+  // RD-1 三级回退：segments（LessonSegment）/ sections（历史 lesson_plan）/ timeline（更早 phase+minutes）
+  const segs = (content.segments || content.sections || content.timeline || []) as Array<Record<string, unknown>>
   let elapsed = 0
-  lessonSteps.value = sections.map((s, index) => {
-    const minutes = Number(s.duration_minutes ?? s.minutes ?? 5)
+  lessonSteps.value = segs.map((s, index) => {
+    const minutes = Number(s.duration_min ?? s.duration_minutes ?? s.minutes ?? 5)
     const activities = Array.isArray(s.activities) ? s.activities.filter(Boolean) : []
-    const item = {
-      id: `step-${index + 1}`,
-      title: s.title || s.phase || `环节 ${index + 1}`,
+    const materials = Array.isArray(s.materials) ? s.materials : []
+    const materialNote = materials.length
+      ? `素材：${materials.map((m) => String((m as any).name || (m as any).title || m)).join('、')}`
+      : ''
+    const baseDesc = activities.length
+      ? activities.map((a) => `• ${a}`).join('\n')
+      : String(s.content || s.description || '').trim()
+    const hasStructured = !!(s.learning_objective || s.teacher_action || s.student_action || s.core_question || s.assessment_check)
+    const step: LessonStep = {
+      id: String(s.id || `step-${index + 1}`),
+      title: String(s.title ?? s.phase ?? `环节 ${index + 1}`),
       timeRange: `${elapsed}-${elapsed + minutes} min`,
-      tagText: '可编辑',
-      tagClass: 'blue',
-      description: activities.length ? activities.map((a) => `• ${a}`).join('\n') : String(s.description || '可编辑教学环节，确认后生成 PPT。'),
+      tagText: String(KIND_LABELS[s.kind as string] || (baseDesc ? '可编辑' : '待补充')),
+      tagClass: String(KIND_CLASS[s.kind as string] || 'blue'),
+      description: materialNote ? (baseDesc ? `${baseDesc}\n${materialNote}` : materialNote) : baseDesc,
+      // RD-1 结构化字段（仅 segments 具备；sections/timeline 回退为空 → legacy 兼容旧 payload）
+      kind: s.kind ? String(s.kind) : undefined,
+      learningObjective: s.learning_objective ? String(s.learning_objective) : undefined,
+      teacherAction: s.teacher_action ? String(s.teacher_action) : undefined,
+      studentAction: s.student_action ? String(s.student_action) : undefined,
+      coreQuestion: s.core_question ? String(s.core_question) : undefined,
+      assessmentCheck: s.assessment_check ? String(s.assessment_check) : undefined,
+      linkedInsights: Array.isArray(s.linked_insights) ? s.linked_insights.map(String) : undefined,
+      locked: s.locked === true,
+      legacy: !hasStructured,
       added: false,
     }
     elapsed += minutes
-    return item
+    return step
   })
+}
+
+/** P-2：同班级最近教案的真实 topic 作为改编起点；无则回落默认课题（不再硬编码单课题） */
+async function resolveTopic(): Promise<string> {
+  try {
+    const lessons = await lessonsApi.list(selectedClass.value)
+    const t = lessons?.[0]?.content?.topic
+    if (t) return String(t)
+  } catch { /* 回落默认 */ }
+  return '导数与函数单调性'
 }
 
 async function createLesson() {
   if (!selectedClass.value) return
-  await store.adapt({ class_id: selectedClass.value, topic: '函数的单调性', requirements: '包含例题、练习与课堂小结', duration_minutes: 45 })
+  // P-2：不再硬编码课题名——取同班级最近一次教案的真实 topic，无则回落默认课题
+  const topic = await resolveTopic()
+  await store.adapt({ class_id: selectedClass.value, topic, requirements: '包含例题、练习与课堂小结', duration_minutes: 45 })
   applyArtifact()
   if (store.error) showToast?.(store.error)
 }
