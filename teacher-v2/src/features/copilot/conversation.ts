@@ -18,3 +18,10 @@ export function appendTeacherTask(conversation: ConversationMessage[], task: str
 
   return [...conversation, { sender: '李老师', direction: 'outgoing', message }]
 }
+
+export function appendButlerReply(
+  conversation: ConversationMessage[],
+  reply: string,
+): ConversationMessage[] {
+  return [...conversation, { sender: '教学管家', direction: 'incoming', message: reply }]
+}
