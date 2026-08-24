@@ -7,12 +7,23 @@ export interface ResourceActionBody {
   client_request_id: string
 }
 
+export interface ExternalResourceReferenceBody {
+  title: string
+  url: string
+  provider?: string
+  attribution?: string
+  intended_use?: string
+  class_id?: string
+}
+
 export const resourcesApi = {
   /** 后端返回 data:{resources:[...]}，此处解包数组（审计 C-04 对齐） */
   list: async (signal?: AbortSignal): Promise<TeacherResource[]> => {
     const res = await teacherGet<{ resources: TeacherResource[] }>('/teacher/resources', undefined, signal)
     return res.data?.resources ?? []
   },
+  createExternalReference: (body: ExternalResourceReferenceBody, signal?: AbortSignal) =>
+    teacherPost<TeacherResource>('/teacher/resources/external-reference', body, undefined, signal),
   /** 上传走 multipart（后端为 UploadFile 端点，审计 C-04 对齐；
    *  不经 api.raw：其会强制 JSON.stringify，FormData 需原生 fetch 让浏览器设置 boundary） */
   upload: async (file: File, signal?: AbortSignal): Promise<UploadTicket> => {

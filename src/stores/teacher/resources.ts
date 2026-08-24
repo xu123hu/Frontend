@@ -26,6 +26,15 @@ export const useResourcesStore = defineStore('resources', {
       } catch (e: any) { if (e?.code === -2) return null; this.error = e?.message || '上传失败'; throw e }
       finally { this.loading = false }
     },
+    async createExternalReference(payload: { title: string; url: string; provider?: string; attribution?: string; intended_use?: string }, signal?: AbortSignal) {
+      this.loading = true; this.error = null
+      try {
+        const created = await resourcesApi.createExternalReference(payload, signal)
+        this.patchItem(created.data)
+        return created.data
+      } catch (e: any) { this.error = e?.message || '保存公开引用失败'; throw e }
+      finally { this.loading = false }
+    },
     async preprocess(id: string, signal?: AbortSignal) {
       this.error = null
       try { this.patchItem((await resourcesApi.preprocess(id, undefined, signal)).data) }

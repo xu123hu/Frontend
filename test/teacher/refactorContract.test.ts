@@ -27,8 +27,10 @@ describe('资源 V2 接管：来源可追溯、候选题须教师审核', () => 
     expect(view).toContain('题目审核队列')
     expect(view).toContain('确认入库')
     expect(view).toContain('来源可追溯')
+    expect(view).toContain('保存公开引用')
     expect(view).not.toContain('t-resource-grid')
     expect(api).toContain('question-candidates/approve')
+    expect(api).toContain('external-reference')
   })
 })
 

@@ -291,6 +291,11 @@ export interface VideoSegment {
 export interface TeacherResource {
   resource_id: string
   name: string
+  resource_kind?: 'uploaded_file' | 'external_reference'
+  external_url?: string | null
+  provider?: string | null
+  attribution?: string | null
+  intended_use?: string | null
   file_type: string
   size_bytes: number
   status: 'uploading' | 'preprocessing' | 'ready' | 'understand' | 'failed' | 'cancelled'
