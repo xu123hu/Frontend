@@ -27,9 +27,9 @@
 
         <!-- 建议芯片 -->
         <div v-if="messages.length === 0" class="t-suggest-chips">
-          <button class="t-chip" type="button" @click="quickAsk('帮我备 7 班的导数课')">帮我备 7 班的导数课</button>
-          <button class="t-chip" type="button" @click="quickAsk('出 20 分钟导数小测')">出 20 分钟导数小测</button>
-          <button class="t-chip" type="button" @click="quickAsk('开始批改导数周测')">开始批改导数周测</button>
+          <button class="t-chip" type="button" @click="quickAsk('根据当前班级和已选资料，帮我开始备课')">根据当前资料开始备课</button>
+          <button class="t-chip" type="button" @click="quickAsk('根据已审核题库，帮我生成一份测验草稿')">根据题库生成测验草稿</button>
+          <button class="t-chip" type="button" @click="quickAsk('读取当前待批改队列，并给出下一步建议')">读取待批改队列</button>
         </div>
       </template>
     </div>
@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { butlerApi, isButlerChatAvailable } from '@/api/teacher/butler'
 import { useButlerScene } from '@/composables/useButlerScene'
@@ -122,11 +122,11 @@ async function send() {
       status.value = res.data.degraded ? 'degraded' : 'ok'
       messages.value.push({
         role: 'ai',
-        text: res.data.message || (res.data.degraded ? '（降级）本地替代方案已生成，可继续编辑与确认。' : '已生成草案。'),
+        text: res.data.message || (res.data.confirmation_required ? '该正式动作需要你在对应工作区明确确认，AI 没有执行。' : (res.data.degraded ? '本次请求未得到可验证结果，请检查模型配置或改在工作区手动处理。' : '服务未返回可展示说明。')),
       })
     } else {
       status.value = 'degraded'
-      messages.value.push({ role: 'ai', text: '本次诉求已记录为草稿。' })
+      messages.value.push({ role: 'ai', text: '服务未返回可用结果，未创建任何草稿或正式动作。' })
     }
   } catch {
     status.value = 'degraded'
@@ -147,4 +147,7 @@ watch(() => props.open, (isOpen) => {
     })
   }
 })
+
+// Today renders the panel open from its first paint. Probe immediately too.
+onMounted(() => { void checkAvailability() })
 </script>

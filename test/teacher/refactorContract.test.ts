@@ -95,6 +95,16 @@ describe('课堂 V2 接管：状态联动优先，未接入事件不得伪造图
   })
 })
 
+describe('Today Butler：初始可用性与真实班级上下文', () => {
+  it('首页内嵌管家首次加载就探测后端，且不写死班级或课题', () => {
+    const panel = readFileSync(resolve(process.cwd(), 'src/components/teacher/ButlerPanel.vue'), 'utf8')
+    const scene = readFileSync(resolve(process.cwd(), 'src/composables/useButlerScene.ts'), 'utf8')
+    expect(panel).toContain('onMounted(() => { void checkAvailability() })')
+    expect(panel).not.toContain('7 班的导数课')
+    expect(scene).toContain('context.classId')
+  })
+})
+
 describe('教学建议：班级数据不足时按知识点给通用建议（不显示"数据不足"）', () => {
   it('知识点命中即返回非空建议，且依据为课标/教法非虚构班级统计', () => {
     const advices = suggestionsForKnowledgePoints(['函数的单调性'], 4)
