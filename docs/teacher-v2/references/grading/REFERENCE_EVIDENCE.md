@@ -1,6 +1,6 @@
 # Grading V2 — Reference Evidence
 
-**Status:** implementation evidence complete for the reference; reconstruction not yet coded
+**Status:** PRE-CODE GATE complete; reconstruction not yet coded
 **Module route:** `/teacher/grading`
 **Primary workflow:** Gradescope question-focused grading
 **Secondary source trace:** WeBWorK manual grader
@@ -12,6 +12,8 @@ The Legacy page chooses a student from a top `<select>`, shows a large answer ar
 Gradescope documents a grading surface with three core regions — submission, rubric, and bottom action bar — and a `Next Ungraded` action that avoids simultaneous work on the same submission. It also documents question-specific rubrics and keyboard navigation. See [grading with rubrics](https://guides.gradescope.com/hc/en-us/articles/22249389005709-Grading-submissions-with-rubrics) and [submission navigation](https://guides.gradescope.com/hc/en-us/articles/37290703633677-Submission-navigation-and-keyboard-shortcuts).
 
 The GradeScope product is closed source. Its public instructor documentation is workflow/screen evidence only; no logo, brand asset, source, or code is reused.
+
+The primary visual evidence is saved locally as `reference-gradescope-01.png` and `reference-gradescope-02.png`; the verified Legacy baseline is `legacy-grading.png`. See [`REFERENCE_SCREEN_MAP.md`](./REFERENCE_SCREEN_MAP.md) for Region A–E responsibilities and the mandatory Legacy Similarity Hard Fail.
 
 ## 2. Open-source secondary reference: verified trace
 
@@ -75,7 +77,7 @@ GET  /teacher/grading/{submission_item_id}/file
 
 `GradingDetail` includes original answer/file, assignment title, question text/type/options, standard answer, analysis, score suggestion and version. The domain confirmation path checks teacher/class scope, decision, suggestion version and idempotency before writing a formal score and updating mastery. These are retained.
 
-V2 must add a semantic workspace adapter only where the existing queue cannot provide assignment/question grouping, stable review state, rubric-point reasoning, or a user-safe next-ungraded lock. It may not bypass the confirmation route or write formal grades directly from the UI.
+V2 must add an additive server-side semantic workspace projection where the existing queue cannot provide assignment/question grouping, stable review state, rubric-point reasoning, or a user-safe next-ungraded lock. It may not bypass the confirmation route or write formal grades directly from the UI. The exact endpoint/field/component contract, explicit gaps, and adapter boundary are in [`BACKEND_TO_V2_MAPPING.md`](./BACKEND_TO_V2_MAPPING.md).
 
 ## 5. Required high-school-mathematics tests
 

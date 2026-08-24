@@ -1,6 +1,6 @@
 # Grading V2 — Reconstruction Specification
 
-**Status:** ready for implementation planning
+**Status:** PRE-CODE GATE complete; ready for implementation planning
 **Primary reference:** Gradescope instructor grading workflow
 **Secondary reference:** verified WebWork manual-grader source trace
 **Official route takeover:** `/teacher/grading` replaces the Legacy component only after the acceptance gate passes.
@@ -20,7 +20,7 @@ GradeDecision
   suggestionId + version + accept|override + finalScore? + feedback? + idempotencyKey
 ```
 
-The frontend must use typed API/service adapters. Components may display state and request actions, but they may not calculate a final grade, hard-code student answers, or write official grade/mastery values.
+The frontend must use the single typed `GradingWorkspace` API/service adapter specified in [`BACKEND_TO_V2_MAPPING.md`](./BACKEND_TO_V2_MAPPING.md). Components may display state and request actions, but they may not calculate a final grade, hard-code student answers, compose a second data model from endpoint fragments, or write official grade/mastery values.
 
 ## Layout and behavior
 
@@ -28,7 +28,7 @@ The frontend must use typed API/service adapters. Components may display state a
 2. The left queue is visible at desktop size and contains anonymous labels by default, grading status, review marker, and current selection. It supports filtering/selection without reloading the workstation.
 3. The center viewer shows question context and original student work. It uses text, image, or file views according to the returned content, with safe zoom/rotate/page navigation for image-like submissions.
 4. The right panel first explains scoring: full mark, standard answer/analysis, rubric or scoring points, and suggestion evidence. It then exposes teacher feedback and a clearly labeled final score decision.
-5. The bottom action bar contains Previous, Mark for review, and Confirm and next. `Enter` confirms only when focus is not in an editable input; keyboard mappings have visible equivalents.
+5. The bottom action bar contains Previous, Mark for review, and Confirm and next. `Enter` confirms only when focus is not in an editable input; keyboard mappings have visible equivalents. Mark-for-review persists separately from automatic/OCR review and does not write a formal score.
 6. A neutral integrity signal is supplementary evidence only: it may say “建议人工复核” with a reason but never labels a student as cheating or applies a score.
 
 ## State and error handling
@@ -64,3 +64,5 @@ Open assignment/question
 - Browser checks cover click, queue/filter, text/image work view, feedback input, accept, override, review, keyboard, cancel/retry, refresh and direct URL at 1366×768 and 1440×900.
 - The test proves a persisted teacher confirmation and downstream effect; a text response or visual toast is insufficient.
 - Reference/Legacy/V2 screenshots demonstrate that the final workspace no longer resembles the Legacy select-plus-form composition.
+- The initial V2 screenshot is checked against [`REFERENCE_SCREEN_MAP.md`](./REFERENCE_SCREEN_MAP.md). A recognisable top-select + generic-answer-panel + detached-side-score-form composition is a **hard fail**: delete the V2 page and reconstruct from this specification; do not apply a CSS/card/drawer patch and do not change Legacy.
+- Until this gate passes, the V2 shell is limited to the grading workstation. No full Teacher OS shell, global V2 navigation, design-system buildout or speculative cross-module component layer is in scope.
