@@ -208,6 +208,7 @@ export function gradingDetail(item: GradingQueueItem) {
     scoring_standard: '正确求导（3 分）、找到分界点（3 分）、写出单调区间（4 分）。',
     suggestion: {
       suggestion_id: `sug-${item.submission_item_id}`, submission_item_id: item.submission_item_id,
+      version: 1,
       student_label: item.student_label, original_answer: '', scoring_standard: '',
       suggestion_score: item.suggestion_score, confidence: item.confidence,
       evidence: '按评分标准分步核对。', review_needed: item.confidence < 0.6,

@@ -7,6 +7,7 @@
 // 页面组件按 res.data?.queue 等形状解包；mock 必须同形，否则静默空态。
 import { describe, it, expect, beforeAll } from 'vitest'
 import { handleTeacherApi } from '@/mock/teacherServer'
+import { gradingDetail, gradingQueue } from '@/mock/teacherData'
 import type { GradingQueueItem, TeacherTodayData, TeacherArtifact } from '@/types/teacher'
 
 function toNodeIncomingMessage(over: { method: string; url: string; headers?: Record<string, string>; body?: unknown }) {
@@ -124,5 +125,36 @@ describe('mock 教师端点契约同构（RC-05-1）', () => {
     expect(res.statusCode).toBe(404)
     expect(typeof res.body.code).toBe('number')
     expect(typeof res.body.message).toBe('string')
+  })
+
+  it('grading detail exposes a stable suggestion version for V2 workspace projection', () => {
+    const detail = gradingDetail(gradingQueue()[0])
+    expect(detail.suggestion.version).toBe(1)
+  })
+
+  it('grading workspace returns the V2 server projection without confidence', async () => {
+    const res = await call('GET', '/teacher/grading/workspace?class_id=c1&assignment_id=a1&item_no=1&submission_item_id=si-2')
+    expect(res.statusCode).toBe(200)
+    const workspace = res.body.data
+    expect(workspace.context.assignment).toMatchObject({ assignment_id: 'a1', title: '函数的单调性' })
+    expect(workspace.context.question).toMatchObject({ item_no: 1, max_score: 10 })
+    expect(workspace.selected).toMatchObject({ submission_item_id: 'si-2' })
+    expect(workspace.selected.scoring.rubric_status).toBe('ready')
+    expect(workspace.selected.scoring.rubric_items).toHaveLength(3)
+    expect(workspace.queue[0]).toHaveProperty('anonymous_label')
+    expect(workspace.queue[0]).not.toHaveProperty('student_label')
+    expect(workspace.selected.suggestion).not.toHaveProperty('confidence')
+  })
+
+  it('grading review persists separately from formal scoring in the V2 workspace', async () => {
+    const body = { state: 'pending', note: '核对 a=0 边界', client_request_id: 'review-1' }
+    const review = await call('POST', '/teacher/grading/si-2/review', body)
+    expect(review.statusCode).toBe(200)
+    expect(review.body.data).toMatchObject({ submission_item_id: 'si-2', state: 'pending', replayed: false })
+
+    const workspace = await call('GET', '/teacher/grading/workspace?class_id=c1&assignment_id=a1&item_no=1&submission_item_id=si-2')
+    const queueEntry = workspace.body.data.queue.find((entry: any) => entry.submission_item_id === 'si-2')
+    expect(queueEntry).toMatchObject({ manual_review: true, state: 'review' })
+    expect(workspace.body.data.selected.confirmed_decision).toBeNull()
   })
 })
