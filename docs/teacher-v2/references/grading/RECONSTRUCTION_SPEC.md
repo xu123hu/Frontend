@@ -71,7 +71,7 @@ Open assignment/question
 
 - Browser evidence: `artifacts/teacher-v2/grading/v2-ready-1366x768.png`, `v2-ready-1440x900.png`, `v2-review-refresh.png`, and `v2-file-error.png`.
 - V2 browser command: `PW_PORT=5194 npx playwright test e2e/teacher-grading-v2.spec.ts --project=chromium --workers=1` — **3 passed**.
-- Full teacher contracts: frontend `test/teacher` — **67 passed**; backend Workspace/review, grading, assignment-materialization, and migration-graph regression — **45 passed**.
+- Full teacher contracts: frontend `test/teacher` — **67 passed**; backend Workspace/review, grading, assignment-materialization, and migration-graph regression — **46 passed**.
 - The route loader for `/teacher/grading` now resolves only `TeacherGradingV2View.vue`; `TeacherGradingView.vue`, the Legacy grading API wrapper, and the Legacy store have no modifications in this branch.
 - The full `e2e/m3-teacher.spec.ts` suite has a separately reproduced, non-Grading failure at `/teacher/today` (missing “今日工作台”); the updated grading journey itself passes. This is not used to claim a clean whole-teacher-suite result.
 - The visual hard-gate verdict and region-by-region comparison are recorded in [`COMPARISON.md`](../../../../artifacts/teacher-v2/grading/COMPARISON.md).
