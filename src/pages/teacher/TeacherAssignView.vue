@@ -169,6 +169,13 @@
           <b>题库供题不足</b>：本卷实际 {{ items.length }} 题（< 请求 {{ form.count }} 题）。请改用「换一题/找相似题」补齐，或在左侧降低题量后再发布。
         </div>
 
+        <div v-if="artifactWarnings.length" class="t-api-note warn" role="alert">
+          <b>出题提示</b>
+          <ul style="margin: 6px 0 0; padding-left: 18px">
+            <li v-for="w in artifactWarnings" :key="w">{{ w }}</li>
+          </ul>
+        </div>
+
         <div class="t-row t-between">
           <button class="t-btn primary lg" type="button" :disabled="generating" @click="generatePaper">
             {{ generating ? '生成中…' : '✨ 生成试卷' }}
@@ -213,6 +220,7 @@
               <div class="qt"><LatexText :text="q.question_text" /></div>
               <div class="qm">
                 {{ q.kp_name || q.kp_code || '综合数学' }} · {{ difficultyLabel(q.difficulty) }} · {{ q.score }}分
+                <span class="t-src" :class="isRealSource(q) ? 'real' : 'local'">{{ provenanceLabel({ source: q.source }) }}</span>
                 <span v-if="q.locked" class="t-lock">已锁定</span>
                 <span v-if="typeLabel(q.q_type)" class="t-type">{{ typeLabel(q.q_type) }}</span>
               </div>
@@ -324,6 +332,7 @@ import { assignmentsApi } from '@/api/teacher/assignments'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import { useAssessmentStore } from '@/stores/teacher/assessment'
 import { SCOPE_TO_KP, MONOTONICITY_BANK, replacementCandidates, type BankQuestion } from '@/mock/questionBank'
+import { fromRealItem, provenanceLabel, isRealSource } from '@/mock/realQuestionAdapter'
 import LatexText from '@/components/LatexText.vue'
 import type { Assignment, QuizQuestion, TeacherArtifact } from '@/types/teacher'
 
@@ -411,6 +420,17 @@ const hasDuplicate = computed(() => {
 })
 const duplicateHint = computed(() => hasDuplicate.value ? '存在重复题，请用"换一题"替换' : '')
 
+/** 真实后端/artifact 返回的 degraded 与 warnings（题库供题不足、难度放宽、缺解析等）如实上屏 */
+const artifactWarnings = computed<string[]>(() => {
+  const a = store.quizArtifact as (TeacherArtifact & { warnings?: string[]; degraded?: boolean }) | null
+  if (!a) return []
+  const ws = Array.isArray(a.warnings) ? [...a.warnings] : []
+  if (a.degraded && !ws.some((w) => (w || '').includes('题库'))) {
+    ws.unshift('题库供题不足，部分题目由本地样例补齐，请核对来源后发布。')
+  }
+  return ws
+})
+
 // ---- 发布一致性门（RC-05-3 D1/发布门）：题数与设定一致 且 每题分值>0 且 总分>0 才可发布；任何不一致禁用并示因 ----
 const totalMismatch = computed(() => items.value.length !== form.count)
 const hasZeroScoreQ = computed(() => items.value.some((q) => !(q.score > 0)))
@@ -434,18 +454,21 @@ function difficultyLabel(d?: string) {
 }
 
 function toEditable(raw: Record<string, unknown>): EditableQuestion {
+  const n = fromRealItem(raw)
   return {
     item_no: Number(raw.item_no ?? 0),
-    q_type: (raw.q_type as EditableQuestion['q_type']) || 'choice',
-    difficulty: (raw.difficulty as EditableQuestion['difficulty']) || 'medium',
-    kp_code: raw.kp_code ? String(raw.kp_code) : undefined,
-    kp_name: raw.kp_name ? String(raw.kp_name) : undefined,
-    question_text: String(raw.question_text ?? ''),
-    options: Array.isArray(raw.options) ? (raw.options as string[]) : undefined,
-    answer: raw.answer ? String(raw.answer) : '',
-    answer_analysis: raw.answer_analysis ? String(raw.answer_analysis) : '',
+    q_type: n.q_type || 'choice',
+    difficulty: n.difficulty || 'medium',
+    kp_code: n.kp_code,
+    kp_name: n.kp_name,
+    question_text: String(n.question_text ?? ''),
+    options: n.options,
+    answer: n.answer ? String(n.answer) : '',
+    answer_analysis: n.answer_analysis || '',
+    source: n.source,
+    source_ref: n.source_ref,
     _key: `q-${keySeq++}`,
-    score: Number(raw.score ?? ((raw.q_type as string) === 'text' || (raw.q_type as string) === 'solution' ? 10 : 5)),
+    score: Number(raw.score ?? (n.q_type === 'text' ? 10 : 5)),
     locked: false,
   }
 }
@@ -679,6 +702,9 @@ onMounted(async () => {
 .t-q-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .t-lock { margin-left: 6px; color: var(--t-violet); font-weight: 600; font-size: 12px; }
 .t-type { margin-left: 6px; color: var(--t-ink-3); font-size: 12px; }
+.t-src { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 6px; vertical-align: 1px; white-space: nowrap; }
+.t-src.real { color: #0a7d4f; background: rgba(10, 125, 79, .12); border: 1px solid #2bb673; }
+.t-src.local { color: #8a6d15; background: rgba(196, 151, 26, .12); border: 1px solid #cfac3a; }
 
 .t-q-edit { margin-top: 10px; padding: 12px; border: 1px solid var(--t-line); border-radius: var(--t-radius-sm); background: var(--t-surface-2); display: flex; flex-direction: column; gap: 10px; }
 .t-q-edit .t-field { display: flex; flex-direction: column; gap: 4px; }

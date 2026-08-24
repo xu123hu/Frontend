@@ -210,6 +210,10 @@ export interface QuizQuestion {
   options?: string[]
   answer?: string
   answer_analysis?: string
+  /** 真题来源（question_bank.source，如「2023新课标I卷」）；本地兜底题缺省 */
+  source?: string
+  /** 题库溯源引用，如 qb:<id> */
+  source_ref?: string
 }
 
 export interface QuizSet {

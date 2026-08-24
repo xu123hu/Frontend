@@ -96,3 +96,26 @@ Round 05（解堵核心环）收尾清单与 P1 执行中。RC-05-1/2/3/4 已绿
 - 备课页「按本课知识点」建议在真实班级数据不足时的表现与「采纳建议」落环节。
 - 组卷高级蓝图分值回填、单题替换/编辑写回、学生端公式渲染。
 - RC-06 排期：教学建议「班级数据≥门槛时切回真实学情驱动（class 模式）」+ 组卷用研库/学生题库真实取题 adapter。
+
+---
+
+## Principal 反馈增量 2（2026-08-24）：作业组卷「真实取题适配层」
+
+**需求**：组卷出题要"真实、不 demo 感"。后端介导后落地了**真实取题适配层**——对接真实后端结构化题库，前端归一化并如实标注来源；`buildQuizSet` 退化为本地兜底。
+
+### 关键事实（真实后端探明，非推测）
+- `POST /api/teacher/quizzes/generate` **有真实实现**（`domains/teacher/assessment.py`），从 `question_bank` 结构题库经 `supply_questions(scope=student, strict_kp_subtree, publishable_only)` 真实取题，题行带 `source`（如「2023新课标I卷」）、`hash`、`source_ref`，解析字段名 `analysis`，option 为对象 `{A,B,C,D}`，选择题型值可能为 `solution`。
+- **诚实边界**：GAOKAO 844 的 KB chunks（`import_gaokao.py`）是「题干+答案+解析」自由文本，无法可靠解析为结构化 options/answer，**不作为组卷结构化取题源**；结构化真实题源 = `question_bank`（经真实接口）。
+
+### 改动
+- 新增 `src/mock/realQuestionAdapter.ts`：`fromRealItem()` 归一化后端题行（`analysis`→`answer_analysis`、`source`/`source_ref` 透传、`options` 对象→数组、`solution`→`text`）；`provenanceLabel()`/`isRealSource()` 如实标注来源，无来源如实标「本地样例」，不冒充真题。
+- `src/types/teacher.ts`：`QuizQuestion` 补 `source?`/`source_ref?`。
+- `src/mock/questionBank.ts`：`BankQuestion` 补可选 `source`/`source_ref`（本地兜底题缺省 → 标「本地样例」）。
+- `TeacherAssignView.vue`：`toEditable()` 走 `fromRealItem()`（修复真实模式下解析/来源/选项被丢弃）；每题显式「真题 · 来源 / 本地样例」来源徽标；`degraded`/`warnings` 如实上屏为「出题提示」横幅。
+- 契约测试 `test/teacher/realQuestionAdapter.test.ts`（8 项）：后端题行归一化、options 对象→数组、solution→text、软历史形状兼容、来源标记、本地兜底不可变。
+
+### 验证
+- 教师套件 **55 passed / 0 failed**（11 文件，含本轮新增 realQuestionAdapter 8 项）；typecheck 教师域 0 错；`vite build` PASS。
+
+### 待 Architect 复验
+- 真实后端（`VITE_USE_MOCK` 关闭）下生成卷的每题「真题 · 来源」徽标与 `degraded`/`warnings` 横幅；本地兜底题如实标「本地样例」。

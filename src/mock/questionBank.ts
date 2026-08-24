@@ -15,6 +15,9 @@ export interface BankQuestion {
   options?: string[]
   answer: string
   answer_analysis: string
+  /** 真题来源（本地兜底题缺省 → 如实标注「本地样例」）；供溯源徽标使用 */
+  source?: string
+  source_ref?: string
 }
 
 /** 出题可配置参数（与 /teacher/quizzes/generate 请求体对齐） */
