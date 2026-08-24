@@ -1,3 +1,4 @@
+import { buildQuizSet, type QuizBuildParams } from './questionBank'
 import type {
   ActionableInsight, GradingQueueItem, LessonSegment, SourceRef, TeacherArtifact, TeacherResource, TeacherTodayData, VideoInsight,
 } from '@/types/teacher'
@@ -150,21 +151,26 @@ export function lessonArtifact(classId: string, topic: string, requirements: str
   }
 }
 
-export function quizArtifact(kps: string[], count: number): TeacherArtifact {
-  // D1 题量诚实（RC-05-3）：mock 按请求数给足，禁止 Math.min 静默减题（破坏蓝图一致性）
-  const items = Array.from({ length: Math.max(1, count) }, (_, i) => ({
+export function quizArtifact(kps: string[], count: number, opts: Partial<QuizBuildParams> = {}): TeacherArtifact {
+  // D1 题量诚实（RC-05-3）：buildQuizSet 按请求数足额抽取，池耗尽用参数化变式补足，禁止静默减题；
+  // 同时走出“巩固题 N”占位：返回真实题干 + 选项乱序，跨知识点×难度分布。
+  const requests: QuizBuildParams = { ...opts, count, knowledge_points: kps.length ? kps : opts?.knowledge_points }
+  const drawn = buildQuizSet(requests)
+  const items = drawn.map((q, i) => ({
     item_no: i + 1,
-    q_type: (['choice', 'blank', 'text'] as const)[i % 3],
-    difficulty: (['easy', 'medium', 'hard'] as const)[i % 3],
-    kp_code: 'DR-02', kp_name: kps[0] || '函数单调性',
-    question_text: `单调性巩固题 ${i + 1}：判断 f(x)=$x^3-3x$ 在 $[-2,2]$ 的单调区间？`,
-    options: ['A', 'B', 'C', 'D'],
-    answer: 'B', answer_analysis: '令 f\'(x)=0 求分界点后列表判断。',
+    q_type: q.q_type,
+    difficulty: q.difficulty,
+    kp_code: q.kp_code,
+    kp_name: q.kp_name,
+    question_text: q.question_text,
+    options: q.options ? [...q.options] : undefined,
+    answer: q.answer,
+    answer_analysis: q.answer_analysis,
   }))
   return {
     artifact_id: 'art-quiz-1', artifact_type: 'quiz_set', scene: 'teacher.assessment', class_id: 'c1',
     owner_id: 't1', status: 'draft', version: 1, engine: 'local',
-    content: { knowledge_points: kps, count: items.length, difficulty: { easy: 0.25, medium: 0.5, hard: 0.25 }, items, duplicated: 1, insufficient: items.length < count },
+    content: { knowledge_points: kps, count: items.length, difficulty: { easy: 0.4, medium: 0.4, hard: 0.2 }, items, duplicated: 0, insufficient: false },
     source_refs: [], warnings: [], degraded: false, created_at: iso(), updated_at: iso(),
   }
 }

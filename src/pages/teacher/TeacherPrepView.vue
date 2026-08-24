@@ -117,6 +117,7 @@
             <div>
               <h2>教学建议</h2>
               <span class="t-tag blue" style="margin-top: 4px">{{ ctx.className || '当前班级' }}</span>
+              <span v-if="suggestionMode === 'kp'" class="t-tag amber" style="margin-top: 4px">按本课知识点</span>
             </div>
           </div>
 
@@ -144,7 +145,7 @@
               </div>
             </div>
           </div>
-          <p v-if="!suggestions.length" class="t-muted t-small">当前班级数据不足，暂无可采纳的学情建议。</p>
+          <p v-if="!suggestions.length" class="t-muted t-small">已按本课知识点生成通用教学建议，请稍候刷新。</p>
         </div>
 
         <!-- 产出按钮组卡片 -->
@@ -184,6 +185,7 @@ import { artifactsApi } from '@/api/teacher/artifacts'
 import { lessonsApi } from '@/api/teacher/lessons'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import { useLessonArtifactsStore } from '@/stores/teacher/lessonArtifacts'
+import { suggestionsForKnowledgePoints } from '@/mock/teachingAdvice'
 import type { LessonPlanSection } from '@/types/teacher'
 
 const router = useRouter()
@@ -243,6 +245,8 @@ interface Suggestion {
 }
 
 const suggestions = ref<Suggestion[]>([])
+/** 建议来源模式：kp=按知识点通用建议（班级数据不足时）；class=按班级学情驱动。用于如实标注，不虚构数据 */
+const suggestionMode = ref<'class' | 'kp'>('kp')
 
 // ---- 结构化抽屉状态（RD-1：目标/师生活动/核心问题/素材/检查理解/时长，替代 window.prompt） ----
 const editingStepId = ref('')
@@ -494,6 +498,52 @@ function applyArtifact() {
     elapsed += minutes
     return step
   })
+  populateSuggestions(content)
+}
+
+// ---- 教学建议：班级数据不足时退化为按「本课知识点」给通用建议（不显示“数据不足”空态） ----
+// 依据 teachingAdvice.ts 的知识点→建议池；证据为课标/教法，绝不虚构班级统计数字。
+const KP_KEYWORDS: Record<string, string[]> = {
+  '函数的单调性': ['单调', '递增', '递减', '单调区间', '单调性'],
+  '函数的奇偶性': ['奇偶', '偶函数', '奇函数', '对称'],
+  '函数的基本性质': ['最值', '值域', '周期性', '函数性质'],
+  '函数与导数': ['导数', '切线', "f'(x)", '求导'],
+  '集合': ['集合', '交集', '并集', '补集', '文氏'],
+}
+
+function detectKps(content: Record<string, unknown>): string[] {
+  const text = [
+    String(content.topic || ''),
+    ...((content.segments as Array<Record<string, unknown>>) || []).flatMap((s: Record<string, unknown>) => [
+      String(s.learning_objective || ''), String(s.core_question || ''), String(s.title || ''), String(s.content || ''),
+    ]),
+  ].join(' ')
+  const hits: string[] = []
+  for (const [kp, kw] of Object.entries(KP_KEYWORDS)) {
+    if (kw.some((w) => text.includes(w))) hits.push(kp)
+  }
+  return hits
+}
+
+function populateSuggestions(content: Record<string, unknown>) {
+  const kps = detectKps(content)
+  const advices = suggestionsForKnowledgePoints(kps, 4)
+  // 优先把建议安放到与之匹配的环节（targetStepKind）；无匹配环节则落到最后一步
+  suggestions.value = advices.map((a, i) => {
+    const step =
+      lessonSteps.value.find((s) => s.kind === a.targetStepKind) ||
+      (lessonSteps.value[a.targetStepKind === 'import' || a.targetStepKind === 'summary' ? 0 : lessonSteps.value.length - 1] as LessonStep | undefined) ||
+      lessonSteps.value[lessonSteps.value.length - 1]
+    return {
+      id: `kp-sug-${i + 1}`,
+      title: a.title,
+      description: a.description,
+      evidence: a.evidence,
+      adopted: false,
+      targetStepId: step ? step.id : '',
+    }
+  })
+  suggestionMode.value = 'kp'
 }
 
 /** P-2：同班级最近教案的真实 topic 作为改编起点；无则回落默认课题（不再硬编码单课题） */

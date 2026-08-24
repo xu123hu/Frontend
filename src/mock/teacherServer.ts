@@ -111,7 +111,7 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
   /* 出题 */
   if (method === 'POST' && url === '/teacher/quizzes/generate') {
     const b = await readBody(req)
-    const art = quizArtifact(b.knowledge_points || ['函数单调性'], b.count || 6)
+    const art = quizArtifact(b.knowledge_points || [], b.count || 6, b)
     art.artifact_id = nextId('art-quiz'); artifacts.set(art.artifact_id, art)
     ok(res, art, 201); return true
   }

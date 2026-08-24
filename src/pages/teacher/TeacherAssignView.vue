@@ -210,7 +210,7 @@
           >
             <div class="t-q-no">{{ idx + 1 }}</div>
             <div class="t-q-main">
-              <div class="qt">{{ q.question_text }}</div>
+              <div class="qt"><LatexText :text="q.question_text" /></div>
               <div class="qm">
                 {{ q.kp_name || q.kp_code || '综合数学' }} · {{ difficultyLabel(q.difficulty) }} · {{ q.score }}分
                 <span v-if="q.locked" class="t-lock">已锁定</span>
@@ -301,10 +301,10 @@
           <div v-for="(q, idx) in items" :key="q._key" class="t-spaper-q">
             <div class="t-spaper-no">{{ idx + 1 }}</div>
             <div class="t-spaper-body">
-              <div class="qt" v-html="latex(q.question_text)"></div>
+              <div class="qt"><LatexText :text="q.question_text" /></div>
               <div v-if="q.q_type === 'choice' && q.options" class="t-spaper-opts">
                 <label v-for="(opt, oi) in q.options" :key="oi" class="t-spaper-opt">
-                  <span class="t-spaper-letter">{{ 'ABCD'[oi] }}</span>{{ opt }}
+                  <span class="t-spaper-letter">{{ 'ABCD'[oi] }}</span><LatexText :text="opt" />
                 </label>
               </div>
             </div>
@@ -323,7 +323,8 @@ import { artifactsApi } from '@/api/teacher/artifacts'
 import { assignmentsApi } from '@/api/teacher/assignments'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import { useAssessmentStore } from '@/stores/teacher/assessment'
-import { MONOTONICITY_BANK, replacementCandidates, type BankQuestion } from '@/mock/questionBank'
+import { SCOPE_TO_KP, MONOTONICITY_BANK, replacementCandidates, type BankQuestion } from '@/mock/questionBank'
+import LatexText from '@/components/LatexText.vue'
 import type { Assignment, QuizQuestion, TeacherArtifact } from '@/types/teacher'
 
 const route = useRoute()
@@ -349,13 +350,8 @@ const typeOptions: TypeOption[] = [
   { id: 'formal-exam', icon: '🏆', title: '正式考试', desc: '期中/期末模拟', defaultCount: 25, defaultDuration: '60' },
 ]
 
-// ---- 范围 → 知识点 ----
-const SCOPE_KP: Record<string, { code: string; name: string }> = {
-  monotonicity: { code: 'MATH-101', name: '函数的单调性' },
-  parity: { code: 'MATH-102', name: '函数的奇偶性' },
-  basic: { code: 'MATH-103', name: '函数的基本性质' },
-  chapter1: { code: 'MATH-001', name: '集合与函数' },
-}
+// ---- 范围 → 知识点（出题范围与蓝图对齐，见 SCOPE_TO_KP） ----
+// 范围映射收敛到 questionBank 的 SCOPE_TO_KP，避免双份知识点表漂移。
 
 // ---- 表单状态 ----
 const form = reactive({
@@ -465,12 +461,7 @@ function selectType(id: string) {
   showToast?.(`已选择「${type?.title}」场景`)
 }
 
-// ---- 学生端预览：简单 LaTeX 转义（教研环境渲染粗粒度，非全量 KaTeX） ----
-function latex(text: string): string {
-  return String(text ?? '')
-    .replace(/\$\$([^$]+)\$\$/g, '<i>$1</i>')
-    .replace(/\$([^$]+)\$/g, '<i>$1</i>')
-}
+// ---- 学生端预览：渲染交 KaTeX（LatexText 组件），非伪斜体替换 ----
 function previewAsStudent() { studentPreviewOpen.value = true }
 
 function restoreItemsFrom(raw: Array<Record<string, unknown>>) {
@@ -507,13 +498,16 @@ async function restoreDraft() {
 async function generatePaper() {
   if (generating.value || !form.classId) return
   generating.value = true
-  const kp = SCOPE_KP[form.scope] || SCOPE_KP.monotonicity
-  const choice = Math.max(1, Math.floor(form.count * 0.3))
-  const blank = Math.max(1, Math.floor(form.count * 0.2))
+  // 范围 → 知识点名称（供 mock/后端按知识点分布取题）
+  const kps = (SCOPE_TO_KP[form.scope] || SCOPE_TO_KP.monotonicity).map((k) => k.name)
+  // 题型比例（小题量不越界）：choice 30% / blank 20% / 余解答
+  const left = Math.max(1, form.count)
+  const choice = left <= 1 ? 1 : Math.max(1, Math.round(left * 0.3))
+  const blank = left <= 2 ? (left === 1 ? 0 : 1) : Math.max(1, Math.round(left * 0.2))
   try {
     await store.generateQuiz({
       class_id: form.classId,
-      knowledge_points: [kp.code],
+      knowledge_points: kps,
       count: form.count,
       question_types: { choice, blank, text: Math.max(0, form.count - choice - blank) },
       difficulty: { easy: difficultyRatio.value.basic / 100, medium: difficultyRatio.value.medium / 100, hard: difficultyRatio.value.hard / 100 },
@@ -521,10 +515,30 @@ async function generatePaper() {
     })
     const raw = (store.quizArtifact?.content?.items || []) as Array<Record<string, unknown>>
     restoreItemsFrom(raw)
+    // 高级蓝图参与：打开高级设置时按 知识点×难度 分值蓝图回填每题分值
+    if (advancedOpen.value && blueprint.value.length) applyBlueprintScores()
     writeArtifactUrl()
     showToast?.(store.quizArtifact?.degraded ? '题库不足部分已用本地模板补齐，请确认后发布' : '试卷已生成，可逐题调整')
   } catch (e: any) { showToast?.(e?.message || store.error || '生成失败') }
   finally { generating.value = false }
+}
+
+/** 高级蓝图：按 知识点×难度 找到对应行分值；命中则为该题回填分值（蓝图真实影响试卷，不再只是展示） */
+function applyBlueprintScores() {
+  items.value.forEach((q) => {
+    const name = q.kp_name || q.kp_code || ''
+    const row = blueprint.value.find((b) => b.kp === name || name.includes(b.kp) || b.kp.includes(name))
+    if (row) q.score = Number(q.difficulty === 'easy' ? row.easy : q.difficulty === 'hard' ? row.hard : row.medium) || q.score
+  })
+}
+
+/** 把当前逐题编辑/替换结果写回 artifact（编辑并非一次性发布才落盘） */
+function syncToArtifact() {
+  if (!store.quizArtifact) return
+  const content = { ...(store.quizArtifact.content || {}) }
+  content.items = items.value.map(({ _key, locked, ...q }) => ({ ...q }))
+  content.count = items.value.length
+  store.quizArtifact = { ...store.quizArtifact, content }
 }
 
 // ---- 每题动作 ----
@@ -537,6 +551,7 @@ function saveEdit(idx: number) {
   const q = items.value[idx]
   if (!q.question_text.trim()) { showToast?.('题干不能为空'); return }
   editingIdx.value = -1
+  syncToArtifact()
   showToast?.('已保存该题')
 }
 
@@ -588,7 +603,7 @@ function applyCandidate(idx: number, cand: BankQuestion, msg?: string) {
     difficulty: cand.difficulty,
     kp_code: cand.kp_code,
     kp_name: cand.kp_name,
-    question_text: `导数与单调性：${cand.question_text}`,
+    question_text: cand.question_text,
     options: cand.options ? [...cand.options] : undefined,
     answer: cand.answer,
     answer_analysis: cand.answer_analysis,
@@ -599,6 +614,7 @@ function applyCandidate(idx: number, cand: BankQuestion, msg?: string) {
   items.value[idx] = picked
   editingIdx.value = -1
   similarList.value = []
+  syncToArtifact()
   showToast?.(msg || '已选用该题')
 }
 

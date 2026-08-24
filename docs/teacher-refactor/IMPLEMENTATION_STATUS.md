@@ -64,3 +64,35 @@ Round 05（解堵核心环）收尾清单与 P1 执行中。RC-05-1/2/3/4 已绿
 ## Next
 - 提交 R05-fix 修复（BL-1 + P-2）至 `refactor/teacher-os`。
 - 请 Architect 亲测 R05-fix 验收 6 条（含旧 payload 回退分支）与组卷 mock 题库/Butler 的 R06 排期。经 Architect 复验通过后 Round 05 关账，进入 R06。
+
+---
+
+## Principal 反馈增量（2026-08-24）：教学建议知识点化 + 作业出题重构
+
+**需求来源（Principal 直接反馈）**：①“教学建议怎么会写出班级数据不足，人不够时就按知识点给建议”；②“作业检测出题太老套麻烦，先 clone 优秀项目再对照全部重构”。已 clone 并 Trace 的 `webwork2`（GPL-2.0/Artistic，B 类）已在 reference-map 全量记录；本轮据此落地。
+
+### 1. 教学建议：班级数据不足 → 按本课知识点生成通用建议（不再是空态）
+- 新增 `src/mock/teachingAdvice.ts`：知识点→建议池（含 依据=课标/教法，绝不虚构班级统计），并为未知知识点提供通用兜底建议。
+- `TeacherPrepView.vue`：`populateSuggestions()` 按本课话题/环节内容 `detectKps()` 提取知识点 → `suggestionsForKnowledgePoints()` 生成建议；卡片头部加「按本课知识点」标签；删除“当前班级数据不足，暂无可采纳的学情建议”空态文案（`suggestions` 原从未被填充、恒空 → 实为产品缺陷）。建议仍走「采纳建议」落进环节。
+- 契约测试：知识点命中返回非空 + 未知知识点回落兜底 + 每条必有依据。
+
+### 2. 作业出题重构（走出“单调性巩固题 N / 答案恒 B / 占位 ABCD”）
+- `src/mock/questionBank.ts`：重写为跨 4 知识点（单调性/奇偶性/基本性质/集合）真实题库 + `SCOPE_TO_KP` + `buildQuizSet()`：按知识点×难度分布抽题、mulberry32 确定性乱序选择项并对齐答案字母、池耗尽用参数化变式补足（D1 足额不静默减题）。
+- `teacherData.quizArtifact()` / `teacherServer.ts`：forward 请求体（knowledge_points/difficulty）→ buildQuizSet；保留契约字段 item_no/q_type/difficulty/kp/options/answer/analysis。
+- `TeacherAssignView.vue`：
+  - 范围统一走 `SCOPE_TO_KP`（删双份 SCOPE_KP）；小题量题型分配防越界；
+  - 高级「知识点×难度×分值」蓝图真实参与：打开高级设置时按行回填每题分值（`applyBlueprintScores()`，蓝图像不再只是展示）；
+  - 逐题「编辑/换一题/找相似」结果写回 artifact（`syncToArtifact()`），不再一次性发布才落盘，`applyCandidate` 去掉“导数与单调性：”强制前缀；
+  - 题干/选项渲染交 KaTeX（`LatexText` 组件），替换伪 `<i>` 斜体，公式与选项不再显式 `$...$` 源码。
+- 契约测试：buildQuizSet 足额 + 题干互不相同 + 选择题乱序且答案对齐（大样本跨知识点） + quizArtifact 完整契约。
+
+### 证据与验证
+- 契约测试：`test/teacher/refactorContract.test.ts`（6 项）通过；教师套件 **47 passed / 0 failed**（10 文件）。
+- typecheck：教师域文件 0 错误；`src/pages/research/*` master 存量债未涉。
+- build：PASS。
+- 真实 mock 浏览器（VITE_USE_MOCK=1, localhost:5177）：备课页建议非空、带「按本课知识点」标签与「依据」；组卷生成 8 道真实数学题、公式 KaTeX 渲染、选择题已乱序（正确答案随选项位移）。证据：`artifacts/teacher-refactor/round-05/prep-suggestions.png`、`assign-generated.png`、`assign-student-preview.png`。
+
+### 待 Architect 复验
+- 备课页「按本课知识点」建议在真实班级数据不足时的表现与「采纳建议」落环节。
+- 组卷高级蓝图分值回填、单题替换/编辑写回、学生端公式渲染。
+- RC-06 排期：教学建议「班级数据≥门槛时切回真实学情驱动（class 模式）」+ 组卷用研库/学生题库真实取题 adapter。
