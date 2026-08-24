@@ -1,0 +1,74 @@
+:root {
+  color: #18243a;
+  background: #f5f7fb;
+  font-family: "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input { font: inherit; }
+
+.teacher-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  background: #f5f7fb;
+}
+
+.teacher-nav {
+  padding: 28px 16px;
+  color: #dfe7f5;
+  background: #10223f;
+}
+
+.brand { display: grid; gap: 4px; margin: 0 12px 36px; }
+.brand strong { color: #fff; font-size: 18px; }
+.brand span { color: #9eb0cc; font-size: 12px; }
+.nav-list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.nav-list a { display: block; padding: 11px 12px; border-radius: 10px; color: inherit; text-decoration: none; font-size: 14px; }
+.nav-list a[aria-current='page'] { color: #10223f; background: #fff; font-weight: 700; }
+
+.today-main { padding: 32px clamp(24px, 5vw, 80px); max-width: 1540px; width: 100%; margin: 0 auto; }
+.today-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px; }
+.eyebrow { margin: 0 0 6px; color: #50617c; font-size: 13px; }
+h1 { margin: 0; color: #13213a; font-size: clamp(28px, 3vw, 38px); letter-spacing: -.04em; }
+.context-pill { margin: 2px 0 0; padding: 8px 12px; border: 1px solid #d6dfed; border-radius: 999px; background: #fff; color: #314361; font-size: 13px; white-space: nowrap; }
+
+.today-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, .8fr); gap: 22px; align-items: start; }
+.panel { background: #fff; border: 1px solid #dde5f0; border-radius: 18px; box-shadow: 0 8px 26px rgba(31, 52, 87, .05); }
+.copilot { min-height: 580px; display: flex; flex-direction: column; overflow: hidden; }
+.copilot-header { padding: 22px 24px; border-bottom: 1px solid #e6ebf3; }
+.copilot-header h2, .evidence-panel h2 { margin: 0; font-size: 18px; }
+.copilot-header p { margin: 8px 0 0; color: #63728c; font-size: 14px; line-height: 1.6; }
+.conversation { flex: 1; min-height: 0; background: linear-gradient(#fff, #f9fbfe); }
+.copilot-kit { height: 390px; }
+.copilot-kit .cs-main-container { border: 0; border-radius: 0; background: transparent; }
+.copilot-kit .cs-chat-container { background: transparent; }
+.copilot-kit .cs-conversation-header { padding: 10px 16px; border-bottom: 1px solid #e6ebf3; background: #fff; }
+.copilot-kit .cs-conversation-header__user-name { color: #203a62; font-weight: 700; }
+.copilot-kit .cs-message-list { background: transparent; }
+.copilot-kit .cs-message__content { line-height: 1.7; }
+.copilot-kit .cs-message--incoming .cs-message__content { background: #edf4ff; color: #203a62; }
+.copilot-kit .cs-message--outgoing .cs-message__content { background: #245eb8; }
+.copilot-kit .cs-message-input { border-top: 1px solid #e6ebf3; background: #fff; }
+.copilot-kit .cs-message-input__content-editor { color: #18243a; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 16px; }
+.suggestions button { border: 1px solid #d4deec; border-radius: 999px; padding: 7px 10px; background: #fff; color: #314361; font-size: 13px; cursor: pointer; }
+
+.evidence-panel { padding: 22px; }
+.evidence-panel > p { margin: 8px 0 20px; color: #63728c; font-size: 14px; line-height: 1.6; }
+.evidence-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.evidence-table th { padding: 0 0 10px; color: #63728c; text-align: left; font-weight: 500; }
+.evidence-table td { padding: 14px 0; border-top: 1px solid #e7edf5; vertical-align: middle; }
+.evidence-table td:last-child { text-align: right; }
+.progress-cell { min-width: 118px; }
+meter { width: 100%; height: 8px; accent-color: #245eb8; }
+.status { display: inline-flex; padding: 5px 8px; border-radius: 999px; background: #fff3d9; color: #8a5d00; font-size: 12px; }
+.evidence-footer { margin: 18px 0 0; color: #63728c; font-size: 13px; }
+
+@media (max-width: 980px) {
+  .teacher-shell { grid-template-columns: 1fr; }
+  .teacher-nav { display: none; }
+  .today-main { padding: 24px 16px; }
+  .today-grid { grid-template-columns: 1fr; }
+}
