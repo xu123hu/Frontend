@@ -35,6 +35,17 @@ Do Not Change（禁改）：导航架构、既有能力适配层接口。
 - **Not borrow**: 不把建议做成只改标签的假动作。
 - **Note**: 备课数据模型已由 Architect **RD-1 裁决 REOPENED→有条件 ACCEPT**（见 modules/lesson-artifact.md）：LessonSegment 结构化字段纳入 artifact content schema（additive/optional、不动 lifecycle、不动数据库）。施工须按该裁决执行，并必修 Identity #13 禁止项：移除 `window.prompt()`。
 
+### Prep 课程时间线编辑器 Person（公式/图片/富文本）— Real Ground Truth（2026-08-24）
+
+**起草：** Principal 反馈——时间线编辑输入框小、无法键入数学公式、无法插图，不符真实备课。已并行调研真实开源项目并下载对照（本地详档 `research-repos/teacher-prep-editor/PREP_EDITOR_REFERENCE.md`；本台账为 committed 摘要）。
+
+- **Primary reference（编辑器引擎）**: **Tiptap**（`ueberdosis/tiptap` + `@tiptap/vue-3`，MIT）— 环节正文用富文本块，扩展补表格/图片/math。
+- **Row 内联补充**: **MathLive**（`arnog/mathlive`，MIT）— `<math-field>` 公式键入（textarea 语义、LaTeX 导出、虚拟键盘）；**function-plot**（MIT，已本地下载）画函数曲线；**Excalidraw**（MIT）手绘草图；`@editorjs/image`（Apache-2.0）插图/剪贴板传图。
+- **Dependency 风险**: 全部 MIT/Apache（A 类可集成）；仅 **JSXGraph**（LGPL/MIT）做精确几何图但 LGPL 接入需注意链接许可（暂列为可选项）。
+- **Borrow**: 环节正文 = 富文本块数组 + 每个结构化字段可键盘输入公式；公式实时预览；图片/函数图可插入环节正文。
+- **Not borrow**: 不复制任一库的 UI 皮肤/品牌；不因引库而改 artifact content schema 语义（公式存 LaTeX 字符串，additive 进 `content`）。
+- **Status**: PROPOSED（待 Architect 纳入 R06「结构化环节」施工范围）——**未在本轮实施**，避免越界改 CURRENT_DIRECTIVE。
+
 ## Assignment / Quiz Builder（RC-3）
 
 - **Primary reference**: Wayground AI「Generate → Review 每题 → Publish」；Formative AI Questions「逐题 accept/decline/edit + similar/easier/harder」。
@@ -90,7 +101,13 @@ Do Not Change（禁改）：导航架构、既有能力适配层接口。
 
 - 借鉴对象多为闭源 Web 产品（Gradescope / Brisk / Khanmigo / Wayground / Formative / 希沃 / 科大讯飞）——只借鉴交互与 IA 模式，不复制品牌与代码。
 - `webwork2`：**已核实 LICENSE 文件** = GPL-2.0 或 Artistic 1.0 双许可。定级 B：仅结构/交互/数据思想参考，禁复制源码与 PG 题目。
-- `xzs`（mindskip/xzs，中国考试系统）：以 zip 源码包方式获取（git clone 网络中断），Trace 进行中——完成后在此补许可证与结构结论；**未完成 Trace 前不声明"已参考"**。
+- `xzs`（mindskip/xzs，学之思考试系统，zip 源码包获取）：**已完成 STEP 1–6 真实 Trace（2026-08-24，Architect 亲测）**：
+  - **许可证（STEP 2 已核实）**：LICENSE 文件 = **AGPL-3.0** → 定级 C（仅概念参考；AGPL 传染性最强，**任何代码/SQL/前端组件均禁复制**）。
+  - Java/Win+Vue 考试系统。源级证据（`domain/Question.java` / `ExamPaper.java` / `ExamPaperAnswer.java`）：
+    - `Question`：questionType / difficult / score / correct / gradeLevel / status —— 题目=结构化实体（题型/难度/分值/标准答案/学段），内容经 infoTextContentId 引用富文本。
+    - `ExamPaper`：**score(总分) + questionCount(题数) + suggestTime(建议时长) + limitStartTime/limitEndTime(时间窗)** —— 试卷自带蓝图不变量与开放时间闸门。
+    - `ExamPaperAnswer`：**systemScore(系统自动判分) 与 userScore(教师终审分) 分离存储**，另有 questionCorrect/doTime。
+  - → 映射：systemScore/userScore 分离 ≈ 我们的 suggestion_score / teacher_final_score（SubmissionItem），**佐证 Confirmation Gate 数据模型**；ExamPaper 蓝图不变量 ≈ 我们的"题数==蓝图、Σ分值==总分、时长"发布门 + webwork2 GatewayQuiz 时间窗。**不借鉴**其无知识点标签体系（只有 subjectId 无 kp）、无证据链洞察。
 - `langgraph`（MIT 许可，clone HEAD f09cfe8）：**已完成 STEP 1–6 轻量 Trace（2026-08-23）**。源级证据：`libs/langgraph/langgraph/types.py:851 def interrupt(value)` —— 抛 `GraphInterrupt`（errors.py:102）暂停执行、把上下文带给客户端；客户端以 `Command(resume=...)` 显式恢复；**必须启用 checkpointer（持久化状态）**。→ 映射：`interrupt` ≈ 我们的 `needs_confirmation`；`Command(resume)` ≈ 教师确认端点（confirm/publish）；checkpointer ≈ draft Artifact 持久化。佐证 ARCHITECTURE.md 的 AI 交互模型，不引入其内核（后端审计决定维持）。
 - Moodle / Canvas / BigBlueButton / RAGFlow（研究报告列示的重型仓库）：**显式延后**，理由：本轮 RC 决策点不依赖其结构细节，且均为 GPL/AGPL 大仓，仅按"模型思想参考"使用（后端审计结论：Moodle/edX 价值在模型不在复杂度）。任何后续模块若需声明参考，必须先补完整 STEP 1–10。
 
@@ -99,5 +116,5 @@ Do Not Change（禁改）：导航架构、既有能力适配层接口。
 | 仓库 | STEP1 clone | STEP2 license | STEP3 发现 | STEP4 Trace | STEP5 结构 | STEP6 工作流 | STEP7 mapping | 声明资格 |
 |---|---|---|---|---|---|---|---|---|
 | webwork2 | ✅ shallow | ✅ GPL-2.0/Artistic | ✅ Instructor/CG 模块清单 | ✅ SetMaker/ProblemGrader 源级 | ✅ 上文记录 | ✅ 组卷/批改工作流 | ✅ 见各模块节 | **可声明已参考** |
-| xzs | 🔄 zip 下载中 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 不可声明 |
+| xzs | ✅ zip 源码包 | ✅ AGPL-3.0（C 类） | ✅ domain/exam 模块清单 | ✅ Question/ExamPaper/Answer 源级 | ✅ 上文记录 | ✅ 组卷/判分分离 | ✅ Confirmation Gate 佐证 | **可声明已参考（仅概念）** |
 | langgraph | ✅ HEAD f09cfe8 | ✅ MIT | ✅ libs/docs 结构 | ✅ types.py:851 源级 | ✅ | ✅ interrupt→Command(resume)→checkpointer | ✅ AI 交互模型映射 | **可声明已参考（轻量）** |

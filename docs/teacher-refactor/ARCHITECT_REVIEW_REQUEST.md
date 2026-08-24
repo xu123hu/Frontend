@@ -22,6 +22,15 @@
 
 ---
 
+## 新提案（2026-08-24，Principal 反馈，请 Architect 裁决是否纳入 R06）
+
+**课程时间线编辑真实备课场景升级**（公式/图片/富文本）。依据真实开源参照已下载对齐：详见 `research-repos/teacher-prep-editor/PREP_EDITOR_REFERENCE.md`（本地）与 `reference-map.md`「Prep 课程时间线编辑器」条目（committed）。要点：
+- 提案技术栈（全 MIT/Apache，A 类可集成）：**Tiptap(@tiptap/vue-3)** 富文本块 + **MathLive(`<math-field>`)** 公式键入 + 图片节点 + **function-plot**（已本地下载）/Excalidraw 函数图/手绘。
+- 解决 Principal 指出的现状痛点：输入框小（textareas rows=2/3）、无法键入公式、无法插图。
+- **未在本轮实施**（不越 CURRENT_DIRECTIVE 范围）；建议并入 R06「结构化环节」施工，先上「正文富文本+公式+插图」最小可用版。
+
+---
+
 ## 背景
 按 `CURRENT_DIRECTIVE.md`（Round 05）执行收尾清单与 P1。D1/D2/发布门/预览学生端/RC-05-5 已完成并真实浏览器复验，证据见 `IMPLEMENTATION_STATUS.md` 与 `artifacts/teacher-refactor/round-05/`。
 
