@@ -1,215 +1,30 @@
 <template>
-  <div id="page-grading">
-    <header class="t-page-head">
-      <div class="t-page-title">
-        <h1>批改作业</h1>
-        <p>系统只提供预批改建议；教师确认后才写入正式成绩并同步给学生。</p>
-      </div>
-      <span class="t-tag blue">待处理 {{ pendingCount }} 份</span>
-    </header>
-
-    <div v-if="store.error" class="t-card" style="color: var(--t-red); margin-bottom: 16px;">
-      {{ store.error }}
-    </div>
-    <div v-if="store.loading && !store.detail" class="t-card">正在加载真实批改队列…</div>
-    <div v-else-if="!store.queue.length" class="t-card">
-      <h2 style="margin-top: 0;">当前没有待批作答</h2>
-      <p class="t-muted">学生提交已发布的试卷或作业后，待批题目会出现在这里。</p>
-      <button class="t-btn primary" type="button" @click="router.push('/teacher/assign')">去发布试卷</button>
-    </div>
-
-    <div v-else class="t-grade-layout">
-      <section class="t-answer-panel">
-        <div class="t-section-title">
-          <div>
-            <h2>学生原始作答</h2>
-            <div class="sub">{{ store.detail?.student_label || '请选择待批记录' }}</div>
-          </div>
-          <select v-model="selectedId" class="t-input" style="max-width: 220px;" @change="loadSelected">
-            <option v-for="item in store.queue" :key="item.submission_item_id" :value="item.submission_item_id">
-              {{ item.student_label }} · {{ statusText(item.status) }}
-            </option>
-          </select>
-        </div>
-
-        <div v-if="store.detail" class="t-paper">
-          <div class="qtitle">评分标准</div>
-          <p>{{ store.detail.scoring_standard }}</p>
-          <div class="qtitle" style="margin-top: 24px;">作答内容</div>
-          <p style="white-space: pre-wrap; line-height: 1.8;">{{ store.detail.original_answer || '学生未填写文本答案' }}</p>
-          <div v-if="store.detail.file_id" class="t-card soft" style="margin-top: 20px;">
-            <b>本题包含学生拍照原稿</b>
-            <p class="t-small t-muted" style="margin-bottom: 0;">文件编号：{{ store.detail.file_id }}。评分建议已按低置信度转人工复核，不会自动记分。</p>
-            <img v-if="photoUrl" :src="photoUrl" alt="学生拍照原稿" style="display: block; max-width: 100%; max-height: 640px; margin-top: 12px; border-radius: 8px; object-fit: contain;" />
-            <p v-else class="t-small t-muted">正在加载原始照片…</p>
-          </div>
-        </div>
-      </section>
-
-      <aside v-if="store.detail" class="t-grade-side">
-        <div class="t-card">
-          <div class="t-section-title">
-            <div>
-              <h2>预批改建议</h2>
-              <div class="sub">建议由评分标准分步核对生成，教师复核后生效</div>
-            </div>
-            <span class="t-tag" :class="store.detail.suggestion?.review_needed ? 'amber' : 'green'">
-              {{ store.detail.suggestion?.review_needed ? '需要人工复核' : '可复核确认' }}
-            </span>
-          </div>
-          <div class="t-scorebox">
-            <span class="score">{{ suggestedScore }}</span>
-            <span class="full">分（建议）</span>
-          </div>
-          <p class="t-small t-muted">{{ store.detail.suggestion?.evidence || '暂无自动评分依据，请人工评分。' }}</p>
-        </div>
-
-        <div class="t-card">
-          <div class="t-section-title"><h2>教师最终确认</h2></div>
-          <label class="t-small t-strong" for="final-score">最终得分</label>
-          <input id="final-score" v-model.number="finalScore" class="t-input" type="number" min="0" step="0.5" style="width: 100%; margin: 8px 0 14px;" />
-          <label class="t-small t-strong" for="feedback">反馈给学生</label>
-          <textarea id="feedback" v-model="feedback" class="t-input" rows="4" style="width: 100%; margin: 8px 0 14px; resize: vertical;" placeholder="写下可执行的改进建议"></textarea>
-          <div class="t-grade-buttons">
-            <button class="t-btn primary lg" type="button" :disabled="store.confirming || !canConfirm" @click="confirmAccept">
-              {{ store.confirming ? '正在写入…' : '接受建议并确认' }}
-            </button>
-            <button class="t-btn lg" type="button" :disabled="store.confirming || !canConfirm" @click="confirmOverride">
-              按当前分数改分并确认
-            </button>
-          </div>
-        </div>
-      </aside>
+  <div class="grading-v2">
+    <header class="grading-v2__header"><div><p class="eyebrow">批改工作区 · 题目聚焦</p><h1>先看作答证据，再确认成绩</h1></div><p>建议分数始终是草稿；只有教师最终确认才会同步给学生与学情记录。</p></header>
+    <p v-if="notice || store.error" class="notice" role="status">{{ notice || store.error }}</p>
+    <div class="grading-v2__workspace">
+      <aside class="queue" aria-labelledby="queue-title"><div class="queue__title"><div><p class="eyebrow">批改队列</p><h2 id="queue-title">待处理作答</h2></div><span>{{ store.loading && !store.queue.length ? '读取中' : `${store.queue.length} 份` }}</span></div><div v-if="!store.loading && !store.queue.length" class="empty">当前没有可批改作答。学生提交已发布作业后，真实记录会出现在这里。</div><div v-else class="queue__list"><button v-for="(item, index) in store.queue" :key="item.submission_item_id" type="button" :class="{ selected: selectedId === item.submission_item_id }" @click="selectItem(item.submission_item_id)"><b>待批改作答 {{ index + 1 }}</b><small>{{ statusText(item.status) }} · {{ Math.round((item.confidence || 0) * 100) }}% 置信</small></button></div></aside>
+      <section class="evidence" aria-labelledby="evidence-title"><template v-if="store.detail"><p class="eyebrow">原始作答证据</p><h2 id="evidence-title">{{ store.detail.question_text || '题目文本不可用，请查看原始附件' }}</h2><article class="answer"><p>学生提交内容</p><pre>{{ store.detail.original_answer || '学生未提交文字作答。' }}</pre><a v-if="store.detail.file_id" :href="`/api/teacher/grading/${store.detail.submission_item_id}/file`" target="_blank" rel="noreferrer">在新窗口查看原始附件</a></article><details v-if="store.detail.answer_analysis"><summary>查看题目解析</summary><p>{{ store.detail.answer_analysis }}</p></details></template><div v-else class="empty">从左侧选择一份真实作答后，才会加载题目、原始答案与评分证据。</div></section>
+      <aside class="rubric" aria-labelledby="rubric-title"><template v-if="store.detail"><p class="eyebrow">评分依据与教师决策</p><h2 id="rubric-title">评分标准</h2><dl><div><dt>标准答案</dt><dd>{{ store.detail.standard_answer || '无可用标准答案，须人工判定' }}</dd></div><div><dt>建议分数</dt><dd>{{ store.detail.suggestion?.suggestion_score ?? '未生成' }}</dd></div><div><dt>建议证据</dt><dd>{{ store.detail.suggestion?.evidence || '未提供证据' }}</dd></div></dl><label>最终分数<input v-model="finalScore" inputmode="decimal" @input="armed = false" /></label><label>给学生的反馈<textarea v-model="feedback" placeholder="可选：说明得分依据或下一步建议" @input="armed = false" /></label><button v-if="!armed" type="button" :disabled="store.confirming || !canConfirm" @click="armed = true">确认记入正式成绩</button><div v-else class="confirm"><p>将以当前分数写入正式成绩，并据此更新学习记录。</p><div><button class="quiet" type="button" :disabled="store.confirming" @click="armed = false">返回修改</button><button type="button" :disabled="store.confirming" @click="commit">最终确认</button></div></div></template><div v-else class="empty">评分依据会与真实作答一同加载；不展示预设分数表单。</div></aside>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, inject, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { authHeaders } from '@/api/client'
 import { useGradingStore } from '@/stores/teacher/grading'
 import { useTeacherContextStore } from '@/stores/teacher/context'
-
-const router = useRouter()
-const route = useRoute()
-const store = useGradingStore()
-const context = useTeacherContextStore()
-const showToast = inject<(msg: string) => void>('showToast', () => {})
-const selectedId = ref('')
-const finalScore = ref<number | null>(null)
-const feedback = ref('')
-const photoUrl = ref('')
-
-const pendingCount = computed(() => store.queue.filter((item) => item.status !== 'confirmed').length)
-const suggestedScore = computed(() => store.detail?.suggestion?.suggestion_score ?? '—')
-const canConfirm = computed(() => Boolean(store.detail?.suggestion?.suggestion_id))
-
-function normalizeQueryId(value: unknown): string {
-  if (Array.isArray(value)) return value[0] ?? ''
-  return typeof value === 'string' ? value : ''
-}
-
-/** URL 与当前份同步：`submission_item_id` 进入 query，刷新/分享/直接打开回到同一份 */
-watch(selectedId, (id) => {
-  const query = { ...route.query }
-  if (id) query.submission_item_id = id
-  else delete query.submission_item_id
-  router.replace({ query })
-})
-
-watch(() => store.detail, (detail) => {
-  finalScore.value = detail?.suggestion?.suggestion_score ?? detail?.teacher_final_score ?? null
-  feedback.value = detail?.suggestion?.teacher_feedback || ''
-})
-
-watch(() => store.detail?.submission_item_id, async (submissionItemId) => {
-  if (photoUrl.value) URL.revokeObjectURL(photoUrl.value)
-  photoUrl.value = ''
-  if (!submissionItemId || !store.detail?.file_id) return
-  try {
-    const response = await fetch(`/api/teacher/grading/${submissionItemId}/file`, {
-      headers: authHeaders() as HeadersInit,
-    })
-    if (response.ok) photoUrl.value = URL.createObjectURL(await response.blob())
-  } catch {
-    photoUrl.value = ''
-  }
-})
-
-function statusText(status: string) {
-  return status === 'confirmed' ? '已确认' : status === 'low_confidence' ? '待人工复核' : '待处理'
-}
-
-async function loadSelected() {
-  if (selectedId.value) await store.fetchItem(selectedId.value)
-}
-
-async function refreshAndAdvance() {
-  const previous = selectedId.value
-  await store.fetchQueue(context.classId || undefined)
-  const next = store.queue.find((item) => item.status !== 'confirmed' && item.submission_item_id !== previous)
-    || store.queue.find((item) => item.submission_item_id !== previous)
-  if (next) {
-    selectedId.value = next.submission_item_id
-    await loadSelected()
-  } else {
-    store.detail = null
-    selectedId.value = ''
-  }
-}
-
-async function confirmAccept() {
-  if (!store.detail || !canConfirm.value) return
-  try {
-    await store.confirm(store.detail.submission_item_id, 'accept', null, feedback.value || null)
-    showToast('已确认评分，学生端可查看结果')
-    await refreshAndAdvance()
-  } catch (error: any) {
-    showToast(error?.message || '确认失败')
-  }
-}
-
-async function confirmOverride() {
-  if (!store.detail || finalScore.value === null || !Number.isFinite(Number(finalScore.value))) {
-    showToast('请填写有效的最终得分')
-    return
-  }
-  try {
-    await store.confirm(store.detail.submission_item_id, 'override', Number(finalScore.value), feedback.value || null)
-    showToast('改分已确认，学生端可查看结果')
-    await refreshAndAdvance()
-  } catch (error: any) {
-    showToast(error?.message || '确认失败')
-  }
-}
-
-onMounted(async () => {
-  await store.fetchQueue(context.classId || undefined)
-  const requested = normalizeQueryId(route.query.submission_item_id)
-  const requestedItem = requested ? store.queue.find((item) => item.submission_item_id === requested) : null
-  const first = requestedItem
-    || store.queue.find((item) => item.status !== 'confirmed')
-    || store.queue[0]
-  if (first) {
-    selectedId.value = first.submission_item_id
-    await loadSelected()
-  }
-  window.addEventListener('keydown', onKeydown)
-})
-
-/** RC-05-4 #4：Enter = 确认并推进下一份（多行反馈框保持换行，不误触跳转） */
-function onKeydown(e: KeyboardEvent) {
-  if (e.key !== 'Enter') return
-  const target = e.target as HTMLElement | null
-  if (target?.tagName === 'TEXTAREA') return
-  if (!canConfirm.value || store.confirming) return
-  e.preventDefault()
-  void confirmAccept()
-}
-
-onUnmounted(() => {
-  if (photoUrl.value) URL.revokeObjectURL(photoUrl.value)
-  window.removeEventListener('keydown', onKeydown)
-})
+const router = useRouter(); const route = useRoute(); const store = useGradingStore(); const context = useTeacherContextStore(); const toast = inject<(message: string) => void>('showToast', () => {}); const selectedId = ref(''); const finalScore = ref(''); const feedback = ref(''); const armed = ref(false); const notice = ref(''); const canConfirm = computed(() => Boolean(store.detail?.suggestion?.suggestion_id))
+function statusText(status: string) { return status === 'confirmed' ? '已确认' : status === 'low_confidence' ? '需人工复核' : '待处理' }
+function queryId() { const value = route.query.submission_item_id; return Array.isArray(value) ? value[0] || '' : typeof value === 'string' ? value : '' }
+async function selectItem(id: string) { if (!id) return; selectedId.value = id; armed.value = false; await store.fetchItem(id) }
+watch(selectedId, (id) => { const query = { ...route.query }; if (id) query.submission_item_id = id; else delete query.submission_item_id; router.replace({ query }) })
+watch(() => store.detail, (detail) => { finalScore.value = String(detail?.teacher_final_score ?? detail?.suggestion?.teacher_final_score ?? detail?.suggestion?.suggestion_score ?? ''); feedback.value = detail?.suggestion?.teacher_feedback || '' })
+async function commit() { if (!store.detail || !canConfirm.value) return; const score = Number(finalScore.value); if (!Number.isFinite(score)) { notice.value = '请输入有效的最终分数；未写入成绩。'; return } try { await store.confirm(store.detail.submission_item_id, score === store.detail.suggestion?.suggestion_score ? 'accept' : 'override', score, feedback.value || null); notice.value = '教师决策已确认：正式成绩与学习记录已按当前作答更新。'; armed.value = false; await store.fetchQueue(context.classId || undefined); const next = store.queue.find((item) => item.status !== 'confirmed'); if (next) await selectItem(next.submission_item_id); else { selectedId.value = ''; store.detail = null } } catch (error: any) { notice.value = error?.message || '确认未完成；正式成绩和学习记录均未更新。'; toast(notice.value) } }
+onMounted(async () => { await store.fetchQueue(context.classId || undefined); const requested = queryId(); const first = store.queue.find((item) => item.submission_item_id === requested) || store.queue.find((item) => item.status !== 'confirmed') || store.queue[0]; if (first) await selectItem(first.submission_item_id) })
 </script>
+
+<style scoped>
+.grading-v2{padding:30px clamp(24px,4vw,64px)}.grading-v2__header{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:22px}.grading-v2 h1{margin:0;color:#13213a;font-size:32px}.grading-v2 h2{margin:0;font-size:19px}.eyebrow{margin:0 0 6px;color:#63728c;font-size:13px}.grading-v2__header>p{max-width:420px;margin:0;color:#63728c;line-height:1.65}.notice{margin:0 0 16px;padding:10px 13px;border:1px solid #cfdcf0;border-radius:10px;background:#f4f8ff;color:#314361}.grading-v2__workspace{display:grid;min-height:650px;grid-template-columns:250px minmax(360px,1fr) minmax(310px,.78fr);overflow:hidden;border:1px solid #dde5f0;border-radius:18px;background:#fff}.queue,.rubric{padding:18px;background:#fbfcff}.queue{border-right:1px solid #e1e8f2}.rubric{border-left:1px solid #e1e8f2}.queue__title{display:flex;justify-content:space-between;gap:8px;margin-bottom:14px}.queue__title span{height:max-content;padding:5px 8px;border-radius:999px;background:#edf4ff;color:#245eb8;font-size:12px}.queue__list{display:grid;gap:8px}.queue__list button{display:grid;gap:6px;width:100%;padding:12px;border:1px solid #e1e8f2;border-radius:10px;background:#fff;color:#203a62;text-align:left;cursor:pointer}.queue__list button.selected{border-color:#245eb8;background:#edf4ff}.queue__list small{color:#63728c;font-size:12px}.evidence{padding:28px}.evidence h2{color:#1d2a43;font-size:21px;line-height:1.55}.answer{margin-top:20px;padding:18px;border:1px solid #dfe7f2;border-radius:12px}.answer>p{margin:0 0 12px;color:#63728c;font-size:13px}.answer pre{margin:0;overflow:auto;color:#203a62;font:15px/1.8 Consolas,monospace;white-space:pre-wrap}.answer a{display:inline-block;margin-top:15px;color:#245eb8;font-size:13px;font-weight:700}.evidence details{margin-top:18px;color:#50617c;line-height:1.7}.evidence summary{color:#245eb8;font-weight:700;cursor:pointer}.rubric dl{display:grid;gap:12px;margin:20px 0}.rubric dl div{padding-bottom:12px;border-bottom:1px solid #e2e9f3}.rubric dt{margin-bottom:5px;color:#63728c;font-size:12px}.rubric dd{margin:0;color:#203a62;font-size:14px;line-height:1.55}.rubric label{display:grid;gap:6px;margin-top:14px;color:#50617c;font-size:13px}.rubric input,.rubric textarea{width:100%;padding:9px 10px;border:1px solid #ccd8e8;border-radius:8px;color:#203a62}.rubric textarea{min-height:78px;resize:vertical}.rubric>button{width:100%;margin-top:18px;border:0;border-radius:9px;padding:10px;background:#245eb8;color:#fff;font-weight:700;cursor:pointer}.confirm{margin-top:18px;padding:12px;border:1px solid #a9c5ee;border-radius:10px;background:#f1f6ff}.confirm p{margin:0 0 10px;color:#314361;font-size:13px;line-height:1.55}.confirm div{display:flex;gap:8px}.confirm button{flex:1;border:0;border-radius:8px;padding:8px;background:#245eb8;color:#fff;font-weight:700;cursor:pointer}.confirm .quiet{border:1px solid #c4d2e4;background:#fff;color:#314361}.empty{padding:34px 16px;border:1px dashed #cdd8e7;border-radius:12px;color:#63728c;line-height:1.65;text-align:center}@media(max-width:1050px){.grading-v2__workspace{grid-template-columns:220px minmax(0,1fr)}.rubric{grid-column:1/-1;border-top:1px solid #e1e8f2;border-left:0}.grading-v2__header{align-items:flex-start;flex-direction:column}}@media(max-width:700px){.grading-v2{padding:24px 16px}.grading-v2__workspace{grid-template-columns:1fr}.queue{border-right:0;border-bottom:1px solid #e1e8f2}.queue__list{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}.evidence{padding:20px}}
+</style>

@@ -1,9 +1,109 @@
 // 本轮重构契约测试（教学建议退化为知识点建议；作业出题真实化）。
 // 直接断言行为，避免回归："数据不足空态"、"巩固题 N 占位"、"答案恒写死"、"足额不足额"。
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { suggestionsForKnowledgePoints } from '@/mock/teachingAdvice'
 import { buildQuizSet } from '@/mock/questionBank'
 import { quizArtifact } from '@/mock/teacherData'
+
+describe('批改 V2 接管：证据优先工作区', () => {
+  it('正式教师批改路由不再回退为顶部选择器和 #001 匿名表单', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherGradingView.vue'), 'utf8')
+    expect(view).toContain('原始作答证据')
+    expect(view).toContain('评分依据与教师决策')
+    expect(view).toContain('确认记入正式成绩')
+    expect(view).not.toContain('<select')
+    expect(view).not.toContain('student_label }}')
+  })
+})
+
+describe('资源 V2 接管：来源可追溯、候选题须教师审核', () => {
+  it('正式教师资源路由不再退化为通用资源卡片，并连接真实候选题审核端点', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherResourcesView.vue'), 'utf8')
+    const api = readFileSync(resolve(process.cwd(), 'src/api/teacher/resources.ts'), 'utf8')
+
+    expect(view).toContain('资源与题目审核')
+    expect(view).toContain('题目审核队列')
+    expect(view).toContain('确认入库')
+    expect(view).toContain('来源可追溯')
+    expect(view).toContain('保存公开引用')
+    expect(view).not.toContain('t-resource-grid')
+    expect(api).toContain('question-candidates/approve')
+    expect(api).toContain('external-reference')
+  })
+})
+
+describe('组卷 V2 接管：严格题源到教师确认发布', () => {
+  it('正式作业路由不得再导入本地模拟题库，并呈现真实草稿确认链', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherAssignView.vue'), 'utf8')
+
+    expect(view).toContain('组卷草稿')
+    expect(view).toContain('严格题源')
+    expect(view).toContain('确认题集草稿')
+    expect(view).toContain('创建作业草稿')
+    expect(view).toContain('确认发布给学生')
+    expect(view).not.toContain("@/mock/questionBank")
+    expect(view).not.toContain('本地模板补齐')
+  })
+})
+
+describe('教师个人中心 V2：只读身份与脱敏模型状态', () => {
+  it('正式教师个人中心使用当前身份与模型配置，且绝不渲染 API 密钥', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherProfileView.vue'), 'utf8')
+    expect(view).toContain('个人中心')
+    expect(view).toContain("authApi.me")
+    expect(view).toContain("'/model-config'")
+    expect(view).toContain('Mimo 测试通道')
+    expect(view).not.toContain('api_key')
+  })
+})
+
+describe('备课 V2 接管：真实来源优先，降级模板不得冒充正式课件', () => {
+  it('正式备课路由只从教师资源选择输入，并阻止基础草稿生成正式 PPT', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherPrepView.vue'), 'utf8')
+    expect(view).toContain('来源材料')
+    expect(view).toContain('来源引用')
+    expect(view).toContain('source_resource_ids')
+    expect(view).toContain('基础草稿')
+    expect(view).toContain('不能生成正式 PPT')
+    expect(view).not.toContain("@/mock/teachingAdvice")
+    expect(view).not.toContain("return '导数与函数单调性'")
+  })
+})
+
+describe('班级 V2 接管：真实花名册和证据驱动的教学去向', () => {
+  it('正式班级路由不再使用旧 metrics/task 卡片骨架', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherClassesView.vue'), 'utf8')
+    expect(view).toContain('班级花名册')
+    expect(view).toContain('作答证据')
+    expect(view).toContain('classApi.members')
+    expect(view).not.toContain('t-metric-strip')
+    expect(view).not.toContain('t-task-list')
+  })
+})
+
+describe('课堂 V2 接管：状态联动优先，未接入事件不得伪造图表', () => {
+  it('正式课堂路由使用持久化课堂模式，并如实显示视频源状态', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherClassroomView.vue'), 'utf8')
+    const api = readFileSync(resolve(process.cwd(), 'src/api/teacher/classroom.ts'), 'utf8')
+    expect(view).toContain('课堂状态与学生端联动')
+    expect(api).toContain('classroom-mode')
+    expect(view).toContain('视频事件源尚未接入')
+    expect(view).not.toContain('t-tabs')
+    expect(view).not.toContain('t-control-card')
+  })
+})
+
+describe('Today Butler：初始可用性与真实班级上下文', () => {
+  it('首页内嵌管家首次加载就探测后端，且不写死班级或课题', () => {
+    const panel = readFileSync(resolve(process.cwd(), 'src/components/teacher/ButlerPanel.vue'), 'utf8')
+    const scene = readFileSync(resolve(process.cwd(), 'src/composables/useButlerScene.ts'), 'utf8')
+    expect(panel).toContain('onMounted(() => { void checkAvailability() })')
+    expect(panel).not.toContain('7 班的导数课')
+    expect(scene).toContain('context.classId')
+  })
+})
 
 describe('教学建议：班级数据不足时按知识点给通用建议（不显示"数据不足"）', () => {
   it('知识点命中即返回非空建议，且依据为课标/教法非虚构班级统计', () => {

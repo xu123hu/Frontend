@@ -1,88 +1,20 @@
+<!--
+  V2 reconstruction source: Paper LMS CoursePacingPage (MIT), cloned at
+  D:\teacher-v2-reference-repos\kocherm-paper-lms, commit 543c… .
+  Its explicit state/action workspace is adapted to the platform's persisted
+  classroom mode. This page does not claim live analytics without an event source.
+-->
 <template>
-  <div id="page-classroom">
-    <header class="t-page-head">
-      <div class="t-page-title">
-        <h1>课堂控制</h1>
-        <p>课堂模式会真实同步到班级学生端；视频洞察只展示已采集事件。</p>
-      </div>
-      <select v-if="classes.length" v-model="selectedClass" class="t-selectish" @change="loadClassroom">
-        <option v-for="item in classes" :key="item.id" :value="item.id">{{ item.name }}</option>
-      </select>
-    </header>
-
-    <div v-if="store.error || error" class="t-card" style="color: var(--t-red); margin-bottom: 16px;">
-      {{ store.error || error }}
-    </div>
-    <div v-if="loading" class="t-card">正在加载课堂状态…</div>
-    <div v-else-if="!classes.length" class="t-card">
-      <h2 style="margin-top: 0;">还没有可控制的班级</h2>
-      <p class="t-muted">创建班级并建立任课关系后即可使用课堂模式。</p>
-    </div>
-
-    <template v-else>
-      <div class="t-card" style="margin-bottom: 16px;">
-        <div class="t-tabs" role="tablist">
-          <button class="t-tab" :class="{ on: activeTab === 'control' }" type="button" @click="activeTab = 'control'">上课控制</button>
-          <button class="t-tab" :class="{ on: activeTab === 'video' }" type="button" @click="showVideo">视频学习</button>
-          <button class="t-tab" :class="{ on: activeTab === 'review' }" type="button" @click="activeTab = 'review'">课后复盘</button>
-        </div>
-
-        <div class="t-tab-pane" :class="{ on: activeTab === 'control' }">
-          <div class="t-g2 t-grid">
-            <div class="t-control-card">
-              <div>
-                <h4>独立作答课堂模式</h4>
-                <p>开启后，学生端读取同一持久化状态并进入“只提示不代答”的独立作答模式。</p>
-              </div>
-              <button class="t-toggle" :class="{ on: modeEnabled }" type="button" :disabled="store.loading" :aria-pressed="modeEnabled" @click="setMode(!modeEnabled)">
-                <span></span>
-              </button>
-            </div>
-            <div class="t-card soft">
-              <div class="t-section-title"><h2>当前状态</h2></div>
-              <div class="t-task-list">
-                <div class="t-task-item">
-                  <div class="t-task-icon" aria-hidden="true">课</div>
-                  <div class="t-task-main">
-                    <div class="t">{{ modeEnabled ? '课堂模式已开启' : '课堂模式未开启' }}</div>
-                    <div class="m">{{ modeEnabled ? `有效期 ${store.mode?.ttl_seconds || 0} 秒` : '学生端保持普通学习模式' }}</div>
-                  </div>
-                  <span class="t-tag" :class="modeEnabled ? 'green' : ''">{{ modeEnabled ? '生效中' : '已关闭' }}</span>
-                </div>
-              </div>
-              <p v-if="store.mode?.updated_at" class="t-small t-muted">最近更新：{{ formatDateTime(store.mode.updated_at) }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="t-tab-pane" :class="{ on: activeTab === 'video' }">
-          <div v-if="store.loading">正在汇总视频事件…</div>
-          <template v-else-if="store.insights?.segments?.length">
-            <div class="t-section-title">
-              <h2>视频事件片段</h2>
-              <span class="sub">整体参与度 {{ engagementText }}</span>
-            </div>
-            <div v-for="segment in store.insights.segments" :key="`${segment.time}-${segment.event}`" class="t-hotspot">
-              <div class="time">{{ formatDuration(segment.time) }}</div>
-              <div><h4>{{ segment.event }}</h4><p>{{ segment.summary || '已采集到该时间点的学习事件' }}</p></div>
-            </div>
-          </template>
-          <p v-else class="t-muted">当前班级尚未采集到视频观看事件，因此没有可展示的热点。</p>
-        </div>
-
-        <div class="t-tab-pane" :class="{ on: activeTab === 'review' }">
-          <div v-if="store.insights?.actions?.length" class="t-g3 t-grid">
-            <div v-for="action in store.insights.actions" :key="action.insight_id" class="t-card soft">
-              <div class="t-eyebrow">{{ action.kind }}</div>
-              <h3>{{ action.summary }}</h3>
-              <p class="t-small t-muted">{{ evidenceText(action.evidence) }}</p>
-              <button v-if="action.recommended_actions?.length" class="t-btn sm primary" type="button" @click="goPrep">带入下次备课</button>
-            </div>
-          </div>
-          <p v-else class="t-muted">尚无足够的课堂或视频数据形成课后复盘。</p>
-        </div>
-      </div>
-    </template>
+  <div class="classroom-v2">
+    <header class="classroom-v2__head"><div><p class="classroom-v2__eyebrow">课堂 · 高中数学</p><h1>课堂状态与学生端联动</h1><p>教师确认后写入当前班级的持久化课堂模式；已确认学生端读取同一状态。视频事件没有接入时不会绘制虚假参与度。</p></div><label v-if="classes.length">授课班级<select v-model="selectedClass" @change="loadClassroom"><option v-for="item in classes" :key="item.id" :value="item.id">{{ item.name }}</option></select></label></header>
+    <p v-if="store.error || error" class="classroom-v2__notice is-error" role="alert">{{ store.error || error }}</p>
+    <main v-if="loading" class="classroom-v2__empty">正在读取该班课堂状态…</main>
+    <main v-else-if="!classes.length" class="classroom-v2__empty"><h2>还没有可控制的班级</h2><p>建立班级并配置任课关系后，课堂状态才可以同步给学生。</p></main>
+    <main v-else class="classroom-v2__workspace">
+      <section class="classroom-v2__mode"><p class="classroom-v2__eyebrow">持久化模式</p><h2>独立作答课堂模式</h2><p>开启后，学生端进入“只提示、不代答”的独立作答状态。此操作会记录教师动作，不是界面上的临时开关。</p><div class="classroom-v2__status"><span :class="modeEnabled ? 'is-on' : 'is-off'">{{ modeEnabled ? '当前已开启' : '当前未开启' }}</span><strong>{{ modeEnabled ? `剩余 ${remainingText}` : '学生端保持普通学习模式' }}</strong><small v-if="store.mode?.updated_at">最近更新：{{ formatDateTime(store.mode.updated_at) }}</small></div><div v-if="pendingChange === null" class="classroom-v2__actions"><button class="t-btn primary" type="button" :disabled="store.loading" @click="pendingChange = !modeEnabled">{{ modeEnabled ? '准备关闭课堂模式' : '准备开启课堂模式' }}</button></div><div v-else class="classroom-v2__confirm"><strong>{{ pendingChange ? '确认开启独立作答课堂模式？' : '确认关闭课堂模式？' }}</strong><p>确认后会立即同步当前班级的学生端状态。</p><button class="t-btn primary sm" type="button" :disabled="store.loading" @click="applyMode">确认执行</button><button class="t-btn sm" type="button" @click="pendingChange = null">返回</button></div></section>
+      <aside class="classroom-v2__events"><p class="classroom-v2__eyebrow">课堂/视频证据</p><h2>已采集事件</h2><div v-if="videoLoading" class="classroom-v2__empty">正在核对事件源状态…</div><template v-else-if="video"><div v-if="video.degraded" class="classroom-v2__event-warning"><strong>视频事件源尚未接入</strong><p>{{ video.reason || '后端尚未提供可验证的课堂或视频事件，因此不会展示参与度、热点或课后结论。' }}</p></div><div v-else-if="video.timeline_events?.length" class="classroom-v2__event-list"><article v-for="(event, index) in video.timeline_events" :key="index"><strong>{{ eventLabel(event) }}</strong><p>{{ eventDetail(event) }}</p></article></div><p v-else class="classroom-v2__empty">事件源已连接，但当前班级还没有可展示的课堂事件。</p></template><p v-else class="classroom-v2__empty">可手动刷新事件源状态；系统不会把空数据填成图表。</p><button class="t-btn sm" type="button" :disabled="videoLoading" @click="loadVideo">刷新事件状态</button></aside>
+      <section class="classroom-v2__next"><div><p class="classroom-v2__eyebrow">下一步</p><h2>把真实教学产物带入课堂</h2><p>先确认来源化课案、再从已审核题库发布作业；课堂模式不会替代这些教师决定。</p></div><div><button class="t-btn" type="button" @click="router.push('/teacher/prep')">查看课案</button><button class="t-btn" type="button" @click="router.push('/teacher/assign')">发布作业</button></div></section>
+    </main>
   </div>
 </template>
 
@@ -92,76 +24,20 @@ import { useRouter } from 'vue-router'
 import { classApi } from '@/api'
 import { useClassroomStore } from '@/stores/teacher/classroom'
 import { useTeacherContextStore } from '@/stores/teacher/context'
+import type { VideoInsight } from '@/types/teacher'
 
-interface ClassItem { id: string; name: string }
-
-const router = useRouter()
-const store = useClassroomStore()
-const context = useTeacherContextStore()
-const showToast = inject<(message: string) => void>('showToast', () => {})
-const activeTab = ref<'control' | 'video' | 'review'>('control')
-const classes = ref<ClassItem[]>([])
-const selectedClass = ref('')
-const loading = ref(false)
-const error = ref('')
-
-const modeEnabled = computed(() => Boolean(store.mode?.enabled))
-const engagementText = computed(() => store.insights?.aggregate_engagement == null ? '暂无' : `${Math.round(store.insights.aggregate_engagement * 100)}%`)
-
-async function loadClassroom() {
-  const cls = classes.value.find((item) => item.id === selectedClass.value)
-  if (!cls) return
-  context.setClass(cls.id, cls.name)
-  await store.fetchState(cls.id)
-}
-
-async function setMode(enabled: boolean) {
-  if (!selectedClass.value) return
-  try {
-    await store.setMode(selectedClass.value, enabled)
-    showToast(enabled ? '课堂模式已开启并同步学生端' : '课堂模式已关闭并同步学生端')
-  } catch (cause: any) {
-    showToast(cause?.message || '课堂模式更新失败')
-  }
-}
-
-async function showVideo() {
-  activeTab.value = 'video'
-  if (selectedClass.value) await store.fetchVideoInsights(selectedClass.value)
-}
-
-function goPrep() {
-  router.push('/teacher/prep')
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN')
-}
-
-function formatDuration(seconds: number) {
-  const minutes = Math.floor(seconds / 60)
-  return `${String(minutes).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
-}
-
-function evidenceText(value: unknown) {
-  if (typeof value === 'string') return value
-  try { return value ? JSON.stringify(value) : '暂无更多证据' } catch { return '暂无更多证据' }
-}
-
-onMounted(async () => {
-  loading.value = true
-  try {
-    const data = await classApi.mine()
-    classes.value = data?.items || []
-    selectedClass.value = classes.value.some((item) => item.id === context.classId)
-      ? context.classId || ''
-      : classes.value[0]?.id || ''
-    if (selectedClass.value) await loadClassroom()
-  } catch (cause: any) {
-    error.value = cause?.message || '课堂数据加载失败'
-  } finally {
-    loading.value = false
-  }
-})
+type ClassItem = { id: string; name: string }
+const router = useRouter(); const store = useClassroomStore(); const context = useTeacherContextStore(); const showToast = inject<(message: string) => void>('showToast', () => {}); const classes = ref<ClassItem[]>([]); const selectedClass = ref(''); const loading = ref(false); const videoLoading = ref(false); const error = ref(''); const pendingChange = ref<boolean | null>(null)
+const modeEnabled = computed(() => Boolean(store.mode?.enabled)); const remainingText = computed(() => { const seconds = store.mode?.ttl_seconds || 0; return `${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒` }); const video = computed(() => store.insights)
+async function loadClassroom() { const current = classes.value.find((item) => item.id === selectedClass.value); if (!current) return; context.setClass(current.id, current.name); await store.fetchState(current.id); pendingChange.value = null }
+async function applyMode() { if (pendingChange.value === null || !selectedClass.value) return; try { await store.setMode(selectedClass.value, pendingChange.value); showToast(pendingChange.value ? '课堂模式已同步至学生端' : '课堂模式已关闭并同步至学生端'); pendingChange.value = null } catch (cause: any) { showToast(cause?.message || '课堂状态更新失败') } }
+async function loadVideo() { if (!selectedClass.value) return; videoLoading.value = true; try { await store.fetchVideoInsights(selectedClass.value) } finally { videoLoading.value = false } }
+function formatDateTime(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN') }
+function eventLabel(event: unknown) { return typeof event === 'object' && event ? String((event as Record<string, unknown>).event || (event as Record<string, unknown>).type || '课堂事件') : '课堂事件' }
+function eventDetail(event: unknown) { try { return typeof event === 'string' ? event : JSON.stringify(event) } catch { return '事件详情无法展示' } }
+onMounted(async () => { loading.value = true; try { const data = await classApi.mine(); classes.value = data?.items || []; selectedClass.value = classes.value.some((item) => item.id === context.classId) ? context.classId || '' : classes.value[0]?.id || ''; if (selectedClass.value) { await loadClassroom(); await loadVideo() } } catch (cause: any) { error.value = cause?.message || '课堂数据加载失败' } finally { loading.value = false } })
 </script>
+
+<style scoped>
+.classroom-v2{max-width:1500px;margin:0 auto;padding:30px 32px 42px;color:#17243b}.classroom-v2__head,.classroom-v2__next{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.classroom-v2__eyebrow{margin:0;color:#69758b;font-size:12px;letter-spacing:.08em;font-weight:700}.classroom-v2 h1{margin:4px 0 8px;font-size:32px;letter-spacing:-.04em}.classroom-v2 h2{margin:5px 0 0;font-size:20px}.classroom-v2__head>div>p:last-child{margin:0;max-width:730px;color:#53637b;line-height:1.6}.classroom-v2__head label{display:grid;gap:6px;color:#526178;font-size:12px;font-weight:700}.classroom-v2 select{min-width:220px;padding:10px;border:1px solid #d8e1ec;border-radius:8px;color:#17243b;background:#fff;font:inherit}.classroom-v2__notice{margin:20px 0;padding:11px 14px;border-radius:9px}.classroom-v2__notice.is-error{background:#fff1f1;color:#b42318}.classroom-v2__workspace{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(310px,.8fr);gap:22px;margin-top:25px}.classroom-v2__mode,.classroom-v2__events,.classroom-v2__next{border:1px solid #e1e7ef;background:#fff;border-radius:14px;padding:22px}.classroom-v2__mode>p:not(.classroom-v2__eyebrow){max-width:620px;color:#56667d;line-height:1.6}.classroom-v2__status{display:grid;gap:7px;margin:22px 0;padding:17px;border-radius:10px;background:#f8fafc}.classroom-v2__status span{width:max-content;padding:5px 8px;border-radius:999px;font-size:12px}.is-on{background:#ecfdf3;color:#166534}.is-off{background:#f1f5f9;color:#64748b}.classroom-v2__status small{color:#718096}.classroom-v2__actions,.classroom-v2__confirm{padding-top:16px;border-top:1px solid #edf0f4}.classroom-v2__confirm{margin-top:16px;color:#7c4a03}.classroom-v2__confirm p{margin:6px 0 12px}.classroom-v2__confirm button+button{margin-left:8px}.classroom-v2__events{align-self:start}.classroom-v2__event-warning{margin:18px 0;padding:15px;border:1px solid #f2c36d;border-radius:9px;color:#92400e;background:#fffbeb}.classroom-v2__event-warning p{margin:7px 0 0;line-height:1.55;font-size:13px}.classroom-v2__event-list{display:grid;gap:9px;margin:18px 0}.classroom-v2__event-list article{padding:12px;border-left:3px solid #3b82f6;background:#f8fbff;border-radius:0 8px 8px 0}.classroom-v2__event-list p{margin:5px 0 0;color:#57677e;font-size:13px}.classroom-v2__next{grid-column:1/-1;align-items:center}.classroom-v2__next p:not(.classroom-v2__eyebrow){margin:7px 0 0;color:#65758b}.classroom-v2__next>div:last-child{display:flex;gap:8px;flex-wrap:wrap}.classroom-v2__empty{margin-top:22px;padding:31px 22px;border-radius:12px;background:#f8fafc;color:#64748b;text-align:center;line-height:1.55}.classroom-v2__events .classroom-v2__empty{margin:18px 0;padding:20px}@media(max-width:900px){.classroom-v2{padding:22px 16px}.classroom-v2__head,.classroom-v2__next{flex-direction:column}.classroom-v2__workspace{grid-template-columns:1fr}.classroom-v2__next>div:last-child{width:100%}}
+</style>

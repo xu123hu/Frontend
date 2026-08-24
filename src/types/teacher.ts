@@ -268,9 +268,17 @@ export interface ClassroomModeState {
 }
 
 export interface VideoInsight {
-  aggregate_engagement: number | null
-  segments: VideoSegment[]
-  actions: ActionableInsight[]
+  class_id?: string
+  lesson_id?: string | null
+  /** Defined only when an actual classroom/video event source supplies it. */
+  participation?: Record<string, unknown>
+  timeline_events?: unknown[]
+  actionable_recommendations?: unknown[]
+  reason?: string
+  /** Legacy mock fields remain optional while the formal endpoint uses the fields above. */
+  aggregate_engagement?: number | null
+  segments?: VideoSegment[]
+  actions?: ActionableInsight[]
   degraded: boolean
 }
 
@@ -283,6 +291,11 @@ export interface VideoSegment {
 export interface TeacherResource {
   resource_id: string
   name: string
+  resource_kind?: 'uploaded_file' | 'external_reference'
+  external_url?: string | null
+  provider?: string | null
+  attribution?: string | null
+  intended_use?: string | null
   file_type: string
   size_bytes: number
   status: 'uploading' | 'preprocessing' | 'ready' | 'understand' | 'failed' | 'cancelled'
@@ -294,8 +307,20 @@ export interface TeacherResource {
   published?: boolean
   degraded?: boolean
   warnings?: string[]
+  /** Extracted from a teacher-owned source. Never becomes a bank row before approval. */
+  question_candidates?: ResourceQuestionCandidate[]
   download_url?: string
   created_at: string
+}
+
+export interface ResourceQuestionCandidate {
+  candidate_id: string
+  stem: string
+  q_type: string
+  answer?: string
+  knowledge_points?: string[]
+  analysis?: string
+  review_status: 'pending_review' | 'approved'
 }
 
 /** Butler 场景输入：前端只提交业务上下文，不提交策略/工具/workflow 字段 */
@@ -320,6 +345,11 @@ export interface GradingDetail extends GradingQueueItem {
   original_answer: string
   file_id?: string | null
   scoring_standard: string
+  /** Persisted quiz evidence returned by the teacher grading detail endpoint. */
+  question_text?: string | null
+  question_type?: string | null
+  standard_answer?: string | null
+  answer_analysis?: string | null
   suggestion: GradingSuggestion | null
 }
 

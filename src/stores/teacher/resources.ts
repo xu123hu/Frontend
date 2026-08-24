@@ -26,6 +26,15 @@ export const useResourcesStore = defineStore('resources', {
       } catch (e: any) { if (e?.code === -2) return null; this.error = e?.message || '上传失败'; throw e }
       finally { this.loading = false }
     },
+    async createExternalReference(payload: { title: string; url: string; provider?: string; attribution?: string; intended_use?: string }, signal?: AbortSignal) {
+      this.loading = true; this.error = null
+      try {
+        const created = await resourcesApi.createExternalReference(payload, signal)
+        this.patchItem(created.data)
+        return created.data
+      } catch (e: any) { this.error = e?.message || '保存公开引用失败'; throw e }
+      finally { this.loading = false }
+    },
     async preprocess(id: string, signal?: AbortSignal) {
       this.error = null
       try { this.patchItem((await resourcesApi.preprocess(id, undefined, signal)).data) }
@@ -41,6 +50,13 @@ export const useResourcesStore = defineStore('resources', {
         ? await resourcesApi.publish(id, signal)
         : await resourcesApi.unpublish(id, signal)
       this.patchItem(response.data)
+    },
+    async approveQuestionCandidate(resourceId: string, candidateId: string, signal?: AbortSignal) {
+      this.error = null
+      try {
+        await resourcesApi.approveQuestionCandidates(resourceId, [candidateId], signal)
+        await this.fetch(signal)
+      } catch (e: any) { this.error = e?.message || '候选题审核失败'; throw e }
     },
     patchItem(r: TeacherResource) {
       const i = this.items.findIndex((x) => x.resource_id === r.resource_id)

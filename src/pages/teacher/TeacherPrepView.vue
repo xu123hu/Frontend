@@ -1,179 +1,87 @@
+<!--
+  V2 reconstruction source: Paper LMS CoursePacingPage (MIT), cloned at
+  D:\teacher-v2-reference-repos\kocherm-paper-lms, commit 543c… .
+  Its source-first pacing workspace is adapted here for teacher-owned Chinese
+  high-school mathematics materials, explicit provenance and teacher approval.
+-->
 <template>
-  <div id="page-prep">
-    <!-- 页面头部 -->
-    <header class="t-page-head">
-      <div class="t-page-title">
-        <h1>备课工作台</h1>
-        <p>{{ ctx.className || '请选择班级' }} · 本地降级可用，生成内容需教师确认</p>
+  <div class="prep-v2">
+    <header class="prep-v2__head">
+      <div>
+        <p class="prep-v2__eyebrow">备课 · 高中数学</p>
+        <h1>从真实材料开始备课</h1>
+        <p>选择你上传且可提取文本的讲义、试卷或课件，再生成可追溯的课案草稿。不会预填课题或编造教学建议。</p>
       </div>
-      <div class="t-contextbar">
-        <select class="t-selectish" v-model="selectedClass" @change="onClassChange">
-          <option v-for="item in classes" :key="item.id" :value="item.id">{{ item.name }}</option>
-        </select>
-        <button class="t-btn" type="button" @click="saveDraft">保存草稿</button>
-        <button class="t-btn primary" type="button" @click="confirmLesson">确认本节课</button>
+      <div class="prep-v2__head-actions">
+        <button class="t-btn" type="button" @click="router.push('/teacher/resources')">管理资料</button>
+        <button class="t-btn primary" type="button" :disabled="!canGenerate || store.loading" @click="generateDraft">
+          {{ store.loading ? '正在生成…' : '生成来源化草稿' }}
+        </button>
       </div>
     </header>
 
-    <!-- 从哪里开始卡片 -->
-    <div class="t-card" style="margin-bottom: 16px">
-      <div class="t-section-title">
-        <div>
-          <h2>从哪里开始？</h2>
-          <span class="sub">不需要写提示词，选一个起点就好</span>
-        </div>
-      </div>
-      <div class="t-source-options">
-        <button
-          v-for="src in sourceOptions"
-          :key="src.id"
-          class="t-source-card"
-          :class="{ on: selectedSource === src.id }"
-          type="button"
-          @click="selectSource(src.id)"
-        >
-          <div class="ico">{{ src.icon }}</div>
-          <b>{{ src.title }}</b>
-          <span>{{ src.desc }}</span>
-        </button>
-      </div>
-    </div>
+    <p v-if="notice" class="prep-v2__notice" role="status">{{ notice }}</p>
+    <p v-if="store.error" class="prep-v2__notice is-error" role="alert">{{ store.error }}</p>
 
-    <!-- 双栏布局 -->
-    <div class="t-prep-layout">
-      <!-- 左栏 - 课堂时间线 -->
-      <div class="t-card">
-        <div class="t-section-title">
-          <div>
-            <h2>课堂时间线</h2>
-            <span class="sub">共 {{ totalMinutes }} 分钟 · {{ lessonSteps.length }} 个教学环节</span>
-          </div>
-          <button class="t-btn sm" type="button" @click="autoBalance">自动平衡时间</button>
+    <main class="prep-v2__grid">
+      <section class="prep-v2__inputs" aria-labelledby="input-title">
+        <header><p class="prep-v2__eyebrow">第一步</p><h2 id="input-title">明确本节课的输入</h2></header>
+        <label>授课班级
+          <select v-model="selectedClass" @change="loadLessons">
+            <option value="" disabled>请选择已有班级</option>
+            <option v-for="item in classes" :key="item.id" :value="item.id">{{ item.name }}</option>
+          </select>
+        </label>
+        <label>课题
+          <input v-model.trim="topic" maxlength="200" placeholder="例如：利用导数研究函数单调性（由教师填写）">
+        </label>
+        <label>教学要求（可选）
+          <textarea v-model.trim="requirements" rows="4" placeholder="例如：保留教材例题的条件；安排学生板演；说明本班易错点的处理方式"></textarea>
+        </label>
+        <label>课堂时长
+          <input v-model.number="durationMinutes" type="number" min="1" max="240">
+        </label>
+
+        <div class="prep-v2__source-head"><div><p class="prep-v2__eyebrow">第二步</p><h2>来源材料</h2></div><span>{{ selectedResourceIds.length }} 份已选</span></div>
+        <p class="prep-v2__hint">只有已成功提取文字的教师自有资料可进入生成上下文；图片或扫描件未提取文字时不会被假装“已理解”。</p>
+        <div v-if="!resources.length" class="prep-v2__empty"><strong>尚无可用来源资料</strong><p>请先上传真实讲义、试卷、课件或文本材料。</p><button class="t-btn sm" type="button" @click="router.push('/teacher/resources')">去上传资料</button></div>
+        <div v-else class="prep-v2__source-list">
+          <label v-for="resource in resources" :key="resource.resource_id" class="prep-v2__source" :class="{ 'is-disabled': !hasText(resource) }">
+            <input v-model="selectedResourceIds" type="checkbox" :value="resource.resource_id" :disabled="!hasText(resource)">
+            <span><strong>{{ resource.name }}</strong><small>{{ hasText(resource) ? '已提取文本，可作为本课依据' : '尚无可提取文本，不能作为生成输入' }}</small></span>
+          </label>
         </div>
 
-        <div class="t-timeline">
-          <div
-            v-for="(step, idx) in lessonSteps"
-            :key="step.id"
-            class="t-lesson-step"
-          >
-            <div class="min">{{ step.timeRange }}</div>
-            <div class="t-step-card" :class="{ added: step.added }">
-              <div class="t-step-head">
-                <b>{{ idx + 1 }}. {{ step.title }}</b>
-                <span class="t-tag" :class="step.tagClass">{{ step.tagText }}</span>
-              </div>
-              <div class="t-step-body">{{ step.description }}</div>
-
-              <!-- 结构化抽屉（RD-1：替代 window.prompt；旧 payload 仅编辑内容/时长，结构化字段可后补） -->
-              <div v-if="editingStepId === step.id" class="t-step-edit">
-                <label class="t-edit-label">本环节学习目标
-                  <textarea v-model="editDraft.learningObjective" rows="2" class="t-input" style="width:100%" placeholder="学生在本环节应达成的目标"></textarea>
-                </label>
-                <label class="t-edit-label">核心问题（一句话）
-                  <input v-model="editDraft.coreQuestion" class="t-input" style="width:100%" placeholder="驱动本环节先行的问题" />
-                </label>
-                <label class="t-edit-label">教师活动（讲授/提问/演示）
-                  <textarea v-model="editDraft.teacherAction" rows="2" class="t-input" style="width:100%" placeholder="本环节教师做什么"></textarea>
-                </label>
-                <label class="t-edit-label">学生活动（独立作答/讨论/演板）
-                  <textarea v-model="editDraft.studentAction" rows="2" class="t-input" style="width:100%" placeholder="本环节学生做什么"></textarea>
-                </label>
-                <label class="t-edit-label">检查理解方式
-                  <input v-model="editDraft.assessmentCheck" class="t-input" style="width:100%" placeholder="如何确认学生已理解（随堂问/限时练/演板）" />
-                </label>
-                <label class="t-edit-label">教学内容（主内容，含关键示例）
-                  <textarea v-model="editDraft.description" rows="3" class="t-input" style="width:100%"></textarea>
-                </label>
-                <label class="t-edit-label">附加材料
-                  <input v-model="editDraft.material" class="t-input" style="width:100%" placeholder="材料名称或使用说明" @keyup.enter="saveStep(step)" />
-                </label>
-                <label class="t-edit-label">时长（分钟）
-                  <input v-model.number="editDraft.minutes" type="number" min="1" class="t-input" style="width:120px" />
-                </label>
-                <p v-if="step.legacy" class="t-tiny t-muted" style="margin: 2px 0 4px">该环节来自旧教案（仅自由文本），结构化字段空出可补填。</p>
-                <div class="t-row" style="gap: 8px; margin-top: 8px">
-                  <button class="t-btn sm primary" type="button" @click="saveStep(step)">保存</button>
-                  <button class="t-btn sm" type="button" @click="closeEdit">取消</button>
-                </div>
-              </div>
-
-              <div v-else class="t-step-tools">
-                <button class="t-ghost-link" type="button" @click="openEdit(step)">编辑</button>
-                <button class="t-ghost-link" type="button" @click="openEdit(step, 'material')">+ 添加材料</button>
-                <button class="t-ghost-link" type="button" @click="openEdit(step, 'time')">调时长</button>
-                <button class="t-ghost-link" type="button" @click="deleteStep(step, idx)">删除</button>
-              </div>
-            </div>
-          </div>
+        <div v-if="lessons.length" class="prep-v2__prior">
+          <p class="prep-v2__eyebrow">或选择已有教案作为改编来源</p>
+          <label v-for="lesson in lessons.slice(0, 3)" :key="lesson.artifact_id" class="prep-v2__source">
+            <input v-model="selectedLessonId" type="radio" :value="lesson.artifact_id" name="prior-lesson">
+            <span><strong>{{ lessonTitle(lesson) }}</strong><small>版本 {{ lesson.version }} · {{ lesson.status === 'confirmed' ? '已确认' : '草稿' }}</small></span>
+          </label>
         </div>
-      </div>
+      </section>
 
-      <!-- 右栏 - 粘性侧边栏 -->
-      <div class="t-sticky-side" style="display: grid; gap: 16px">
-        <!-- 管家建议卡片 -->
-        <div class="t-card">
-          <div class="t-section-title">
-            <div>
-              <h2>教学建议</h2>
-              <span class="t-tag blue" style="margin-top: 4px">{{ ctx.className || '当前班级' }}</span>
-              <span v-if="suggestionMode === 'kp'" class="t-tag amber" style="margin-top: 4px">按本课知识点</span>
-            </div>
+      <section class="prep-v2__workspace" aria-labelledby="workspace-title">
+        <header class="prep-v2__workspace-head"><div><p class="prep-v2__eyebrow">第三步</p><h2 id="workspace-title">课案草稿与教师确认</h2></div><span v-if="artifact" :class="['prep-v2__state', artifact.status]">{{ stateText(artifact.status) }}</span></header>
+        <div v-if="!artifact" class="prep-v2__blank"><h3>尚未生成课案</h3><p>填写课题并选择至少一份来源材料或已有课案后，生成第一个草稿。</p></div>
+        <template v-else>
+          <div v-if="artifact.degraded" class="prep-v2__warning"><strong>基础草稿</strong><p>当前没有获得可验证的来源化模型结果。此稿不能确认为正式课案，也不能生成正式 PPT；请检查模型配置、来源材料或改为人工编辑后再继续。</p><small v-for="warning in artifact.warnings" :key="warning">{{ warning }}</small></div>
+          <div v-else class="prep-v2__provenance"><strong>来源引用</strong><span v-for="ref in artifact.source_refs" :key="sourceLabel(ref)">{{ sourceLabel(ref) }}</span><span v-if="!artifact.source_refs.length">服务未返回来源引用，不能作为正式课案确认。</span></div>
+          <article class="prep-v2__lesson">
+            <h3>{{ lessonTitle(artifact) }}</h3>
+            <p v-if="lessonObjectives(artifact).length" class="prep-v2__objectives">{{ lessonObjectives(artifact).join('；') }}</p>
+            <ol v-if="lessonTimeline(artifact).length" class="prep-v2__timeline"><li v-for="(step, index) in lessonTimeline(artifact)" :key="`${index}-${step.title}`"><span>{{ step.minutes ? `${step.minutes} 分钟` : '时长待定' }}</span><div><strong>{{ step.title }}</strong><p v-for="activity in step.activities" :key="activity">{{ activity }}</p></div></li></ol>
+            <p v-else class="prep-v2__empty">服务未返回教学环节。请勿将空草稿确认或用于生成课件。</p>
+          </article>
+          <div class="prep-v2__actions">
+            <button class="t-btn" type="button" @click="downloadWord">下载 Word 草稿</button>
+            <button v-if="artifact.status === 'draft'" class="t-btn primary" type="button" :disabled="artifact.degraded || !artifact.source_refs.length" @click="confirmLesson">教师确认课案</button>
+            <button v-if="artifact.status === 'confirmed'" class="t-btn primary" type="button" :disabled="artifact.degraded" @click="generateSlides">生成并下载 PPT</button>
+            <button class="t-btn" type="button" @click="router.push('/teacher/assign')">基于已审核题库组卷</button>
           </div>
-
-          <div
-            v-for="(sug, idx) in suggestions"
-            :key="sug.id"
-            class="t-suggest-box"
-          >
-            <div class="t-row" style="gap: 10px; align-items: flex-start">
-              <div class="num">{{ idx + 1 }}</div>
-              <div style="flex: 1; min-width: 0">
-                <h4>{{ sug.title }}</h4>
-                <p>{{ sug.description }}</p>
-                <div class="t-source-proof">依据：{{ sug.evidence }}</div>
-                <div style="margin-top: 10px">
-                  <button
-                    class="t-btn primary sm"
-                    type="button"
-                    :disabled="sug.adopted"
-                    @click="adoptSuggestion(sug)"
-                  >
-                    {{ sug.adopted ? '已采纳' : '采纳建议' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p v-if="!suggestions.length" class="t-muted t-small">已按本课知识点生成通用教学建议，请稍候刷新。</p>
-        </div>
-
-        <!-- 产出按钮组卡片 -->
-        <div class="t-card">
-          <div class="t-section-title">
-            <h2>这节课可以直接产出</h2>
-          </div>
-          <div class="t-grid" style="grid-template-columns: 1fr 1fr; gap: 8px">
-            <button class="t-btn" type="button" @click="generateSlides">
-              <span aria-hidden="true">📊</span>
-              生成PPT
-            </button>
-            <button class="t-btn" type="button" @click="exportWord">
-              <span aria-hidden="true">📄</span>
-              导出Word教案
-            </button>
-            <button class="t-btn" type="button" @click="generatePractice">
-              <span aria-hidden="true">✏️</span>
-              生成当堂练习
-            </button>
-            <button class="t-btn" type="button" @click="generateBoardOutline">
-              <span aria-hidden="true">📋</span>
-              生成板书提纲
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        </template>
+      </section>
+    </main>
   </div>
 </template>
 
@@ -183,397 +91,59 @@ import { useRouter } from 'vue-router'
 import { api, authHeaders } from '@/api/client'
 import { artifactsApi } from '@/api/teacher/artifacts'
 import { lessonsApi } from '@/api/teacher/lessons'
-import { useTeacherContextStore } from '@/stores/teacher/context'
+import { resourcesApi } from '@/api/teacher/resources'
 import { useLessonArtifactsStore } from '@/stores/teacher/lessonArtifacts'
-import { suggestionsForKnowledgePoints } from '@/mock/teachingAdvice'
-import type { LessonPlanSection } from '@/types/teacher'
+import type { SourceRef, TeacherArtifact, TeacherResource } from '@/types/teacher'
+
+type ClassItem = { id: string; name: string }
+type TimelineStep = { title: string; minutes?: number; activities: string[] }
 
 const router = useRouter()
-const ctx = useTeacherContextStore()
 const store = useLessonArtifactsStore()
-const showToast = inject('showToast') as (msg: string) => void
-
-// ---- 数据状态 ----
+const showToast = inject<(message: string) => void>('showToast', () => {})
+const classes = ref<ClassItem[]>([])
+const resources = ref<TeacherResource[]>([])
+const lessons = ref<TeacherArtifact[]>([])
 const selectedClass = ref('')
-const classes = ref<Array<{ id: string; name: string }>>([])
-const selectedSource = ref('last-lesson')
+const selectedResourceIds = ref<string[]>([])
+const selectedLessonId = ref('')
+const topic = ref('')
+const requirements = ref('')
+const durationMinutes = ref(45)
+const notice = ref('')
+const artifact = computed(() => store.artifact)
+const canGenerate = computed(() => Boolean(selectedClass.value && topic.value && (selectedResourceIds.value.length || selectedLessonId.value)))
 
-interface SourceOption {
-  id: string
-  icon: string
-  title: string
-  desc: string
+function hasText(resource: TeacherResource) { return Boolean(resource.slices?.length) }
+function lessonTitle(item: TeacherArtifact) { return String(item.content.topic || item.content.title || '未命名教案') }
+function stateText(status: TeacherArtifact['status']) { return status === 'confirmed' ? '已确认' : status === 'published' ? '已发布' : '草稿' }
+function sourceLabel(ref: SourceRef) { return ref.title || ref.snippet || ref.ref || ref.kind }
+function lessonObjectives(item: TeacherArtifact) { return Array.isArray(item.content.objectives) ? item.content.objectives.map(String) : [] }
+function lessonTimeline(item: TeacherArtifact): TimelineStep[] {
+  const raw = item.content.timeline || item.content.sections || item.content.segments
+  if (!Array.isArray(raw)) return []
+  return raw.map((step: any, index) => ({ title: String(step.phase || step.title || `环节 ${index + 1}`), minutes: Number(step.minutes ?? step.duration_minutes ?? step.duration_min) || undefined, activities: Array.isArray(step.activities) ? step.activities.map(String) : [String(step.content || step.description || '')].filter(Boolean) }))
 }
-
-const sourceOptions: SourceOption[] = [
-  { id: 'last-lesson', icon: '📚', title: '上次类似课', desc: '基于同课题改编' },
-  { id: 'word-ppt', icon: '📁', title: '我的 Word/PPT', desc: '上传已有课件' },
-  { id: 'blank', icon: '✨', title: '空白新建', desc: '从零开始设计' },
-]
-
-interface LessonStep {
-  id: string
-  title: string
-  timeRange: string
-  tagText: string
-  tagClass: string
-  description: string
-  added?: boolean
-  /** RD-1 结构化环节字段（additive/optional，旧 payload 可回退到 description） */
-  kind?: string
-  learningObjective?: string
-  teacherAction?: string
-  studentAction?: string
-  coreQuestion?: string
-  assessmentCheck?: string
-  linkedInsights?: string[]
-  locked?: boolean
-  /** 旧格式（仅 description）占位标记，用于抽屉无结构化字段时的编辑提示 */
-  legacy?: boolean
+async function loadLessons() { selectedLessonId.value = ''; selectedResourceIds.value = []; lessons.value = selectedClass.value ? await lessonsApi.list(selectedClass.value) : [] }
+async function loadInputs() {
+  const [classResult, resourceResult] = await Promise.all([api.get('/classes/mine'), resourcesApi.list()])
+  classes.value = classResult?.items || []
+  resources.value = resourceResult
+  if (classes.value.length) { selectedClass.value = classes.value[0].id; await loadLessons() }
 }
-
-const lessonSteps = ref<LessonStep[]>([])
-const totalMinutes = computed(() => lessonSteps.value.reduce((sum, step) => sum + stepDuration(step), 0))
-
-interface Suggestion {
-  id: string
-  title: string
-  description: string
-  evidence: string
-  adopted: boolean
-  targetStepId: string
+async function generateDraft() {
+  if (!canGenerate.value) return
+  await store.adapt({ class_id: selectedClass.value, topic: topic.value, requirements: requirements.value || null, duration_minutes: durationMinutes.value, source_resource_ids: selectedResourceIds.value, source_artifact_id: selectedLessonId.value || null, source_refs: [] })
+  if (store.artifact) notice.value = store.artifact.degraded ? '已保存基础草稿；它不会被伪装为正式课案。' : '已生成带来源引用的课案草稿，请逐项核对后确认。'
+  if (store.error) showToast(store.error)
 }
-
-const suggestions = ref<Suggestion[]>([])
-/** 建议来源模式：kp=按知识点通用建议（班级数据不足时）；class=按班级学情驱动。用于如实标注，不虚构数据 */
-const suggestionMode = ref<'class' | 'kp'>('kp')
-
-// ---- 结构化抽屉状态（RD-1：目标/师生活动/核心问题/素材/检查理解/时长，替代 window.prompt） ----
-const editingStepId = ref('')
-const editDraft = ref({
-  description: '', material: '', minutes: 5, focus: 'content' as string,
-  learningObjective: '', teacherAction: '', studentAction: '', coreQuestion: '', assessmentCheck: '',
-})
-
-// ---- 交互逻辑 ----
-async function selectSource(id: string) {
-  selectedSource.value = id
-  const src = sourceOptions.find((s) => s.id === id)
-  if (id === 'word-ppt') {
-    router.push('/teacher/resources')
-    return
-  }
-  if (id === 'last-lesson' && selectedClass.value) {
-    const lessons = await lessonsApi.list(selectedClass.value)
-    if (lessons.length) {
-      store.artifact = lessons[0]
-      applyArtifact()
-      showToast?.('已载入服务器中的最近教案')
-      return
-    }
-  }
-  await createLesson()
-  showToast?.(`已选择「${src?.title}」作为起点`)
-}
-
-function onClassChange() {
-  const className = classes.value.find((item) => item.id === selectedClass.value)?.name || ''
-  ctx.setClass(selectedClass.value, className)
-  showToast?.(`已切换到${className}`)
-  createLesson()
-}
-
-async function saveDraft() {
-  if (!store.artifact) return createLesson()
-  await store.save({
-    version: store.artifact.version,
-    content: { ...store.artifact.content, timeline: lessonSteps.value.map((s) => ({ phase: s.title, minutes: stepDuration(s) || 5 })) },
-  })
-  showToast?.('草稿已保存到服务器')
-}
-
-async function confirmLesson() {
-  if (!store.artifact) await createLesson()
-  if (!store.artifact) return
-  store.artifact = await artifactsApi.confirm(store.artifact.artifact_id, `confirm:${store.artifact.artifact_id}`)
-  showToast?.('本节课已确认，可生成正式 PPT')
-}
-
-function autoBalance() {
-  if (!lessonSteps.value.length) return
-  const base = Math.floor(45 / lessonSteps.value.length)
-  let elapsed = 0
-  lessonSteps.value.forEach((step, index) => {
-    const minutes = index === lessonSteps.value.length - 1 ? 45 - elapsed : base
-    step.timeRange = `${elapsed}-${elapsed + minutes} min`
-    elapsed += minutes
-  })
-  showToast?.('已将课堂环节自动平衡为 45 分钟')
-}
-
-function openEdit(step: LessonStep, focus?: 'material' | 'time') {
-  editingStepId.value = step.id
-  editDraft.value.description = step.description
-  editDraft.value.material = ''
-  editDraft.value.minutes = stepDuration(step) || 5
-  editDraft.value.focus = focus || 'content'
-  editDraft.value.learningObjective = step.learningObjective || ''
-  editDraft.value.teacherAction = step.teacherAction || ''
-  editDraft.value.studentAction = step.studentAction || ''
-  editDraft.value.coreQuestion = step.coreQuestion || ''
-  editDraft.value.assessmentCheck = step.assessmentCheck || ''
-}
-
-function closeEdit() {
-  editingStepId.value = ''
-  editDraft.value.material = ''
-}
-
-function saveStep(step: LessonStep) {
-  // 内容（主内容）
-  if (editDraft.value.description.trim()) step.description = editDraft.value.description.trim()
-  // 附加材料（RD-1：素材引用落到内容备注）
-  if (editDraft.value.material.trim()) {
-    step.description = `${step.description || ''}\n材料：${editDraft.value.material.trim()}`.trim()
-  }
-  // RD-1 结构化字段（去空写回）
-  step.learningObjective = editDraft.value.learningObjective.trim() || undefined
-  step.teacherAction = editDraft.value.teacherAction.trim() || undefined
-  step.studentAction = editDraft.value.studentAction.trim() || undefined
-  step.coreQuestion = editDraft.value.coreQuestion.trim() || undefined
-  step.assessmentCheck = editDraft.value.assessmentCheck.trim() || undefined
-  step.legacy = false
-  // 时长
-  const minutes = Number(editDraft.value.minutes)
-  if (Number.isFinite(minutes) && minutes > 0) {
-    const start = Number(step.timeRange.match(/\d+/)?.[0] || 0)
-    step.timeRange = `${start}-${start + Math.round(minutes)} min`
-    recalculateRanges()
-  }
-  closeEdit()
-  showToast?.('已更新该环节')
-}
-
-function stepDuration(step: LessonStep) {
-  const values = step.timeRange.match(/\d+/g)?.map(Number) || []
-  return values.length > 1 ? Math.max(0, values[1] - values[0]) : 0
-}
-
-function recalculateRanges() {
-  let elapsed = 0
-  lessonSteps.value.forEach((step) => {
-    const minutes = stepDuration(step) || 5
-    step.timeRange = `${elapsed}-${elapsed + minutes} min`
-    elapsed += minutes
-  })
-}
-
-function deleteStep(_step: LessonStep, idx: number) {
-  if (lessonSteps.value.length <= 2) {
-    showToast?.('至少保留 2 个教学环节')
-    return
-  }
-  lessonSteps.value.splice(idx, 1)
-  recalculateRanges()
-  showToast?.('已删除该环节')
-}
-
-function adoptSuggestion(sug: Suggestion) {
-  if (sug.adopted) return
-  sug.adopted = true
-  const step = lessonSteps.value.find((s) => s.id === sug.targetStepId)
-  if (step) {
-    step.added = true
-    step.tagText = '已采纳'
-    step.tagClass = 'green'
-  }
-  showToast?.(`已采纳建议：${sug.title}`)
-}
-
-async function generateSlides() {
-  try {
-    if (!store.artifact) await createLesson()
-    if (!store.artifact) return
-    if (store.artifact.status === 'draft') await confirmLesson()
-    const slide = (await lessonsApi.createSlides(store.artifact.artifact_id, { version: store.artifact.version, style: '简洁课堂' })).data
-    const url = String(slide.content.download_url || '')
-    const response = await fetch(url, { headers: authHeaders() as HeadersInit })
-    if (!response.ok) throw new Error('PPT 下载失败')
-    const objectUrl = URL.createObjectURL(await response.blob())
-    const link = document.createElement('a')
-    link.href = objectUrl
-    link.download = String(slide.content.filename || '课堂课件.pptx')
-    link.click()
-    URL.revokeObjectURL(objectUrl)
-    showToast?.('PPT 已生成并开始下载')
-  } catch (e: any) { showToast?.(e?.message || 'PPT 生成失败') }
-}
-
-async function exportWord() {
-  try {
-    if (!store.artifact) await createLesson()
-    if (!store.artifact) return
-    const response = await fetch(`/api/teacher/lessons/${store.artifact.artifact_id}/download`, { headers: authHeaders() as HeadersInit })
-    if (!response.ok) throw new Error('Word 教案下载失败')
-    downloadBlob(await response.blob(), `${String(store.artifact.content.topic || '课堂教案')}.docx`)
-    showToast?.('Word 教案已生成并开始下载')
-  } catch (e: any) {
-    showToast?.(e?.message || 'Word 教案生成失败')
-  }
-}
-
-function generatePractice() {
-  router.push('/teacher/assign')
-  showToast?.('跳转到作业测验工作台')
-}
-
-function generateBoardOutline() {
-  if (!lessonSteps.value.length) {
-    showToast?.('请先生成教案')
-    return
-  }
-  const lines = lessonSteps.value.flatMap((step, index) => [
-    `${index + 1}. ${step.title}（${step.timeRange}）`,
-    `   ${step.description}`,
-  ])
-  downloadBlob(new Blob([`课堂板书提纲\n\n${lines.join('\n')}`], { type: 'text/plain;charset=utf-8' }), '课堂板书提纲.txt')
-  showToast?.('板书提纲已生成并开始下载')
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
-}
-
-// ---- 生命周期 ----
-// RD-1 环节类型标签与配色（仅使用既有 .t-tag 配色：blue/green/red/amber/violet/peach）
-const KIND_LABELS: Record<string, string> = {
-  import: '复习导入', concept: '新知探究', example: '例题精讲', practice: '当堂练习',
-  check: '检查理解', summary: '课堂小结', intervention: '干预/复习',
-}
-const KIND_CLASS: Record<string, string> = {
-  import: 'violet', concept: 'blue', example: 'peach', practice: 'green',
-  check: 'amber', summary: 'violet', intervention: 'red',
-}
-
-function applyArtifact() {
-  const content = (store.artifact?.content || {}) as Record<string, unknown>
-  // RD-1 三级回退：segments（LessonSegment）/ sections（历史 lesson_plan）/ timeline（更早 phase+minutes）
-  const segs = (content.segments || content.sections || content.timeline || []) as Array<Record<string, unknown>>
-  let elapsed = 0
-  lessonSteps.value = segs.map((s, index) => {
-    const minutes = Number(s.duration_min ?? s.duration_minutes ?? s.minutes ?? 5)
-    const activities = Array.isArray(s.activities) ? s.activities.filter(Boolean) : []
-    const materials = Array.isArray(s.materials) ? s.materials : []
-    const materialNote = materials.length
-      ? `素材：${materials.map((m) => String((m as any).name || (m as any).title || m)).join('、')}`
-      : ''
-    const baseDesc = activities.length
-      ? activities.map((a) => `• ${a}`).join('\n')
-      : String(s.content || s.description || '').trim()
-    const hasStructured = !!(s.learning_objective || s.teacher_action || s.student_action || s.core_question || s.assessment_check)
-    const step: LessonStep = {
-      id: String(s.id || `step-${index + 1}`),
-      title: String(s.title ?? s.phase ?? `环节 ${index + 1}`),
-      timeRange: `${elapsed}-${elapsed + minutes} min`,
-      tagText: String(KIND_LABELS[s.kind as string] || (baseDesc ? '可编辑' : '待补充')),
-      tagClass: String(KIND_CLASS[s.kind as string] || 'blue'),
-      description: materialNote ? (baseDesc ? `${baseDesc}\n${materialNote}` : materialNote) : baseDesc,
-      // RD-1 结构化字段（仅 segments 具备；sections/timeline 回退为空 → legacy 兼容旧 payload）
-      kind: s.kind ? String(s.kind) : undefined,
-      learningObjective: s.learning_objective ? String(s.learning_objective) : undefined,
-      teacherAction: s.teacher_action ? String(s.teacher_action) : undefined,
-      studentAction: s.student_action ? String(s.student_action) : undefined,
-      coreQuestion: s.core_question ? String(s.core_question) : undefined,
-      assessmentCheck: s.assessment_check ? String(s.assessment_check) : undefined,
-      linkedInsights: Array.isArray(s.linked_insights) ? s.linked_insights.map(String) : undefined,
-      locked: s.locked === true,
-      legacy: !hasStructured,
-      added: false,
-    }
-    elapsed += minutes
-    return step
-  })
-  populateSuggestions(content)
-}
-
-// ---- 教学建议：班级数据不足时退化为按「本课知识点」给通用建议（不显示“数据不足”空态） ----
-// 依据 teachingAdvice.ts 的知识点→建议池；证据为课标/教法，绝不虚构班级统计数字。
-const KP_KEYWORDS: Record<string, string[]> = {
-  '函数的单调性': ['单调', '递增', '递减', '单调区间', '单调性'],
-  '函数的奇偶性': ['奇偶', '偶函数', '奇函数', '对称'],
-  '函数的基本性质': ['最值', '值域', '周期性', '函数性质'],
-  '函数与导数': ['导数', '切线', "f'(x)", '求导'],
-  '集合': ['集合', '交集', '并集', '补集', '文氏'],
-}
-
-function detectKps(content: Record<string, unknown>): string[] {
-  const text = [
-    String(content.topic || ''),
-    ...((content.segments as Array<Record<string, unknown>>) || []).flatMap((s: Record<string, unknown>) => [
-      String(s.learning_objective || ''), String(s.core_question || ''), String(s.title || ''), String(s.content || ''),
-    ]),
-  ].join(' ')
-  const hits: string[] = []
-  for (const [kp, kw] of Object.entries(KP_KEYWORDS)) {
-    if (kw.some((w) => text.includes(w))) hits.push(kp)
-  }
-  return hits
-}
-
-function populateSuggestions(content: Record<string, unknown>) {
-  const kps = detectKps(content)
-  const advices = suggestionsForKnowledgePoints(kps, 4)
-  // 优先把建议安放到与之匹配的环节（targetStepKind）；无匹配环节则落到最后一步
-  suggestions.value = advices.map((a, i) => {
-    const step =
-      lessonSteps.value.find((s) => s.kind === a.targetStepKind) ||
-      (lessonSteps.value[a.targetStepKind === 'import' || a.targetStepKind === 'summary' ? 0 : lessonSteps.value.length - 1] as LessonStep | undefined) ||
-      lessonSteps.value[lessonSteps.value.length - 1]
-    return {
-      id: `kp-sug-${i + 1}`,
-      title: a.title,
-      description: a.description,
-      evidence: a.evidence,
-      adopted: false,
-      targetStepId: step ? step.id : '',
-    }
-  })
-  suggestionMode.value = 'kp'
-}
-
-/** P-2：同班级最近教案的真实 topic 作为改编起点；无则回落默认课题（不再硬编码单课题） */
-async function resolveTopic(): Promise<string> {
-  try {
-    const lessons = await lessonsApi.list(selectedClass.value)
-    const t = lessons?.[0]?.content?.topic
-    if (t) return String(t)
-  } catch { /* 回落默认 */ }
-  return '导数与函数单调性'
-}
-
-async function createLesson() {
-  if (!selectedClass.value) return
-  // P-2：不再硬编码课题名——取同班级最近一次教案的真实 topic，无则回落默认课题
-  const topic = await resolveTopic()
-  await store.adapt({ class_id: selectedClass.value, topic, requirements: '包含例题、练习与课堂小结', duration_minutes: 45 })
-  applyArtifact()
-  if (store.error) showToast?.(store.error)
-}
-
-onMounted(async () => {
-  try {
-    const data = await api.get('/classes/mine')
-    classes.value = data?.items || []
-    if (classes.value.length) {
-      selectedClass.value = classes.value[0].id
-      ctx.setClass(classes.value[0].id, classes.value[0].name)
-      await createLesson()
-    }
-  } catch (e: any) { showToast?.(e?.message || '班级加载失败') }
-})
+async function confirmLesson() { if (!artifact.value || artifact.value.degraded) return; store.artifact = await artifactsApi.confirm(artifact.value.artifact_id, `confirm:${artifact.value.artifact_id}`); notice.value = '课案已由教师确认。' }
+async function downloadWord() { if (!artifact.value) return; const response = await fetch(`/api/teacher/lessons/${artifact.value.artifact_id}/download`, { headers: authHeaders() as HeadersInit }); if (!response.ok) return showToast('Word 教案下载失败'); download(await response.blob(), `${lessonTitle(artifact.value)}.docx`) }
+async function generateSlides() { if (!artifact.value || artifact.value.degraded || artifact.value.status !== 'confirmed') return; try { const slide = (await lessonsApi.createSlides(artifact.value.artifact_id, { version: artifact.value.version, style: '课堂课件' })).data; const response = await fetch(String(slide.content.download_url || ''), { headers: authHeaders() as HeadersInit }); if (!response.ok) throw new Error('PPT 下载失败'); download(await response.blob(), String(slide.content.filename || '课堂课件.pptx')); notice.value = 'PPT 已生成并开始下载。' } catch (e: any) { showToast(e?.message || 'PPT 生成失败') } }
+function download(blob: Blob, filename: string) { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url) }
+onMounted(() => { void loadInputs().catch((e: any) => { showToast(e?.message || '备课输入加载失败') }) })
 </script>
+
+<style scoped>
+.prep-v2{max-width:1500px;margin:0 auto;padding:30px 32px 42px;color:#17243b}.prep-v2__head,.prep-v2__head-actions,.prep-v2__workspace-head,.prep-v2__source-head,.prep-v2__actions{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.prep-v2__head h1{margin:3px 0 8px;font-size:32px;letter-spacing:-.04em}.prep-v2__head>div:first-child>p:last-child{max-width:760px;margin:0;color:#53637b;line-height:1.6}.prep-v2__head-actions{align-items:center}.prep-v2__eyebrow{margin:0;color:#69758b;font-size:12px;letter-spacing:.08em;font-weight:700}.prep-v2__notice{margin:22px 0 0;padding:11px 14px;background:#edf7ff;color:#175e8f;border-radius:9px}.prep-v2__notice.is-error{background:#fff1f1;color:#b42318}.prep-v2__grid{display:grid;grid-template-columns:minmax(310px,.78fr) minmax(0,1.42fr);gap:22px;margin-top:24px}.prep-v2__inputs,.prep-v2__workspace{background:#fff;border:1px solid #e1e7ef;border-radius:14px;padding:22px;min-width:0}.prep-v2 h2{margin:5px 0 0;font-size:20px}.prep-v2__inputs>label{display:grid;gap:7px;margin-top:17px;color:#35455d;font-size:13px;font-weight:700}.prep-v2 input,.prep-v2 select,.prep-v2 textarea{box-sizing:border-box;width:100%;border:1px solid #d8e1ec;border-radius:8px;padding:10px 11px;color:#17243b;background:#fff;font:inherit}.prep-v2 textarea{resize:vertical;line-height:1.5}.prep-v2__source-head{margin-top:27px;align-items:end}.prep-v2__source-head>span{font-size:12px;color:#6b7280}.prep-v2__hint{margin:9px 0 12px;color:#64748b;font-size:12px;line-height:1.55}.prep-v2__source-list,.prep-v2__prior{display:grid;gap:8px}.prep-v2__prior{margin-top:18px}.prep-v2__source{display:flex!important;grid-template-columns:none!important;align-items:flex-start;gap:10px;margin:0!important;padding:11px;border:1px solid #e1e7ef;border-radius:9px;cursor:pointer}.prep-v2__source input{width:auto;margin:3px 0 0}.prep-v2__source span{display:grid;gap:4px}.prep-v2__source small{color:#66758a;font-weight:400;line-height:1.4}.prep-v2__source.is-disabled{opacity:.58;cursor:not-allowed;background:#f8fafc}.prep-v2__empty,.prep-v2__blank{margin-top:16px;padding:28px 20px;background:#f8fafc;border-radius:10px;color:#64748b;text-align:center;line-height:1.55}.prep-v2__empty p,.prep-v2__blank p{margin:6px 0 14px}.prep-v2__workspace-head{padding-bottom:17px;border-bottom:1px solid #edf0f4}.prep-v2__state{padding:5px 9px;border-radius:999px;background:#fff7df;color:#a16207;font-size:12px}.prep-v2__state.confirmed{background:#ecfdf3;color:#166534}.prep-v2__warning{margin:18px 0;padding:16px;border:1px solid #fdba74;background:#fff7ed;border-radius:10px;color:#9a3412}.prep-v2__warning p{margin:6px 0;line-height:1.55}.prep-v2__warning small{display:block;margin-top:4px}.prep-v2__provenance{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0;padding:12px;background:#f0f9ff;border-radius:9px;color:#175e8f;font-size:13px}.prep-v2__provenance span{padding:4px 7px;background:#fff;border-radius:5px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.prep-v2__lesson{padding:19px 0}.prep-v2__lesson h3{margin:0;font-size:21px}.prep-v2__objectives{padding:10px 12px;background:#f8fafc;border-radius:8px;color:#4b5c72;line-height:1.55}.prep-v2__timeline{display:grid;gap:14px;padding:0;margin:18px 0;list-style:none}.prep-v2__timeline li{display:grid;grid-template-columns:75px 1fr;gap:14px}.prep-v2__timeline li>span{color:#9a6700;font-size:12px;padding-top:3px}.prep-v2__timeline li>div{padding:13px;border-left:3px solid #f59e0b;background:#fffdf8;border-radius:0 8px 8px 0}.prep-v2__timeline p{margin:7px 0 0;color:#56667d;line-height:1.5}.prep-v2__actions{padding-top:17px;border-top:1px solid #edf0f4;justify-content:flex-start;flex-wrap:wrap}@media(max-width:900px){.prep-v2{padding:22px 16px}.prep-v2__grid{grid-template-columns:1fr}.prep-v2__head{flex-direction:column}.prep-v2__head-actions{width:100%;justify-content:flex-start}}
+</style>

@@ -39,6 +39,7 @@ const routes = [
   { path: '/teacher/classroom', name: 'teacher-classroom', component: () => import('@/pages/teacher/TeacherClassroomView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.classroom', title: '课堂' } },
   { path: '/teacher/classes', name: 'teacher-classes', component: () => import('@/pages/teacher/TeacherClassesView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.class.insights', title: '班级' } },
   { path: '/teacher/resources', name: 'teacher-resources', component: () => import('@/pages/teacher/TeacherResourcesView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.resources', title: '资源' } },
+  { path: '/teacher/profile', name: 'teacher-profile', component: () => import('@/pages/teacher/TeacherProfileView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.profile', title: '个人中心' } },
 
   /* ===== 管理后台（唯一 admin 布局） ===== */
   { path: '/admin/overview', name: 'admin-overview', component: () => import('@/pages/admin/AdminOverviewView.vue'), meta: { admin: true, requiresRole: 'admin', title: '总览' } },

@@ -1,5 +1,6 @@
 import { useRoute } from 'vue-router'
 import { createIdempotencyTracker } from '@/api/idempotency'
+import { useTeacherContextStore } from '@/stores/teacher/context'
 import type { ButlerSceneInput, TeacherScene } from '@/types/teacher'
 
 const idem = createIdempotencyTracker()
@@ -10,11 +11,12 @@ const idem = createIdempotencyTracker()
  */
 export function useButlerScene() {
   const route = useRoute()
+  const context = useTeacherContextStore()
   function submit(payload: { classId?: string; artifactId?: string; userMessage: string }): ButlerSceneInput {
     const scene = (route.meta.scene as TeacherScene) || 'teacher.today'
     return {
       scene,
-      classId: payload.classId,
+      classId: payload.classId || context.classId || undefined,
       artifactId: payload.artifactId,
       userMessage: payload.userMessage,
       clientRequestId: idem.keyFor(`butler:${scene}:${payload.artifactId || payload.classId || 'global'}`),
