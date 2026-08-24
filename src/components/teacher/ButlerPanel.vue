@@ -1,5 +1,5 @@
 <template>
-  <div class="t-assistant" :class="{ open }" role="dialog" aria-label="AI 教学助手">
+  <div class="t-assistant" :class="{ open, embedded }" role="dialog" aria-label="AI 教学助手">
     <!-- 头部：琥珀渐变 -->
     <div class="t-assistant-head">
       <div class="orb" aria-hidden="true">✦</div>
@@ -65,6 +65,7 @@ import { useArtifactMutation } from '@/composables/useArtifactMutation'
 
 const props = defineProps<{
   open: boolean
+  embedded?: boolean
 }>()
 
 defineEmits<{

@@ -8,6 +8,8 @@
       </div>
     </header>
 
+    <ButlerPanel :open="true" embedded />
+
     <div v-if="store.error" class="t-alert" role="alert">{{ store.error }} <button class="t-btn sm" type="button" @click="store.fetch()">重试</button></div>
 
     <div class="t-today-grid" v-if="!store.loading">
@@ -105,6 +107,7 @@ import { useTeacherContextStore } from '@/stores/teacher/context'
 import { useGradingStore } from '@/stores/teacher/grading'
 import { useAuthStore } from '@/stores/auth'
 import type { ActionableInsight } from '@/types/teacher'
+import ButlerPanel from '@/components/teacher/ButlerPanel.vue'
 
 const router = useRouter()
 const store = useTeacherTodayStore()
