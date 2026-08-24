@@ -70,6 +70,17 @@ describe('备课 V2 接管：真实来源优先，降级模板不得冒充正式
   })
 })
 
+describe('班级 V2 接管：真实花名册和证据驱动的教学去向', () => {
+  it('正式班级路由不再使用旧 metrics/task 卡片骨架', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherClassesView.vue'), 'utf8')
+    expect(view).toContain('班级花名册')
+    expect(view).toContain('作答证据')
+    expect(view).toContain('classApi.members')
+    expect(view).not.toContain('t-metric-strip')
+    expect(view).not.toContain('t-task-list')
+  })
+})
+
 describe('教学建议：班级数据不足时按知识点给通用建议（不显示"数据不足"）', () => {
   it('知识点命中即返回非空建议，且依据为课标/教法非虚构班级统计', () => {
     const advices = suggestionsForKnowledgePoints(['函数的单调性'], 4)
