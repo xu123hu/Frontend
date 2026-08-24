@@ -32,6 +32,20 @@ describe('资源 V2 接管：来源可追溯、候选题须教师审核', () => 
   })
 })
 
+describe('组卷 V2 接管：严格题源到教师确认发布', () => {
+  it('正式作业路由不得再导入本地模拟题库，并呈现真实草稿确认链', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherAssignView.vue'), 'utf8')
+
+    expect(view).toContain('组卷草稿')
+    expect(view).toContain('严格题源')
+    expect(view).toContain('确认题集草稿')
+    expect(view).toContain('创建作业草稿')
+    expect(view).toContain('确认发布给学生')
+    expect(view).not.toContain("@/mock/questionBank")
+    expect(view).not.toContain('本地模板补齐')
+  })
+})
+
 describe('教学建议：班级数据不足时按知识点给通用建议（不显示"数据不足"）', () => {
   it('知识点命中即返回非空建议，且依据为课标/教法非虚构班级统计', () => {
     const advices = suggestionsForKnowledgePoints(['函数的单调性'], 4)
