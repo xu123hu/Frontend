@@ -42,6 +42,13 @@ export const useResourcesStore = defineStore('resources', {
         : await resourcesApi.unpublish(id, signal)
       this.patchItem(response.data)
     },
+    async approveQuestionCandidate(resourceId: string, candidateId: string, signal?: AbortSignal) {
+      this.error = null
+      try {
+        await resourcesApi.approveQuestionCandidates(resourceId, [candidateId], signal)
+        await this.fetch(signal)
+      } catch (e: any) { this.error = e?.message || '候选题审核失败'; throw e }
+    },
     patchItem(r: TeacherResource) {
       const i = this.items.findIndex((x) => x.resource_id === r.resource_id)
       if (i >= 0) this.items[i] = r; else this.items.unshift(r)

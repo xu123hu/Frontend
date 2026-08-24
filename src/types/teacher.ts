@@ -294,8 +294,20 @@ export interface TeacherResource {
   published?: boolean
   degraded?: boolean
   warnings?: string[]
+  /** Extracted from a teacher-owned source. Never becomes a bank row before approval. */
+  question_candidates?: ResourceQuestionCandidate[]
   download_url?: string
   created_at: string
+}
+
+export interface ResourceQuestionCandidate {
+  candidate_id: string
+  stem: string
+  q_type: string
+  answer?: string
+  knowledge_points?: string[]
+  analysis?: string
+  review_status: 'pending_review' | 'approved'
 }
 
 /** Butler 场景输入：前端只提交业务上下文，不提交策略/工具/workflow 字段 */

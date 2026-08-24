@@ -18,6 +18,20 @@ describe('批改 V2 接管：证据优先工作区', () => {
   })
 })
 
+describe('资源 V2 接管：来源可追溯、候选题须教师审核', () => {
+  it('正式教师资源路由不再退化为通用资源卡片，并连接真实候选题审核端点', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherResourcesView.vue'), 'utf8')
+    const api = readFileSync(resolve(process.cwd(), 'src/api/teacher/resources.ts'), 'utf8')
+
+    expect(view).toContain('资源与题目审核')
+    expect(view).toContain('题目审核队列')
+    expect(view).toContain('确认入库')
+    expect(view).toContain('来源可追溯')
+    expect(view).not.toContain('t-resource-grid')
+    expect(api).toContain('question-candidates/approve')
+  })
+})
+
 describe('教学建议：班级数据不足时按知识点给通用建议（不显示"数据不足"）', () => {
   it('知识点命中即返回非空建议，且依据为课标/教法非虚构班级统计', () => {
     const advices = suggestionsForKnowledgePoints(['函数的单调性'], 4)

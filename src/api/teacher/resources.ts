@@ -53,4 +53,11 @@ export const resourcesApi = {
     teacherPost<TeacherResource>(`/teacher/resources/${resourceId}/publish`, {}, undefined, signal),
   unpublish: (resourceId: string, signal?: AbortSignal) =>
     teacherPost<TeacherResource>(`/teacher/resources/${resourceId}/unpublish`, {}, undefined, signal),
+  approveQuestionCandidates: (resourceId: string, candidateIds: string[], signal?: AbortSignal) =>
+    teacherPost<{ resource_id: string; approved_hashes: string[]; review_required: boolean }>(
+      `/teacher/resources/${resourceId}/question-candidates/approve`,
+      { candidate_ids: candidateIds },
+      undefined,
+      signal,
+    ),
 }
