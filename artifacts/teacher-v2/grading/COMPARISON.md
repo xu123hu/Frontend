@@ -26,7 +26,7 @@ This is an adaptation of the documented product pattern only. No Gradescope bran
 
 ## Browser proof
 
-`PW_PORT=5196 npx playwright test e2e/teacher-grading-v2.spec.ts --project=chromium --workers=1` completed with **3 passed**:
+`PW_PORT=5198 npx playwright test e2e/teacher-grading-v2.spec.ts --project=chromium --workers=1` completed with **3 passed**:
 
 1. Question-focused derivative-solution workstation at `/teacher/grading?submission_item_id=si-2`.
 2. Manual review of an initially ungraded submission survives refresh; explicit teacher override advances through the server-provided next item.
@@ -36,4 +36,4 @@ The updated M3 grading journey separately passed. The unrelated existing `/teach
 
 ## Corrective visual check — mathematical notation and anonymity
 
-The original-work surface renders inline TeX through the repository's existing sanitized `LatexText` component, rather than presenting source such as `\\pm` or `\\infty` in a plain-text block. The focused component test covers both delimited and bare high-school-math TeX across the header, original work, standard answer, and evidence. The fresh 1366×768 browser screenshot uses bare `\\pm`, `\\infty`, and `\\cup` source and visibly displays `±`, `∞`, and `∪` instead. Queue labels are supplied by the server as `匿名作答 #001` so the number is clearly an anonymous blind-grading identifier, not a student name or an unexplained assignment number.
+The original-work surface renders inline TeX through the repository's existing sanitized `LatexText` component, rather than presenting source such as `\\pm` or `\\infty` in a plain-text block. The focused component test covers both delimited and bare high-school-math TeX across the header, original work, standard answer, and evidence. The fresh 1366×768 browser screenshot uses bare `\\pm`, `\\infty`, and `\\cup` source and visibly displays `±`, `∞`, and `∪` instead. Queue labels are supplied by the server as `第 1 份作答`; the queue context explains that this is blind grading by answer order, not a student name or an unexplained system number.

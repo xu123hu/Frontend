@@ -32,7 +32,8 @@ describe('Teacher Grading V2 reconstruction', () => {
     const { wrapper } = await mountWorkspace()
 
     expect(wrapper.find('[data-grading-region="header"]').text()).toContain('函数的单调性')
-    expect(wrapper.find('[data-grading-region="queue"]').text()).toContain('匿名作答 #002')
+    expect(wrapper.find('[data-grading-region="queue"]').text()).toContain('第 2 份作答')
+    expect(wrapper.find('[data-grading-region="queue"]').text()).toContain('为保证公平，按本题作答顺序批改')
     expect(wrapper.find('[data-grading-region="queue"]').text()).toContain('人工复看')
     const visibleMath = wrapper.findAll('[data-grading-region="work"] .katex-html')
     expect(visibleMath.length).toBeGreaterThan(0)

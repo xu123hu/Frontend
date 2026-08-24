@@ -60,7 +60,7 @@ function gradingWorkspace(selectedId: string | null, status: string) {
   const queue = gradingItems
     .map((item, index) => ({
       submission_item_id: item.submission_item_id,
-      anonymous_label: '匿名作答 #' + String(index + 1).padStart(3, '0'),
+      anonymous_label: '第 ' + String(index + 1) + ' 份作答',
       state: workspaceState(item),
       manual_review: gradingReviews.get(item.submission_item_id) === 'pending',
     }))

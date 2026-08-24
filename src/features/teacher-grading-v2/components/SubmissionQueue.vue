@@ -1,9 +1,9 @@
 <template>
-  <aside class="submission-queue" data-grading-region="queue" aria-label="匿名作答队列">
+  <aside class="submission-queue" data-grading-region="queue" aria-label="盲评作答队列">
     <div class="submission-queue__head">
       <div>
         <p>作答队列</p>
-        <small>按本题连续批改</small>
+        <small>为保证公平，按本题作答顺序批改</small>
       </div>
       <span>{{ entries.length }}</span>
     </div>

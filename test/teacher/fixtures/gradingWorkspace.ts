@@ -18,9 +18,9 @@ export const serverWorkspaceFixture = {
       questions: [{ item_no: 1, label: '第 1 题', question_text: '已知 f(x)=x^3-3x，讨论函数的单调性。' }],
     },
     queue: [
-      { submission_item_id: 'si-1', anonymous_label: '匿名作答 #001', state: 'ungraded', manual_review: false },
-      { submission_item_id: 'si-2', anonymous_label: '匿名作答 #002', state: 'review', manual_review: true },
-      { submission_item_id: 'si-3', anonymous_label: '匿名作答 #003', state: 'ungraded', manual_review: false },
+      { submission_item_id: 'si-1', anonymous_label: '第 1 份作答', state: 'ungraded', manual_review: false },
+      { submission_item_id: 'si-2', anonymous_label: '第 2 份作答', state: 'review', manual_review: true },
+      { submission_item_id: 'si-3', anonymous_label: '第 3 份作答', state: 'ungraded', manual_review: false },
     ],
     selected: {
       submission_item_id: 'si-2',
