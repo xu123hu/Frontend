@@ -26,7 +26,7 @@ This is an adaptation of the documented product pattern only. No Gradescope bran
 
 ## Browser proof
 
-`PW_PORT=5194 npx playwright test e2e/teacher-grading-v2.spec.ts --project=chromium --workers=1` completed with **3 passed**:
+`PW_PORT=5196 npx playwright test e2e/teacher-grading-v2.spec.ts --project=chromium --workers=1` completed with **3 passed**:
 
 1. Question-focused derivative-solution workstation at `/teacher/grading?submission_item_id=si-2`.
 2. Manual review of an initially ungraded submission survives refresh; explicit teacher override advances through the server-provided next item.
