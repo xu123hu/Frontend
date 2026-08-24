@@ -46,6 +46,17 @@ describe('组卷 V2 接管：严格题源到教师确认发布', () => {
   })
 })
 
+describe('教师个人中心 V2：只读身份与脱敏模型状态', () => {
+  it('正式教师个人中心使用当前身份与模型配置，且绝不渲染 API 密钥', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherProfileView.vue'), 'utf8')
+    expect(view).toContain('个人中心')
+    expect(view).toContain("authApi.me")
+    expect(view).toContain("'/model-config'")
+    expect(view).toContain('Mimo 测试通道')
+    expect(view).not.toContain('api_key')
+  })
+})
+
 describe('教学建议：班级数据不足时按知识点给通用建议（不显示"数据不足"）', () => {
   it('知识点命中即返回非空建议，且依据为课标/教法非虚构班级统计', () => {
     const advices = suggestionsForKnowledgePoints(['函数的单调性'], 4)

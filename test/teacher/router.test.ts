@@ -4,7 +4,7 @@ import { router } from '@/router'
 describe('teacher router contract', () => {
   const paths = [
     '/teacher/today', '/teacher/prep', '/teacher/assign', '/teacher/grading',
-    '/teacher/classroom', '/teacher/classes', '/teacher/resources',
+    '/teacher/classroom', '/teacher/classes', '/teacher/resources', '/teacher/profile',
   ]
   const sceneMap: Record<string, string> = {
     '/teacher/today': 'teacher.today',
@@ -14,11 +14,12 @@ describe('teacher router contract', () => {
     '/teacher/classroom': 'teacher.classroom',
     '/teacher/classes': 'teacher.class.insights',
     '/teacher/resources': 'teacher.resources',
+    '/teacher/profile': 'teacher.profile',
   }
 
-  it('defines exactly the 7 teacher workspaces with teacher meta and scene', () => {
+  it('defines exactly the 8 teacher workspaces with teacher meta and scene', () => {
     const teacherRoutes = router.getRoutes().filter((r) => r.meta?.teacher)
-    expect(teacherRoutes.length).toBe(7)
+    expect(teacherRoutes.length).toBe(8)
     const found = new Set(teacherRoutes.map((r) => r.path))
     for (const p of paths) expect(found.has(p), `missing ${p}`).toBe(true)
     for (const r of teacherRoutes) expect(r.meta.scene).toBe(sceneMap[r.path])

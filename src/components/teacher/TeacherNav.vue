@@ -28,5 +28,6 @@ const nav = computed(() => [
   { to: '/teacher/classroom', icon: '▶', name: '课堂' },
   { to: '/teacher/classes', icon: '👥', name: '班级' },
   { to: '/teacher/resources', icon: '▣', name: '资源' },
+  { to: '/teacher/profile', icon: '◉', name: '我' },
 ])
 </script>
