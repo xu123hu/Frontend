@@ -272,6 +272,12 @@ export function mockApi(req, res, next) {
       const identity = identityFor(requestedRole, state)
       return { access_token: tokenFor(identity.user.active_role), expires_in: 900, onboarding_required: onboardingRequired, ...identity }
     }
+    const persistMockIdentity = (role, state) => {
+      res.setHeader('Set-Cookie', [
+        `ma_mock_role=${role}; Path=/; SameSite=Lax`,
+        `ma_mock_state=${state}; Path=/; SameSite=Lax`,
+      ])
+    }
     const mockIdentity = identityFor(mockRole)
     if (method === 'POST' && url === '/auth/token/refresh') return ok(res, { access_token: tokenFor(mockIdentity.user.active_role), expires_in: 900 })
     if (method === 'GET' && url === '/auth/me') {
@@ -284,10 +290,19 @@ export function mockApi(req, res, next) {
     if (method === 'POST' && url === '/auth/register/sms') return json((b) => {
       const role = b.role || mockRole
       const state = professionalRoles.includes(role) ? (mockState === 'needs_more_info' ? 'needs_more_info' : 'pending') : 'approved'
+      persistMockIdentity(role, state)
       return ok(res, sessionResponse(role, state, role === 'student'))
     })
-    if (method === 'POST' && url === '/auth/login/sms') return json((b) => ok(res, sessionResponse(b.preferred_role || mockRole)))
-    if (method === 'POST' && url === '/auth/login/password') return json((b) => ok(res, sessionResponse(b.preferred_role || mockRole)))
+    if (method === 'POST' && url === '/auth/login/sms') return json((b) => {
+      const role = b.preferred_role || mockRole
+      persistMockIdentity(role, mockState)
+      return ok(res, sessionResponse(role))
+    })
+    if (method === 'POST' && url === '/auth/login/password') return json((b) => {
+      const role = b.preferred_role || mockRole
+      persistMockIdentity(role, mockState)
+      return ok(res, sessionResponse(role))
+    })
     if (method === 'POST' && url === '/identity/onboarding/student') return ok(res, { onboarding_required: false })
     if (method === 'POST' && url === '/identity/role-applications') return json((b) => ok(res, { id: 'mock-application', role: b.role, status: 'pending' }))
     if (method === 'GET' && url === '/identity/role-applications/current') return ok(res, [{ id: 'mock-application', role: 'teacher', status: 'pending', organization_name: '示例中学' }])
@@ -295,7 +310,7 @@ export function mockApi(req, res, next) {
     if (method === 'POST' && url === '/auth/password/reset') return ok(res, { password_reset: true })
     if (method === 'POST' && url === '/auth/role/switch') return json((b) => {
       const role = supportedRoles.includes(b.role) ? b.role : mockRole
-      res.setHeader('Set-Cookie', `ma_mock_role=${role}; Path=/; SameSite=Lax`)
+      persistMockIdentity(role, 'approved')
       return ok(res, sessionResponse(role, 'approved'))
     })
     if (method === 'GET' && url === '/auth/sessions') return ok(res, [

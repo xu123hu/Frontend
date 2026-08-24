@@ -102,4 +102,42 @@ describe('auth bootstrap state machine', () => {
     expect(store.status).toBe('needs_more_info')
     expect(store.user).toMatchObject({ pending_role: 'researcher' })
   })
+
+  it('honors an onboarding-required student login even when the user body is completed', async () => {
+    authMocks.loginSms.mockResolvedValue({
+      access_token: 'student-token',
+      identity_status: 'authenticated',
+      onboarding_required: true,
+      user: {
+        id: 'u3',
+        active_role: 'student',
+        onboarding_status: 'completed',
+        roles: [{ role: 'student', status: 'approved' }],
+      },
+    })
+    const store = useAuthStore()
+
+    await store.loginSms({ phone: '13800138000' })
+
+    expect(store.status).toBe('onboarding')
+  })
+
+  it('honors an onboarding-required student registration even when the user body is completed', async () => {
+    authMocks.registerSms.mockResolvedValue({
+      access_token: 'student-token',
+      identity_status: 'authenticated',
+      onboarding_required: true,
+      user: {
+        id: 'u4',
+        active_role: 'student',
+        onboarding_status: 'completed',
+        roles: [{ role: 'student', status: 'approved' }],
+      },
+    })
+    const store = useAuthStore()
+
+    await store.registerSms({ phone: '13800138000', role: 'student' })
+
+    expect(store.status).toBe('onboarding')
+  })
 })

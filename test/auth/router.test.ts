@@ -12,6 +12,7 @@ describe('role-aware auth navigation', () => {
 
   it('routes onboarding, pending review, and deletion identities to their only allowed areas', () => {
     expect(resolveAuthNavigation(route('/overview'), { status: 'onboarding' })).toEqual({ path: '/onboarding/student' })
+    expect(resolveAuthNavigation(route('/'), { status: 'onboarding' })).toEqual({ path: '/onboarding/student' })
     expect(resolveAuthNavigation(route('/teacher/today'), { status: 'pending_review' })).toEqual({ path: '/identity/pending' })
     expect(resolveAuthNavigation(route('/overview'), { status: 'deletion_pending' })).toEqual({ path: '/account/security' })
   })

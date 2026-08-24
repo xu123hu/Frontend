@@ -29,6 +29,10 @@ export const useAuthStore = defineStore('auth', {
       this.user = user
       this.status = deriveStatus(user)
     },
+    applyAuthResponse(data) {
+      this.applyIdentity({ ...data.user, identity_status: data.identity_status, pending_role: data.pending_role })
+      if (data.onboarding_required && this.status === 'authenticated') this.status = 'onboarding'
+    },
     async bootstrap() {
       if (this.status !== 'idle' && this.status !== 'anonymous') return
       if (this.bootstrapPromise) return this.bootstrapPromise
@@ -50,19 +54,19 @@ export const useAuthStore = defineStore('auth', {
     async loginSms(payload) {
       const data = await authApi.loginSms(payload)
       setAccessToken(data.access_token)
-      this.applyIdentity({ ...data.user, identity_status: data.identity_status, pending_role: data.pending_role })
+      this.applyAuthResponse(data)
       return data
     },
     async loginPassword(payload) {
       const data = await authApi.loginPassword(payload)
       setAccessToken(data.access_token)
-      this.applyIdentity({ ...data.user, identity_status: data.identity_status, pending_role: data.pending_role })
+      this.applyAuthResponse(data)
       return data
     },
     async registerSms(payload) {
       const data = await authApi.registerSms(payload)
       setAccessToken(data.access_token)
-      this.applyIdentity({ ...data.user, identity_status: data.identity_status, pending_role: data.pending_role })
+      this.applyAuthResponse(data)
       return data
     },
     async refreshMe() {
