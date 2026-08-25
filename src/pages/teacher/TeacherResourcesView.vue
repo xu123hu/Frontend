@@ -63,6 +63,8 @@
               <button v-if="publishConfirmId !== resource.resource_id" class="t-btn sm" :class="resource.published ? 'soft' : 'primary'" type="button" @click="beginPublish(resource)">{{ resource.published ? '取消学生可见' : '发布给学生' }}</button>
               <button v-else class="t-btn sm primary" type="button" @click="confirmPublish(resource)">确认{{ resource.published ? '取消发布' : '发布' }}</button>
               <button v-if="publishConfirmId === resource.resource_id" class="t-btn sm" type="button" @click="publishConfirmId = null">返回</button>
+              <button v-if="deleteConfirmId !== resource.resource_id" class="t-btn sm danger" type="button" @click="beginDelete(resource)">删除</button>
+              <template v-else><button class="t-btn sm danger" type="button" :disabled="store.loading" @click="confirmDelete(resource)">确认删除</button><button class="t-btn sm" type="button" @click="deleteConfirmId = null">返回</button></template>
             </div>
           </article>
         </div>
@@ -97,6 +99,7 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const query = ref('')
 const notice = ref('')
 const publishConfirmId = ref<string | null>(null)
+const deleteConfirmId = ref<string | null>(null)
 const showExternalForm = ref(false)
 const externalDraft = ref({ title: '', url: '', provider: '', attribution: '', intended_use: '' })
 const showToast = inject<(msg: string) => void>('showToast', () => {})
@@ -112,6 +115,8 @@ async function saveExternalReference() { try { await store.createExternalReferen
 async function preprocess(id: string) { try { await store.preprocess(id); notice.value = '预处理完成，结果仍以原始材料为准。' } catch (e: any) { showToast(e?.message || '预处理失败') } }
 async function understand(id: string) { try { await store.understand(id); notice.value = '摘要已更新；请结合原文件进行教学判断。' } catch (e: any) { showToast(e?.message || '生成摘要失败') } }
 function beginPublish(resource: TeacherResource) { publishConfirmId.value = resource.resource_id; notice.value = resource.published ? '请再次确认取消学生可见。' : '请再次确认发布给学生。' }
+function beginDelete(resource: TeacherResource) { deleteConfirmId.value = resource.resource_id; notice.value = `删除后“${resource.name}”及其未审核候选题不可恢复；已审核入库的题目不受影响。` }
+async function confirmDelete(resource: TeacherResource) { try { await store.remove(resource.resource_id); deleteConfirmId.value = null; notice.value = `已删除“${resource.name}”。`; showToast('已删除') } catch (e: any) { showToast(e?.message || '删除失败') } }
 async function confirmPublish(resource: TeacherResource) { try { await store.setPublished(resource.resource_id, !resource.published); publishConfirmId.value = null; notice.value = resource.published ? '资源已发布给学生。' : '资源已取消学生可见。' } catch (e: any) { showToast(e?.message || '发布操作失败') } }
 async function approveCandidate(resourceId: string, candidateId: string) { try { await store.approveQuestionCandidate(resourceId, candidateId); notice.value = '候选题已确认入库，可供后续组卷使用。' } catch (e: any) { showToast(e?.message || '候选题审核失败') } }
 async function download(resource: TeacherResource) { const response = await fetch(resource.download_url || `/api/teacher/resources/${resource.resource_id}/download`, { headers: authHeaders() as HeadersInit }); if (!response.ok) return showToast('下载失败'); const url = URL.createObjectURL(await response.blob()); const link = document.createElement('a'); link.href = url; link.download = resource.name; link.click(); URL.revokeObjectURL(url) }

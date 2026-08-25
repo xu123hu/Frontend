@@ -1,4 +1,4 @@
-import { teacherGet, teacherPost } from './client'
+import { teacherGet, teacherPost, teacherRequest } from './client'
 import type { TeacherResource, UploadTicket } from '@/types/teacher'
 import { authHeaders } from '@/api/client'
 import { ApiError } from '@/api/client'
@@ -64,6 +64,9 @@ export const resourcesApi = {
     teacherPost<TeacherResource>(`/teacher/resources/${resourceId}/publish`, {}, undefined, signal),
   unpublish: (resourceId: string, signal?: AbortSignal) =>
     teacherPost<TeacherResource>(`/teacher/resources/${resourceId}/unpublish`, {}, undefined, signal),
+  /** 删除资源：后端移除任务记录与本地存储文件；已审核入库的题目不受影响 */
+  remove: (resourceId: string, signal?: AbortSignal) =>
+    teacherRequest<{ resource_id: string; deleted: boolean }>('DELETE', `/teacher/resources/${resourceId}`, { signal }),
   approveQuestionCandidates: (resourceId: string, candidateIds: string[], signal?: AbortSignal) =>
     teacherPost<{ resource_id: string; approved_hashes: string[]; review_required: boolean }>(
       `/teacher/resources/${resourceId}/question-candidates/approve`,

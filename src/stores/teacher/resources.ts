@@ -51,6 +51,13 @@ export const useResourcesStore = defineStore('resources', {
         : await resourcesApi.unpublish(id, signal)
       this.patchItem(response.data)
     },
+    async remove(id: string, signal?: AbortSignal) {
+      this.error = null
+      try {
+        await resourcesApi.remove(id, signal)
+        this.items = this.items.filter((x) => x.resource_id !== id)
+      } catch (e: any) { this.error = e?.message || '删除失败'; throw e }
+    },
     async approveQuestionCandidate(resourceId: string, candidateId: string, signal?: AbortSignal) {
       this.error = null
       try {
