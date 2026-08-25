@@ -74,25 +74,16 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
     expect(published.data.status).toBe('published')
   })
 
-  test('grading shows teacher-only question context and requires an explicit confirmation', async ({ page }) => {
+  test('grading: question-focused workspace requires an explicit teacher decision', async ({ page }) => {
     await presetMock(page, TEACHER_USER)
-    await page.goto('/teacher/grading')
+    await page.goto('/teacher/grading?submission_item_id=si-2')
+    await expect(page.getByRole('heading', { name: '函数的单调性', exact: true })).toBeVisible()
+    await expect(page.getByText('正确求导')).toBeVisible()
+    await page.getByRole('button', { name: '教师明确给分' }).click()
+    await page.getByLabel('最终得分').fill('3')
+    await page.getByRole('button', { name: '确认并下一份', exact: true }).click()
+    await expect(page.getByText('教师确认已写入')).toBeVisible()
 
-    await expect(page.getByText('作业：函数的单调性巩固练习')).toBeVisible()
-    await expect(page.getByText('题目（choice）')).toBeVisible()
-    await expect(page.getByText('已知函数 f(x)=x³−3x，求其单调递增区间。')).toBeVisible()
-    await expect(page.getByText('A. (-∞, -1) ∪ (1, +∞)')).toBeVisible()
-    await expect(page.getByText('标准答案（仅教师可见）')).toBeVisible()
-    await expect(page.getByText('(-∞, -1) ∪ (1, +∞)', { exact: true })).toBeVisible()
-    await expect(page.getByText('答案解析（仅教师可见）')).toBeVisible()
-    await expect(page.getByText('求导得到 f′(x)=3x²−3，并按临界点 -1、1 判断符号。')).toBeVisible()
-    const confirmationResponse = page.waitForResponse((response) =>
-      /\/api\/teacher\/grading\/[^/]+\/confirm$/.test(new URL(response.url()).pathname)
-        && response.request().method() === 'POST',
-    )
-    await page.getByRole('button', { name: '接受建议并确认' }).click()
-    const confirmation = await (await confirmationResponse).json()
-    expect(confirmation.data.decision).toBe('accepted')
   })
 
   test('classroom mode toggles through the accessible pressed control', async ({ page }) => {

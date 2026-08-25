@@ -33,4 +33,12 @@ describe('teacher router contract', () => {
       await expect((loader as () => Promise<unknown>)()).resolves.toBeTruthy()
     }
   })
+
+  it('keeps the official grading route on the independent V2 page tree', async () => {
+    const grading = router.getRoutes().find((route) => route.path === '/teacher/grading')
+    const loader = grading?.components?.default as unknown as () => Promise<{ default: { name?: string; __name?: string } }>
+    const component = (await loader()).default
+    expect(component.name || component.__name).toBe('TeacherGradingV2View')
+  })
+
 })

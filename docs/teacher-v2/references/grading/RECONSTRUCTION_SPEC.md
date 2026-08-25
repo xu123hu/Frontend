@@ -1,6 +1,6 @@
 # Grading V2 — Reconstruction Specification
 
-**Status:** PRE-CODE GATE complete; ready for implementation planning
+**Status:** V2 hard-similarity and focused-browser gates passed on `codex/teacher-v2-grading-frontend` (2026-08-24); deployment migration still requires an available PostgreSQL instance.
 **Primary reference:** Gradescope instructor grading workflow
 **Secondary reference:** verified WebWork manual-grader source trace
 **Official route takeover:** `/teacher/grading` replaces the Legacy component only after the acceptance gate passes.
@@ -66,3 +66,13 @@ Open assignment/question
 - Reference/Legacy/V2 screenshots demonstrate that the final workspace no longer resembles the Legacy select-plus-form composition.
 - The initial V2 screenshot is checked against [`REFERENCE_SCREEN_MAP.md`](./REFERENCE_SCREEN_MAP.md). A recognisable top-select + generic-answer-panel + detached-side-score-form composition is a **hard fail**: delete the V2 page and reconstruct from this specification; do not apply a CSS/card/drawer patch and do not change Legacy.
 - Until this gate passes, the V2 shell is limited to the grading workstation. No full Teacher OS shell, global V2 navigation, design-system buildout or speculative cross-module component layer is in scope.
+
+## V2 evidence record — 2026-08-24
+
+- Browser evidence: `artifacts/teacher-v2/grading/v2-ready-1366x768.png`, `v2-ready-1440x900.png`, `v2-review-refresh.png`, and `v2-file-error.png`.
+- V2 browser command: `PW_PORT=5198 npx playwright test e2e/teacher-grading-v2.spec.ts --project=chromium --workers=1` — **3 passed**.
+- Full teacher contracts: frontend `test/teacher` — **67 passed**; backend Workspace/review, grading, assignment-materialization, and migration-graph regression — **46 passed**.
+- The route loader for `/teacher/grading` now resolves only `TeacherGradingV2View.vue`; `TeacherGradingView.vue`, the Legacy grading API wrapper, and the Legacy store have no modifications in this branch.
+- The full `e2e/m3-teacher.spec.ts` suite has a separately reproduced, non-Grading failure at `/teacher/today` (missing “今日工作台”); the updated grading journey itself passes. This is not used to claim a clean whole-teacher-suite result.
+- The visual hard-gate verdict and region-by-region comparison are recorded in [`COMPARISON.md`](../../../../artifacts/teacher-v2/grading/COMPARISON.md).
+- The original-work surface renders senior-high-math TeX through the existing sanitized math renderer; it does not expose raw commands such as `\\pm` or `\\infty`, including when a source omits `$...$` delimiters. The Workspace API supplies `第 1 份作答`-style labels, while the queue explains that answers are blind-graded in submission order. A reviewed source rubric is materialized from `QuestionBank.annotate_meta` without invention, and teacher overrides above the persisted `max_score` are rejected before formal score/mastery writes. Correct objective answers use that same persisted full mark; `m3_004_grading_v2_merge` preserves both historical migration branches while leaving one upgrade head.

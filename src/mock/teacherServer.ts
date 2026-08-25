@@ -21,6 +21,7 @@ function fail(res: any, status: number, code: number, message: string, data: unk
 let artifacts = new Map<string, TeacherArtifact>()
 let assignments = new Map<string, Assignment>()
 let gradingItems: GradingQueueItem[] = gradingQueue()
+let gradingReviews = new Map<string, 'pending' | 'cleared'>()
 let resources: TeacherResource[] = seedResources()
 let tasks = new Map<string, TeacherTask>()
 let modes = new Map<string, ClassroomModeState>()
@@ -44,13 +45,95 @@ function advanceTask(id: string): TeacherTask {
 
 function resetTeacherMock() {
   artifacts = new Map(); assignments = new Map(); gradingItems = gradingQueue(); resources = seedResources()
-  tasks = new Map(); modes = new Map(); idem.clear(); seq = 1
+  gradingReviews = new Map(); tasks = new Map(); modes = new Map(); idem.clear(); seq = 1
 }
 
 function assertScope(cid: string): boolean { return TEACHER_CLASSES.some((c) => c.id === cid) }
 
+function workspaceState(item: GradingQueueItem): 'ungraded' | 'review' | 'confirmed' {
+  if (item.status === 'confirmed') return 'confirmed'
+  if (gradingReviews.get(item.submission_item_id) === 'pending' || item.status === 'low_confidence') return 'review'
+  return 'ungraded'
+}
+
+function gradingWorkspace(selectedId: string | null, status: string) {
+  const queue = gradingItems
+    .map((item, index) => ({
+      submission_item_id: item.submission_item_id,
+      anonymous_label: '第 ' + String(index + 1) + ' 份作答',
+      state: workspaceState(item),
+      manual_review: gradingReviews.get(item.submission_item_id) === 'pending',
+    }))
+    .filter((item) => status === 'all' || item.state === status)
+  const selected = queue.find((item) => item.submission_item_id === selectedId)
+    || queue.find((item) => item.state !== 'confirmed')
+    || queue[0]
+  const selectedIndex = selected ? queue.findIndex((item) => item.submission_item_id === selected.submission_item_id) : -1
+  const item = selected ? gradingItems.find((candidate) => candidate.submission_item_id === selected.submission_item_id) : null
+  const detail = item ? gradingDetail(item) : null
+  const sourceFileId = selected?.submission_item_id === 'si-4' ? 'scan-si-4' : null
+  const following = selectedIndex >= 0 ? [...queue.slice(selectedIndex + 1), ...queue.slice(0, selectedIndex)] : []
+  const nextUngraded = following.find((entry) => entry.state !== 'confirmed')
+  const confirmed = queue.filter((entry) => entry.state === 'confirmed').length
+  return {
+    context: {
+      class: { class_id: 'c1', label: '高二（3）班 · 46 人' },
+      assignment: { assignment_id: 'a1', title: '函数的单调性' },
+      question: {
+        item_no: 1,
+        question_text: '已知 f(x)=x^3-3x，讨论函数的单调性。',
+        q_type: 'solution',
+        options: null,
+        max_score: 10,
+      },
+      filters: { status },
+      progress: { total: queue.length, confirmed, remaining: queue.length - confirmed },
+    },
+    available_context: {
+      assignments: [{ assignment_id: 'a1', title: '函数的单调性' }],
+      questions: [{ item_no: 1, label: '第 1 题', question_text: '已知 f(x)=x^3-3x，讨论函数的单调性。' }],
+    },
+    queue,
+    selected: detail && selected ? {
+      submission_item_id: selected.submission_item_id,
+      work: { original_answer: detail.original_answer, file_id: sourceFileId },
+      scoring: {
+        max_score: 10,
+        rubric_status: 'ready',
+        rubric_items: [
+          { id: 'derivative', criterion: '正确求导', points: 3, evidence_hint: '写出 f′(x)=3x²−3' },
+          { id: 'critical', criterion: '确定分界点', points: 3, evidence_hint: 'x=-1,1' },
+          { id: 'interval', criterion: '写出单调区间', points: 4, evidence_hint: '给出增减区间' },
+        ],
+        standard_answer: 'f′(x)=3x²−3；由导数符号判断函数的增减区间。',
+        answer_analysis: '先求导，确定临界点，再判断每个区间的导数符号。',
+        fallback_standard: detail.scoring_standard,
+      },
+      suggestion: {
+        suggestion_id: detail.suggestion?.suggestion_id ?? null,
+        version: detail.suggestion?.version ?? 1,
+        proposed_score: detail.suggestion?.suggestion_score ?? null,
+        review_needed: detail.suggestion?.review_needed ?? true,
+        evidence: [{ kind: 'grading_evidence', text: detail.suggestion?.evidence ?? '待教师核对原始作答与评分点。' }],
+      },
+      confirmed_decision: item?.teacher_final_score === null ? null : {
+        final_score: item?.teacher_final_score,
+        feedback: detail.suggestion?.teacher_feedback ?? null,
+        decision: detail.suggestion?.decision ?? null,
+      },
+      fixture_id: sourceFileId ? 'handwritten-scan' : 'derivative-solution',
+      source_ref: 'docs/teacher-v2/references/grading/TEST_INPUT_CORPUS.md',
+    } : null,
+    navigation: {
+      previous_id: selectedIndex > 0 ? queue[selectedIndex - 1].submission_item_id : null,
+      next_ungraded_id: nextUngraded?.submission_item_id ?? null,
+    },
+  }
+}
+
 export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
-  const url = (req.url || '').split('?')[0]
+  const [url, queryString = ''] = (req.url || '').split('?')
+  const query = new URLSearchParams(queryString)
   const method = req.method
   const seg = url.split('/').filter(Boolean)
   const isTeacher = isTeacherToken(req)
@@ -161,11 +244,32 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
     // 契约同构（RC-05-1/B1）：真实后端返回 data:{queue:[...]}，前端 gallery 按 res.data?.queue 解包；同形避免 mock 静默空态
 
     if (method === 'GET' && url === '/teacher/grading/queue') { ok(res, { queue: gradingItems }); return true }
+    if (method === 'GET' && url === '/teacher/grading/workspace') {
+      const selectedId = query.get('submission_item_id')
+      const status = query.get('status') || 'all'
+      ok(res, gradingWorkspace(selectedId, status)); return true
+    }
+    if (method === 'GET' && seg[2] && seg[3] === 'file') {
+      if (seg[2] === 'si-4') { fail(res, 503, 50310, 'source_file_temporarily_unavailable'); return true }
+      fail(res, 404, 40400, 'file_not_found'); return true
+    }
     if (method === 'POST' && url === '/teacher/grading/batch-confirm') {
       const b = await readBody(req)
       const results = (b.items || []).map((it: any) => ({ submission_item_id: it, ok: true, error: undefined }))
       gradingItems = gradingItems.map((g) => (b.items || []).includes(g.submission_item_id) ? { ...g, status: 'confirmed', teacher_final_score: g.suggestion_score } : g)
       ok(res, { results, failed: 0 }); return true
+    }
+    if (method === 'POST' && seg[2] && seg[3] === 'review') {
+      const body = await readBody(req)
+      const item = gradingItems.find((candidate) => candidate.submission_item_id === seg[2])
+      if (!item) { fail(res, 404, 40400, 'not_found'); return true }
+      if (body.state !== 'pending' && body.state !== 'cleared') { fail(res, 422, 40001, 'invalid_review_state'); return true }
+      const key = req.headers?.['idempotency-key'] as string | undefined
+      if (key && idem.has(key)) { ok(res, idem.get(key)); return true }
+      gradingReviews.set(item.submission_item_id, body.state)
+      const result = { submission_item_id: item.submission_item_id, state: body.state, replayed: false }
+      if (key) idem.set(key, { ...result, replayed: true })
+      ok(res, result); return true
     }
     if (seg[2] && seg[3] === 'suggest') { const it = gradingItems.find((g) => g.submission_item_id === seg[2]); ok(res, it ? gradingDetail(it).suggestion : null); return true }
     if (seg[2] && seg[3] === 'confirm') {
@@ -236,4 +340,5 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
 
   return false
 }
+
 

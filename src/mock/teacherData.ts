@@ -226,9 +226,11 @@ export function gradingDetail(item: GradingQueueItem): GradingDetail & { suggest
     standard_answer: '(-∞, -1) ∪ (1, +∞)',
     answer_analysis: '求导得到 f′(x)=3x²−3，并按临界点 -1、1 判断符号。',
     original_answer: `$f(x)=x^3-3x$ 的单调性：$f'(x)=3x^2-3$，令其为零得 $x=\\pm 1$，故在 $(-\\infty,-1)\\cup(1,+\\infty)$ 单调增，$(-1,1)$ 单调减。`,
+
     scoring_standard: '正确求导（3 分）、找到分界点（3 分）、写出单调区间（4 分）。',
     suggestion: {
       suggestion_id: `sug-${item.submission_item_id}`, submission_item_id: item.submission_item_id,
+      version: 1,
       student_label: item.student_label, original_answer: '', scoring_standard: '',
       suggestion_score: item.suggestion_score, confidence: item.confidence,
       evidence: '按评分标准分步核对。', review_needed: item.confidence < 0.6,
@@ -253,4 +255,5 @@ export function seedResources(): TeacherResource[] {
     { resource_id: 'r2', name: '函数单调性.pdf', file_type: 'pdf', size_bytes: 512003, status: 'ready', pages: [{ page: 1 }, { page: 2 }], created_at: iso() },
   ]
 }
+
 
