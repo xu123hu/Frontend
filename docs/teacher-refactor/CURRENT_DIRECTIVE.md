@@ -1,10 +1,89 @@
-# CURRENT_DIRECTIVE — Round 05
+# CURRENT_DIRECTIVE — Round 06（当前生效）
 
-> ⭐ **本文件是工程 Agent（DeepSeek V4）的最高优先级施工指令。每轮施工从阅读本文件开始。**
-> 版本：R05 · 发布：2026-08-23 · 发布人：Principal Product Architect
-> 依据：ARCHITECT_REVIEW.md（Round 04，基于浏览器实测 + 源码亲读）
-> 配套：ACCEPTANCE.md（红线）· GOLDEN_PATH.md（验收主线）· modules/*.md（模块 spec）· BUSINESS_OBJECTS.md §3（数据 SSOT）
-> 本文件自包含，无需聊天上下文即可执行。
+> ⭐ **工程 Agent（DeepSeek V4）最高优先级施工指令。每轮施工从阅读本文件开始。**
+> 版本：R06 · 发布：2026-08-24 · 发布人：Principal Product Architect
+> 依据：ARCHITECT_REVIEW.md Round 05-fix（BL-1 RESOLVED，Round 05 关账）
+> 路线图位置：R06 闭环右半环 → R07 课堂 Session → R08 资源/效果验证 → R09 全链验收 → R10 真后端联调
+
+## Current Goal（本轮唯一主线）
+
+**打通闭环右半环：批改确认 → 讲评回流（最值得讲的 3 题）→ 学情动作（干预/复习）→ 回流备课**，即 Golden Path GP-11/GP-12。同时清偿 Round 05 遗留尾巴。
+
+## 施工顺序（Phase 制，前一 Phase 全绿才进下一 Phase）
+
+### Phase A｜清欠（预计 1h）
+
+- **RC-06-0** ~~修 mock 8 个类型错误~~ **已随 `a7c2553` questionBank 重写完成（Architect 亲验 0 错）**。剩余：补 legacy 兼容单测（sections/timeline payload → applyArtifact 渲染不报错）。
+- **RC-06-3** saveDraft 归一：草稿保存统一写回 `content.segments`（停止双轨 timeline），二次保存后刷新结构化字段不丢。
+
+### Phase B｜内容可信（预计 2–3h）
+
+- **RC-06-8（新，P0）题卡内联选项**：选择题题卡主视图渲染只读选项（A–D，KaTeX），教师不进编辑/预览即可审题决策；编辑态保持现输入框形态。
+- **RC-06-9（新，P0）编辑持久化**：`syncToArtifact()` 内存同步之上，逐题保存（编辑/换一题/找相似/锁定）时调用已有 `PUT /teacher/artifacts/:id` 落盘；验收 = 改题→刷新→改动仍在（Architect 亲测此路径）。
+- **RC-06-1** 组卷取题 adapter：按 Constitution #9 抽 `QuestionSource` 接口（mock 题库实现挂后），真源留 R10；**mock 题库真实性已达成（`a7c2553` 亲验：8 题互异/难度合规/选项乱序对齐）**，本轮只做接口隔离不改行为。
+
+### Phase C｜闭环右半环（本轮核心，预计 4–5h）
+
+- **RC-06-6 讲评回流**：批改页确认完 21 份后（或达到阈值），生成「最值得讲的 3 题」讲评卡——每卡含：错误人数/典型错误摘录（来自已批 submission）/关联知识点/建议讲评动作；数据源 = 队列内真实统计，禁硬编码。
+- **RC-06-7 学情动作**：班级学情页每条洞察挂「创建干预」动作 → 预填（班级/知识点/目标学生/依据=该洞察）→ 确认后生成 intervention artifact 并在 Today 时间线出现对应任务。
+
+### P1（Phase A–C 全绿后）
+
+- RC-06-2 Butler 冒烟（链路已通）；RC-06-4 `?focus` 高亮 + linked_insights UI；RC-06-5 时间线编辑器最小闭环（MathLive 公式 + 插图，裁决 ACCEPT）。
+
+## Acceptance Criteria（Architect 逐条亲测）
+
+1. **A0** typecheck 教师域含 mock 真实 0 错；vitest 全绿；状态文档 L48 已修正。
+2. **A3'** 结构化编辑 → saveDraft → 刷新 → 五字段与时长不丢（segments 单轨）；legacy 单测通过。
+3. **A1'** 生成 8 题：题干两两互异（脚本去重证明）、选项真实、难度分布符合蓝图。
+4. **A6'** 确认若干份后讲评卡出现：错误人数 == 队列实际统计（我将改一批答案后核对数字变化）；无硬编码痕迹（rg 检查讲评卡数据源）。
+5. **A7'** 学情页点「创建干预」→ 预填正确 → 确认 → Today 出现干预任务（浏览器全流程）。
+6. **A-通用** console 零错误；GP-1 → GP-12 全链一次走通；证据截图每 RC ≥2 张；IMPLEMENTATION_STATUS 如实逐项。
+
+## Do Not Change
+
+Round 05 全部保护区（D1/D2/发布门/预览/批改寻址/SSOT/时间线回退+五字段抽屉）+ 既有全局约束（导航 7 项/Today 结构/后端 D:\math-arena 禁改/mock 切换机制）。
+
+---
+
+# CURRENT_DIRECTIVE — R05-fix（历史存档）
+
+## Current Goal（本轮唯一目标）
+
+**修复 BL-1（segments 接线断裂），让备课时间线与结构化抽屉真实可用。**
+
+## Priority
+
+- **P0（唯一项）**：RC-05-F1 BL-1 修复。
+- 明确不做（R06 范围，已裁决）：RC-05-6 Butler 冒烟、组卷真实取题、`?focus` 高亮、linked_insight UI。
+
+## Required Changes
+
+**RC-05-F1｜`TeacherPrepView.vue` applyArtifact() 契约接线**
+- 现状（Architect 代码亲读）：L452 只读 `content.sections || content.timeline`；契约已迁 `content.segments`（RD-1）。
+- 修改：`content.segments || content.sections || content.timeline` 三级回退；按 `modules/lesson-artifact.md` 的 LessonSegment schema 映射（`duration_min`→时长、`kind`→环节类型标签、`learning_objective/core_question/teacher_action/student_action/assessment_check`→结构化抽屉字段、`materials[]`→素材计数、`linked_insights[]` 暂存不渲染）。
+- 顺手修复 P-2：「上次类似课」不再硬编码 topic（改为取同课题最近 lesson 的真实 topic/内容）。
+
+## Acceptance Criteria（Architect 将逐条亲测）
+
+1. 点「上次类似课」→ 时间线出现 **6 环节**，Σ时长显示 45 分钟。
+2. 点任一环节【编辑】→ 结构化抽屉打开，五字段（学习目标/核心问题/教师活动/学生活动/检查理解）可见可编辑可保存。
+3. 旧 payload（仅 sections 或 timeline 的历史教案）打开不报错、正常渲染（兼容回退）。
+4. 编辑某环节时长 → 顶部「共 N 分钟」实时更新。
+5. console 零错误；教师域 typecheck 0 错；`npx vitest run test/teacher` 全过。
+6. 截图（时间线 + 抽屉打开态）落 `artifacts/teacher-refactor/round-05/`。
+
+## Do Not Change
+
+Round 05 已 Accepted 的四项（D1/D2/发布门/预览学生端）及其全部既有保护区（导航/Today 结构/后端/生命周期/mock 机制/SSOT 数字）。
+
+## 记录修正要求
+
+`IMPLEMENTATION_STATUS.md` 中 RC-05-5 的「✅ 已完成」与事实不符（12 张证据截图无一备课页；Architect 亲测时间线 0 环节）。随本次修复将其改为真实状态并补齐证据——**今后任何条目打 ✅ 必须同时具备该条目的浏览器截图与操作路径**，无证据不得标记完成。
+
+---
+
+# CURRENT_DIRECTIVE — Round 05（历史存档）
 
 ---
 
