@@ -6,6 +6,7 @@ import {
   MOCK_TOKEN_RESEARCHER,
   MOCK_TOKEN_STUDENT,
   MOCK_TOKEN_TEACHER,
+  resolveMockStartupIdentity,
 } from '@/config/mockIdentity'
 import { mockApi } from '@/mock/server'
 
@@ -77,5 +78,19 @@ describe('mock identity preview', () => {
 
     expect(login.data).toMatchObject({ identity_status: 'pending_review', pending_role: 'teacher' })
     expect(reload.data).toMatchObject({ identity_status: 'pending_review', pending_role: 'teacher', active_role: 'student' })
+  })
+  it('keeps a pending teacher startup state when stale student storage is present', () => {
+    expect(resolveMockStartupIdentity(
+      'student',
+      'ma_mock_role=teacher; ma_mock_state=pending',
+      JSON.stringify({ active_role: 'student' }),
+    )).toMatchObject({ role: 'teacher', state: 'pending', activeRole: 'student' })
+  })
+  it('restores pending teacher startup state from persisted identity without cookies', () => {
+    expect(resolveMockStartupIdentity(
+      'student',
+      '',
+      JSON.stringify({ active_role: 'student', pending_role: 'teacher', identity_status: 'pending_review' }),
+    )).toMatchObject({ role: 'teacher', state: 'pending', activeRole: 'student' })
   })
 })
