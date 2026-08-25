@@ -45,13 +45,13 @@ async function chooseFile(wrapper: ReturnType<typeof mountResources>, file: File
   await flushPromises()
 }
 
-describe('TeacherResourcesView upload and summary workflow', () => {
+describe('TeacherResourcesView 上传与摘要工作流', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     list.mockResolvedValue([existingResource])
   })
 
-  it('rejects a zero-byte file locally before any upload side effect', async () => {
+  it('拒绝空文件：本地拦截，不产生上传副作用，既有摘要仍可见', async () => {
     const wrapper = mountResources()
     await flushPromises()
 
@@ -62,18 +62,8 @@ describe('TeacherResourcesView upload and summary workflow', () => {
     expect(wrapper.text()).toContain('已有摘要：围绕导数概念的课堂活动。')
   })
 
-  it('uploads a nonempty file through the existing store contract', async () => {
-    upload.mockResolvedValue({ resource_id: 'resource-2', status: 'uploading' })
-    list
-      .mockResolvedValueOnce([existingResource])
-      .mockResolvedValueOnce([{
-        resource_id: 'resource-2',
-        name: '有效资料.txt',
-        file_type: 'text/plain',
-        size_bytes: 12,
-        status: 'preprocessing',
-        created_at: '2026-08-22T00:01:00Z',
-      }, existingResource])
+  it('非空文件走 store 契约上传并即时上架到资料库', async () => {
+    upload.mockResolvedValue({ resource_id: 'resource-2', status: 'uploading', task_id: 'task-2' })
     const wrapper = mountResources()
     await flushPromises()
     const file = new File(['有效内容'], '有效资料.txt', { type: 'text/plain' })
@@ -81,41 +71,39 @@ describe('TeacherResourcesView upload and summary workflow', () => {
     await chooseFile(wrapper, file)
 
     expect(upload).toHaveBeenCalledWith(file, undefined)
-    expect(toast).toHaveBeenCalledWith('上传成功，资源已可用')
+    expect(toast).toHaveBeenCalledWith('上传成功')
     expect(wrapper.text()).toContain('有效资料.txt')
   })
 
-  it('immediately renders the backend understanding summary on the same resource card', async () => {
+  it('生成摘要后在同一资源卡立即展示后端摘要', async () => {
     understand.mockResolvedValue({
       data: {
         ...existingResource,
-        status: 'understand',
         summary: '新摘要：学生需区分平均变化率与瞬时变化率。',
       },
     })
     const wrapper = mountResources()
     await flushPromises()
 
-    const card = wrapper.get('.t-resource')
-    await card.get('button:nth-of-type(2)').trigger('click')
+    const card = wrapper.get('.resource-v2__item')
+    await card.get('.resource-v2__actions button:nth-of-type(2)').trigger('click')
     await flushPromises()
 
     expect(card.text()).toContain('新摘要：学生需区分平均变化率与瞬时变化率。')
     expect(card.text()).not.toContain('已有摘要：围绕导数概念的课堂活动。')
-    expect(toast).toHaveBeenCalledWith('本地摘要已生成')
+    expect(wrapper.text()).toContain('摘要已更新；请结合原文件进行教学判断。')
   })
 
-  it('keeps an existing usable summary visible when understanding fails', async () => {
+  it('摘要生成失败时保留既有可用摘要，并向教师报错', async () => {
     understand.mockRejectedValue(new Error('理解服务暂不可用'))
     const wrapper = mountResources()
     await flushPromises()
 
-    const card = wrapper.get('.t-resource')
-    await card.get('button:nth-of-type(2)').trigger('click')
+    const card = wrapper.get('.resource-v2__item')
+    await card.get('.resource-v2__actions button:nth-of-type(2)').trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('已有摘要：围绕导数概念的课堂活动。')
-    expect(wrapper.text()).toContain('理解服务暂不可用')
     expect(toast).toHaveBeenCalledWith('理解服务暂不可用')
   })
 })

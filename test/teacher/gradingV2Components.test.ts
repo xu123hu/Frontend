@@ -7,7 +7,7 @@ import { toGradingWorkspace } from '@/features/teacher-grading-v2/gradingWorkspa
 import { useGradingWorkspaceStore } from '@/stores/teacher/gradingWorkspace'
 import { serverWorkspaceFixture } from './fixtures/gradingWorkspace'
 
-async function mountWorkspace(response: unknown = serverWorkspaceFixture) {
+async function mountWorkspace(response = serverWorkspaceFixture) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const router = createRouter({

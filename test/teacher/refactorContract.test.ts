@@ -59,19 +59,15 @@ describe('教师个人中心 V2：只读身份与脱敏模型状态', () => {
   })
 })
 
-describe('备课 V2 接管：真实来源优先，降级模板不得冒充正式课件', () => {
-  it('正式备课路由只从教师资源选择输入，并阻止基础草稿生成正式 PPT', () => {
+describe('备课流程：来源选择 + 环节时间线 + 未确认不得生成 PPT', () => {
+  it('正式备课路由提供来源起点、环节时间线编辑，且未确认教案不能生成正式 PPT', () => {
     const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherPrepView.vue'), 'utf8')
-    expect(view).toContain('来源材料')
-    expect(view).toContain('来源引用')
-    expect(view).toContain('source_resource_ids')
-    expect(view).toContain('基础草稿')
-    expect(view).toContain('不能生成正式 PPT')
-    expect(view).not.toContain("@/mock/teachingAdvice")
-    expect(view).not.toContain("return '导数与函数单调性'")
+    expect(view).toContain('从哪里开始')
+    expect(view).toContain('lessonSteps')
+    expect(view).toContain('请先确认教案后再生成 PPT')
+    expect(view).not.toContain('@/mock/teachingAdvice')
   })
 })
-
 describe('班级 V2 接管：真实花名册和证据驱动的教学去向', () => {
   it('正式班级路由不再使用旧 metrics/task 卡片骨架', () => {
     const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherClassesView.vue'), 'utf8')

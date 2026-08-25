@@ -11,9 +11,7 @@
       <label v-if="classes.length" class="classes-v2__picker">当前班级<select v-model="selectedClassId" @change="loadClassData"><option v-for="item in classes" :key="item.id" :value="item.id">{{ item.name }}</option></select></label>
     </header>
     <p v-if="error" class="classes-v2__notice is-error" role="alert">{{ error }}</p>
-    <main v-if="loading" class="classes-v2__empty">正在加载该班真实成员和作答数据…
-      <section v-if="visibleInviteCode" class="classes-v2__next" aria-label="学生入班邀请码"><div><p class="classes-v2__eyebrow">学生入班邀请码</p><h2 style="letter-spacing:.16em;">{{ visibleInviteCode }}</h2><p>仅向本班创建教师展示，请通过可信渠道发送给学生。</p></div><button class="t-btn sm" type="button" @click="copyInviteCode">{{ copyStatus || '复制邀请码' }}</button></section>
-    </main>
+    <main v-if="loading" class="classes-v2__empty">正在加载该班真实成员和作答数据…</main>
     <main v-else-if="!classes.length" class="classes-v2__empty"><h2>还没有任教班级</h2><p>等待班级建立或任课关系配置后，此处才会出现花名册。</p></main>
     <main v-else class="classes-v2__workspace">
       <section class="classes-v2__roster"><header><div><p class="classes-v2__eyebrow">平台成员</p><h2>班级花名册</h2></div><span>{{ students.length }} 名已确认学生</span></header>
@@ -27,6 +25,7 @@
       <section class="classes-v2__next"><div><p class="classes-v2__eyebrow">带入当前班级</p><h2>{{ currentClass?.name }}</h2><p>以下入口会将当前班级上下文交给正式工作区。</p></div><div><button class="t-btn primary" type="button" @click="go('/teacher/prep')">基于资料备课</button><button class="t-btn" type="button" @click="go('/teacher/assign')">从已审核题库组卷</button><button class="t-btn" type="button" @click="go('/teacher/classroom')">进入课堂控制</button></div></section>
     </main>
 
+    <section v-if="visibleInviteCode" class="classes-v2__next" data-testid="class-invite-code" aria-label="学生入班邀请码"><div><p class="classes-v2__eyebrow">学生入班邀请码</p><h2 style="letter-spacing:.16em;">{{ visibleInviteCode }}</h2><p>仅向本班创建教师展示，请通过可信渠道发送给学生。</p></div><button class="t-btn sm" type="button" :aria-label="`复制班级邀请码 ${visibleInviteCode}`" @click="copyInviteCode">{{ copyStatus || '复制邀请码' }}</button></section>
   </div>
 </template>
 

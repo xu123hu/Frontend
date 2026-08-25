@@ -71,7 +71,7 @@
           <div v-if="insights.length" class="t-insight-list">
             <div v-for="ins in insights" :key="ins.insight_id" class="t-insight">
               <b class="t-insight-summary">{{ ins.summary }}</b>
-              <p class="t-muted">{{ ins.evidence }}</p>
+              <p class="t-muted">{{ evidenceText(ins.evidence) }}</p>
               <div class="t-chiprow">
                 <button
                   v-for="act in ins.recommended_actions"
@@ -118,11 +118,23 @@ const auth = useAuthStore()
 
 const hour = new Date().getHours()
 const greeting = computed(() => hour < 11 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好')
-/** 修复"王老师老师"重复称呼：仅在昵称不以"老师"结尾时追加 */
-const displayName = computed(() => {
-  const raw = auth.nickname || '教师'
-  return raw.endsWith('老师') ? raw : `${raw}老师`
-})
+/** 教师称呼规范化：去重"老师"后缀、修正空值/占位值（教师/同学），避免"王老师老师/undefined老师" */
+function normalizeTeacherName(value: unknown) {
+  const nickname = typeof value === 'string' ? value.trim() : ''
+  if (!nickname || nickname === '教师' || nickname === '同学') return '老师'
+  const name = nickname.replace(/(?:老师)+$/, '').trim()
+  return name ? `${name}老师` : '老师'
+}
+const displayName = computed(() => normalizeTeacherName(auth.nickname))
+/** 教学证据面向前端渲染：禁止裸露内部 key=value 诊断字段 */
+function evidenceText(value: unknown) {
+  if (typeof value !== 'string' || !value.trim()) return '暂无更多证据'
+  const evidence = value.trim()
+  if (/(?:^|[;；,，\s])[a-z][a-z0-9_]*\s*=/i.test(evidence)) {
+    return '证据格式待更新，暂不展示内部诊断字段。'
+  }
+  return evidence
+}
 
 
 const nextLesson = computed(() => store.data?.next_lesson || null)

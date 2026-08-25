@@ -168,14 +168,6 @@ export function quizArtifact(kps: string[], count: number, opts: Partial<QuizBui
     answer_analysis: q.answer_analysis,
 
   }))
-  const slotFulfillment = (Object.keys(quota.effective) as QuizType[]).flatMap((qType) => difficultySlots(quota.effective[qType], difficulty).map((slot) => ({
-    question_type: qType,
-    difficulty: slot.difficulty,
-    requested: slot.requested,
-    fulfilled: items.filter((item) => item.q_type === (qType === 'text' ? 'solution' : qType) && (slot.difficulty === 'any' || item.difficulty === slot.difficulty)).length,
-    relaxed: 0,
-  })))
-  const insufficient = items.length < requestedCount
   return {
     artifact_id: 'art-quiz-1', artifact_type: 'quiz_set', scene: 'teacher.assessment', class_id: 'c1',
     owner_id: 't1', status: 'draft', version: 1, engine: 'local',
