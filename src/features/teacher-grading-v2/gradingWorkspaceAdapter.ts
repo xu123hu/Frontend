@@ -43,7 +43,12 @@ function parseContext(value: unknown): WorkspaceContext {
       itemNo: number(questionSource.item_no),
       questionText: string(questionSource.question_text),
       questionType: string(questionSource.q_type),
-      options: questionSource.options === null || questionSource.options === undefined ? null : array(questionSource.options).map(string),
+      // 选择题选项兼容两种后端形态：字符串数组 或 {A:'..', B:'..'} 映射
+      options: questionSource.options === null || questionSource.options === undefined
+        ? null
+        : Array.isArray(questionSource.options)
+          ? questionSource.options.map(string)
+          : Object.entries(record(questionSource.options)).map(([key, value]) => `${key}. ${string(value)}`),
       maxScore: nullableNumber(questionSource.max_score),
     } : null,
     filter: filter(filters.status),
