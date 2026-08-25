@@ -5,7 +5,7 @@ export const MOCK_TOKEN_RESEARCHER = 'mock-token-researcher-preview'
 export const MOCK_TOKEN_ADMIN = 'mock-token-admin-preview'
 
 type MockRole = 'student' | 'teacher' | 'researcher' | 'admin'
-type MockState = 'approved' | 'pending' | 'needs_more_info' | 'rejected'
+type MockState = 'approved' | 'pending' | 'needs_more_info' | 'rejected' | 'suspended'
 
 type MockUser = { nickname: string; roles: { role: MockRole }[]; active_role: MockRole; grade: string }
 
@@ -27,7 +27,7 @@ function isMockRole(value: unknown): value is MockRole {
 }
 
 function isMockState(value: unknown): value is MockState {
-  return ['approved', 'pending', 'needs_more_info', 'rejected'].includes(String(value))
+  return ['approved', 'pending', 'needs_more_info', 'rejected', 'suspended'].includes(String(value))
 }
 
 function cookieValue(cookie: string, name: string): string | null {

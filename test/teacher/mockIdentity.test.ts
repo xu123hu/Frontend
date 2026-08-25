@@ -93,4 +93,11 @@ describe('mock identity preview', () => {
       JSON.stringify({ active_role: 'student', pending_role: 'teacher', identity_status: 'pending_review' }),
     )).toMatchObject({ role: 'teacher', state: 'pending', activeRole: 'student' })
   })
+  it('keeps a suspended teacher out of the approved startup fallback', () => {
+    expect(resolveMockStartupIdentity(
+      'student',
+      'ma_mock_state=suspended',
+      JSON.stringify({ active_role: 'teacher' }),
+    )).toMatchObject({ role: 'teacher', state: 'suspended' })
+  })
 })
