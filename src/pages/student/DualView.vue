@@ -140,11 +140,24 @@
             </div>
           </div>
           <div class="side-card">
-            <h4>💬 随讲随问 · AI 在听</h4>
-            <p class="side-tip">没听懂？把你的疑问写下来，我们带问题去对话学习，AI 会基于本课上下文引导你。</p>
+            <h4>💬 AI 课堂助手 · 随讲随问 / 随堂小测</h4>
+            <div ref="chatListRef" class="side-msgs">
+              <div v-if="!chatAsk.messages.value.length" class="side-tip">
+                没听懂？直接提问；或点「随堂小测」让 AI 就当前页出一道选择题。AI 会结合本课上下文引导（页内即时对话，不再跳转）。
+              </div>
+              <MessageBubble v-for="m in chatAsk.messages.value" :key="m.key" :msg="m" @quiz-answered="onQAnswer" />
+              <div v-if="chatAsk.streaming.value" class="v4-thinking">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>AI 思考中…
+              </div>
+            </div>
+            <div class="side-quick">
+              <button class="chip" @click="quickQuiz">🎯 随堂小测</button>
+              <button class="chip" @click="ask('这一页我没听懂，请讲细一点并给例子。')">🤔 没听懂这里</button>
+              <button class="chip" @click="ask('请总结本课要点并告诉我最易错的地方。')">📌 本课小结</button>
+            </div>
             <div class="ask-row">
-              <input v-model="askDraft" class="input" placeholder="例如：为什么这里要讨论定义域？" @keyup.enter="ask" />
-              <button class="secondary" @click="ask">提问</button>
+              <input v-model="askDraft" class="input" placeholder="例如：为什么这里要讨论定义域？" @keyup.enter="ask()" />
+              <button class="secondary" :disabled="chatAsk.streaming.value" @click="ask()">提问</button>
             </div>
           </div>
           <div class="side-card">
@@ -158,9 +171,12 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api/client'
+import { useChat } from '@/composables/useChat'
+import MessageBubble from '@/components/chat/MessageBubble.vue'
+import { SKILL_ID_BY_KEY } from '@/config/skills'
 import { classroomApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import LatexText from '@/components/LatexText.vue'
@@ -181,6 +197,40 @@ const genTopic = ref('')
 const curIndex = ref(0)
 const speaking = ref(false)
 const askDraft = ref('')
+// 页内 AI 课堂助手（OpenMAIC 语义：随讲随问 + 随堂小测，复用现有对话/出题能力，不再跳页）
+const chatAsk = useChat({
+  workspace: 'student',
+  manageConversations: false,
+  sendThinking: true,
+  hooks: { resolveSkills: (keys) => (keys || []).map((k) => SKILL_ID_BY_KEY[k] || k) },
+})
+function ensureConv() {
+  if (!chatAsk.activeConvId.value) return chatAsk.createConversation('student').catch(() => {})
+  return Promise.resolve()
+}
+function ask(t) {
+  const text = (typeof t === 'string' ? t : askDraft.value || '').trim()
+  if (!text || chatAsk.streaming.value) return
+  askDraft.value = ''
+  ensureConv().then(() => {
+    const ctx = session.value
+      ? `我现在在第 ${curIndex.value + 1} 页「${currentSlide?.title || ''}」，正在学习「${session.value.title}」。`
+      : ''
+    chatAsk.doSend(ctx + text, { skills: [] })
+  })
+}
+function quickQuiz() {
+  const base = currentSlide?.title ? `基于「${currentSlide.title}」(第 ${curIndex.value + 1} 页)` : '基于本课'
+  const text = base + '出一道高中数学选择题（给出选项与解析），适合课堂随堂小测。'
+  if (chatAsk.streaming.value) return
+  ensureConv().then(() => chatAsk.doSend(text, { skills: ['smart_quiz'] }))
+}
+const chatListRef = ref(null)
+watch(
+  () => chatAsk.messages.value.length + (chatAsk.streaming.value ? 1 : 0),
+  () => nextTick(() => { const el = chatListRef.value; if (el) el.scrollTop = el.scrollHeight })
+)
+function onQAnswer(p) { toast.info(p?.feedback === 'correct' ? '答对啦！' : '看下解析，再试一次') }
 const notes = ref('')
 const sessionKey = 'dual-notes:' + (currentId.value || '')
 
@@ -248,7 +298,7 @@ async function loadSession() {
   curIndex.value = 0
   try {
     const list = await classroomApi.sessions()
-    const mine = (list?.items || []).filter((s) => s.status === 'ready')
+    const mine = ((list?.data || list)?.items || []).filter((s) => s.status === 'ready')
     // 优先回显：选中课程的会话 → 其次最近生成的课堂（含自由生成 topic 会话）
     const hit =
       (currentId.value ? mine.find((s) => s.course_id === currentId.value) : null) ||
@@ -256,8 +306,9 @@ async function loadSession() {
       null
     if (hit) {
       const detail = await classroomApi.session(hit.session_id)
+      const dd = detail?.data || detail
       // 回显防御：只接受内容完整的 ready 会话（早期生成中断可能留下空 slides）
-      if (detail?.status === 'ready' && detail?.slides?.length) session.value = detail
+      if (dd?.status === 'ready' && dd?.slides?.length) session.value = dd
     }
   } catch { /* 尚无会话，展示创建面板 */ }
 }
@@ -271,9 +322,10 @@ async function startGeneration() {
   generating.value = true
   try {
     const s = await classroomApi.createSession(payload)
-    session.value = s
+    const d = s?.data || s
+    session.value = d
     curIndex.value = 0
-    pollSession(s.session_id)
+    pollSession(d.session_id)
   } catch (e) {
     toast.error(e?.message || '生成失败，请稍后重试')
   } finally {
@@ -287,9 +339,10 @@ async function pollSession(id) {
   const tick = async () => {
     try {
       const s = await classroomApi.session(id)
-      session.value = s
-      if (s.status === 'ready' || s.status === 'failed') return
-      if (s.status === 'generating' && s.slides?.length) { /* 进度写回，无需退出 */ }
+      const d = s?.data || s
+      session.value = d
+      if (d.status === 'ready' || d.status === 'failed') return
+      if (d.status === 'generating' && d.slides?.length) { /* 进度写回，无需退出 */ }
     } catch { /* 网络抖动继续轮询 */ }
     pollTimer = setTimeout(tick, 2500)
   }
@@ -334,14 +387,6 @@ function startFresh() {
 
 function saveNotes() {
   try { localStorage.setItem('dual-notes:' + currentId.value, notes.value) } catch { /* 无痕模式忽略 */ }
-}
-
-function ask() {
-  const t = askDraft.value.trim()
-  if (!t) return
-  askDraft.value = ''
-  toast.info('已带问题前往对话学习，AI 会结合本课知识点引导你')
-  router.push({ path: '/dialog', query: { q: t } })
 }
 
 async function postLesson() {
@@ -423,12 +468,23 @@ onBeforeUnmount(() => { clearTimeout(pollTimer); window.speechSynthesis?.cancel(
 .ask-row input { flex: 1; }
 .slide { position: relative; overflow: hidden; }
 .page-fade-enter-active, .page-fade-leave-active { transition: opacity .22s ease, transform .22s ease; }
-.page-fade-enter-from { opacity: 0; transform: translateX(14px); }
-.page-fade-leave-to { opacity: 0; transform: translateX(-14px); }
+.page-fade-enter-from { opacity: 0; transform: translateX(28px); }
+.page-fade-leave-to { opacity: 0; transform: translateX(-24px); }
 .ex-q { cursor: pointer; }
 .ex-toggle { margin-left: 8px; font-size: 11px; color: var(--brand, #3b7bff); font-weight: 700; }
 .self-check { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--line, #eef1f5); font-size: 12.5px; color: var(--ink2, #646a73); font-weight: 700; }
 .self-check button { border: 1px solid var(--line, #eef1f5); background: #fff; border-radius: 999px; padding: 4px 12px; cursor: pointer; font: inherit; font-size: 12px; }
 .self-check button.picked { background: var(--brand-soft, #eaf1ff); border-color: var(--warn-border, #bcd4ff); }
 .rate-sel { width: 76px; flex-shrink: 0; }
+/* ==== 页内 AI 课堂助手（OpenMAIC 语义） ==== */
+.side-msgs { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; }
+.side-msgs :deep(.inline-math) { font-size: 13px; }
+.side-quick { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.chip { border: 1px solid var(--line, #eef1f5); background: var(--card-bg, #fff); border-radius: 999px; font-size: 12px; padding: 4px 10px; cursor: pointer; color: var(--ink2, #334155); transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
+.chip:hover { border-color: #93c2f7; color: #2563eb; background: #f3f8ff; }
+.v4-thinking { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink3, #9aa1ac); padding: 6px 2px; }
+.v4-thinking .dot { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; animation: blink 1.2s infinite; }
+.v4-thinking .dot:nth-child(2) { animation-delay: .2s; } .v4-thinking .dot:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: .25; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
+.side-card { transition: border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
 </style>
