@@ -105,7 +105,7 @@ test.describe('unified authentication journeys', () => {
     await presetRole(teacherPage, 'teacher')
     await teacherPage.goto('/')
     await expect(teacherPage).toHaveURL(/\/teacher\/today/)
-    await expect(teacherPage.getByText('函数的单调性')).toBeVisible()
+    await expect(teacherPage.getByText('导数与函数单调性')).toBeVisible()
     await teacherContext.close()
   })
 
