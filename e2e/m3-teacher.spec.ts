@@ -16,62 +16,46 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
     await page.goto('/')
 
     await expect(page).toHaveURL(/\/teacher\/today/)
-    await expect(page.getByRole('heading', { name: /王老师/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /李老师/ })).toBeVisible()
     await expect(page.getByRole('navigation', { name: '教师工作台导航' })).toBeVisible()
   })
 
-  test('monotonicity quiz blocks publication while strict inventory is insufficient, then publishes after reducing count', async ({ page }) => {
+  test('strict-source quiz fills the requested count, is reviewed by teacher, then publishes for students', async ({ page }) => {
     await presetMock(page, TEACHER_USER)
     await page.goto('/teacher/assign')
-    await expect(page.getByLabel('班级')).toHaveValue('c1')
-    await page.getByLabel('范围').selectOption('monotonicity')
+    await expect(page.getByText('组卷草稿')).toBeVisible()
 
-    const insufficientResponse = page.waitForResponse((response) =>
+    await page.getByLabel('目标班级').selectOption('c1')
+    await page.getByLabel('知识点代码').fill('函数单调性')
+
+    const genResponse = page.waitForResponse((response) =>
       response.url().includes('/api/teacher/quizzes/generate') && response.request().method() === 'POST',
     )
-    await page.getByRole('button', { name: '✨ 生成试卷' }).click()
-    const insufficient = await (await insufficientResponse).json()
-    expect(insufficient.data.content).toMatchObject({
-      knowledge_points: ['MATH-003'],
-      count: 8,
-      insufficient: true,
-    })
-    expect(insufficient.data.validation).toMatchObject({ requested_count: 8, available_count: 6 })
-    expect(insufficient.data.content.question_type_distribution).toEqual({ choice: 2, blank: 1, solution: 3 })
-    expect(insufficient.data.validation.slot_fulfillment).toEqual(expect.arrayContaining([
-      expect.objectContaining({ question_type: 'choice', requested: expect.any(Number), fulfilled: expect.any(Number), relaxed: 0 }),
-      expect.objectContaining({ question_type: 'text', difficulty: 'easy', requested: expect.any(Number), fulfilled: expect.any(Number), relaxed: 0 }),
-    ]))
-    const choice = insufficient.data.content.items.find((item: any) => item.q_type === 'choice')
-    expect(choice).toMatchObject({
-      options: { A: '递增区间' }, answer: 'A', analysis: expect.any(String), difficulty: expect.any(String),
-    })
-    expect(insufficient.data).toMatchObject({ degraded: true })
-    expect(insufficient.data.warnings).toContain('题库仅有 6/8 道严格命中题，请调整知识点范围、题型或题量后再发布。')
-    await expect(page.getByRole('button', { name: '确认并发布给学生' })).toBeDisabled()
+    await page.getByRole('button', { name: '从严格题源生成草稿' }).click()
+    const generated = await (await genResponse).json()
+    const items = generated.data.content.items as any[]
+    expect(items.length).toBe(8)
+    expect(generated.data.degraded).toBe(false)
+    for (const item of items) {
+      expect(item.question_text).toBeTruthy()
+      expect(item.answer).toBeTruthy()
+      expect(['choice', 'blank', 'text']).toContain(item.q_type)
+    }
 
-    await page.getByLabel('题量').fill('6')
-    const sufficientResponse = page.waitForResponse((response) =>
-      response.url().includes('/api/teacher/quizzes/generate') && response.request().method() === 'POST',
-    )
-    await page.getByRole('button', { name: '✨ 生成试卷' }).click()
-    const sufficient = await (await sufficientResponse).json()
-    expect(sufficient.data.content).toMatchObject({ count: 6, insufficient: false })
-    expect(sufficient.data.validation).toMatchObject({ requested_count: 6, available_count: 6 })
-    expect(sufficient.data.content.question_type_distribution).toEqual({ choice: 1, blank: 1, solution: 4 })
-    expect(sufficient.data).toMatchObject({ degraded: false, warnings: [] })
-    await expect(page.getByText('A. 递增区间')).toBeVisible()
-    await expect(page.getByText('标准答案：A')).toBeVisible()
-    await expect(page.getByText(/解析：令 f/).first()).toBeVisible()
-    await expect(page.getByRole('button', { name: '确认并发布给学生' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: '确认题集草稿' })).toBeEnabled()
+    await page.getByRole('button', { name: '确认题集草稿' }).click()
+    await expect(page.getByRole('button', { name: '创建作业草稿' })).toBeVisible()
+    await page.getByRole('button', { name: '创建作业草稿' }).click()
 
     const publishResponse = page.waitForResponse((response) =>
       /\/api\/teacher\/assignments\/[^/]+\/publish$/.test(new URL(response.url()).pathname)
         && response.request().method() === 'POST',
     )
-    await page.getByRole('button', { name: '确认并发布给学生' }).click()
+    await page.getByRole('button', { name: '发布给学生' }).click()
+    await page.getByRole('button', { name: '确认发布给学生' }).click()
     const published = await (await publishResponse).json()
     expect(published.data.status).toBe('published')
+    await expect(page.getByRole('heading', { name: '我的作业' })).toBeVisible()
   })
 
   test('grading: question-focused workspace requires an explicit teacher decision', async ({ page }) => {
@@ -86,21 +70,21 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
 
   })
 
-  test('classroom mode toggles through the accessible pressed control', async ({ page }) => {
+  test('classroom mode persists through the explicit two-step teacher confirm', async ({ page }) => {
     await presetMock(page, TEACHER_USER)
     await page.goto('/teacher/classroom')
 
-    await expect(page.getByText('课堂模式未开启')).toBeVisible()
-    const modeToggle = page.locator('[aria-pressed="false"]')
-    await expect(modeToggle).toHaveCount(1)
+    await expect(page.getByText('当前未开启')).toBeVisible()
+    await page.getByRole('button', { name: '准备开启课堂模式' }).click()
     const enabledResponse = page.waitForResponse((response) =>
       new URL(response.url()).pathname === '/api/teacher/classes/c1/classroom-mode'
         && response.request().method() === 'POST',
     )
-    await modeToggle.click()
+    await page.getByRole('button', { name: '确认执行' }).click()
     const enabled = await (await enabledResponse).json()
     expect(enabled.data.enabled).toBe(true)
-    await expect(page.getByText('课堂模式已开启')).toBeVisible()
+    await expect(page.getByText('当前已开启')).toBeVisible()
+    await expect(page.getByRole('button', { name: '准备关闭课堂模式' })).toBeVisible()
   })
 
   test('student role cannot enter teacher workspace', async ({ page }) => {
