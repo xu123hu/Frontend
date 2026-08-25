@@ -3,7 +3,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import { router } from './router'
 import { setAccessToken } from './api/authSession'
-import { resolveMockUser } from './config/mockIdentity'
+import { resolveMockStartupIdentity, resolveMockUser } from './config/mockIdentity'
 import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/github-dark.css'
 import './styles/tokens.css'
@@ -17,12 +17,16 @@ import './styles/research.css'
 const useMock = import.meta.env.VITE_USE_MOCK === '1'
 let mockRole = (import.meta.env.VITE_MOCK_ROLE || 'student').toString()
 if (useMock) {
-  try { mockRole = JSON.parse(localStorage.getItem('ma_user') || 'null')?.active_role || mockRole } catch { /* ignore */ }
-  document.cookie = `ma_mock_role=${mockRole}; path=/; SameSite=Lax`
+  const startup = resolveMockStartupIdentity(mockRole, document.cookie, localStorage.getItem('ma_user'))
+  mockRole = startup.role
+  document.cookie = `ma_mock_role=${startup.role}; path=/; SameSite=Lax`
+  document.cookie = `ma_mock_state=${startup.state}; path=/; SameSite=Lax`
   document.cookie = 'ma_csrf=mock-csrf; path=/; SameSite=Lax'
-  const mockToken = mockRole === 'student' ? 'mock-token-preview' : `mock-token-${mockRole}-preview`
+  const mockToken = startup.activeRole === 'student' ? 'mock-token-preview' : `mock-token-${startup.activeRole}-preview`
   setAccessToken(mockToken)
-  try { localStorage.setItem('ma_user', JSON.stringify(resolveMockUser(mockRole))) } catch { /* ignore */ }
+  try {
+    if (!startup.storedUser) localStorage.setItem('ma_user', JSON.stringify(resolveMockUser(mockRole)))
+  } catch { /* ignore */ }
 }
 
 const app = createApp(App)

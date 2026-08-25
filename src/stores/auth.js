@@ -6,6 +6,7 @@ import { clearAccessToken, setAccessToken } from '@/api/authSession'
 function deriveStatus(user) {
   if (!user) return 'anonymous'
   if (user.status === 'deletion_pending') return 'deletion_pending'
+  if (['pending_review', 'needs_more_info', 'rejected'].includes(user.identity_status)) return user.identity_status
   if (user.onboarding_status && user.onboarding_status !== 'completed') return 'onboarding'
   const active = (user.roles || []).find((item) => item.role === user.active_role)
   if (active && active.status !== 'approved') return 'pending_review'
@@ -15,7 +16,7 @@ function deriveStatus(user) {
 export const useAuthStore = defineStore('auth', {
   state: () => ({ status: 'idle', user: null, bootstrapPromise: null }),
   getters: {
-    isLoggedIn: (state) => ['authenticated', 'onboarding', 'pending_review', 'deletion_pending'].includes(state.status),
+    isLoggedIn: (state) => ['authenticated', 'onboarding', 'pending_review', 'needs_more_info', 'rejected', 'deletion_pending'].includes(state.status),
     approvedRoleBindings: (state) => (state.user?.roles || []).filter((item) => item.status === 'approved' || item.verified === true),
     roles() { return this.approvedRoleBindings.map((item) => item.role) },
     pendingRoles: (state) => (state.user?.roles || []).filter((item) => item.status && item.status !== 'approved').map((item) => item.role),
@@ -27,6 +28,10 @@ export const useAuthStore = defineStore('auth', {
     applyIdentity(user) {
       this.user = user
       this.status = deriveStatus(user)
+    },
+    applyAuthResponse(data) {
+      this.applyIdentity({ ...data.user, identity_status: data.identity_status, pending_role: data.pending_role })
+      if (data.onboarding_required && this.status === 'authenticated') this.status = 'onboarding'
     },
     async bootstrap() {
       if (this.status !== 'idle' && this.status !== 'anonymous') return
@@ -49,14 +54,19 @@ export const useAuthStore = defineStore('auth', {
     async loginSms(payload) {
       const data = await authApi.loginSms(payload)
       setAccessToken(data.access_token)
-      this.applyIdentity(data.user)
-      if (data.onboarding_required) this.status = 'onboarding'
+      this.applyAuthResponse(data)
       return data
     },
     async loginPassword(payload) {
       const data = await authApi.loginPassword(payload)
       setAccessToken(data.access_token)
-      this.applyIdentity(data.user)
+      this.applyAuthResponse(data)
+      return data
+    },
+    async registerSms(payload) {
+      const data = await authApi.registerSms(payload)
+      setAccessToken(data.access_token)
+      this.applyAuthResponse(data)
       return data
     },
     async refreshMe() {

@@ -12,6 +12,7 @@ describe('role-aware auth navigation', () => {
 
   it('routes onboarding, pending review, and deletion identities to their only allowed areas', () => {
     expect(resolveAuthNavigation(route('/overview'), { status: 'onboarding' })).toEqual({ path: '/onboarding/student' })
+    expect(resolveAuthNavigation(route('/'), { status: 'onboarding' })).toEqual({ path: '/onboarding/student' })
     expect(resolveAuthNavigation(route('/teacher/today'), { status: 'pending_review' })).toEqual({ path: '/identity/pending' })
     expect(resolveAuthNavigation(route('/overview'), { status: 'deletion_pending' })).toEqual({ path: '/account/security' })
   })
@@ -23,5 +24,16 @@ describe('role-aware auth navigation', () => {
     expect(resolveAuthNavigation(route('/admin/identity/applications', { requiresRole: 'admin' }), {
       status: 'authenticated', activeRole: 'admin', roles: ['student', 'admin'],
     })).toBe(true)
+  })
+
+  it('routes an approved researcher root to the research workspace', () => {
+    expect(resolveAuthNavigation(route('/'), {
+      status: 'authenticated', activeRole: 'researcher', roles: ['researcher'],
+    })).toEqual({ path: '/research' })
+  })
+
+  it('keeps needs-more-info identities out of the student home', () => {
+    expect(resolveAuthNavigation(route('/overview'), { status: 'needs_more_info' }))
+      .toEqual({ path: '/identity/pending' })
   })
 })

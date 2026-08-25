@@ -89,7 +89,7 @@ export function resolveAuthNavigation(to, auth) {
   if (to.meta.public) return true
   if (auth.status === 'anonymous') return { path: '/login', query: to.fullPath !== '/' ? { redirect: to.fullPath } : {} }
   if (auth.status === 'onboarding' && to.path !== '/onboarding/student') return { path: '/onboarding/student' }
-  if (auth.status === 'pending_review' && !['/identity/pending', '/identity/apply'].includes(to.path)) return { path: '/identity/pending' }
+  if (['pending_review', 'needs_more_info', 'rejected'].includes(auth.status) && !['/identity/pending', '/identity/apply'].includes(to.path)) return { path: '/identity/pending' }
   if (auth.status === 'deletion_pending' && to.path !== '/account/security') return { path: '/account/security' }
   if (to.path === '/') return { path: roleHome(auth.activeRole) }
   if (to.meta.requiresRole && (auth.activeRole !== to.meta.requiresRole || !auth.roles.includes(to.meta.requiresRole))) return { path: roleHome(auth.activeRole) }

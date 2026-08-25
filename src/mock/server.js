@@ -235,28 +235,84 @@ export function mockApi(req, res, next) {
     const mockRole = cookieValue('ma_mock_role') || 'student'
     const mockState = cookieValue('ma_mock_state') || 'approved'
     const mockDual = cookieValue('ma_mock_dual') === '1'
-    const mockToken = mockRole === 'student' ? 'mock-token-preview' : `mock-token-${mockRole}-preview`
-    const identities = {
-      admin: { id: 'mock-admin', nickname: '管理员', status: 'active', onboarding_status: 'completed', roles: [{ role: 'admin', status: 'approved', verified: true }], active_role: 'admin', grade: '' },
-      researcher: { id: 'mock-researcher', nickname: '陈研究员', status: 'active', onboarding_status: 'completed', roles: [{ role: 'researcher', status: 'approved', verified: true }], active_role: 'researcher', grade: '' },
-      teacher: { id: 'mock-teacher', nickname: '李老师', status: 'active', onboarding_status: 'completed', roles: [{ role: 'teacher', status: mockState, verified: mockState === 'approved' }], active_role: 'teacher', grade: '' },
-      student: { id: 'mock-student', ...MOCK_USER, status: 'active', onboarding_status: 'completed', roles: [{ role: 'student', status: 'approved', verified: true }, ...(mockDual ? [{ role: 'teacher', status: 'approved', verified: true }] : [])], active_role: 'student' },
+    const supportedRoles = ['student', 'teacher', 'researcher', 'admin']
+    const professionalRoles = ['teacher', 'researcher']
+    const tokenFor = (role) => role === 'student' ? 'mock-token-preview' : `mock-token-${role}-preview`
+    const statusFor = (role, state) => professionalRoles.includes(role) && state !== 'approved'
+      ? ({ pending: 'pending_review', needs_more_info: 'needs_more_info', rejected: 'rejected' }[state] || 'pending_review')
+      : 'authenticated'
+    const identityFor = (requestedRole, state = mockState) => {
+      const role = supportedRoles.includes(requestedRole) ? requestedRole : 'student'
+      const identityStatus = statusFor(role, state)
+      const isProfessionalPending = professionalRoles.includes(role) && identityStatus !== 'authenticated'
+      const activeRole = isProfessionalPending ? 'student' : role
+      const approvedRole = { role: activeRole, status: 'approved', verified: true }
+      const user = activeRole === 'student'
+        ? {
+            id: isProfessionalPending ? `mock-${role}-applicant` : 'mock-student',
+            ...MOCK_USER,
+            status: 'active',
+            onboarding_status: 'completed',
+            roles: [approvedRole, ...(isProfessionalPending ? [{ role, status: state, verified: false }] : mockDual ? [{ role: 'teacher', status: 'approved', verified: true }] : [])],
+            active_role: 'student',
+            grade: MOCK_USER.grade || '',
+          }
+        : {
+            id: `mock-${role}`,
+            nickname: role === 'teacher' ? '李老师' : role === 'researcher' ? '陈研究员' : '管理员',
+            status: 'active',
+            onboarding_status: 'completed',
+            roles: [approvedRole],
+            active_role: activeRole,
+            grade: '',
+          }
+      return { user, identity_status: identityStatus, ...(isProfessionalPending ? { pending_role: role } : {}) }
     }
-    const mockIdentity = identities[mockRole] || identities.student
-    if (method === 'POST' && url === '/auth/token/refresh') return ok(res, { access_token: mockToken, expires_in: 900 })
+    const sessionResponse = (requestedRole, state = mockState, onboardingRequired = false) => {
+      const identity = identityFor(requestedRole, state)
+      return { access_token: tokenFor(identity.user.active_role), expires_in: 900, onboarding_required: onboardingRequired, ...identity }
+    }
+    const persistMockIdentity = (role, state) => {
+      res.setHeader('Set-Cookie', [
+        `ma_mock_role=${role}; Path=/; SameSite=Lax`,
+        `ma_mock_state=${state}; Path=/; SameSite=Lax`,
+      ])
+    }
+    const mockIdentity = identityFor(mockRole)
+    if (method === 'POST' && url === '/auth/token/refresh') return ok(res, { access_token: tokenFor(mockIdentity.user.active_role), expires_in: 900 })
     if (method === 'GET' && url === '/auth/me') {
       const authz = req.headers?.authorization || ''
-      const tokenRole = ['admin', 'researcher', 'teacher'].find((role) => authz.includes(`mock-token-${role}-preview`)) || 'student'
-      return ok(res, identities[tokenRole])
+      const tokenRole = ['admin', 'researcher', 'teacher'].find((role) => authz.includes(`mock-token-${role}-preview`))
+      const identity = identityFor(tokenRole || mockRole)
+      return ok(res, { ...identity.user, identity_status: identity.identity_status, ...(identity.pending_role ? { pending_role: identity.pending_role } : {}) })
     }
     if (method === 'POST' && url === '/auth/challenges/sms') return ok(res, { challenge_id: 'mock-challenge', expires_in: 300, retry_after: 1, demo_code: '123456' })
-    if (method === 'POST' && url === '/auth/login/sms') return json(() => ok(res, { access_token: 'mock-token-preview', expires_in: 900, onboarding_required: true, user: { id: 'new-student', nickname: '', status: 'active', onboarding_status: 'required', roles: [{ role: 'student', status: 'approved', verified: true }], active_role: 'student' } }))
+    if (method === 'POST' && url === '/auth/register/sms') return json((b) => {
+      const role = b.role || mockRole
+      const state = professionalRoles.includes(role) ? (mockState === 'needs_more_info' ? 'needs_more_info' : 'pending') : 'approved'
+      persistMockIdentity(role, state)
+      return ok(res, sessionResponse(role, state, role === 'student'))
+    })
+    if (method === 'POST' && url === '/auth/login/sms') return json((b) => {
+      const role = b.preferred_role || mockRole
+      persistMockIdentity(role, mockState)
+      return ok(res, sessionResponse(role))
+    })
+    if (method === 'POST' && url === '/auth/login/password') return json((b) => {
+      const role = b.preferred_role || mockRole
+      persistMockIdentity(role, mockState)
+      return ok(res, sessionResponse(role))
+    })
     if (method === 'POST' && url === '/identity/onboarding/student') return ok(res, { onboarding_required: false })
     if (method === 'POST' && url === '/identity/role-applications') return json((b) => ok(res, { id: 'mock-application', role: b.role, status: 'pending' }))
     if (method === 'GET' && url === '/identity/role-applications/current') return ok(res, [{ id: 'mock-application', role: 'teacher', status: 'pending', organization_name: '示例中学' }])
     if (method === 'POST' && url === '/auth/reauth') return ok(res, { reauthenticated: true, valid_for: 600 })
     if (method === 'POST' && url === '/auth/password/reset') return ok(res, { password_reset: true })
-    if (method === 'POST' && url === '/auth/role/switch') return json((b) => ok(res, { access_token: b.role === 'student' ? 'mock-token-preview' : `mock-token-${b.role}-preview`, expires_in: 900 }))
+    if (method === 'POST' && url === '/auth/role/switch') return json((b) => {
+      const role = supportedRoles.includes(b.role) ? b.role : mockRole
+      persistMockIdentity(role, 'approved')
+      return ok(res, sessionResponse(role, 'approved'))
+    })
     if (method === 'GET' && url === '/auth/sessions') return ok(res, [
       { id: 'current-session', device_name: 'Chrome · Windows', current: true, revoked: false, last_seen_at: '刚刚' },
       { id: 'other-session', device_name: 'Firefox · macOS', current: false, revoked: false, last_seen_at: '昨天' },

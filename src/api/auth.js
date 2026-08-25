@@ -13,6 +13,11 @@ export const authApi = {
     setAccessToken(data.access_token)
     return data
   },
+  registerSms: async (payload) => {
+    const data = await api.post('/auth/register/sms', payload)
+    setAccessToken(data.access_token)
+    return data
+  },
   refreshSession: refreshAccessToken,
   me: () => api.get('/auth/me'),
   logout: () => api.post('/auth/logout'),

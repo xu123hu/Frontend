@@ -15,6 +15,15 @@
         <button role="tab" :aria-selected="mode === 'password'" :class="{ active: mode === 'password' }" @click="mode = 'password'">密码登录</button>
       </div>
       <form @submit.prevent="submit">
+        <div class="form-item">
+          <label class="form-label" for="preferred-role">进入身份</label>
+          <select id="preferred-role" v-model="preferredRole" name="preferred_role" class="input" aria-label="进入身份">
+            <option value="student">学生端</option>
+            <option value="teacher">教师端</option>
+            <option value="researcher">科研端</option>
+          </select>
+          <p class="role-note">教师、科研身份需管理员审核通过后才能进入对应端口；审核中会展示进度页。</p>
+        </div>
         <PhoneField v-model="phone" :error="phoneError" />
         <OtpField v-if="mode === 'sms'" v-model="code" :phone="phone" purpose="login" @challenge="challengeId = $event" @error="showError" />
         <PasswordField v-else v-model="password" />
@@ -35,23 +44,48 @@ import { useRoute, useRouter } from 'vue-router'
 import OtpField from '@/components/auth/OtpField.vue'
 import PasswordField from '@/components/auth/PasswordField.vue'
 import PhoneField from '@/components/auth/PhoneField.vue'
+import { roleHome } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter(); const route = useRoute(); const auth = useAuthStore()
 const mode = ref('sms'); const phone = ref(''); const code = ref(''); const password = ref('')
 const challengeId = ref(''); const remember = ref(false); const loading = ref(false); const error = ref('')
+const preferredRole = ref('student')
 const phoneError = computed(() => phone.value && !/^1[3-9]\d{9}$/.test(phone.value) ? '请输入有效的 11 位手机号' : '')
 const canSubmit = computed(() => !phoneError.value && /^1[3-9]\d{9}$/.test(phone.value) && (mode.value === 'sms' ? code.value.length === 6 && !!challengeId.value : password.value.length >= 1))
-const errorCopy = { AUTH_PASSWORD_INVALID: '手机号或密码不正确', AUTH_PASSWORD_LOCKED: '失败次数过多，请 15 分钟后再试', AUTH_CHALLENGE_EXPIRED: '验证码已过期，请重新获取', AUTH_CHALLENGE_INVALID: '验证码不正确' }
+const errorCopy = {
+  AUTH_PASSWORD_INVALID: '手机号或密码不正确',
+  AUTH_PASSWORD_LOCKED: '失败次数过多，请 15 分钟后再试',
+  AUTH_CHALLENGE_EXPIRED: '验证码已过期，请重新获取',
+  AUTH_CHALLENGE_INVALID: '验证码不正确',
+  AUTH_ROLE_NOT_AVAILABLE: '该手机号尚未申请此身份，请先注册或切换为学生端',
+}
 function showError(value) { error.value = errorCopy[value?.errorKey] || value?.message || '操作失败，请稍后重试' }
+
+function redirectFor(activeRole) {
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  if (!redirect) return roleHome(activeRole)
+  const professional = redirect.startsWith('/teacher') || redirect.startsWith('/research') || redirect.startsWith('/admin')
+  if (activeRole === 'teacher') return redirect.startsWith('/teacher') ? redirect : roleHome(activeRole)
+  if (activeRole === 'researcher') return redirect.startsWith('/research') ? redirect : roleHome(activeRole)
+  if (activeRole === 'admin') return redirect.startsWith('/admin') ? redirect : roleHome(activeRole)
+  return professional ? roleHome(activeRole) : redirect
+}
+
 async function submit() {
   if (!canSubmit.value || loading.value) return
   loading.value = true; error.value = ''
   try {
+    const payload = { remember: remember.value, preferred_role: preferredRole.value }
     const data = mode.value === 'sms'
-      ? await auth.loginSms({ phone: phone.value, challenge_id: challengeId.value, code: code.value, remember: remember.value })
-      : await auth.loginPassword({ phone: phone.value, password: password.value, remember: remember.value })
-    await router.push(data.onboarding_required ? '/onboarding/student' : (route.query.redirect || '/'))
+      ? await auth.loginSms({ ...payload, phone: phone.value, challenge_id: challengeId.value, code: code.value })
+      : await auth.loginPassword({ ...payload, phone: phone.value, password: password.value })
+    const destination = ['pending_review', 'needs_more_info'].includes(data.identity_status)
+      ? '/identity/pending'
+      : data.onboarding_required
+        ? '/onboarding/student'
+        : redirectFor(data.user.active_role)
+    await router.push(destination)
   } catch (value) { showError(value) } finally { loading.value = false }
 }
 </script>
@@ -70,6 +104,7 @@ async function submit() {
 .tabs { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; background: var(--bg2); border-radius: 12px; margin-bottom: 24px; }
 .tabs button { border: 0; padding: 10px; border-radius: 9px; background: transparent; color: var(--ink2); cursor: pointer; font-weight: 600; }
 .tabs button.active { background: white; color: var(--ink); box-shadow: var(--shadow-sm); }
+.role-note { margin-top: 6px; color: var(--ink3); font-size: 12px; }
 .remember { display: flex; gap: 8px; align-items: center; color: var(--ink2); font-size: 13px; margin: 4px 0 16px; }
 .submit { width: 100%; height: 46px; font-weight: 700; }
 .error { padding: 9px 12px; background: var(--err-bg); color: var(--err-deep); border-radius: 9px; margin-bottom: 12px; font-size: 13px; }
