@@ -6,15 +6,31 @@ async function presetRole(page, role) {
   }, role)
 }
 
+async function completeMockSmsLogin(page, role = 'student') {
+  await page.goto('/login')
+  await page.getByLabel('进入身份').selectOption(role)
+  await page.getByLabel('手机号').fill('13800000000')
+  await page.getByRole('button', { name: '获取验证码' }).click()
+  await expect(page.getByText('演示环境验证码：123456')).toBeVisible()
+  await page.getByLabel('短信验证码').fill('123456')
+  await page.getByRole('button', { name: '安全登录' }).click()
+}
+
+async function completeMockRegistration(page, { role = 'student', organization = '' } = {}) {
+  await page.goto('/register')
+  if (role !== 'student') await page.getByLabel('注册身份').selectOption(role)
+  await page.getByLabel('手机号').fill('13800000000')
+  await page.getByRole('button', { name: '获取验证码' }).click()
+  await expect(page.getByText('演示环境验证码：123456')).toBeVisible()
+  await page.getByLabel('短信验证码').fill('123456')
+  if (organization) await page.getByLabel('学校或机构').fill(organization)
+  await page.getByText('我已阅读并同意').click()
+  await page.getByRole('button', { name: '注册并继续' }).click()
+}
+
 test.describe('unified authentication journeys', () => {
   test('student SMS registration completes onboarding without storing access tokens', async ({ page }) => {
-    await page.goto('/register')
-    await page.getByLabel('手机号').fill('13800000000')
-    await page.getByRole('button', { name: '获取验证码' }).click()
-    await expect(page.getByText('演示环境验证码：123456')).toBeVisible()
-    await page.getByLabel('短信验证码').fill('123456')
-    await page.getByText('我已阅读并同意').click()
-    await page.getByRole('button', { name: '注册并继续' }).click()
+    await completeMockRegistration(page)
     await expect(page).toHaveURL(/\/onboarding\/student/)
     await page.getByLabel('姓名或昵称').fill('小数同学')
     await page.getByLabel('年级').fill('高二')
@@ -40,11 +56,35 @@ test.describe('unified authentication journeys', () => {
     await expect(page.getByText('审核中')).toBeVisible()
   })
 
-  test('login entry has SMS/password modes and no privileged role selector', async ({ page }) => {
+  test('login entry offers workspace selection for the three public roles', async ({ page }) => {
     await page.goto('/login')
     await expect(page.getByRole('tab', { name: '短信验证码' })).toBeVisible()
     await expect(page.getByRole('tab', { name: '密码登录' })).toBeVisible()
+    const selector = page.locator('select[name="preferred_role"]')
+    await expect(selector).toBeVisible()
+    await expect(selector.locator('option')).toHaveText(['学生端', '教师端', '科研端'])
     await expect(page.locator('select[name="role"]')).toHaveCount(0)
+  })
+
+  test('approved teacher login opens the teacher workspace, not overview', async ({ page }) => {
+    await completeMockSmsLogin(page, 'teacher')
+    await expect(page).toHaveURL(/\/teacher\/today$/)
+  })
+
+  test('approved researcher password login opens the research workspace', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByRole('tab', { name: '密码登录' }).click()
+    await page.getByLabel('进入身份').selectOption('researcher')
+    await page.getByLabel('手机号').fill('13800000000')
+    await page.getByLabel('密码', { exact: true }).fill('correct horse battery staple')
+    await page.getByRole('button', { name: '安全登录' }).click()
+    await expect(page).toHaveURL(/\/research$/)
+  })
+
+  test('pending teacher registration opens review status, not overview', async ({ page }) => {
+    await completeMockRegistration(page, { role: 'teacher', organization: '示例中学' })
+    await expect(page).toHaveURL(/\/identity\/pending$/)
+    await expect(page.getByText('审核中')).toBeVisible()
   })
 
   test('admin reauthenticates, approves a teacher, and the teacher can relogin', async ({ page, browser }) => {

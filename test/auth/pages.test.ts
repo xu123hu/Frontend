@@ -6,6 +6,8 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
   useRoute: () => ({ query: {} }),
   RouterLink: { template: '<a><slot /></a>' },
+  createRouter: () => ({ beforeEach: vi.fn() }),
+  createWebHistory: () => ({}),
 }))
 
 vi.mock('@/api/auth', () => ({
@@ -22,11 +24,13 @@ vi.mock('@/api/auth', () => ({
 }))
 
 import { authApi, securityApi } from '@/api/auth'
+import OtpField from '@/components/auth/OtpField.vue'
 import PhoneField from '@/components/auth/PhoneField.vue'
 import DeletionCancellation from '@/pages/DeletionCancellation.vue'
 import Login from '@/pages/Login.vue'
 import PasswordReset from '@/pages/PasswordReset.vue'
 import PendingReview from '@/pages/PendingReview.vue'
+import Register from '@/pages/Register.vue'
 import RoleApplication from '@/pages/RoleApplication.vue'
 
 describe('unified authentication pages', () => {
@@ -38,15 +42,33 @@ describe('unified authentication pages', () => {
     expect(input.attributes('aria-label')).toBe('手机号')
   })
 
-  it('offers SMS and password login without a privileged-role selector', async () => {
+  it('lets users select student, teacher, or researcher before SMS login', () => {
     const wrapper = mount(Login, {
       global: { plugins: [createPinia()], stubs: { RouterLink: { template: '<a><slot /></a>' } } },
     })
     expect(wrapper.get('[role="tablist"]').text()).toContain('短信验证码')
     expect(wrapper.get('[role="tablist"]').text()).toContain('密码登录')
-    expect(wrapper.text()).toContain('注册新账号')
-    expect(wrapper.text()).not.toContain('选择教师身份')
+    expect(wrapper.get('select[name="preferred_role"]').text()).toContain('学生端')
+    expect(wrapper.get('select[name="preferred_role"]').text()).toContain('教师端')
+    expect(wrapper.get('select[name="preferred_role"]').text()).toContain('科研端')
     expect(wrapper.find('select[name="role"]').exists()).toBe(false)
+    expect(wrapper.find('select[name="preferred_role"]').find('option[value="admin"]').exists()).toBe(false)
+  })
+
+  it('shows teacher fields and requests a registration-purpose verification code', async () => {
+    const wrapper = mount(Register, {
+      global: { plugins: [createPinia()], stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
+    expect(wrapper.findComponent(OtpField).props('purpose')).toBe('registration')
+    await wrapper.get('select[name="role"]').setValue('teacher')
+    expect(wrapper.find('input[name="organization_name"]').exists()).toBe(true)
+    expect(wrapper.find('input[name="teaching_stage"]').exists()).toBe(true)
+    expect(wrapper.find('input[name="subject"]').exists()).toBe(true)
+    expect(wrapper.find('input[name="staff_or_student_id"]').exists()).toBe(true)
+
+    await wrapper.get('select[name="role"]').setValue('researcher')
+    expect(wrapper.find('input[name="research_direction"]').exists()).toBe(true)
+    expect(wrapper.find('input[name="teaching_stage"]').exists()).toBe(false)
   })
 
   it('shows role-specific application fields and a clear pending state', async () => {
