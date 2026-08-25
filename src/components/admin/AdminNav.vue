@@ -5,7 +5,7 @@
       :key="item.to"
       :to="item.to"
       class="anav-item"
-      :class="{ active: $route.path === item.to }"
+      :class="{ active: $route?.path === item.to }"
     >
       <span class="anav-icon" aria-hidden="true">{{ item.icon }}</span>
       <span class="anav-txt">{{ item.title }}</span>
