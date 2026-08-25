@@ -456,6 +456,7 @@ interface OutlineItem {
   name: string
   level: number
   line: number
+  children?: OutlineItem[]
 }
 
 const outlineItems = ref<OutlineItem[]>([

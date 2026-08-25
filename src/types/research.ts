@@ -67,7 +67,7 @@ export interface VerifyResult {
 export interface VerifyCapability {
   name: string
   key: string
-  status: 'passed' | 'failed' | 'warning' | 'info'
+  status: 'passed' | 'failed' | 'warning' | 'info' | 'running'
   description: string
   detail?: string
 }

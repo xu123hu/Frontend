@@ -15,5 +15,6 @@ export const useToastStore = defineStore('toast', {
     success(text) { this.show(text, 'success') },
     error(text) { this.show(text, 'error', 3600) },
     info(text) { this.show(text, 'info') },
+    warning(text) { this.show(text, 'warning') },
   },
 })

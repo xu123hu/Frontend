@@ -12,7 +12,7 @@
 <script setup>
 import { useToastStore } from '@/stores/toast'
 const store = useToastStore()
-const icons = { success: '✅', error: '⚠️', info: 'ℹ️' }
+const icons = { success: '✅', error: '⚠️', info: 'ℹ️', warning: '🔔' }
 </script>
 
 <style scoped>
@@ -30,6 +30,7 @@ const icons = { success: '✅', error: '⚠️', info: 'ℹ️' }
 .toast.success { border-left: 3px solid var(--success); }
 .toast.error { border-left: 3px solid var(--error); }
 .toast.info { border-left: 3px solid var(--primary); }
+.toast.warning { border-left: 3px solid var(--warning, #f59e0b); }
 .toast-enter-active, .toast-leave-active { transition: all var(--transition-base); }
 .toast-enter-from { opacity: 0; transform: translateX(16px); }
 .toast-leave-to { opacity: 0; transform: translateY(-8px); }

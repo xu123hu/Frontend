@@ -527,12 +527,12 @@ const lineChartData = [85, 82, 78, 62, 58, 55, 52]
 const lineChartLabels = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7']
 
 const lineChartPoints = computed(() => {
-  return lineChartData.value.map((v, i) => `${40 + i * 40},${120 - v * 1.1}`).join(' ')
+  return lineChartData.map((v, i) => `${40 + i * 40},${120 - v * 1.1}`).join(' ')
 })
 
 const lineChartAreaPoints = computed(() => {
-  const points = lineChartData.value.map((v, i) => `${40 + i * 40},${120 - v * 1.1}`)
-  return `${points.join(' ')} ${40 + (lineChartData.value.length - 1) * 40},120 40,120`
+  const points = lineChartData.map((v, i) => `${40 + i * 40},${120 - v * 1.1}`)
+  return `${points.join(' ')} ${40 + (lineChartData.length - 1) * 40},120 40,120`
 })
 
 // ===== 计算属性 =====

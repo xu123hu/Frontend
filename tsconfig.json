@@ -16,7 +16,7 @@
     "verbatimModuleSyntax": false,
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] },
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals", "node"]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue", "src/**/*.js", "test/**/*.ts"],
   "exclude": ["node_modules", "dist"]
