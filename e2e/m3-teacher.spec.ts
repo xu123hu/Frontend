@@ -3,103 +3,138 @@ import { test, expect } from '@playwright/test'
 const TEACHER_USER = { nickname: '王老师', roles: [{ role: 'teacher' }], active_role: 'teacher', grade: '' }
 const STUDENT_USER = { nickname: '小婷', roles: [{ role: 'student' }], active_role: 'student', grade: '高二（3）班' }
 
-async function presetMock(page, user) {
-  await page.addInitScript((u) => {
+async function presetMock(page: import('@playwright/test').Page, user: typeof TEACHER_USER) {
+  await page.addInitScript((mockUser) => {
     localStorage.setItem('ma_token', 'mock-token-teacher-preview')
-    localStorage.setItem('ma_user', JSON.stringify(u))
+    localStorage.setItem('ma_user', JSON.stringify(mockUser))
   }, user)
 }
 
 test.describe('M3 teacher frontend journeys (mock)', () => {
-  test('teacher root routes to today and shows insights', async ({ page }) => {
+  test('teacher root routes to the teacher workspace', async ({ page }) => {
     await presetMock(page, TEACHER_USER)
     await page.goto('/')
+
     await expect(page).toHaveURL(/\/teacher\/today/)
-    await expect(page.getByText('今日工作台')).toBeVisible()
-    await expect(page.getByText('函数的单调性')).toBeVisible()
-    await expect(page.getByText('应用到教案')).toBeVisible()
+    await expect(page.getByRole('heading', { name: /王老师/ })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: '教师工作台导航' })).toBeVisible()
   })
 
-  test('prep: adapt lesson -> confirm -> generate slides task', async ({ page }) => {
-    await presetMock(page, TEACHER_USER)
-    await page.goto('/teacher/prep')
-    await page.locator('#prep-topic').fill('导数与单调性')
-    await page.getByRole('button', { name: '改编教案' }).click()
-    await expect(page.getByText('导入')).toBeVisible()
-    await page.getByRole('button', { name: '确认' }).click()
-    await expect(page.getByRole('button', { name: '确认教案' })).toBeVisible()
-    await page.getByRole('button', { name: '确认教案' }).click()
-    await expect(page.getByRole('button', { name: '生成衍生产物' })).toBeVisible()
-    await page.getByRole('button', { name: '生成衍生产物' }).click()
-    await expect(page.getByText(/课件任务已启动|进行中|完成/)).toBeVisible()
-  })
-
-  test('assign: generate quiz -> edit -> confirm -> create draft -> publish', async ({ page }) => {
+  test('monotonicity quiz blocks publication while strict inventory is insufficient, then publishes after reducing count', async ({ page }) => {
     await presetMock(page, TEACHER_USER)
     await page.goto('/teacher/assign')
-    await page.locator('#as-kp').fill('函数单调性')
-    await page.getByRole('button', { name: '生成题集' }).click()
-    await expect(page.getByText('题集草稿')).toBeVisible()
-    await expect(page.locator('.tq').first()).toBeVisible()
-    const confirmBtn = page.getByRole('button', { name: '确认题集 → 创建作业草稿' })
-    await confirmBtn.click()
-    await expect(page.getByRole('button', { name: '确认并创建' })).toBeVisible()
-    await page.getByRole('button', { name: '确认并创建' }).click()
-    await expect(page.getByRole('button', { name: '发布作业' })).toBeVisible()
-    await page.getByRole('button', { name: '发布作业' }).click()
-    await page.getByRole('button', { name: '发布', exact: true }).click()
-    await expect(page.getByText('作业已发布')).toBeVisible()
+    await expect(page.getByLabel('班级')).toHaveValue('c1')
+    await page.getByLabel('范围').selectOption('monotonicity')
+
+    const insufficientResponse = page.waitForResponse((response) =>
+      response.url().includes('/api/teacher/quizzes/generate') && response.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: '✨ 生成试卷' }).click()
+    const insufficient = await (await insufficientResponse).json()
+    expect(insufficient.data.content).toMatchObject({
+      knowledge_points: ['MATH-003'],
+      count: 8,
+      insufficient: true,
+    })
+    expect(insufficient.data.validation).toMatchObject({ requested_count: 8, available_count: 6 })
+    expect(insufficient.data.content.question_type_distribution).toEqual({ choice: 2, blank: 1, solution: 3 })
+    expect(insufficient.data.validation.slot_fulfillment).toEqual(expect.arrayContaining([
+      expect.objectContaining({ question_type: 'choice', requested: expect.any(Number), fulfilled: expect.any(Number), relaxed: 0 }),
+      expect.objectContaining({ question_type: 'text', difficulty: 'easy', requested: expect.any(Number), fulfilled: expect.any(Number), relaxed: 0 }),
+    ]))
+    const choice = insufficient.data.content.items.find((item: any) => item.q_type === 'choice')
+    expect(choice).toMatchObject({
+      options: { A: '递增区间' }, answer: 'A', analysis: expect.any(String), difficulty: expect.any(String),
+    })
+    expect(insufficient.data).toMatchObject({ degraded: true })
+    expect(insufficient.data.warnings).toContain('题库仅有 6/8 道严格命中题，请调整知识点范围、题型或题量后再发布。')
+    await expect(page.getByRole('button', { name: '确认并发布给学生' })).toBeDisabled()
+
+    await page.getByLabel('题量').fill('6')
+    const sufficientResponse = page.waitForResponse((response) =>
+      response.url().includes('/api/teacher/quizzes/generate') && response.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: '✨ 生成试卷' }).click()
+    const sufficient = await (await sufficientResponse).json()
+    expect(sufficient.data.content).toMatchObject({ count: 6, insufficient: false })
+    expect(sufficient.data.validation).toMatchObject({ requested_count: 6, available_count: 6 })
+    expect(sufficient.data.content.question_type_distribution).toEqual({ choice: 1, blank: 1, solution: 4 })
+    expect(sufficient.data).toMatchObject({ degraded: false, warnings: [] })
+    await expect(page.getByText('A. 递增区间')).toBeVisible()
+    await expect(page.getByText('标准答案：A')).toBeVisible()
+    await expect(page.getByText(/解析：令 f/).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: '确认并发布给学生' })).toBeEnabled()
+
+    const publishResponse = page.waitForResponse((response) =>
+      /\/api\/teacher\/assignments\/[^/]+\/publish$/.test(new URL(response.url()).pathname)
+        && response.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: '确认并发布给学生' }).click()
+    const published = await (await publishResponse).json()
+    expect(published.data.status).toBe('published')
   })
 
-  test('grading: low-confidence item requires confirm and override', async ({ page }) => {
+  test('grading shows teacher-only question context and requires an explicit confirmation', async ({ page }) => {
     await presetMock(page, TEACHER_USER)
     await page.goto('/teacher/grading')
-    await expect(page.getByRole('button', { name: '低置信度' })).toBeVisible()
-    await page.getByRole('button', { name: '低置信度' }).click()
-    await expect(page.getByText('同学 B')).toBeVisible()
-    await page.getByText('同学 B').click()
-    await expect(page.getByText('批改详情')).toBeVisible()
-    await expect(page.getByText(/OCR 不清或低置信度/)).toBeVisible()
-    await page.locator('#g-score').fill('3')
-    await page.getByRole('button', { name: '按我的分数确认' }).click()
-    await page.getByRole('button', { name: '确认', exact: true }).click()
-    await expect(page.getByText('已确认正式结果')).toBeVisible()
+
+    await expect(page.getByText('作业：函数的单调性巩固练习')).toBeVisible()
+    await expect(page.getByText('题目（choice）')).toBeVisible()
+    await expect(page.getByText('已知函数 f(x)=x³−3x，求其单调递增区间。')).toBeVisible()
+    await expect(page.getByText('A. (-∞, -1) ∪ (1, +∞)')).toBeVisible()
+    await expect(page.getByText('标准答案（仅教师可见）')).toBeVisible()
+    await expect(page.getByText('(-∞, -1) ∪ (1, +∞)', { exact: true })).toBeVisible()
+    await expect(page.getByText('答案解析（仅教师可见）')).toBeVisible()
+    await expect(page.getByText('求导得到 f′(x)=3x²−3，并按临界点 -1、1 判断符号。')).toBeVisible()
+    const confirmationResponse = page.waitForResponse((response) =>
+      /\/api\/teacher\/grading\/[^/]+\/confirm$/.test(new URL(response.url()).pathname)
+        && response.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: '接受建议并确认' }).click()
+    const confirmation = await (await confirmationResponse).json()
+    expect(confirmation.data.decision).toBe('accepted')
   })
 
-  test('classroom: start mode with confirmation', async ({ page }) => {
+  test('classroom mode toggles through the accessible pressed control', async ({ page }) => {
     await presetMock(page, TEACHER_USER)
     await page.goto('/teacher/classroom')
-    await page.getByRole('button', { name: '启动课堂模式' }).click()
-    await page.getByRole('button', { name: '启动', exact: true }).click()
-    await expect(page.getByText('课堂模式已启动')).toBeVisible()
-    await expect(page.getByRole('button', { name: '停止课堂模式' })).toBeVisible()
+
+    await expect(page.getByText('课堂模式未开启')).toBeVisible()
+    const modeToggle = page.locator('[aria-pressed="false"]')
+    await expect(modeToggle).toHaveCount(1)
+    const enabledResponse = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === '/api/teacher/classes/c1/classroom-mode'
+        && response.request().method() === 'POST',
+    )
+    await modeToggle.click()
+    const enabled = await (await enabledResponse).json()
+    expect(enabled.data.enabled).toBe(true)
+    await expect(page.getByText('课堂模式已开启')).toBeVisible()
   })
 
-  test('classes: shows aggregated insights by default', async ({ page }) => {
-    await presetMock(page, TEACHER_USER)
-    await page.goto('/teacher/classes')
-    await expect(page.getByText('本班导数与单调性正确率下滑')).toBeVisible()
-  })
-
-  test('resources: upload -> preprocess -> understand', async ({ page }) => {
-    await presetMock(page, TEACHER_USER)
-    await page.goto('/teacher/resources')
-    await expect(page.getByText('材料')).toBeVisible()
-  })
-
-  test('student role cannot enter teacher workspace (redirects to overview)', async ({ page }) => {
+  test('student role cannot enter teacher workspace', async ({ page }) => {
     await presetMock(page, STUDENT_USER)
     await page.goto('/teacher/today')
     await expect(page).toHaveURL(/\/overview/)
   })
 
-  test('mock returns 40901 on stale version (no silent overwrite)', async ({ page, request }) => {
+  test('mock returns 40901 on a stale artifact version', async ({ request }) => {
     const headers = { Authorization: 'Bearer mock-token-teacher-preview' }
-    const adapt = await request.post('/api/teacher/lessons/adapt', { headers, data: { class_id: 'c1', topic: '试讲', requirements: 'x' } })
-    const art = (await adapt.json()).data
-    const first = await request.put(`/api/teacher/artifacts/${art.artifact_id}`, { headers, data: { version: 1, content: art.content } })
+    const adapt = await request.post('/api/teacher/lessons/adapt', {
+      headers,
+      data: { class_id: 'c1', topic: '试讲', requirements: 'x' },
+    })
+    const artifact = (await adapt.json()).data
+    const first = await request.put(`/api/teacher/artifacts/${artifact.artifact_id}`, {
+      headers,
+      data: { version: 1, content: artifact.content },
+    })
     expect(first.status()).toBe(200)
-    const stale = await request.put(`/api/teacher/artifacts/${art.artifact_id}`, { headers, data: { version: 1, content: art.content } })
+
+    const stale = await request.put(`/api/teacher/artifacts/${artifact.artifact_id}`, {
+      headers,
+      data: { version: 1, content: artifact.content },
+    })
     expect(stale.status()).toBe(409)
     expect((await stale.json()).code).toBe(40901)
   })

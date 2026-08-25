@@ -74,6 +74,8 @@ export interface TeacherArtifact {
   source_refs: SourceRef[]
   warnings: string[]
   degraded: boolean
+  /** 后端对产物生成/校验的结构化元数据；题集包含请求与可用题量。 */
+  validation?: ArtifactValidation
   engine?: string
   confirmed_by?: string | null
   confirmed_at?: string | null
@@ -202,18 +204,36 @@ export interface LessonSegmentContent {
 
 export interface QuizQuestion {
   item_no: number
-  q_type: 'choice' | 'blank' | 'text'
+  q_type: 'choice' | 'blank' | 'solution'
   difficulty: 'easy' | 'medium' | 'hard'
   kp_code?: string
   kp_name?: string
   question_text: string
-  options?: string[]
-  answer?: string
-  answer_analysis?: string
+  options?: string[] | Record<string, string> | null
+  answer?: string | null
+  answer_analysis?: string | null
   /** 真题来源（question_bank.source，如「2023新课标I卷」）；本地兜底题缺省 */
   source?: string
   /** 题库溯源引用，如 qb:<id> */
   source_ref?: string
+  hash?: string
+  /** Compatibility with legacy solution-shaped quiz payloads. */
+  solution?: string | null
+  analysis?: string | null
+}
+
+/** 教师备课生成请求；输入由备课页显式采集，不能由页面默认课题隐式补齐。 */
+export interface LessonAdaptRequest {
+  class_id: string
+  topic: string
+  requirements: string
+  duration_minutes: number
+}
+
+export interface LessonTimelineItem {
+  phase?: string
+  minutes?: number
+  activities?: string[]
 }
 
 export interface QuizSet {
@@ -345,12 +365,22 @@ export interface GradingDetail extends GradingQueueItem {
   original_answer: string
   file_id?: string | null
   scoring_standard: string
+  assignment_title?: string | null
   /** Persisted quiz evidence returned by the teacher grading detail endpoint. */
   question_text?: string | null
   question_type?: string | null
+  options?: Record<string, string> | string[] | null
   standard_answer?: string | null
   answer_analysis?: string | null
   suggestion: GradingSuggestion | null
+}
+
+export interface ArtifactValidation extends Record<string, unknown> {
+  question_count?: number
+  dedup?: boolean
+  bank_count?: number
+  requested_count?: number
+  available_count?: number
 }
 
 export interface BatchConfirmResult {

@@ -11,6 +11,7 @@
         <p class="resource-v2__eyebrow">资源中心 · 高中数学</p>
         <h1>资源与题目审核</h1>
         <p>从真实讲义、试卷、课件或照片开始；所有候选题均需教师确认后，才可进入组卷题库。</p>
+
       </div>
       <div class="resource-v2__head-actions">
         <button class="t-btn" type="button" @click="showExternalForm = !showExternalForm">添加公开引用</button>
@@ -119,6 +120,7 @@ function beginDelete(resource: TeacherResource) { deleteConfirmId.value = resour
 async function confirmDelete(resource: TeacherResource) { try { await store.remove(resource.resource_id); deleteConfirmId.value = null; notice.value = `已删除“${resource.name}”。`; showToast('已删除') } catch (e: any) { showToast(e?.message || '删除失败') } }
 async function confirmPublish(resource: TeacherResource) { try { await store.setPublished(resource.resource_id, !resource.published); publishConfirmId.value = null; notice.value = resource.published ? '资源已发布给学生。' : '资源已取消学生可见。' } catch (e: any) { showToast(e?.message || '发布操作失败') } }
 async function approveCandidate(resourceId: string, candidateId: string) { try { await store.approveQuestionCandidate(resourceId, candidateId); notice.value = '候选题已确认入库，可供后续组卷使用。' } catch (e: any) { showToast(e?.message || '候选题审核失败') } }
+
 async function download(resource: TeacherResource) { const response = await fetch(resource.download_url || `/api/teacher/resources/${resource.resource_id}/download`, { headers: authHeaders() as HeadersInit }); if (!response.ok) return showToast('下载失败'); const url = URL.createObjectURL(await response.blob()); const link = document.createElement('a'); link.href = url; link.download = resource.name; link.click(); URL.revokeObjectURL(url) }
 onMounted(() => { void store.fetch() })
 </script>
@@ -133,3 +135,4 @@ onMounted(() => { void store.fetch() })
 .resource-v2__review { padding: 21px; align-self: start; }.resource-v2__review > p:not(.resource-v2__eyebrow) { color: #5c6b80; line-height: 1.55; }.resource-v2__review-empty, .resource-v2__empty { padding: 25px; color: #67758b; background: #f8fafc; border-radius: 9px; line-height: 1.55; }.resource-v2__empty { margin: 14px; text-align: center; }.resource-v2__empty h3 { color: #26354b; margin: 0 0 6px; }.resource-v2__empty p { margin: 0; }.resource-v2__candidates { display: grid; gap: 10px; margin-top: 16px; }.resource-v2__candidate { padding: 14px; border: 1px solid #e4e9f0; border-radius: 10px; background: #fff; }.resource-v2__candidate h3 { font-size: 14px; line-height: 1.5; }.resource-v2__candidate > p:last-of-type { margin: 9px 0; }.resource-v2__approved { display: inline-block; padding: 5px 8px; color: #166534; background: #ecfdf3; border-radius: 6px; font-size: 12px; }.resource-v2__policy { margin: 18px 0 0; color: #69758b; font-size: 13px; line-height: 1.55; }
 @media (max-width: 900px) { .resource-v2 { padding: 22px 16px; }.resource-v2__workspace { grid-template-columns: 1fr; }.resource-v2__head, .resource-v2__toolbar { align-items: stretch; flex-direction: column; }.resource-v2__toolbar input { width: calc(100% - 78px); } }
 </style>
+

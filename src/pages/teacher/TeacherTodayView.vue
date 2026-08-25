@@ -8,6 +8,7 @@
       </div>
     </header>
 
+
     <ButlerPanel :open="true" embedded />
 
     <div v-if="store.error" class="t-alert" role="alert">{{ store.error }} <button class="t-btn sm" type="button" @click="store.fetch()">重试</button></div>
@@ -85,6 +86,7 @@
           <p v-else class="t-muted">暂无足够数据形成教学洞察。</p>
         </section>
 
+
         <section class="t-card">
           <div class="t-section-title"><h3>快捷入口</h3></div>
           <div class="t-grade-buttons">
@@ -122,6 +124,7 @@ const displayName = computed(() => {
   return raw.endsWith('老师') ? raw : `${raw}老师`
 })
 
+
 const nextLesson = computed(() => store.data?.next_lesson || null)
 const gradingCount = computed(() => store.data?.grading_queue?.count || 0)
 const deadlines = computed(() => store.data?.deadlines || [])
@@ -148,6 +151,7 @@ interface TaskRow {
   action: string
   count?: number | string
   run: () => void
+
 }
 
 const topTasks = computed<TaskRow[]>(() => {
@@ -274,3 +278,4 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
   .t-today-grid { grid-template-columns: 1fr; }
 }
 </style>
+

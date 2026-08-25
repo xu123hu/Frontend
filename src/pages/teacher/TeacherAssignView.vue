@@ -69,6 +69,7 @@
       <div v-if="!assignments.length" class="assign-v2__history-empty">当前范围没有可显示的作业；不会使用示例试卷填充。</div>
       <article v-for="assignment in assignments" :key="assignment.assignment_id" class="assign-v2__assignment"><div><h3>{{ assignment.title }}</h3><p>{{ assignment.created_at ? new Date(assignment.created_at).toLocaleString('zh-CN') : '创建时间待返回' }}</p></div><span :class="`status-${assignment.status}`">{{ assignmentStatusLabel(assignment.status) }}</span></article>
     </section>
+
   </div>
 </template>
 
@@ -78,6 +79,7 @@ import { api } from '@/api/client'
 import { artifactsApi } from '@/api/teacher/artifacts'
 import { assignmentsApi } from '@/api/teacher/assignments'
 import LatexText from '@/components/LatexText.vue'
+
 import { useAssessmentStore } from '@/stores/teacher/assessment'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import type { Assignment, QuizQuestion } from '@/types/teacher'
@@ -121,6 +123,7 @@ async function confirmArtifact() {
   if (!store.quizArtifact || isInsufficient.value) return
   try { store.quizArtifact = await artifactsApi.confirm(store.quizArtifact.artifact_id, `confirm:${store.quizArtifact.artifact_id}`); notice.value = '题集已由教师确认，可以创建学生作业草稿。' }
   catch (error: any) { showToast(error?.message || '题集确认失败') }
+
 }
 async function createAssignment() {
   if (!store.quizArtifact || artifactStatus.value !== 'confirmed') return
@@ -149,3 +152,4 @@ onMounted(async () => {
 .assign-v2__workspace { display: grid; grid-template-columns: minmax(320px, .8fr) minmax(0, 1.2fr); gap: 22px; margin-top: 24px; }.assign-v2__builder, .assign-v2__paper, .assign-v2__history { border: 1px solid #e1e7ef; background: #fff; border-radius: 14px; overflow: hidden; }.assign-v2__section-head { padding: 19px 21px 15px; border-bottom: 1px solid #edf0f4; }.assign-v2__section-head > span { color: #65758b; font-size: 13px; }.assign-v2__form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 20px; }.assign-v2__form label { display: flex; flex-direction: column; gap: 6px; color: #405168; font-size: 13px; font-weight: 650; }.assign-v2__form label.wide { grid-column: 1 / -1; }.assign-v2__form input, .assign-v2__form textarea, .assign-v2__form select { box-sizing: border-box; width: 100%; border: 1px solid #d5dee9; border-radius: 7px; padding: 9px 10px; color: #17243b; background: #fff; font: inherit; font-weight: 400; }.assign-v2__form textarea { resize: vertical; line-height: 1.45; }.assign-v2__form small { color: #738198; font-weight: 400; line-height: 1.5; }.assign-v2__builder > .t-btn { margin: 0 20px 22px; }.assign-v2__guard { margin: 0 20px 14px; color: #a16207; font-size: 13px; }.assign-v2__empty, .assign-v2__history-empty { margin: 18px; padding: 28px; text-align: center; color: #6b7a90; background: #f8fafc; border-radius: 9px; }.assign-v2__empty h3 { margin: 0 0 7px; color: #334155; }.assign-v2__empty p { margin: 0; }.assign-v2__blocker { margin: 16px; padding: 13px 15px; border: 1px solid #f2c36d; border-radius: 9px; color: #92400e; background: #fffbeb; }.assign-v2__blocker p { margin: 6px 0 0; line-height: 1.5; font-size: 13px; }.assign-v2__questions { margin: 0; padding: 0 18px 12px 42px; }.assign-v2__questions li { padding: 15px 5px 14px 0; border-bottom: 1px solid #edf0f4; line-height: 1.55; }.assign-v2__questions li > p { margin: 7px 0 0; color: #65758b; font-size: 12px; }.assign-v2__questions li .analysis { color: #475569; }.assign-v2__actions { display: flex; flex-wrap: wrap; gap: 9px; padding: 16px 20px 20px; }.assign-v2__history { margin-top: 22px; }.assign-v2__assignment { align-items: center; padding: 15px 21px; border-bottom: 1px solid #edf0f4; }.assign-v2__assignment:last-child { border-bottom: 0; }.assign-v2__assignment h3 { margin: 0; font-size: 15px; }.assign-v2__assignment p { margin: 5px 0 0; color: #718096; font-size: 12px; }.assign-v2__assignment span { padding: 5px 8px; border-radius: 999px; font-size: 12px; white-space: nowrap; }.status-published { color: #166534; background: #ecfdf3; }.status-draft { color: #1d4ed8; background: #eff6ff; }.status-closed, .status-archived { color: #65758b; background: #f1f5f9; }
 @media (max-width: 900px) { .assign-v2 { padding: 22px 16px; }.assign-v2__head { flex-direction: column; }.assign-v2__workspace { grid-template-columns: 1fr; }.assign-v2__form { grid-template-columns: 1fr; }.assign-v2__form label.wide { grid-column: auto; } }
 </style>
+

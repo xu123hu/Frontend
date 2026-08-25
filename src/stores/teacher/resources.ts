@@ -21,7 +21,15 @@ export const useResourcesStore = defineStore('resources', {
       this.loading = true; this.error = null
       try {
         this.ticket = await resourcesApi.upload(file, signal)
-        this.patchItem(this.ticket as unknown as TeacherResource)
+        this.patchItem({
+          resource_id: this.ticket.resource_id,
+          name: file.name,
+          file_type: file.type || 'application/octet-stream',
+          size_bytes: file.size,
+          status: this.ticket.status,
+          task_id: this.ticket.task_id,
+          created_at: new Date().toISOString(),
+        })
         return this.ticket
       } catch (e: any) { if (e?.code === -2) return null; this.error = e?.message || '上传失败'; throw e }
       finally { this.loading = false }

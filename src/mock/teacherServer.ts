@@ -111,9 +111,13 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
   /* 出题 */
   if (method === 'POST' && url === '/teacher/quizzes/generate') {
     const b = await readBody(req)
-    const art = quizArtifact(b.knowledge_points || [], b.count || 6, b)
-    art.artifact_id = nextId('art-quiz'); artifacts.set(art.artifact_id, art)
-    ok(res, art, 201); return true
+    try {
+      const art = quizArtifact(b.knowledge_points || ['函数单调性'], b.count || 6, { question_types: b.question_types, difficulty: b.difficulty })
+      art.artifact_id = nextId('art-quiz'); artifacts.set(art.artifact_id, art)
+      ok(res, art, 201); return true
+    } catch (error: any) {
+      fail(res, 422, 40001, error?.message || 'question_type_quota_exceeds_count'); return true
+    }
   }
 
   /* Artifact CRUD + 状态机 + 任务 */
@@ -155,6 +159,7 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
   /* 批改 */
   if (seg[0] === 'teacher' && seg[1] === 'grading') {
     // 契约同构（RC-05-1/B1）：真实后端返回 data:{queue:[...]}，前端 gallery 按 res.data?.queue 解包；同形避免 mock 静默空态
+
     if (method === 'GET' && url === '/teacher/grading/queue') { ok(res, { queue: gradingItems }); return true }
     if (method === 'POST' && url === '/teacher/grading/batch-confirm') {
       const b = await readBody(req)
@@ -231,3 +236,4 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
 
   return false
 }
+

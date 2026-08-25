@@ -1,6 +1,6 @@
 import { buildQuizSet, type QuizBuildParams } from './questionBank'
 import type {
-  ActionableInsight, GradingQueueItem, LessonSegment, SourceRef, TeacherArtifact, TeacherResource, TeacherTodayData, VideoInsight,
+ActionableInsight, GradingQueueItem, LessonSegment, SourceRef, TeacherArtifact, TeacherResource, TeacherTodayData, VideoInsight, GradingDetail
 } from '@/types/teacher'
 
 export const iso = (d: Date = new Date()) => d.toISOString()
@@ -166,12 +166,22 @@ export function quizArtifact(kps: string[], count: number, opts: Partial<QuizBui
     options: q.options ? [...q.options] : undefined,
     answer: q.answer,
     answer_analysis: q.answer_analysis,
+
   }))
+  const slotFulfillment = (Object.keys(quota.effective) as QuizType[]).flatMap((qType) => difficultySlots(quota.effective[qType], difficulty).map((slot) => ({
+    question_type: qType,
+    difficulty: slot.difficulty,
+    requested: slot.requested,
+    fulfilled: items.filter((item) => item.q_type === (qType === 'text' ? 'solution' : qType) && (slot.difficulty === 'any' || item.difficulty === slot.difficulty)).length,
+    relaxed: 0,
+  })))
+  const insufficient = items.length < requestedCount
   return {
     artifact_id: 'art-quiz-1', artifact_type: 'quiz_set', scene: 'teacher.assessment', class_id: 'c1',
     owner_id: 't1', status: 'draft', version: 1, engine: 'local',
     content: { knowledge_points: kps, count: items.length, difficulty: { easy: 0.4, medium: 0.4, hard: 0.2 }, items, duplicated: 0, insufficient: false },
     source_refs: [], warnings: [], degraded: false, created_at: iso(), updated_at: iso(),
+
   }
 }
 
@@ -201,9 +211,20 @@ export function gradingQueue(): GradingQueueItem[] {
   })
 }
 
-export function gradingDetail(item: GradingQueueItem) {
+export function gradingDetail(item: GradingQueueItem): GradingDetail & { suggestion: NonNullable<GradingDetail['suggestion']> } {
   return {
     ...item,
+    assignment_title: '函数的单调性巩固练习',
+    question_text: '已知函数 f(x)=x³−3x，求其单调递增区间。',
+    question_type: 'choice',
+    options: {
+      A: '(-∞, -1) ∪ (1, +∞)',
+      B: '(-1, 1)',
+      C: '(-∞, 1)',
+      D: '(-1, +∞)',
+    },
+    standard_answer: '(-∞, -1) ∪ (1, +∞)',
+    answer_analysis: '求导得到 f′(x)=3x²−3，并按临界点 -1、1 判断符号。',
     original_answer: `$f(x)=x^3-3x$ 的单调性：$f'(x)=3x^2-3$，令其为零得 $x=\\pm 1$，故在 $(-\\infty,-1)\\cup(1,+\\infty)$ 单调增，$(-1,1)$ 单调减。`,
     scoring_standard: '正确求导（3 分）、找到分界点（3 分）、写出单调区间（4 分）。',
     suggestion: {
@@ -232,3 +253,4 @@ export function seedResources(): TeacherResource[] {
     { resource_id: 'r2', name: '函数单调性.pdf', file_type: 'pdf', size_bytes: 512003, status: 'ready', pages: [{ page: 1 }, { page: 2 }], created_at: iso() },
   ]
 }
+
