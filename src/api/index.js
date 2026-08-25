@@ -107,6 +107,12 @@ export const butlerApi = {
   updateSettings: (payload) => api.patch('/butler/settings', payload),
 }
 
+/* ===== AI 数学课堂 /api/classroom（OpenMAIC 融合：大纲→逐页内容） ===== */
+export const classroomApi = {
+  sessions: () => api.get('/classroom/sessions'),
+  createSession: (payload) => api.post('/classroom/sessions', payload),
+  session: (id) => api.get(`/classroom/sessions/${encodeURIComponent(id)}`),
+}
 /* ===== 班级 /api/classes ===== */
 export const classApi = {
   create: (payload) => api.post('/classes', payload),

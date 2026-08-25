@@ -33,6 +33,22 @@
       </template>
     </div>
 
+    <!-- 课堂任务速览（真实数据联动 /student/assignments） -->
+    <div class="card" style="padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;cursor:pointer;" @click="router.push('/tasks')">
+      <span style="font-size:24px;">📋</span>
+      <div style="flex:1;">
+        <div style="font-weight:800;font-size:14px;">课堂任务</div>
+        <div style="font-size:12px;color:var(--ink3);margin-top:2px;">
+          <template v-if="taskStat.loading">加载中…</template>
+          <template v-else-if="taskStat.error">暂时无法加载，稍后再试</template>
+          <template v-else>
+            待完成 <b style="color:var(--err-deep);">{{ taskStat.todo + taskStat.overdue }}</b> 项 · 已逾期 <b style="color:var(--err-deep);">{{ taskStat.overdue }}</b> 项 · 已完成 {{ taskStat.done }} 项
+          </template>
+        </div>
+      </div>
+      <span style="font-size:12px;font-weight:700;color:var(--brand);">去完成 ›</span>
+    </div>
+
     <div class="hero-row">
       <div class="hero-main">
         <div class="today-tag">🌙 晚自习 · 薄弱攻坚</div>
@@ -254,12 +270,32 @@ async function loadEntries() {
   }
 }
 
+
+/* ---------- 课堂任务速览（作业/课堂任务联动） ---------- */
+const taskStat = ref({ loading: true, error: false, todo: 0, overdue: 0, done: 0 })
+async function loadTaskStat() {
+  try {
+    const d = await api.get('/student/assignments', { status: 'all' })
+    const st = { loading: false, error: false, todo: 0, overdue: 0, done: 0 }
+    ;(d?.items || []).forEach((it) => {
+      const p = it.progress || { done: 0, total: 0 }
+      const done = p.total > 0 && p.done >= p.total
+      if (it.overdue && !done) st.overdue++
+      else if (done) st.done++
+      else st.todo++
+    })
+    taskStat.value = st
+  } catch {
+    taskStat.value = { loading: false, error: true, todo: 0, overdue: 0, done: 0 }
+  }
+}
 onMounted(() => {
   loadStreak()
   loadLoop()
   loadScore()
   loadToday3()
   loadEntries()
+  loadTaskStat()
 })
 </script>
 

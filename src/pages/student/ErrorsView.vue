@@ -5,6 +5,42 @@
       <div class="sub">FSRS 算法根据你的作答历史算出记忆曲线——最该复习的已置顶。其它题目暂不需要复习（过早复习=浪费时间）。</div>
     </div>
 
+
+<!-- 错题闪卡复习（OpenTutor 同款：3D 翻牌 + 四档评分，沉浸式浮层） -->
+    <div v-if="!flashcardMode && (listTotal > 0 || dueTotal > 0)" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="secondary" @click="flashcardMode = true">🎴 错题闪卡复习<template v-if="dueTotal > 0"> · 今日 {{ dueTotal }} 张到期</template></button>
+    </div>
+
+    <FlashcardReview v-if="flashcardMode" @close="onFcClose" />
+
+    <!-- 拍错题入本（Vision03：主动收录闭环；OCR 识别题干 + 原图随记录保存） -->
+    <div class="card" style="padding:14px 18px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <strong style="font-size:14px;">📷 拍错题入本</strong>
+        <span style="font-size:12px;color:var(--ink3);">把做错/不会的题拍下来自动识别题干——进本即按 FSRS 排期复习</span>
+        <button v-if="!manualOpen" class="secondary" style="margin-left:auto;" @click="manualOpen = true">＋ 打开录入</button>
+        <button v-else class="secondary" style="margin-left:auto;" @click="manualOpen = false">收起</button>
+      </div>
+      <template v-if="manualOpen">
+        <textarea v-model="manual.question" class="input" rows="2" style="margin-top:10px;" placeholder="OCR 识别出的题干（可修改），或直接粘贴题目"></textarea>
+        <textarea v-model="manual.note" class="input" rows="2" style="margin-top:8px;" placeholder="备注：当时怎么错的 / 卡在哪一步（选填）"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+          <select v-model="manual.errorType" class="input" style="flex:1;min-width:140px;">
+            <option value="">错因：未分类</option>
+            <option v-for="t in ERROR_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
+          </select>
+          <select v-model="manual.kpCode" class="input" style="flex:1;min-width:140px;">
+            <option value="">知识点：暂不标注</option>
+            <option v-for="k in kpOptions" :key="k.value" :value="k.value">{{ k.label }}</option>
+          </select>
+        </div>
+        <HomeworkPhotos v-model="manual.photos" :max="1" @ocr="onManualOcr" />
+        <div style="display:flex;gap:10px;margin-top:10px;">
+          <button class="primary" :disabled="manualSubmitting" @click="submitManual">📌 入本</button>
+          <span style="font-size:11.5px;color:var(--ink3);align-self:center;">入本后按 FSRS 自动排期，临到期自动提醒复习</span>
+        </div>
+      </template>
+    </div>
     <!-- FSRS 记忆稳定性热力图（独家创新） -->
     <div class="fsrs-section">
       <h4>🌡️ 记忆稳定性热力图 · {{ totalErrors }} 道错题的"会忘程度"</h4>
@@ -221,11 +257,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
-import { butlerApi } from '@/api'
+import { butlerApi, studentApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import LatexText from '@/components/LatexText.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
+import HomeworkPhotos from '@/components/student/HomeworkPhotos.vue'
+import FlashcardReview from '@/components/student/FlashcardReview.vue'
 
 const router = useRouter()
 const toast = useToastStore()
@@ -511,6 +549,52 @@ function goPractice() {
   router.push('/practice')
 }
 
+
+/* ===== 错题闪卡复习（OpenTutor 同款沉浸复习） ===== */
+const flashcardMode = ref(false)
+function onFcClose() {
+  flashcardMode.value = false
+  loadHeatmap()
+  loadDue()
+  loadFilter()
+}
+
+/* ===== 拍错题入本（Vision03） ===== */
+const manualOpen = ref(false)
+const manualSubmitting = ref(false)
+const manual = ref({ question: '', note: '', errorType: '', kpCode: '', photos: [] })
+function onManualOcr(text) {
+  if (text && !manual.value.question.trim()) manual.value.question = text
+}
+async function submitManual() {
+  const q = manual.value.question.trim()
+  if (!q && !manual.value.photos.length) { toast.error('请先粘贴题干或拍照'); return }
+  if (manualSubmitting.value) return
+  manualSubmitting.value = true
+  try {
+    const fileId = manual.value.photos[0]?.file_id || null
+    await studentApi.createErrorRecord({
+      question_text: q || '（拍照错题）',
+      error_type: manual.value.errorType || null,
+      kp_code: manual.value.kpCode || null,
+      file_id: fileId,
+      source_channel: 'manual_photo',
+    })
+    if (manual.value.note.trim()) {
+      // 备注回写 best-effort：查重命中后 PATCH
+      try {
+        const rec = await api.get('/student/error-records', { q: (q || '（拍照错题）').slice(0, 40) })
+        const hit = (rec?.items || []).find((r) => r.question_text === (q || '（拍照错题）'))
+        if (hit) await api.patch(`/student/error-records/${hit.record_id}`, { note: manual.value.note.trim() })
+      } catch { /* 备注回写失败不回影响入本 */ }
+    }
+    toast.success('已收录，自动排入复习队列')
+    manual.value = { question: '', note: '', errorType: '', kpCode: '', photos: [] }
+    manualOpen.value = false
+    loadHeatmap(); loadDue(); loadFilter()
+  } catch (e) { toast.error(`入本失败：${e?.message || '请稍后重试'}`) }
+  finally { manualSubmitting.value = false }
+}
 onMounted(() => {
   loadHeatmap()
   loadDue()

@@ -10,8 +10,8 @@
     <div class="kg-controls">
       <div class="left">
         <div class="view-switch">
-          <button class="active">📚 树形</button>
-          <button @click="galaxy()">🌌 星系</button>
+          <button :class="{ active: viewMode === 'tree' }" @click="switchView('tree')">📚 树形</button>
+          <button :class="{ active: viewMode === 'galaxy' }" @click="switchView('galaxy')">🌌 星系</button>
         </div>
         <div class="shape-legend">
           <span><span class="shape-circle"></span>基础</span>
@@ -28,7 +28,7 @@
     </div>
 
     <div class="kg-wrap">
-      <div class="kg-tree">
+      <div v-if="viewMode === 'tree'" class="kg-tree">
         <div v-if="treeLoading" style="padding:24px;color:var(--ink3);font-size:13px;">正在加载知识图谱…</div>
         <div v-else-if="treeError" style="padding:24px;color:var(--err-deep);font-size:13px;">{{ treeError }}</div>
         <div v-else-if="!chapters.length" style="padding:24px;color:var(--ink3);font-size:13px;">暂无知识点数据，完成首次练习后将生成你的学习版图。</div>
@@ -50,6 +50,32 @@
         </template>
       </div>
 
+      <div v-if="viewMode === 'galaxy'" class="kg-galaxy">
+        <h4>🌌 知识点星系 · 一个环=一大章节，颜色=掌握度，点击节点联动右侧推荐</h4>
+        <svg class="galaxy-svg" viewBox="0 0 640 480">
+          <text x="320" y="246" text-anchor="middle" font-size="12" font-weight="800" fill="#9aa1ac">数学<br/><tspan x="320" dy="14">宇宙</tspan></text>
+          <g v-for="(c, ci) in galaxyChapters" :key="c.chap">
+            <circle cx="320" cy="240" :r="44 + ci * 78" fill="none" stroke="#e6eaf0" stroke-dasharray="3 4" />
+            <text :x="320 + (44 + ci * 78) + 12" y="246" font-size="10" fill="#9aa1ac" font-weight="700">{{ (c.title || '').slice(0, 6) }}</text>
+          </g>
+          <g
+            v-for="n in galaxyNodes" :key="n.kp_code"
+            :transform="`translate(${n.x}, ${n.y})`"
+            class="galaxy-node" :class="[n.state, { selected: selected?.kp_code === n.kp_code }]"
+            :title="n.name"
+            @click="galaxySelect(n)"
+          >
+            <circle :r="n.r" :fill="n.color" opacity="0.92" />
+            <text y="3.5" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">{{ n.short }}</text>
+          </g>
+        </svg>
+        <div class="galaxy-legend">
+          <span v-for="s in ['mastered','improving','weak','unlearned']" :key="s" class="legend-item">
+            <span class="swatch" :style="{ background: STATE_COLOR[s] }"></span>{{ STATE_LABEL[s] }}
+          </span>
+        </div>
+        <div style="font-size:12px;color:var(--ink2);margin-top:8px;">内环为基础知识，外环为进阶/拔高；点击任意节点查看追根溯源与下一步推荐。</div>
+      </div>
       <div>
         <!-- ALEKS Pie -->
         <div class="kg-pie">
@@ -273,8 +299,35 @@ function goPractice() {
   router.push(kp ? '/practice?kp=' + encodeURIComponent(kp) : '/practice')
 }
 
-function galaxy() {
-  toast.info('🌌 星系视图（演示版）——切换回树形视图可继续浏览')
+const viewMode = ref('tree')
+function switchView(mode) { viewMode.value = mode }
+
+/* 星系视图：按章节分层环 + 放射分布，节点颜色/大小映射掌握度与层级 */
+const galaxyChapters = computed(() => chapters.value.map((ch, ci) => ({ ...ch, ci })))
+function galaxyRadius(ci) { return 44 + ci * 78 }
+const galaxyNodes = computed(() => {
+  const nodes = []
+  chapters.value.forEach((ch, ci) => {
+    const R = galaxyRadius(ci) + 22
+    const n = ch.nodes || []
+    n.forEach((node, i) => {
+      const angle = (i / Math.max(1, n.length)) * Math.PI * 2 - Math.PI / 2
+      nodes.push({
+        ...node,
+        x: 320 + R * Math.cos(angle),
+        y: 240 + R * Math.sin(angle),
+        r: node.shape === 'circle' ? 10 : node.shape === 'diamond' ? 12 : 14,
+        color: STATE_COLOR[node.state] || 'var(--ink3)',
+        short: (node.name || '').slice(0, 4),
+      })
+    })
+  })
+  return nodes
+})
+function galaxySelect(n) {
+  const ch = chapters.value.find((c) => (c.nodes || []).some((x) => x.kp_code === n.kp_code))
+  if (!ch) return
+  selectNode(n, ch)
 }
 
 onMounted(() => {
@@ -285,4 +338,10 @@ onMounted(() => {
 
 <style scoped>
 .tree-node.selected { outline: 2px solid var(--brand); outline-offset: 1px; }
+.kg-galaxy { padding: 10px 0 4px; }
+.galaxy-svg { width: 100%; max-width: 640px; background: linear-gradient(180deg, #fbfdff, #f6f9ff); border: 1px solid var(--line); border-radius: 12px; }
+.galaxy-node { cursor: pointer; }
+.galaxy-node.selected circle { stroke: var(--brand, #3b7bff); stroke-width: 2.5; }
+.galaxy-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--ink2); }
+.galaxy-legend .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
 </style>
