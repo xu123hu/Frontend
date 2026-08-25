@@ -126,8 +126,9 @@
         </div>
 
         <div class="player-side">
-          <div class="side-card">
-            <h4>📑 课堂大纲</h4>
+          <div class="side-card" style="display:flex;align-items:center;justify-content:space-between;">
+            <h4 style="margin-bottom:0;">📑 课堂大纲</h4>
+            <button class="link" @click="startFresh">🆕 生成新课堂</button>
             <div
               v-for="(o, i) in session.outlines" :key="o.order"
               class="outline-item" :class="{ active: i === curIndex, done: i < curIndex }"
@@ -322,6 +323,13 @@ function toggleSpeak() {
   } else {
     speak()
   }
+}
+
+function startFresh() {
+  session.value = null
+  curIndex.value = 0
+  speaking.value = false
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel()
 }
 
 function saveNotes() {
