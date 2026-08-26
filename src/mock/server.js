@@ -238,14 +238,12 @@ export function mockApi(req, res, next) {
     const supportedRoles = ['student', 'teacher', 'researcher', 'admin']
     const professionalRoles = ['teacher', 'researcher']
     const tokenFor = (role) => role === 'student' ? 'mock-token-preview' : `mock-token-${role}-preview`
-    const statusFor = (role, state) => professionalRoles.includes(role) && state !== 'approved'
-      ? ({ pending: 'pending_review', needs_more_info: 'needs_more_info', rejected: 'rejected' }[state] || 'pending_review')
-      : 'authenticated'
+    const statusFor = () => 'authenticated'
     const identityFor = (requestedRole, state = mockState) => {
       const role = supportedRoles.includes(requestedRole) ? requestedRole : 'student'
       const identityStatus = statusFor(role, state)
-      const isProfessionalPending = professionalRoles.includes(role) && identityStatus !== 'authenticated'
-      const activeRole = isProfessionalPending ? 'student' : role
+      const isProfessionalPending = false
+      const activeRole = role
       const approvedRole = { role: activeRole, status: 'approved', verified: true }
       const user = activeRole === 'student'
         ? {
@@ -289,7 +287,7 @@ export function mockApi(req, res, next) {
     if (method === 'POST' && url === '/auth/challenges/sms') return ok(res, { challenge_id: 'mock-challenge', expires_in: 300, retry_after: 1, demo_code: '123456' })
     if (method === 'POST' && url === '/auth/register/sms') return json((b) => {
       const role = b.role || mockRole
-      const state = professionalRoles.includes(role) ? (mockState === 'needs_more_info' ? 'needs_more_info' : 'pending') : 'approved'
+      const state = 'approved'
       persistMockIdentity(role, state)
       return ok(res, sessionResponse(role, state, role === 'student'))
     })

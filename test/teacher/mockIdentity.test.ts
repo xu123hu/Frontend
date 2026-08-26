@@ -61,7 +61,7 @@ describe('mock identity preview', () => {
     expect(isPreviewToken(MOCK_TOKEN_ADMIN)).toBe(true)
     expect(isPreviewToken('real-jwt')).toBe(false)
   })
-  it('preserves a pending teacher target through mock session reload', async () => {
+  it('opens a teacher directly even when a legacy pending marker is present', async () => {
     const login = await requestMock({
       method: 'POST',
       url: '/auth/login/sms',
@@ -76,22 +76,37 @@ describe('mock identity preview', () => {
       headers: { cookie: cookies, authorization: `Bearer ${login.data.access_token}` },
     })
 
-    expect(login.data).toMatchObject({ identity_status: 'pending_review', pending_role: 'teacher' })
-    expect(reload.data).toMatchObject({ identity_status: 'pending_review', pending_role: 'teacher', active_role: 'student' })
+    expect(login.data).toMatchObject({ identity_status: 'authenticated', user: { active_role: 'teacher' } })
+    expect(login.data.pending_role).toBeUndefined()
+    expect(reload.data).toMatchObject({ identity_status: 'authenticated', active_role: 'teacher' })
+    expect(reload.data.pending_role).toBeUndefined()
   })
-  it('keeps a pending teacher startup state when stale student storage is present', () => {
+  it.each(['teacher', 'researcher'])('registers a %s directly into that identity', async (role) => {
+    const registration = await requestMock({
+      method: 'POST',
+      url: '/auth/register/sms',
+      body: { role },
+    })
+
+    expect(registration.data).toMatchObject({
+      identity_status: 'authenticated',
+      user: { active_role: role },
+    })
+    expect(registration.data.pending_role).toBeUndefined()
+  })
+  it('opens the cookie-selected teacher when a legacy pending marker is present', () => {
     expect(resolveMockStartupIdentity(
       'student',
       'ma_mock_role=teacher; ma_mock_state=pending',
       JSON.stringify({ active_role: 'student' }),
-    )).toMatchObject({ role: 'teacher', state: 'pending', activeRole: 'student' })
+    )).toMatchObject({ role: 'teacher', state: 'approved', activeRole: 'teacher' })
   })
-  it('restores pending teacher startup state from persisted identity without cookies', () => {
+  it('does not grant a professional identity from stale persisted pending data alone', () => {
     expect(resolveMockStartupIdentity(
       'student',
       '',
       JSON.stringify({ active_role: 'student', pending_role: 'teacher', identity_status: 'pending_review' }),
-    )).toMatchObject({ role: 'teacher', state: 'pending', activeRole: 'student' })
+    )).toMatchObject({ role: 'student', state: 'approved', activeRole: 'student' })
   })
   it('keeps a suspended teacher out of the approved startup fallback', () => {
     expect(resolveMockStartupIdentity(
