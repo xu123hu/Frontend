@@ -3,7 +3,7 @@
     <section class="panel">
       <p class="eyebrow">创建账号</p>
       <h1>注册智学数研</h1>
-      <p class="hint">学生验证手机号后立即开通学习端；教师与科研人员提交资料后进入管理员审核。</p>
+      <p class="hint">完成手机号验证后，立即开通所选的学习、教学或科研端口。</p>
       <form @submit.prevent="submit">
         <div class="form-item">
           <label class="form-label" for="register-role">注册身份</label>
@@ -54,6 +54,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import PhoneField from '@/components/auth/PhoneField.vue'
 import OtpField from '@/components/auth/OtpField.vue'
+import { roleHome } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 
 const CONSENT_VERSION = '2026-08-24'
@@ -83,11 +84,9 @@ async function submit() {
     if (role.value !== 'student' && department.value.trim()) payload.department = department.value.trim()
     if (role.value === 'teacher' && staffId.value.trim()) payload.staff_or_student_id = staffId.value.trim()
     const data = await auth.registerSms(payload)
-    const destination = ['pending_review', 'needs_more_info'].includes(data.identity_status)
-      ? '/identity/pending'
-      : data.onboarding_required
+    const destination = data.onboarding_required && data.user?.active_role === 'student'
         ? '/onboarding/student'
-        : '/'
+        : roleHome(data.user?.active_role)
     await router.push(destination)
   } catch (value) { showError(value) } finally { loading.value = false }
 }

@@ -16,12 +16,6 @@ const previewUsers: Record<MockRole, MockUser> = {
   admin: { nickname: '管理员', roles: [{ role: 'admin' }], active_role: 'admin', grade: '' },
 }
 
-const pendingStateByIdentityStatus: Record<string, MockState | undefined> = {
-  pending_review: 'pending',
-  needs_more_info: 'needs_more_info',
-  rejected: 'rejected',
-}
-
 function isMockRole(value: unknown): value is MockRole {
   return typeof value === 'string' && value in previewUsers
 }
@@ -47,18 +41,8 @@ export function resolveMockStartupIdentity(defaultRole: string, cookie: string, 
   const storedUser = parseStoredUser(storedUserJson)
   const cookieRole = cookieValue(cookie, 'ma_mock_role')
   const cookieState = cookieValue(cookie, 'ma_mock_state')
-  const storedPendingState = pendingStateByIdentityStatus[String(storedUser?.identity_status || '')]
-  const storedPendingRole = storedUser?.pending_role
-
-  if (isMockRole(cookieRole) && ['teacher', 'researcher'].includes(cookieRole) && isMockState(cookieState) && cookieState !== 'approved') {
-    return { role: cookieRole, state: cookieState, activeRole: 'student' as const, storedUser }
-  }
-  if (isMockRole(storedPendingRole) && ['teacher', 'researcher'].includes(storedPendingRole) && storedPendingState) {
-    return { role: storedPendingRole, state: storedPendingState, activeRole: 'student' as const, storedUser }
-  }
-
   const role = isMockRole(cookieRole) ? cookieRole : isMockRole(storedUser?.active_role) ? storedUser.active_role : isMockRole(defaultRole) ? defaultRole : 'student'
-  const state = isMockState(cookieState) ? cookieState : 'approved'
+  const state = isMockState(cookieState) && cookieState === 'suspended' ? 'suspended' : 'approved'
   return { role, state, activeRole: role, storedUser }
 }
 

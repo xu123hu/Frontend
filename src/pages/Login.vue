@@ -4,7 +4,7 @@
       <div class="brand-mark">π</div>
       <p class="eyebrow">智学数研</p>
       <h1>一个账号，连接学习、教学与科研</h1>
-      <p>先安全登录平台，再按需要申请教师或科研人员身份。高权限身份统一由管理员审核。</p>
+      <p>完成手机号验证后，直接进入你选择的学习、教学或科研端口。</p>
       <ul><li>学生个性化学习与成长画像</li><li>教师备课、课堂与评价闭环</li><li>科研推导验证与知识协作</li></ul>
     </section>
     <section class="auth-card" aria-labelledby="login-title">
@@ -22,7 +22,7 @@
             <option value="teacher">教师端</option>
             <option value="researcher">科研端</option>
           </select>
-          <p class="role-note">教师、科研身份需管理员审核通过后才能进入对应端口；审核中会展示进度页。</p>
+          <p class="role-note">登录后将进入所选身份对应的端口。</p>
         </div>
         <PhoneField v-model="phone" :error="phoneError" />
         <OtpField v-if="mode === 'sms'" v-model="code" :phone="phone" purpose="login" @challenge="challengeId = $event" @error="showError" />
@@ -80,9 +80,7 @@ async function submit() {
     const data = mode.value === 'sms'
       ? await auth.loginSms({ ...payload, phone: phone.value, challenge_id: challengeId.value, code: code.value })
       : await auth.loginPassword({ ...payload, phone: phone.value, password: password.value })
-    const destination = ['pending_review', 'needs_more_info'].includes(data.identity_status)
-      ? '/identity/pending'
-      : data.onboarding_required
+    const destination = data.onboarding_required && data.user?.active_role === 'student'
         ? '/onboarding/student'
         : redirectFor(data.user.active_role)
     await router.push(destination)
