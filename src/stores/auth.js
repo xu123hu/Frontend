@@ -7,7 +7,12 @@ function deriveStatus(user) {
   if (!user) return 'anonymous'
   if (user.status === 'deletion_pending') return 'deletion_pending'
   if (['pending_review', 'needs_more_info', 'rejected'].includes(user.identity_status)) return user.identity_status
-  if (user.onboarding_status && user.onboarding_status !== 'completed') return 'onboarding'
+  // 学生档案引导只作用于学生身份：教师/科研没有学生引导流程，
+  // 否则演示模式下自动开通的专业身份会被路由守卫强制劫到 /onboarding/student
+  if (
+    (!user.active_role || user.active_role === 'student') &&
+    user.onboarding_status && user.onboarding_status !== 'completed'
+  ) return 'onboarding'
   const active = (user.roles || []).find((item) => item.role === user.active_role)
   if (active && active.status !== 'approved') return 'pending_review'
   return 'authenticated'
@@ -31,7 +36,13 @@ export const useAuthStore = defineStore('auth', {
     },
     applyAuthResponse(data) {
       this.applyIdentity({ ...data.user, identity_status: data.identity_status, pending_role: data.pending_role })
-      if (data.onboarding_required && this.status === 'authenticated') this.status = 'onboarding'
+      // 学生档案引导只作用于学生身份：教师/科研没有学生引导流程，
+      // 否则演示模式下自动开通的专业身份会被强制打回 /onboarding/student
+      const activeRole = data.user?.active_role
+      if (
+        data.onboarding_required && this.status === 'authenticated' &&
+        (!activeRole || activeRole === 'student')
+      ) this.status = 'onboarding'
     },
     async bootstrap() {
       if (this.status !== 'idle' && this.status !== 'anonymous') return
