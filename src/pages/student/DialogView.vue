@@ -151,6 +151,9 @@ const chat = useChat({
     onConversationId: (id) => {
       conv.select(id)
       history.replaceState(null, '', `/dialog/${id}`)
+      // 新会话由后端在首次对话时才创建：立即刷新侧栏列表，
+      // 否则列表停留在"暂无会话"，要手动刷新页面才能看到历史（2026-08-29 N4 回归发现）
+      conv.load().catch(() => {})
     },
     onTitle: (t) => conv.updateTitle(conv.activeId, t),
     onAction: handleAction,
