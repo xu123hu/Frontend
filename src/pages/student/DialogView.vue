@@ -174,12 +174,25 @@ const activeTitle = computed(
   () => conv.items.find((c) => c.id === conv.activeId)?.title || '新对话'
 )
 
-/** 顶部步骤徽标（对齐 v4「第 3 步 / 共 5 步」） */
+/** 顶部步骤徽标：以后端 socratic 进度卡为唯一事实源（此前按消息数估算，会误导进度） */
 const stepBadge = computed(() => {
-  if (chat.streaming.value) return '第 ' + Math.min((chat.messages.value.filter((m) => m.role === 'assistant').length || 1) + 1, 5) + ' 步 / 共 5 步'
-  const n = chat.messages.value.filter((m) => m.role === 'assistant').length
-  if (!n) return '新对话'
-  return `第 ${Math.min(n + 2, 5)} 步 / 共 5 步`
+  const msgs = chat.messages.value
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const cards = msgs[i]?.cards || []
+    for (let j = cards.length - 1; j >= 0; j--) {
+      const c = cards[j]
+      if (c?.card_type === 'socratic_progress' && c.steps_count) {
+        return `第 ${c.current_step} 步 / 共 ${c.steps_count} 步`
+      }
+      if (c?.card_type === 'socratic_complete') return '已完成 ✓'
+      if (c?.card_type === 'socratic_start' && c.steps_count) {
+        return `第 1 步 / 共 ${c.steps_count} 步`
+      }
+    }
+  }
+  if (chat.streaming.value) return '引导中…'
+  if (!msgs.length) return '新对话'
+  return '对话中'
 })
 
 /** 建议卡：首轮发送后收起为 slim 条 */

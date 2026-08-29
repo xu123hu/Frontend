@@ -250,7 +250,7 @@ const labNav = [
   { key: 'resource', icon: '📚', name: '资源推荐', to: '/resource', new: 'NEW' },
   { key: 'memories', icon: '🗂️', name: '记忆管理', to: '', unconfigured: true },
   { key: 'voice', icon: '🎙️', name: '语音讲解', to: '', unconfigured: true },
-  { key: 'visual', icon: '📈', name: '可视化讲解', to: '', unconfigured: true },
+  { key: 'visual', icon: '📈', name: '可视化讲解', to: '/dialog', new: 'NEW' },
   { key: 'derive', icon: '✅', name: '推导检查', to: '', unconfigured: true },
   { key: 'replay', icon: '🔁', name: '课堂回溯', to: '', unconfigured: true },
   { key: 'resource2', icon: '📖', name: '资源推荐', to: '', unconfigured: true },
