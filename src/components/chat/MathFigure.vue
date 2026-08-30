@@ -7,12 +7,40 @@
     <div v-if="figure.caption || figure.step_no" class="mf-head">
       <span v-if="figure.step_no" class="mf-badge">步骤 {{ figure.step_no }}</span>
       <span v-if="figure.caption" class="mf-caption">{{ figure.caption }}</span>
-      <button v-if="!ggbItems.length" class="mf-replay" style="margin-left:auto;" @click="genDynamic">
+      <button
+        v-if="interactiveAvailable && !showInteractive"
+        class="mf-replay"
+        style="margin-left:auto;"
+        @click="showInteractive = true"
+      >🖐 可拖动</button>
+      <button
+        v-if="interactiveAvailable && showInteractive"
+        class="mf-replay"
+        style="margin-left:auto;"
+        @click="showInteractive = false"
+      >看静态帧</button>
+      <button v-if="!ggbItems.length && !showInteractive" class="mf-replay" @click="genDynamic">
         {{ ggbBusy ? '生成中…' : '🔍 动态演示' }}
       </button>
-      <button v-else class="mf-replay" style="margin-left:auto;" @click="ggbItems = []">收起动态</button>
+      <button v-else-if="ggbItems.length && !showInteractive" class="mf-replay" @click="ggbItems = []">收起动态</button>
+      <span
+        v-if="figure.problem_source_sha256"
+        class="mf-src-badge"
+        title="本图与原题图 SHA-256 绑定（N3 图形合同）"
+      >已核对原题图</span>
     </div>
 
+    <MathFigure3D
+      v-if="showInteractive && solidScene"
+      :figure="solidScene"
+      :caption="figure.caption || ''"
+      :height="300"
+    />
+    <FigureConicInteractive
+      v-else-if="showInteractive && conicParams"
+      :params="conicParams"
+    />
+    <template v-else>
     <DynamicFigureViewer v-if="ggbItems.length" :items="ggbItems" :label="'动态演示'" :height="300" />
     <div v-if="ggbError" class="mf-fallback" style="margin-top:6px;">{{ ggbError }}</div>
 
@@ -36,8 +64,9 @@
         </div>
       </Transition>
     </div>
+    </template>
 
-    <div v-if="frames.length > 1" class="mf-controls">
+    <div v-if="!showInteractive && frames.length > 1" class="mf-controls">
       <div class="mf-dots" role="tablist">
         <button
           v-for="(f, i) in frames"
@@ -62,6 +91,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { api } from '@/api/client'
 import UiIcon from '@/components/common/UiIcon.vue'
 import DynamicFigureViewer from '@/components/DynamicFigureViewer.vue'
+import MathFigure3D from '@/components/chat/MathFigure3D.vue'
+import FigureConicInteractive from '@/components/chat/FigureConicInteractive.vue'
 
 const props = defineProps({
   figure: { type: Object, required: true },
@@ -73,6 +104,15 @@ const frames = computed(() =>
   Array.isArray(props.figure?.frames) ? props.figure.frames.slice(0, 6) : []
 )
 const frameIndex = ref(0)
+
+/* ===== N6 可拖动交互（three.js 立体旋转 / 圆锥曲线拖动动点） ===== */
+const solidScene = computed(() => props.figure?.solid || null)
+const conicParams = computed(() => {
+  const fp = props.figure?.figure_params
+  return fp?.type === 'conic' ? fp.params : null
+})
+const interactiveAvailable = computed(() => !!solidScene.value || !!conicParams.value)
+const showInteractive = ref(false)
 const imgFailed = ref(false)
 const ggbItems = ref([])
 const ggbBusy = ref(false)
@@ -249,6 +289,16 @@ onBeforeUnmount(clearAuto)
   font-size: 11px;
   color: var(--text-muted);
   flex: 1;
+}
+.mf-src-badge {
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e8f6ec;
+  color: #1c7a43;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .mf-replay {
   border: 1px solid var(--border);
