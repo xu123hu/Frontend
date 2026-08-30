@@ -7,7 +7,14 @@
     <div v-if="figure.caption || figure.step_no" class="mf-head">
       <span v-if="figure.step_no" class="mf-badge">步骤 {{ figure.step_no }}</span>
       <span v-if="figure.caption" class="mf-caption">{{ figure.caption }}</span>
+      <button v-if="!ggbItems.length" class="mf-replay" style="margin-left:auto;" @click="genDynamic">
+        {{ ggbBusy ? '生成中…' : '🔍 动态演示' }}
+      </button>
+      <button v-else class="mf-replay" style="margin-left:auto;" @click="ggbItems = []">收起动态</button>
     </div>
+
+    <DynamicFigureViewer v-if="ggbItems.length" :items="ggbItems" :label="'动态演示'" :height="300" />
+    <div v-if="ggbError" class="mf-fallback" style="margin-top:6px;">{{ ggbError }}</div>
 
     <div class="mf-stage">
       <Transition name="mf-fade" mode="out-in">
@@ -52,7 +59,9 @@
 
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { api } from '@/api/client'
 import UiIcon from '@/components/common/UiIcon.vue'
+import DynamicFigureViewer from '@/components/DynamicFigureViewer.vue'
 
 const props = defineProps({
   figure: { type: Object, required: true },
@@ -65,6 +74,9 @@ const frames = computed(() =>
 )
 const frameIndex = ref(0)
 const imgFailed = ref(false)
+const ggbItems = ref([])
+const ggbBusy = ref(false)
+const ggbError = ref('')
 let autoTimer = null
 let playedOnce = false
 
@@ -106,6 +118,32 @@ function replay() {
   frameIndex.value = 0
   imgFailed.value = false
   startAuto()
+}
+
+// 动态演示：调用 /api/figures/ggb 由 AI 生成 GeoGebra 交互构造（best-effort）
+async function genDynamic() {
+  if (ggbBusy.value) return
+  ggbBusy.value = true
+  ggbError.value = ''
+  try {
+    // v3.3：把确定性渲染用的 figure_params 一并下发——几何体的顶点/边/面精确可查，
+    // 此前只发 caption（一句话说明），生成器只能靠猜，构造常与原题不符。
+    // question_text 上限 2000：caption + 紧凑参数 JSON 截断保安全
+    const compact = (() => {
+      try { return JSON.stringify(props.figure?.figure_params || {}) } catch { return '' }
+    })()
+    const caption = props.figure?.caption || ''
+    const questionText = (compact && compact !== '{}'
+      ? `${caption}；图形结构化参数：${compact}`
+      : caption).slice(0, 2000)
+    const d = await api.post('/figures/ggb', { question_text: questionText, figure_hint: caption.slice(0, 300), interactive: true })
+    if (d?.ggb) ggbItems.value = [d.ggb]
+    else ggbError.value = '动态图形生成失败'
+  } catch (e) {
+    ggbError.value = e?.message || '动态图形生成失败'
+  } finally {
+    ggbBusy.value = false
+  }
 }
 
 // 流式结束后自动播放一次；流式期间保持展示当前帧（跟随讲解节奏）
