@@ -45,14 +45,15 @@ export const classroomApi = {
       undefined,
       signal,
     ),
-  launchQuestion: (classId: string, questionNo: number, signal?: AbortSignal) =>
+  launchQuestion: (classId: string, questionNo: number, idempotencyKey?: string, signal?: AbortSignal) =>
     teacherPost<ClassroomSessionQuestion>(
       `/teacher/classes/${classId}/classroom-session/question`,
       {
         question_no: questionNo,
-        client_request_id: `session:${classId}:q:${questionNo}:${Date.now()}`,
+        // 稳定键（无 Date.now）：重试同键防重复发题；再次发题语义=递增 question_no（0 基，契约 accepted）
+        client_request_id: `session:${classId}:q:${questionNo}`,
       },
-      undefined,
+      idempotencyKey,
       signal,
     ),
   closeSession: (classId: string, signal?: AbortSignal) =>

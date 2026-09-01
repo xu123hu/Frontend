@@ -70,21 +70,29 @@ test.describe('M3 teacher frontend journeys (mock)', () => {
 
   })
 
-  test('classroom mode persists through the explicit two-step teacher confirm', async ({ page }) => {
+  test('classroom session: start → launch question → live distribution → close (GP-13)', async ({ page }) => {
     await presetMock(page, TEACHER_USER)
     await page.goto('/teacher/classroom')
 
-    await expect(page.getByText('当前未开启')).toBeVisible()
-    await page.getByRole('button', { name: '准备开启课堂模式' }).click()
-    const enabledResponse = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === '/api/teacher/classes/c1/classroom-mode'
-        && response.request().method() === 'POST',
-    )
-    await page.getByRole('button', { name: '确认执行' }).click()
-    const enabled = await (await enabledResponse).json()
-    expect(enabled.data.enabled).toBe(true)
-    await expect(page.getByText('当前已开启')).toBeVisible()
-    await expect(page.getByRole('button', { name: '准备关闭课堂模式' })).toBeVisible()
+    // idle：填写课题后显式开启
+    await expect(page.getByText('填写本节课信息后开启')).toBeVisible()
+    await page.getByLabel('课题').fill('导数与函数单调性')
+    await page.getByRole('button', { name: '开启课堂会话' }).click()
+    await expect(page.getByText('已连接（人）')).toBeVisible()
+    await expect(page.getByText('44')).toBeVisible()
+
+    // 发题（0 基检测点）→ 实时结果渲染后端题面与分布
+    await page.getByRole('button', { name: /检测点 1/ }).click()
+    await expect(page.getByText('实时结果')).toBeVisible()
+    await expect(page.getByText(/检测题 1/)).toBeVisible()
+    await expect(page.getByText('正确率 66%')).toBeVisible()
+    await expect(page.getByText('错误模式与最近作业一致')).toBeVisible()
+    // 诚实标注：作答前分布为演示数据
+    await expect(page.getByText('分布为演示数据')).toBeVisible()
+
+    // 结束归档 → 回到启动面板（ended 态）
+    await page.getByRole('button', { name: '结束课堂并归档' }).click()
+    await expect(page.getByText('上一节课已归档，可开启新的一节。')).toBeVisible()
   })
 
   test('student role cannot enter teacher workspace', async ({ page }) => {

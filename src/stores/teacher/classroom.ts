@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
+import { createIdempotencyTracker } from '@/api/idempotency'
 import { classroomApi } from '@/api/teacher/classroom'
 import type { ClassroomModeState, ClassroomSessionState, VideoInsight } from '@/types/teacher'
+
+const idem = createIdempotencyTracker()
 
 export const useClassroomStore = defineStore('classroom', {
   state: () => ({
@@ -11,14 +14,14 @@ export const useClassroomStore = defineStore('classroom', {
     error: null as string | null,
   }),
   actions: {
-    /** 开/关使用不同幂等键（同键会被后端重放，导致无法关闭） */
+    /** 开/关使用不同幂等键（同键会被后端重放，导致无法关闭）；tracker 保证重试同键 */
     async setMode(classId: string, enabled: boolean, lessonId?: string, idempotencyKey?: string) {
       this.loading = true; this.error = null
       try {
         this.mode = (await classroomApi.setMode(
           classId,
           { enabled, lesson_id: lessonId ?? undefined },
-          idempotencyKey ?? `mode:${classId}:${enabled ? 'on' : 'off'}:${crypto.randomUUID()}`,
+          idempotencyKey ?? idem.keyFor(`classroom:mode:${classId}:${enabled ? 'on' : 'off'}`),
         )).data
       } catch (e: any) { this.error = e?.message || '操作课堂模式失败'; throw e } finally { this.loading = false }
     },
@@ -49,7 +52,8 @@ export const useClassroomStore = defineStore('classroom', {
     async launchQuestion(classId: string, questionNo: number) {
       this.loading = true; this.error = null
       try {
-        const result = (await classroomApi.launchQuestion(classId, questionNo)).data
+        // 幂等恢复（N2）：tracker 同动作复用同键，网络重试不重复发题
+        const result = (await classroomApi.launchQuestion(classId, questionNo, idem.keyFor(`classroom:launch:${classId}:${questionNo}`))).data
         if (this.session) this.session = { ...this.session, last_question: result }
         else this.session = { class_id: classId, session_id: null, topic: '', room: '', started_at: '', status: 'active', connected_total: 0, current_segment: null, last_question: result, degraded: false }
       } catch (e: any) { this.error = e?.message || '发题失败'; throw e } finally { this.loading = false }

@@ -28,11 +28,12 @@
       <p>建立班级并配置任课关系后，才可以开启课堂会话。</p>
     </main>
 
-    <!-- 未开课：启动面板 -->
-    <main v-else-if="sessionStatus === 'idle'" class="classroom-v3__start">
+    <!-- 未开课/已归档：启动面板 -->
+    <main v-else-if="!session || session.status !== 'active'" class="classroom-v3__start">
       <section class="classroom-v3__start-card">
         <p class="classroom-v3__eyebrow">开始一节课</p>
         <h2>填写本节课信息后开启</h2>
+        <p v-if="session?.status === 'ended'" class="classroom-v3__hint">上一节课已归档，可开启新的一节。</p>
         <label>课题<input v-model.trim="startForm.topic" maxlength="120" placeholder="例如：导数与函数单调性" /></label>
         <label>教室<input v-model.trim="startForm.room" maxlength="80" placeholder="例如：303" /></label>
         <button class="classroom-v3__primary" type="button" :disabled="starting" @click="startSession">{{ starting ? '正在开启…' : '开启课堂会话' }}</button>
@@ -57,7 +58,7 @@
         </div>
       </section>
 
-      <!-- 一键发题：检测点 -->
+      <!-- 一键发题：检测点（题池暴露契约就位前用中性标签，不自编题面） -->
       <section class="classroom-v3__bank">
         <div class="classroom-v3__section-title">
           <div><p class="classroom-v3__eyebrow">课堂检测</p><h2>发起一道题</h2></div>
@@ -65,15 +66,15 @@
         </div>
         <div class="classroom-v3__bank-grid">
           <button
-            v-for="(item, idx) in questionBank"
-            :key="item.focus"
+            v-for="(label, idx) in checkPoints"
+            :key="label"
             class="classroom-v3__bank-card"
             type="button"
             :disabled="launching"
             @click="launch(idx)"
           >
-            <span class="classroom-v3__bank-focus">{{ item.focus }}</span>
-            <span class="classroom-v3__bank-prompt">{{ item.prompt }}</span>
+            <span class="classroom-v3__bank-focus">{{ label }}</span>
+            <span class="classroom-v3__bank-prompt">按题池顺序发题，发题后题面以学生端收到的为准</span>
           </button>
         </div>
       </section>
@@ -99,6 +100,7 @@
             <b>{{ question.pattern_similar ? '错误模式与最近作业一致' : '课堂洞察' }}</b>
             <p>{{ question.ai_reminder }}</p>
             <p class="classroom-v3__wrong">主要错误集中在「{{ question.main_wrong_option }}」</p>
+            <p class="classroom-v3__muted">分布为演示数据；真实作答采集开通后自动替换（后端诚实化排期中）。</p>
           </div>
         </div>
         <div class="classroom-v3__result-actions">
@@ -118,10 +120,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, reactive, ref } from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { classApi } from '@/api'
-import { classroomApi } from '@/api/teacher/classroom'
 import { useClassroomStore } from '@/stores/teacher/classroom'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import type { ClassroomSessionQuestion, ClassroomSessionState } from '@/types/teacher'
@@ -146,18 +147,17 @@ const sessionStatus = computed(() => session.value?.status ?? 'idle')
 const question = computed<ClassroomSessionQuestion | null>(() => session.value?.last_question ?? null)
 const currentClass = computed(() => classes.value.find((item) => item.id === selectedClass.value) || { name: '当前班级' })
 
-/** 与课堂会话对应的确定性检测点：紧扣《导数与函数单调性》三大重难点 */
-const questionBank = [
-  { focus: '单调区间端点取等', prompt: 'f(x)=x³−3x 在 (a,+∞) 单调递增，a 的最小值？' },
-  { focus: '参数边界 a=0 分类', prompt: '讨论 f(x)=ln x−ax 的单调性，a=0 时如何处理？' },
-  { focus: '导数符号与单调性充要', prompt: 'f′(x)>0 是单调递增的什么条件？' },
-]
+/** 检测点中性标签（题池暴露契约 proposed；落地后改渲染后端 question_pool，删除本表） */
+const checkPoints = ['检测点 1', '检测点 2', '检测点 3']
 
 const elapsedMinutes = computed(() => {
   if (!session.value?.started_at) return 0
-  const diff = Math.floor((Date.now() - new Date(session.value.started_at).getTime()) / 60000)
+  const diff = Math.floor((nowMs.value - new Date(session.value.started_at).getTime()) / 60000)
   return Math.max(0, diff)
 })
+
+const nowMs = ref(Date.now())
+let clockTimer: ReturnType<typeof setInterval> | null = null
 
 function optionLabel(index: number) { return String.fromCharCode(65 + index) }
 function barWidth(count: number) {
@@ -207,9 +207,14 @@ async function closeSession() {
   } catch (cause: any) { error.value = cause?.message || '结束课堂失败' } finally { closing.value = false }
 }
 
-function goPrep() { router.push('/teacher/prep') }
+function goPrep() {
+  // L6→L2 闭环：携带课堂焦点进入备课
+  const focus = question.value?.prompt || ''
+  router.push({ path: '/teacher/prep', query: focus ? { focus, from: 'classroom' } : {} })
+}
 
 onMounted(async () => {
+  clockTimer = setInterval(() => { nowMs.value = Date.now() }, 30000)
   loading.value = true
   try {
     const data = await classApi.mine()
@@ -219,6 +224,7 @@ onMounted(async () => {
     if (selectedClass.value) await loadClassroom()
   } catch (cause: any) { error.value = cause?.message || '班级信息未能加载' } finally { loading.value = false }
 })
+onBeforeUnmount(() => { if (clockTimer) clearInterval(clockTimer) })
 </script>
 
 <style scoped>

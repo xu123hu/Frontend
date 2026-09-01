@@ -14,6 +14,9 @@ export default defineConfig({
   testDir: './e2e',
   timeout: 45_000,
   retries: 0,
+  // 单 worker：两个 spec 共享同一 mock dev server，_mock/teacher/reset 会清空共享内存态，
+  // 并行 worker 会互踩（2026-09-01 L4 实测），故固化串行。
+  workers: 1,
   reporter: [['list', { printSteps: true }]],
   use: {
     baseURL,

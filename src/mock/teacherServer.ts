@@ -46,6 +46,7 @@ let gradingReviews = new Map<string, 'pending' | 'cleared'>()
 let resources: TeacherResource[] = seedResources()
 let tasks = new Map<string, TeacherTask>()
 let modes = new Map<string, ClassroomModeState>()
+let sessions = new Map<string, ClassroomSessionState>()
 const idem = new Map<string, unknown>()
 let seq = 1
 
@@ -66,7 +67,7 @@ function advanceTask(id: string): TeacherTask {
 
 function resetTeacherMock() {
   artifacts = new Map(); assignments = new Map(); gradingItems = gradingQueue(); resources = seedResources()
-  gradingReviews = new Map(); tasks = new Map(); modes = new Map(); idem.clear(); seq = 1
+  gradingReviews = new Map(); tasks = new Map(); modes = new Map(); sessions = new Map(); idem.clear(); seq = 1
 }
 
 function assertScope(cid: string): boolean { return TEACHER_CLASSES.some((c) => c.id === cid) }
@@ -196,6 +197,42 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
         const mode: ClassroomModeState = { enabled: !!b.enabled, class_id: cid, lesson_id: b.lesson_id || null, ttl_seconds: b.enabled ? 3600 : 0, updated_at: iso(), degraded: false }
         modes.set(cid, mode)
         ok(res, mode); return true
+      }
+    }
+    // ===== 课堂会话（契约 2026-09-01 accepted；镜像后端 test_m3_teacher_classroom.py 断言） =====
+    if (seg[3] === 'classroom-session') {
+      if (method === 'GET' && !seg[4]) {
+        ok(res, sessions.get(cid) || { class_id: cid, session_id: null, topic: '', room: '', started_at: '', status: 'idle', connected_total: 0, current_segment: null, last_question: null, degraded: false })
+        return true
+      }
+      if (seg[4] === 'start' && method === 'POST') {
+        const b = await readBody(req)
+        const session: ClassroomSessionState = {
+          class_id: cid, session_id: `sess-${cid}-${seq++}`, topic: String(b.topic || ''), room: String(b.room || ''),
+          started_at: iso(), status: 'active', connected_total: 44, current_segment: null, last_question: null, degraded: false,
+        }
+        sessions.set(cid, session)
+        ok(res, session); return true
+      }
+      if (seg[4] === 'question' && method === 'POST') {
+        const b = await readBody(req)
+        const session = sessions.get(cid)
+        if (!session || session.status !== 'active') { fail(res, 409, 40910, 'session_not_active'); return true }
+        // 确定性：同 question_no 同分布（对标后端 question_no % 题池长度 断言）
+        const question: ClassroomSessionQuestion = {
+          prompt: `检测题 ${Number(b.question_no) + 1}：导数与函数单调性（题池第 ${Number(b.question_no) + 1} 题）`,
+          submitted: 44, correct_rate: 66, distribution: [18, 12, 9, 5], main_wrong_option: 'C',
+          ai_reminder: '错误模式与最近一次作业一致，建议再用 3 分钟讲 a=0 边界分类。',
+          pattern_similar: true, variant: '变式：讨论 f(x)=x³−3ax 的单调性（按 a 分类）',
+        }
+        session.last_question = question
+        sessions.set(cid, session)
+        ok(res, question); return true
+      }
+      if (seg[4] === 'close' && method === 'POST') {
+        const session = sessions.get(cid)
+        if (session) { session.status = 'ended'; sessions.set(cid, session) }
+        ok(res, { status: 'ended' }); return true
       }
     }
     return false
