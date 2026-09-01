@@ -1,5 +1,5 @@
 import {
-  TEACHER_CLASSES, classInsights, gradingDetail, gradingQueue, iso, lessonArtifact, quizArtifact, seedResources, todayData, videoInsights,
+  ROSTER_NAMES, TEACHER_CLASSES, classInsights, gradingDetail, gradingQueue, iso, lessonArtifact, quizArtifact, seedResources, todayData, videoInsights,
 } from './teacherData'
 import type {
   Assignment, AssignmentStatus, ClassroomModeState, GradingQueueItem, SourceRef, TeacherArtifact, TeacherResource, TeacherTask, UploadTicket,
@@ -144,6 +144,19 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
     if (!isTeacher) { fail(res, 403, 40301, 'role_denied'); return true }
   }
   if (method === 'GET' && url === '/classes/mine') { ok(res, { items: TEACHER_CLASSES }); return true }
+  if (method === 'GET' && seg[0] === 'classes' && seg[1] && seg[2] === 'members') {
+    // 班级花名册（L5/TC-L5-F04）：与统一数据世界同源——高二（3）班 46 名学生 + 1 名教师
+    if (!assertScope(seg[1])) { fail(res, 403, 40302, 'class_scope_denied'); return true }
+    const students = ROSTER_NAMES.map((name, i) => ({
+      userId: `stu-${i + 1}`,
+      nickname: name,
+      nicknameInClass: name,
+      memberRole: 'student',
+      confirmed: true,
+    }))
+    ok(res, { items: [{ userId: 't1', nickname: '李老师', nicknameInClass: '李老师', memberRole: 'teacher', confirmed: true }, ...students] })
+    return true
+  }
   if (seg[0] !== 'teacher') return false
 
   if (method === 'GET' && url === '/teacher/today') { ok(res, todayData()); return true }
@@ -152,7 +165,8 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
   if (seg[0] === 'teacher' && seg[1] === 'classes' && seg[2]) {
     const cid = seg[2]
     if (!assertScope(cid)) { fail(res, 403, 40302, 'class_scope_denied'); return true }
-    if (seg[3] === 'insights') { ok(res, classInsights(cid)); return true }
+    // 契约同构：后端返回 data:{insights:[...]}（api 层按 res.data.insights 解包），mock 同形
+    if (seg[3] === 'insights') { ok(res, { insights: classInsights(cid) }); return true }
     if (seg[3] === 'video-insights') { ok(res, videoInsights(cid)); return true }
     if (seg[3] === 'classroom-mode') {
       if (method === 'GET') { ok(res, modes.get(cid) || { enabled: false, class_id: cid, lesson_id: null, ttl_seconds: 0, updated_at: iso(), degraded: false }); return true }

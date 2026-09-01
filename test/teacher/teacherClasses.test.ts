@@ -81,13 +81,13 @@ describe('TeacherClassesView class-scoped context', () => {
     await flushPromises()
     await wrapper.get('select').setValue('class-b')
     membersB.resolve({ items: [member('student-b', 'B 班学生', '')] })
-    insightsB.resolve([{ insight_id: 'b', kind: 'queue', summary: 'B 班洞察', evidence: 'B 班 5 份待确认。', data_window: { from: '', to: '' }, recommended_actions: [] }])
+    insightsB.resolve([{ insight_id: 'b', kind: 'review_backlog', summary: 'B 班洞察', evidence: 'B 班 5 份待确认。', data_window: { from: '', to: '' }, recommended_actions: [] }])
     await flushPromises()
     expect(wrapper.text()).toContain('B 班学生')
     expect(wrapper.text()).toContain('B 班洞察')
 
     membersA.resolve({ items: [member('student-a', 'A 班学生', '')] })
-    insightsA.resolve([{ insight_id: 'a', kind: 'queue', summary: 'A 班洞察', evidence: 'A 班 8 份待确认。', data_window: { from: '', to: '' }, recommended_actions: [] }])
+    insightsA.resolve([{ insight_id: 'a', kind: 'review_backlog', summary: 'A 班洞察', evidence: 'A 班 8 份待确认。', data_window: { from: '', to: '' }, recommended_actions: [] }])
     await flushPromises()
     expect(wrapper.text()).toContain('B 班学生')
     expect(wrapper.text()).toContain('B 班洞察')
@@ -120,13 +120,36 @@ describe('TeacherClassesView class-scoped context', () => {
 
   it('renders human-readable evidence unchanged without exposing legacy key=value diagnostics', async () => {
     classesApi.insights.mockResolvedValue([
-      { insight_id: 'human', kind: 'queue', summary: '待批提醒', evidence: '本班有 5 份低置信度作答需要确认。', data_window: { from: '', to: '' }, recommended_actions: [] },
-      { insight_id: 'legacy', kind: 'queue', summary: '旧证据', evidence: 'pending_count=5; low_confidence=2', data_window: { from: '', to: '' }, recommended_actions: [] },
+      { insight_id: 'human', kind: 'review_backlog', summary: '待批提醒', evidence: '本班有 5 份低置信度作答需要确认。', data_window: { from: '', to: '' }, recommended_actions: [] },
+      { insight_id: 'legacy', kind: 'review_backlog', summary: '旧证据', evidence: 'pending_count=5; low_confidence=2', data_window: { from: '', to: '' }, recommended_actions: [] },
     ])
     const wrapper = mount(TeacherClassesView)
     await flushPromises()
     expect(wrapper.text()).toContain('本班有 5 份低置信度作答需要确认。')
     expect(wrapper.text()).not.toContain('pending_count=5')
     expect(wrapper.text()).not.toContain('low_confidence=2')
+  })
+
+  it('maps authoritative insight kinds to real actions and carries kp/class context (GP-12)', async () => {
+    classesApi.insights.mockResolvedValue([
+      { insight_id: 'ec', kind: 'error_cluster', summary: 'a=0 边界失分集中', evidence: '17/46 人失分。', data_window: { from: '', to: '' }, recommended_actions: [], kp_code: '函数的单调性' },
+      { insight_id: 'rb', kind: 'review_backlog', summary: '21 份待确认', evidence: '按题批改更快。', data_window: { from: '', to: '' }, recommended_actions: [] },
+      { insight_id: 'unknown', kind: 'mystery', summary: '未知洞察', evidence: 'evidence。', data_window: { from: '', to: '' }, recommended_actions: [] },
+    ])
+    const wrapper = mount(TeacherClassesView)
+    await flushPromises()
+    const labels = wrapper.findAll('button').map((button) => button.text())
+    expect(labels).toContain('布置变式练习')
+    expect(labels).toContain('看典型错误')
+    expect(labels).toContain('去批改这些作答')
+    expect(labels).toContain('回到今天的工作台')
+
+    await wrapper.findAll('button').find((button) => button.text() === '布置变式练习')!.trigger('click')
+    await flushPromises()
+    expect(router.push).toHaveBeenCalledWith({ path: '/teacher/assign', query: { kp_codes: '函数的单调性' } })
+
+    await wrapper.findAll('button').find((button) => button.text() === '去批改这些作答')!.trigger('click')
+    await flushPromises()
+    expect(router.push).toHaveBeenCalledWith({ path: '/teacher/grading', query: { class_id: 'class-a' } })
   })
 })

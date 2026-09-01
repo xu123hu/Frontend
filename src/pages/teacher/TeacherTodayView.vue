@@ -108,6 +108,7 @@ import { useTeacherTodayStore } from '@/stores/teacher/today'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import { gradingWorkspaceApi } from '@/api/teacher/gradingWorkspace'
 import { toGradingWorkspace } from '@/features/teacher-grading-v2/gradingWorkspaceAdapter'
+import { evidenceText } from '@/utils/insightCopy'
 import { useAuthStore } from '@/stores/auth'
 import type { ActionableInsight } from '@/types/teacher'
 import ButlerPanel from '@/components/teacher/ButlerPanel.vue'
@@ -127,15 +128,6 @@ function normalizeTeacherName(value: unknown) {
   return name ? `${name}老师` : '老师'
 }
 const displayName = computed(() => normalizeTeacherName(auth.nickname))
-/** 教学证据面向前端渲染：禁止裸露内部 key=value 诊断字段 */
-function evidenceText(value: unknown) {
-  if (typeof value !== 'string' || !value.trim()) return '暂无更多证据'
-  const evidence = value.trim()
-  if (/(?:^|[;；,，\s])[a-z][a-z0-9_]*\s*=/i.test(evidence)) {
-    return '证据格式待更新，暂不展示内部诊断字段。'
-  }
-  return evidence
-}
 
 
 const nextLesson = computed(() => store.data?.next_lesson || null)

@@ -19,7 +19,7 @@
         <p v-else class="classes-v2__empty">当前班级尚无成员记录。</p>
       </section>
       <aside class="classes-v2__evidence"><p class="classes-v2__eyebrow">已确认作答的聚合结果</p><h2>作答证据</h2><p class="classes-v2__description">只展示后端形成的可行动洞察；没有证据时保持为空，不把建议写成班级事实。</p>
-        <div v-if="insights.length" class="classes-v2__insights"><article v-for="insight in insights" :key="insight.insight_id"><h3>{{ insight.summary }}</h3><p>{{ evidenceText(insight.evidence) }}</p><small v-if="insight.recommended_actions?.length">建议：{{ insight.recommended_actions.join('；') }}</small><button class="t-btn sm primary classes-v2__act" type="button" @click="go(insightAction(insight).path)">{{ insightAction(insight).label }}</button></article></div>
+        <div v-if="insights.length" class="classes-v2__insights"><article v-for="insight in insights" :key="insight.insight_id"><h3>{{ insightTitle(insight) }}</h3><p>{{ evidenceText(insight.evidence) }}</p><small v-if="insight.recommended_actions?.length">建议：{{ insight.recommended_actions.join('；') }}</small><div class="classes-v2__actrow"><button v-for="act in insightActions(insight)" :key="act.label" class="t-btn sm primary classes-v2__act" type="button" @click="goAction(act)">{{ act.label }}</button></div></article></div>
         <p v-else class="classes-v2__empty">当前没有足以形成教学行动的作答证据。</p>
       </aside>
       <section class="classes-v2__next"><div><p class="classes-v2__eyebrow">带入当前班级</p><h2>{{ currentClass?.name }}</h2><p>以下入口会将当前班级上下文交给正式工作区。</p></div><div><button class="t-btn primary" type="button" @click="go('/teacher/prep')">基于资料备课</button><button class="t-btn" type="button" @click="go('/teacher/assign')">从已审核题库组卷</button><button class="t-btn" type="button" @click="go('/teacher/classroom')">进入课堂控制</button></div></section>
@@ -35,6 +35,7 @@ import { useRouter } from 'vue-router'
 import { classApi } from '@/api'
 import { classesApi } from '@/api/teacher/classes'
 import { useTeacherContextStore } from '@/stores/teacher/context'
+import { evidenceText, insightTitle, isKnownInsightKind } from '@/utils/insightCopy'
 import type { ActionableInsight } from '@/types/teacher'
 
 interface ClassItem { id: string; name: string; myRole?: string; confirmed?: boolean; inviteCode?: string | null }
@@ -64,7 +65,6 @@ const visibleInviteCode = computed(() => {
   return cls.inviteCode.trim()
 })
 const students = computed(() => members.value.filter((item) => item.memberRole === 'student' && item.confirmed))
-const pendingMembers = computed(() => members.value.filter((item) => !item.confirmed))
 
 async function loadClassData() {
   const cls = currentClass.value
@@ -86,21 +86,13 @@ async function loadClassData() {
     insights.value = insightData
   } catch (cause: any) {
     if (requestVersion !== classRequestVersion || selectedClassId.value !== cls.id) return
-    error.value = cause?.message || '班级数据加载失败'
+    console.error('[classes] 班级数据加载失败', cause)
+    error.value = '班级数据暂时加载不出来，可重试或先切换班级。'
     members.value = []
     insights.value = []
   } finally {
     if (requestVersion === classRequestVersion && selectedClassId.value === cls.id) loading.value = false
   }
-}
-
-function evidenceText(value: unknown) {
-  if (typeof value !== 'string' || !value.trim()) return '暂无更多证据'
-  const evidence = value.trim()
-  if (/(?:^|[;；,，\s])[a-z][a-z0-9_]*\s*=/i.test(evidence)) {
-    return '证据格式待更新，暂不展示内部诊断字段。'
-  }
-  return evidence
 }
 
 async function copyInviteCode() {
@@ -135,61 +127,78 @@ onMounted(async () => {
     if (selectedClassId.value) await loadClassData()
     else loading.value = false
   } catch (cause: any) {
-    error.value = cause?.message || '班级列表加载失败'
+    console.error('[classes] 班级列表加载失败', cause)
+    error.value = '班级列表暂时加载不出来，请刷新重试。'
     loading.value = false
   }
 })
-const INSIGHT_ACTIONS: Record<string, { label: string; path: string }> = {
-  review_backlog: { label: '去批改这些作答', path: '/teacher/grading' },
-  low_mastery: { label: '布置针对性练习', path: '/teacher/assign' },
-  submission_trend: { label: '查看作业与提交', path: '/teacher/assign' },
+/** 洞察动作映射：kind 权威四枚举（契约记录 2026-09-01），未知 kind 落兜底并告警 */
+interface InsightAction { label: string; path: string; query?: Record<string, string> }
+const INSIGHT_ACTIONS: Record<string, InsightAction[]> = {
+  error_cluster: [
+    { label: '布置变式练习', path: '/teacher/assign' },
+    { label: '看典型错误', path: '/teacher/grading' },
+  ],
+  review_backlog: [{ label: '去批改这些作答', path: '/teacher/grading' }],
+  low_mastery: [{ label: '布置针对性练习', path: '/teacher/assign' }],
+  submission_trend: [{ label: '查看作业与提交', path: '/teacher/assign' }],
 }
-function insightAction(insight: ActionableInsight) { return INSIGHT_ACTIONS[insight.kind] || { label: '回到今天的工作台', path: '/teacher/today' } }
+
+function insightActions(insight: ActionableInsight): InsightAction[] {
+  if (!isKnownInsightKind(insight.kind)) console.warn(`[insights] 未知洞察 kind：${insight.kind}，动作落兜底`)
+  const base = INSIGHT_ACTIONS[insight.kind] || [{ label: '回到今天的工作台', path: '/teacher/today' }]
+  const kpCode = (insight as { kp_code?: string }).kp_code
+  const classId = selectedClassId.value
+  return base.map((act) => {
+    const query: Record<string, string> = { ...(act.query || {}) }
+    if (kpCode && act.path === '/teacher/assign') query.kp_codes = kpCode
+    if (classId && act.path === '/teacher/grading') query.class_id = classId
+    return { ...act, query }
+  })
+}
+
+function goAction(action: InsightAction) {
+  const cls = currentClass.value
+  if (cls) context.setClass(cls.id, cls.name)
+  router.push({ path: action.path, query: action.query })
+}
+
 </script>
 
 <style scoped>
-.class-invite {
-  align-items: center;
-  display: flex;
-  gap: 20px;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.class-invite-label {
-  color: var(--t-text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.class-invite-value {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-}
-
-.class-invite p {
-  margin: 6px 0 0;
-}
-
-.class-invite-action {
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-@media (max-width: 640px) {
-  .class-invite {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .class-invite-action {
-    align-items: flex-start;
-  }
-}
-
+/* 版式参照 REF-L5（Khan 班级 Overview）：左花名册右证据两栏；此前 classes-v2 版式类零定义（体验轨未通过项修复） */
+.classes-v2 { max-width: 1500px; margin: 0 auto; padding: 30px 32px 44px; color: #17243b; }
+.classes-v2__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.classes-v2__eyebrow { margin: 0; color: #69758b; font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+.classes-v2 h1 { margin: 4px 0 8px; font-size: 30px; letter-spacing: -.03em; }
+.classes-v2 h2 { margin: 4px 0 0; font-size: 20px; }
+.classes-v2__head > div > p:last-child { margin: 6px 0 0; color: #53637b; max-width: 720px; line-height: 1.6; }
+.classes-v2__picker { display: grid; gap: 6px; color: #526178; font-size: 12px; font-weight: 700; }
+.classes-v2__picker select { min-width: 200px; padding: 9px 10px; border: 1px solid #d8e1ec; border-radius: 8px; background: #fff; color: inherit; font: inherit; }
+.classes-v2__notice { margin: 18px 0 0; padding: 11px 14px; border-radius: 9px; background: #fff1f2; color: #b42318; }
+.classes-v2__workspace { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; margin-top: 24px; align-items: start; }
+.classes-v2__roster, .classes-v2__evidence, .classes-v2__next { border: 1px solid #e1e7ef; border-radius: 14px; background: #fff; padding: 20px 22px; }
+.classes-v2__roster > header, .classes-v2__evidence .classes-v2__eyebrow { margin-bottom: 8px; }
+.classes-v2__roster header { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.classes-v2__roster header span { color: #65758b; font-size: 13px; }
+.classes-v2__table { display: grid; margin-top: 8px; }
+.classes-v2__tr { display: grid; grid-template-columns: minmax(0, 1.4fr) 90px 120px; gap: 10px; padding: 9px 4px; border-bottom: 1px solid #eef2f6; align-items: center; }
+.classes-v2__th { color: #7c8aa0; font-size: 12px; font-weight: 700; }
+.classes-v2__tr strong { font-weight: 600; }
+.classes-v2__tr span { color: #5d6d84; font-size: 13px; }
+.classes-v2__tr .is-confirmed { color: #166534; }
+.classes-v2__tr .is-pending { color: #92400e; }
+.classes-v2__description { margin: 6px 0 10px; color: #53637b; font-size: 13px; line-height: 1.6; }
+.classes-v2__insights { display: grid; gap: 12px; margin-top: 4px; }
+.classes-v2__insights article { border: 1px solid #e4ebf3; border-radius: 11px; padding: 14px 16px; background: #fbfdff; }
+.classes-v2__insights h3 { margin: 0; font-size: 15px; color: #1c3452; }
+.classes-v2__insights p { margin: 6px 0 0; color: #65758b; font-size: 13px; line-height: 1.55; }
+.classes-v2__insights small { display: block; margin-top: 6px; color: #91a0b8; font-size: 12px; }
+.classes-v2__actrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.classes-v2__actrow .t-btn.sm { padding: 6px 12px; font-size: 12px; }
+.classes-v2__empty { margin-top: 10px; color: #6b7a90; }
+.classes-v2__next { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.classes-v2__next > div > p { margin: 4px 0 0; color: #53637b; font-size: 13px; }
+.classes-v2__next > div:last-child { display: flex; gap: 9px; flex-wrap: wrap; }
+@media (max-width: 980px) { .classes-v2 { padding: 22px 16px; } .classes-v2__workspace { grid-template-columns: 1fr; } .classes-v2__head { flex-direction: column; } }
 </style>
-

@@ -10,6 +10,17 @@ export const TEACHER_CLASSES = [
   { id: 'c2', name: '高二（4）班' },
 ]
 
+/** 花名册名源（46 人 = QUEUE_NAMES 21 + 补 25），供 /classes/:id/members 使用 */
+export const ROSTER_NAMES = [
+  '李昊', '王雨桐', '张子墨', '陈思睿', '刘一鸣', '赵欣怡', '孙可', '周宇航',
+  '吴欣然', '郑皓宇', '冯若彤', '蒋明轩', '韩露', '杨子航', '何静怡', '高天',
+  '林晓', '罗宇轩', '梁雪', '宋斌', '唐心怡',
+  '郑楚仪', '王梓萱', '冯致远', '陈曦', '褚天翼', '卫诗雅', '蒋文博', '沈月',
+  '韩明浩', '杨若曦', '朱子豪', '秦晓峰', '尤佳琪', '许博文', '何静姝', '吕星辰',
+  '施雨泽', '张若楠', '孔维哲', '曹俊杰', '严雨欣', '华子墨', '金晨曦', '魏泽楷',
+  '陶思远',
+]
+
 export function todayData(): TeacherTodayData {
   // SSOT（BUSINESS_OBJECTS §3）：下一节课 = 10:10–10:55 固定课表，不随运行时刻漂移
   const now = Date.now()
@@ -50,22 +61,38 @@ export function todayData(): TeacherTodayData {
 
 export function classInsights(classId: string): ActionableInsight[] {
   const now = Date.now()
+  // kind 权威四枚举（契约记录 2026-09-01 BE 答复）；error_cluster 居首（GP-12 顶部洞察）。
+  // 数字与统一数据世界同源：a=0 边界 17/46、21 份待批（BUSINESS_OBJECTS §3）。
   return [
     {
-      insight_id: `ins-${classId}-1`, kind: 'mastery_drop',
-      summary: '本班导数与单调性正确率下滑',
-      evidence: '平均正确率 74%，低于年级 81%。',
+      insight_id: `ins-${classId}-1`, kind: 'error_cluster',
+      summary: 'a=0 边界连续两次失分集中',
+      evidence: '17/46 人在最近两次作业的 a=0 边界题失分。',
       data_window: { from: iso(new Date(now - 7 * 86400e3)), to: iso() },
-      recommended_actions: ['生成巩固题'],
-      confidence: 0.8,
+      recommended_actions: ['布置变式练习', '看典型错误'],
+      kp_code: '函数的单调性',
     },
     {
-      insight_id: `ins-${classId}-2`, kind: 'queue_pressure',
-      summary: '存在较多低置信度待批项',
-      evidence: '建议优先人工复核、按题批改。',
+      insight_id: `ins-${classId}-2`, kind: 'review_backlog',
+      summary: '21 份作答待教师确认',
+      evidence: '主观题建议按题批改，逐份确认后写入正式成绩。',
       data_window: { from: iso(new Date(now - 3 * 86400e3)), to: iso() },
-      recommended_actions: ['去批改'],
-      confidence: 0.9,
+      recommended_actions: ['去批改这些作答'],
+    },
+    {
+      insight_id: `ins-${classId}-3`, kind: 'low_mastery',
+      summary: '函数的奇偶性掌握偏弱',
+      evidence: '该知识点最近练习正确率 58%，低于班均 16 个百分点。',
+      data_window: { from: iso(new Date(now - 7 * 86400e3)), to: iso() },
+      recommended_actions: ['布置针对性练习'],
+      kp_code: '函数的奇偶性',
+    },
+    {
+      insight_id: `ins-${classId}-4`, kind: 'submission_trend',
+      summary: '本周作业提交率下降',
+      evidence: '提交率由 93% 降至 80%。',
+      data_window: { from: iso(new Date(now - 7 * 86400e3)), to: iso() },
+      recommended_actions: ['查看作业与提交'],
     },
   ]
 }
