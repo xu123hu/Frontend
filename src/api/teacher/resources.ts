@@ -1,7 +1,7 @@
 import { teacherGet, teacherPost, teacherRequest } from './client'
 import type { TeacherResource, UploadTicket } from '@/types/teacher'
-import { authHeaders } from '@/api/client'
-import { ApiError } from '@/api/client'
+import { authHeaders, ApiError } from '@/api/client'
+import { refreshAccessToken } from '@/api/authSession'
 
 export interface ResourceActionBody {
   client_request_id: string
@@ -25,20 +25,29 @@ export const resourcesApi = {
   createExternalReference: (body: ExternalResourceReferenceBody, signal?: AbortSignal) =>
     teacherPost<TeacherResource>('/teacher/resources/external-reference', body, undefined, signal),
   /** 上传走 multipart（后端为 UploadFile 端点，审计 C-04 对齐；
-   *  不经 api.raw：其会强制 JSON.stringify，FormData 需原生 fetch 让浏览器设置 boundary） */
+   *  不经 api.raw：其会强制 JSON.stringify，FormData 需原生 fetch 让浏览器设置 boundary；
+   *  401 先走 token 刷新重试一次（L7/TC-L7-F01，与 client 主链路对齐） */
   upload: async (file: File, signal?: AbortSignal): Promise<UploadTicket> => {
-    const fd = new FormData()
-    fd.append('file', file, file.name)
-    let res: Response
-    try {
-      res = await fetch('/api/teacher/resources/upload', {
+    const attempt = () => {
+      const fd = new FormData()
+      fd.append('file', file, file.name)
+      return fetch('/api/teacher/resources/upload', {
         method: 'POST',
         headers: { ...authHeaders() } as Record<string, string>,
         body: fd,
         signal,
       })
+    }
+    let res: Response
+    try {
+      res = await attempt()
+      if (res.status === 401) {
+        await refreshAccessToken()
+        res = await attempt()
+      }
     } catch (e) {
       if ((e as Error)?.name === 'AbortError') throw new ApiError(-2, '请求已取消')
+      if ((e as ApiError)?.code === 401) throw e
       throw new ApiError(-1, '网络连接失败，请确认后端已启动')
     }
     if (res.status === 401) throw new ApiError(401, '登录已过期')

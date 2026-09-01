@@ -91,7 +91,7 @@
 
 <script setup lang="ts">
 import { computed, inject, onMounted, ref } from 'vue'
-import { authHeaders } from '@/api/client'
+import { api } from '@/api/client'
 import { useResourcesStore } from '@/stores/teacher/resources'
 import type { TeacherResource } from '@/types/teacher'
 
@@ -121,7 +121,7 @@ async function confirmDelete(resource: TeacherResource) { try { await store.remo
 async function confirmPublish(resource: TeacherResource) { try { await store.setPublished(resource.resource_id, !resource.published); publishConfirmId.value = null; notice.value = resource.published ? '资源已发布给学生。' : '资源已取消学生可见。' } catch (e: any) { showToast(e?.message || '发布操作失败') } }
 async function approveCandidate(resourceId: string, candidateId: string) { try { await store.approveQuestionCandidate(resourceId, candidateId); notice.value = '候选题已确认入库，可供后续组卷使用。' } catch (e: any) { showToast(e?.message || '候选题审核失败') } }
 
-async function download(resource: TeacherResource) { const response = await fetch(resource.download_url || `/api/teacher/resources/${resource.resource_id}/download`, { headers: authHeaders() as HeadersInit }); if (!response.ok) return showToast('下载失败'); const url = URL.createObjectURL(await response.blob()); const link = document.createElement('a'); link.href = url; link.download = resource.name; link.click(); URL.revokeObjectURL(url) }
+async function download(resource: TeacherResource) { try { const path = String(resource.download_url || `/api/teacher/resources/${resource.resource_id}/download`).replace(/^\/api/, ''); const { blob } = await api.download(path); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = resource.name; link.click(); URL.revokeObjectURL(url) } catch { showToast('下载失败') } }
 onMounted(() => { void store.fetch() })
 </script>
 

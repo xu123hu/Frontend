@@ -2,7 +2,7 @@ import {
   ROSTER_NAMES, TEACHER_CLASSES, classInsights, gradingDetail, gradingQueue, iso, lessonArtifact, quizArtifact, seedResources, todayData, videoInsights,
 } from './teacherData'
 import type {
-  Assignment, AssignmentStatus, ClassroomModeState, GradingQueueItem, SourceRef, TeacherArtifact, TeacherResource, TeacherTask, UploadTicket,
+  Assignment, AssignmentStatus, ClassroomModeState, ClassroomSessionQuestion, ClassroomSessionState, GradingQueueItem, SourceRef, TeacherArtifact, TeacherResource, TeacherTask, UploadTicket,
 } from '@/types/teacher'
 
 function readBody(req: any) {
@@ -219,8 +219,10 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
         const session = sessions.get(cid)
         if (!session || session.status !== 'active') { fail(res, 409, 40910, 'session_not_active'); return true }
         // 确定性：同 question_no 同分布（对标后端 question_no % 题池长度 断言）
+        const no = Math.max(0, Number(b.question_no) || 0)
         const question: ClassroomSessionQuestion = {
-          prompt: `检测题 ${Number(b.question_no) + 1}：导数与函数单调性（题池第 ${Number(b.question_no) + 1} 题）`,
+          question_id: `sq-${cid}-${no}`, prompt: `检测题 ${no + 1}：导数与函数单调性（题池第 ${no + 1} 题）`,
+          options: ['A 选项', 'B 选项', 'C 选项', 'D 选项'], correct_index: 0, focus: '导数与函数单调性',
           submitted: 44, correct_rate: 66, distribution: [18, 12, 9, 5], main_wrong_option: 'C',
           ai_reminder: '错误模式与最近一次作业一致，建议再用 3 分钟讲 a=0 边界分类。',
           pattern_similar: true, variant: '变式：讨论 f(x)=x³−3ax 的单调性（按 a 分类）',
@@ -454,6 +456,43 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
       const r = resources.find((x) => x.resource_id === seg[2])
       if (r) { r.status = 'understand'; r.pages = [{ page: 1, text: '理解完成' }] }
       ok(res, r); return true
+    }
+    if (method === 'POST' && url === '/teacher/resources/external-reference') {
+      const b = await readBody(req)
+      const r: TeacherResource = {
+        resource_id: nextId('res'), name: String(b.title || '公开引用'), resource_kind: 'external_reference',
+        external_url: String(b.url || ''), provider: b.provider || null, file_type: 'external_reference',
+        size_bytes: 0, status: 'understand', created_at: iso(),
+      }
+      resources.unshift(r); ok(res, r, 201); return true
+    }
+    if (seg[2] && seg[3] === 'publish') {
+      const r = resources.find((x) => x.resource_id === seg[2])
+      if (!r) { fail(res, 404, 40400, 'not_found'); return true }
+      r.published = true; ok(res, r); return true
+    }
+    if (seg[2] && seg[3] === 'unpublish') {
+      const r = resources.find((x) => x.resource_id === seg[2])
+      if (!r) { fail(res, 404, 40400, 'not_found'); return true }
+      r.published = false; ok(res, r); return true
+    }
+    if (seg[2] && seg[3] === 'question-candidates' && seg[4] === 'approve') {
+      const b = await readBody(req)
+      const r = resources.find((x) => x.resource_id === seg[2])
+      if (!r) { fail(res, 404, 40400, 'not_found'); return true }
+      const ids = (b.candidate_ids || []) as string[]
+      r.question_candidates = (r.question_candidates || []).map((c) => (ids.includes(c.candidate_id || '') ? { ...c, review_status: 'approved' as const } : c))
+      ok(res, { resource_id: seg[2], approved_hashes: ids, review_required: false }); return true
+    }
+    if (seg[2] && seg[3] === 'download') {
+      const r = resources.find((x) => x.resource_id === seg[2])
+      return sendFile(res, `${r?.name || '资源'}-演示.txt`, `资源内容（演示）· ${r?.name || ''}`), true
+    }
+    if (seg[2] && method === 'DELETE' && !seg[3]) {
+      const existed = resources.some((x) => x.resource_id === seg[2])
+      if (!existed) { fail(res, 404, 40400, 'not_found'); return true }
+      resources = resources.filter((x) => x.resource_id !== seg[2])
+      ok(res, { resource_id: seg[2], deleted: true }); return true
     }
     return false
   }
