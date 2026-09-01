@@ -3,15 +3,12 @@ import { setActivePinia, createPinia } from 'pinia'
 
 vi.mock('@/api/teacher/today', () => ({ todayApi: { today: vi.fn() } }))
 vi.mock('@/api/teacher/assignments', () => ({ assignmentsApi: { create: vi.fn(), publish: vi.fn(), list: vi.fn() } }))
-vi.mock('@/api/teacher/grading', () => ({ gradingApi: { queue: vi.fn(), item: vi.fn(), confirm: vi.fn(), batchConfirm: vi.fn() } }))
 
 import { useTeacherTodayStore } from '@/stores/teacher/today'
 import { useAssessmentStore } from '@/stores/teacher/assessment'
-import { useGradingStore } from '@/stores/teacher/grading'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import { todayApi } from '@/api/teacher/today'
 import { assignmentsApi } from '@/api/teacher/assignments'
-import { gradingApi } from '@/api/teacher/grading'
 
 describe('teacher today store', () => {
   beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks() })
@@ -50,26 +47,6 @@ describe('assessment store', () => {
     const firstKey = (assignmentsApi.publish as any).mock.calls[0][1]
     await s.publish('a1')
     const secondKey = (assignmentsApi.publish as any).mock.calls[1][1]
-    expect(secondKey).toBe(firstKey)
-  })
-})
-
-describe('grading store', () => {
-  beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks() })
-  it('reuses the same idempotency key for confirm retries', async () => {
-    const s = useGradingStore()
-    // 契约对齐：确认需先有建议记录（suggestion_id + version）
-    s.detail = {
-      submission_item_id: 'i1', student_label: '作答 #001', status: 'unprocessed',
-      confidence: 0.8, suggestion_score: 8, teacher_final_score: null,
-      original_answer: '', scoring_standard: '',
-      suggestion: { suggestion_id: 's1', submission_item_id: 'i1', version: 1, decision: 'draft' },
-    } as any
-    ;(gradingApi.confirm as any).mockResolvedValue({ data: { suggestion_id: 's1', decision: 'accepted' } })
-    await s.confirm('i1', 'accept', 8)
-    const firstKey = (gradingApi.confirm as any).mock.calls[0][2]
-    await s.confirm('i1', 'accept', 8)
-    const secondKey = (gradingApi.confirm as any).mock.calls[1][2]
     expect(secondKey).toBe(firstKey)
   })
 })

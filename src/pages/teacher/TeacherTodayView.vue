@@ -106,7 +106,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTeacherTodayStore } from '@/stores/teacher/today'
 import { useTeacherContextStore } from '@/stores/teacher/context'
-import { useGradingStore } from '@/stores/teacher/grading'
+import { gradingWorkspaceApi } from '@/api/teacher/gradingWorkspace'
+import { toGradingWorkspace } from '@/features/teacher-grading-v2/gradingWorkspaceAdapter'
 import { useAuthStore } from '@/stores/auth'
 import type { ActionableInsight } from '@/types/teacher'
 import ButlerPanel from '@/components/teacher/ButlerPanel.vue'
@@ -213,14 +214,16 @@ function goAssign(classId?: string, className?: string) {
   router.push('/teacher/assign')
 }
 
-/** RC-05-4 #5：挤批改深链直达首个未确认份，URL 携带其 submission_item_id（非列表页） */
+/** 批改深链直达首个未确认份：走 V2 workspace 通路（V1 queue 已收敛），URL 携带 submission_item_id */
 async function goGradingDeepLink() {
-  const gradingStore = useGradingStore()
-  await gradingStore.fetchQueue(context.classId || undefined)
-  const first = gradingStore.queue.find((item) => item.status !== 'confirmed') || gradingStore.queue[0]
-  const query: Record<string, string> = {}
-  if (first?.submission_item_id) query.submission_item_id = first.submission_item_id
-  router.push({ path: '/teacher/grading', query })
+  let firstId: string | undefined
+  try {
+    const workspace = toGradingWorkspace(await gradingWorkspaceApi.get({ classId: context.classId || undefined, status: 'ungraded' }))
+    firstId = workspace.selected?.submissionItemId
+      ?? workspace.queue.find((entry) => entry.state === 'ungraded')?.submissionItemId
+      ?? workspace.queue[0]?.submissionItemId
+  } catch { firstId = undefined }
+  router.push({ path: '/teacher/grading', query: firstId ? { submission_item_id: firstId } : {} })
 }
 
 function runInsightAction(ins: ActionableInsight, label: string) {

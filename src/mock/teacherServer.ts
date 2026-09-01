@@ -249,6 +249,19 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
       const status = query.get('status') || 'all'
       ok(res, gradingWorkspace(selectedId, status)); return true
     }
+    if (method === 'GET' && url === '/teacher/grading/insights') {
+      // 批后讲评（GP-11）：数字与统一数据世界同源——a=0 边界 17/46（正确率 63%），SSOT 21 份待批
+      ok(res, {
+        assignment_id: 'asg-derivative-weekly',
+        title: '《导数周测》',
+        review_rate: 19,
+        top_questions: [
+          { item_no: 4, question_text: '讨论 f(x)=ln x−ax 的单调性（a=0 边界分类）', wrong_count: 17, correct_ratio: 63 },
+          { item_no: 2, question_text: '求 f(x)=x³−3x 的单调区间', wrong_count: 12, correct_ratio: 74 },
+          { item_no: 7, question_text: '已知单调性求参数取值范围', wrong_count: 9, correct_ratio: 80 },
+        ],
+      }); return true
+    }
     if (method === 'GET' && seg[2] && seg[3] === 'file') {
       if (seg[2] === 'si-4') { fail(res, 503, 50310, 'source_file_temporarily_unavailable'); return true }
       fail(res, 404, 40400, 'file_not_found'); return true

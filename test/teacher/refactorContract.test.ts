@@ -1,20 +1,30 @@
 // 本轮重构契约测试（教学建议退化为知识点建议；作业出题真实化）。
 // 直接断言行为，避免回归："数据不足空态"、"巩固题 N 占位"、"答案恒写死"、"足额不足额"。
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { suggestionsForKnowledgePoints } from '@/mock/teachingAdvice'
 import { buildQuizSet } from '@/mock/questionBank'
 import { quizArtifact } from '@/mock/teacherData'
 
-describe('批改 V2 接管：证据优先工作区', () => {
-  it('正式教师批改路由不再回退为顶部选择器和 #001 匿名表单', () => {
-    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherGradingView.vue'), 'utf8')
-    expect(view).toContain('原始作答证据')
-    expect(view).toContain('评分依据与教师决策')
-    expect(view).toContain('确认记入正式成绩')
-    expect(view).not.toContain('<select')
-    expect(view).not.toContain('student_label }}')
+describe('批改 V1/V2 收敛：路由唯一指向 V2，V1 残留清零', () => {
+  it('V1 孤儿页与 V1 store 已删除，today 深链与导航不再引用 V1 通路', () => {
+    expect(existsSync(resolve(process.cwd(), 'src/pages/teacher/TeacherGradingView.vue'))).toBe(false)
+    expect(existsSync(resolve(process.cwd(), 'src/stores/teacher/grading.ts'))).toBe(false)
+    const router = readFileSync(resolve(process.cwd(), 'src/router/index.js'), 'utf8')
+    expect(router).toContain('TeacherGradingV2View')
+    const today = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherTodayView.vue'), 'utf8')
+    expect(today).not.toContain('stores/teacher/grading\'')
+    const nav = readFileSync(resolve(process.cwd(), 'src/components/teacher/TeacherNav.vue'), 'utf8')
+    expect(nav).toContain('gradingWorkspaceApi')
+    expect(nav).not.toContain('useGradingStore')
+  })
+
+  it('批改链 API 仅保留 insights，V1 队列端点前端零调用', () => {
+    const api = readFileSync(resolve(process.cwd(), 'src/api/teacher/grading.ts'), 'utf8')
+    expect(api).toContain('insights')
+    expect(api).not.toContain('/teacher/grading/queue')
+    expect(api).not.toContain('teacherPost')
   })
 })
 
