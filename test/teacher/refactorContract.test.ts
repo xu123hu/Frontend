@@ -28,6 +28,28 @@ describe('批改 V1/V2 收敛：路由唯一指向 V2，V1 残留清零', () => 
   })
 })
 
+describe('Today 诚实化与通知真源（TC-L1-F03/F07、P0-4）', () => {
+  it('today 视图不再写死 17/46 统计文案，证据渲染走文案引擎', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherTodayView.vue'), 'utf8')
+    expect(view).not.toContain('17/46')
+    expect(view).toContain("from '@/utils/insightCopy'")
+    expect(view).toContain('boundaryInsight')
+  })
+
+  it('内嵌管家默认折叠由教师展开，不再首屏恒占位', () => {
+    const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherTodayView.vue'), 'utf8')
+    expect(view).toContain('v-if="butlerOpen"')
+    expect(view).not.toContain('<ButlerPanel :open="true" embedded />')
+  })
+
+  it('通知铃铛接真实 today 任务源，空态明示暂无新通知', () => {
+    const layout = readFileSync(resolve(process.cwd(), 'src/layouts/TeacherLayout.vue'), 'utf8')
+    expect(layout).toContain('useTeacherTodayStore')
+    expect(layout).toContain('暂无新通知')
+    expect(layout).toMatch(/v-if="notifTasks\.length"[\s\S]*t-dot/)
+  })
+})
+
 describe('资源 V2 接管：来源可追溯、候选题须教师审核', () => {
   it('正式教师资源路由不再退化为通用资源卡片，并连接真实候选题审核端点', () => {
     const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherResourcesView.vue'), 'utf8')

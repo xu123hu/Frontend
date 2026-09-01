@@ -6,10 +6,11 @@
         <p class="t-today-sub" v-if="!store.loading">今天你值得处理 {{ topTasks.length }} 件事，先做最重要的一件。</p>
         <p class="t-today-sub" v-else>正在汇总今天的真实教学数据…</p>
       </div>
+      <button class="t-btn sm" type="button" data-testid="today-butler-toggle" @click="butlerOpen = !butlerOpen">{{ butlerOpen ? '收起教学助手' : '✦ 教学助手' }}</button>
     </header>
 
 
-    <ButlerPanel :open="true" embedded />
+    <ButlerPanel v-if="butlerOpen" :open="true" embedded @close="butlerOpen = false" />
 
     <div v-if="store.error" class="t-alert" role="alert">{{ store.error }} <button class="t-btn sm" type="button" @click="store.fetch()">重试</button></div>
 
@@ -135,6 +136,9 @@ const gradingCount = computed(() => store.data?.grading_queue?.count || 0)
 const deadlines = computed(() => store.data?.deadlines || [])
 const insights = computed(() => store.data?.actionable_insights || [])
 const prep = computed(() => (nextLesson.value?.prep_completion ?? null))
+/** 错题聚类洞察：任务理由的证据来源（渲染后端字段，禁硬编码统计） */
+const boundaryInsight = computed(() => insights.value.find((ins) => ins.kind === 'error_cluster'))
+const butlerOpen = ref(false)
 
 const nowMs = ref(Date.now())
 let timer: ReturnType<typeof setInterval> | null = null
@@ -167,9 +171,10 @@ const topTasks = computed<TaskRow[]>(() => {
   const review = deadlines.value.find((d) => d.kind === 'grade_review')
 
   if (nl?.missing_items?.length) {
+    const evidenceNote = boundaryInsight.value ? `，${evidenceText(boundaryInsight.value.evidence)}` : ''
     rows.push({
       key: 'prep', title: '补这一处课', count: nl.missing_items.length,
-      reason: `下一节还缺 ${nl.missing_items.join('、')}，与最近 17/46 人失分的边界条件相关`,
+      reason: `下一节还缺 ${nl.missing_items.join('、')}${evidenceNote}`,
       action: '去备课', run: () => goPrep(),
     })
   }
