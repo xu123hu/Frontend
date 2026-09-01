@@ -578,7 +578,7 @@ function applyArtifact() {
     const fromStructured = [seg.teacher_action, seg.student_action]
       .filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
       .map((item: string) => item.trim())
-    const fromLegacy = Array.isArray(seg.activities) ? seg.activities.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim()) : []
+    const fromLegacy = Array.isArray(seg.activities) ? (seg.activities as unknown[]).filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0).map((item: string) => item.trim()) : []
     const activities = fromStructured.length ? fromStructured : fromLegacy
     const item = {
       id: `step-${index + 1}`,
@@ -648,7 +648,12 @@ onMounted(async () => {
         await loadSuggestions(loaded?.class_id || selectedClass.value)
         if (insightParam) markSuggestedStep(insightParam)
         showToast?.('已载入洞察指向的教案，插入点已高亮')
-      } catch { showToast?.('洞察指向的教案未能载入，可从下方起点重新生成') }
+      } catch {
+        // 教案未能载入（如后端无该 lesson）：仍走建议链，保证 GP-2 的依据与插入点可见
+        await loadSuggestions(selectedClass.value)
+        if (insightParam) markSuggestedStep(insightParam)
+        showToast?.('洞察指向的教案未能载入，已按当前班级给出建议与插入点')
+      }
     } else {
       if (insightParam) {
         await loadSuggestions(selectedClass.value)

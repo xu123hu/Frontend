@@ -226,7 +226,12 @@ async function goGradingDeepLink() {
 function runInsightAction(ins: ActionableInsight, label: string) {
   const classId = store.data?.next_lesson?.class_id
   const className = store.data?.next_lesson?.class_name
-  if (label === '加入下节课' || label === '应用到教案') return goPrep(classId, className)
+  if (label === '加入下节课' || label === '应用到教案') {
+    // GP-2：携带洞察 id 与下节课 lesson_id 进入备课，插入点高亮
+    const lessonId = store.data?.next_lesson?.lesson_id || ''
+    selectClass(classId, className)
+    return router.push({ path: '/teacher/prep', query: { ...(lessonId ? { lesson_id: lessonId } : {}), from: `insight:${ins.insight_id}` } })
+  }
   if (label === '出巩固题' || label === '生成巩固题') return goAssign(classId, className)
   if (label === '去批改') return goGradingDeepLink()
   // 看依据 / 看典型作答 / 看名单 → 进入班级学情，证据在看依据处展示
