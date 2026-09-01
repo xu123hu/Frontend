@@ -80,9 +80,10 @@ async function submit() {
     const data = mode.value === 'sms'
       ? await auth.loginSms({ ...payload, phone: phone.value, challenge_id: challengeId.value, code: code.value })
       : await auth.loginPassword({ ...payload, phone: phone.value, password: password.value })
-    const destination = data.onboarding_required && data.user?.active_role === 'student'
+    const activeRole = data.user?.active_role
+    const destination = data.onboarding_required && activeRole === 'student'
         ? '/onboarding/student'
-        : redirectFor(data.user.active_role)
+        : redirectFor(activeRole)
     await router.push(destination)
   } catch (value) { showError(value) } finally { loading.value = false }
 }

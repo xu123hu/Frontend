@@ -26,6 +26,9 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   server: {
+    // 双师课堂验收契约：主入口必须是 http://127.0.0.1:5176/dual
+    // （显式绑定 IPv4，避免 localhost 解析成 ::1 导致 127.0.0.1 无法访问）
+    host: '127.0.0.1',
     port: 5176,
     proxy: useRealApi
       ? { '/api': { target: apiProxyTarget, changeOrigin: true } }

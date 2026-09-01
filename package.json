@@ -15,12 +15,14 @@
   },
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
+    "@types/three": "^0.185.4",
     "dompurify": "^3.2.4",
     "highlight.js": "^11.11.2",
     "katex": "^0.16.47",
     "marked": "^18.0.7",
     "marked-katex-extension": "^5.1.10",
     "pinia": "^2.3.1",
+    "three": "^0.185.1",
     "vue": "^3.5.39",
     "vue-router": "^4.6.4"
   },
