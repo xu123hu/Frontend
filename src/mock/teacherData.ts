@@ -166,7 +166,9 @@ export function quizArtifact(kps: string[], count: number, opts: Partial<QuizBui
     options: q.options ? [...q.options] : undefined,
     answer: q.answer,
     answer_analysis: q.answer_analysis,
-
+    // 来源如实标注（内容资产清单 TC-L3-E02）：本地题库统一「本地样例」，真题来源由 realQuestionAdapter/后端覆盖
+    source: q.source || '本地样例',
+    source_ref: q.source_ref,
   }))
   return {
     artifact_id: 'art-quiz-1', artifact_type: 'quiz_set', scene: 'teacher.assessment', class_id: 'c1',

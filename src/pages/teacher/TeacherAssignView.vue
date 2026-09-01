@@ -51,8 +51,12 @@
               <div><LatexText :text="question.question_text" /></div>
               <p>{{ typeLabel(question.q_type) }} · {{ difficultyLabel(question.difficulty) }} · 来源：{{ question.source || '题库未标注来源' }}<span v-if="question.source_ref">（{{ question.source_ref }}）</span></p>
               <p v-if="question.answer_analysis" class="analysis">解析：{{ question.answer_analysis }}</p>
+              <div class="assign-v2__q-actions">
+                <button class="t-btn" type="button" disabled title="单题换题端点待后端契约开通后可用">换一题</button>
+              </div>
             </li>
           </ol>
+          <p data-testid="swap-pending" class="assign-v2__swap-hint">逐题换题能力已提请后端契约（replace / regenerate / similar），开通前不支持整卷重生成或单题替换。</p>
           <div class="assign-v2__actions">
             <button v-if="artifactStatus === 'draft'" class="t-btn primary" type="button" :disabled="isInsufficient" @click="confirmArtifact">确认题集草稿</button>
             <button v-if="artifactStatus === 'confirmed' && !store.assignment" class="t-btn primary" type="button" @click="createAssignment">创建作业草稿</button>
@@ -75,7 +79,8 @@
 
 <script setup lang="ts">
 import { computed, inject, onMounted, reactive, ref } from 'vue'
-import { api } from '@/api/client'
+import { useRoute } from 'vue-router'
+import { classApi } from '@/api'
 import { artifactsApi } from '@/api/teacher/artifacts'
 import { assignmentsApi } from '@/api/teacher/assignments'
 import LatexText from '@/components/LatexText.vue'
@@ -86,6 +91,7 @@ import type { Assignment, QuizQuestion } from '@/types/teacher'
 
 const store = useAssessmentStore()
 const context = useTeacherContextStore()
+const route = useRoute()
 const showToast = inject<(message: string) => void>('showToast', () => {})
 const classes = ref<Array<{ id: string; name: string }>>([])
 const assignments = ref<Assignment[]>([])
@@ -135,9 +141,32 @@ async function confirmPublish() {
   try { await store.publish(store.assignment.assignment_id); publishConfirmation.value = false; notice.value = '作业已发布，目标班级的学生端现在可见。'; await loadAssignments() }
   catch (error: any) { showToast(error?.message || store.error || '发布失败') }
 }
+function firstQuery(value: unknown): string | undefined {
+  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : undefined
+  return typeof value === 'string' ? value : undefined
+}
+
+/** 消费备课/学情跳转携带的组卷蓝图（GP-6：当堂练习蓝图预填） */
+function applyBlueprintPrefill() {
+  const topic = firstQuery(route.query.topic)
+  const kpCodes = firstQuery(route.query.kp_codes)
+  const countRaw = Number(firstQuery(route.query.count))
+  if (!topic && !kpCodes && !Number.isInteger(countRaw)) return
+  if (topic) form.title = topic
+  if (kpCodes) form.knowledgePoints = kpCodes.split(/[，,\s]+/).map((item) => item.trim()).filter(Boolean).join('、')
+  if (Number.isInteger(countRaw) && countRaw >= 1 && countRaw <= 100) {
+    form.count = countRaw
+    form.choice = Math.round(countRaw * 0.5)
+    form.blank = Math.min(Math.round(countRaw * 0.25), countRaw - form.choice)
+    form.text = countRaw - form.choice - form.blank
+  }
+  notice.value = '已按上课蓝图预填组卷条件，可再手工调整。'
+}
+
 onMounted(async () => {
+  applyBlueprintPrefill()
   try {
-    const data = await api.get('/classes/mine')
+    const data = await classApi.mine()
     classes.value = data?.items || []
     const remembered = classes.value.find((item) => item.id === context.classId)
     const initial = remembered || classes.value[0]
@@ -151,5 +180,11 @@ onMounted(async () => {
 .assign-v2 { max-width: 1500px; margin: 0 auto; padding: 30px 32px 44px; color: #17243b; }.assign-v2__head, .assign-v2__section-head, .assign-v2__assignment { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }.assign-v2__eyebrow { margin: 0; color: #64748b; font-size: 12px; font-weight: 700; letter-spacing: .08em; }.assign-v2 h1 { margin: 4px 0 8px; font-size: 32px; letter-spacing: -.04em; }.assign-v2 h2 { margin: 5px 0 0; font-size: 20px; }.assign-v2__head > div > p:last-child { margin: 0; color: #53637b; max-width: 720px; }.assign-v2__notice { margin: 22px 0 0; padding: 11px 14px; color: #175e8f; background: #edf7ff; border-radius: 8px; }.assign-v2__notice.error { color: #b42318; background: #fff1f2; }
 .assign-v2__workspace { display: grid; grid-template-columns: minmax(320px, .8fr) minmax(0, 1.2fr); gap: 22px; margin-top: 24px; }.assign-v2__builder, .assign-v2__paper, .assign-v2__history { border: 1px solid #e1e7ef; background: #fff; border-radius: 14px; overflow: hidden; }.assign-v2__section-head { padding: 19px 21px 15px; border-bottom: 1px solid #edf0f4; }.assign-v2__section-head > span { color: #65758b; font-size: 13px; }.assign-v2__form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 20px; }.assign-v2__form label { display: flex; flex-direction: column; gap: 6px; color: #405168; font-size: 13px; font-weight: 650; }.assign-v2__form label.wide { grid-column: 1 / -1; }.assign-v2__form input, .assign-v2__form textarea, .assign-v2__form select { box-sizing: border-box; width: 100%; border: 1px solid #d5dee9; border-radius: 7px; padding: 9px 10px; color: #17243b; background: #fff; font: inherit; font-weight: 400; }.assign-v2__form textarea { resize: vertical; line-height: 1.45; }.assign-v2__form small { color: #738198; font-weight: 400; line-height: 1.5; }.assign-v2__builder > .t-btn { margin: 0 20px 22px; }.assign-v2__guard { margin: 0 20px 14px; color: #a16207; font-size: 13px; }.assign-v2__empty, .assign-v2__history-empty { margin: 18px; padding: 28px; text-align: center; color: #6b7a90; background: #f8fafc; border-radius: 9px; }.assign-v2__empty h3 { margin: 0 0 7px; color: #334155; }.assign-v2__empty p { margin: 0; }.assign-v2__blocker { margin: 16px; padding: 13px 15px; border: 1px solid #f2c36d; border-radius: 9px; color: #92400e; background: #fffbeb; }.assign-v2__blocker p { margin: 6px 0 0; line-height: 1.5; font-size: 13px; }.assign-v2__questions { margin: 0; padding: 0 18px 12px 42px; }.assign-v2__questions li { padding: 15px 5px 14px 0; border-bottom: 1px solid #edf0f4; line-height: 1.55; }.assign-v2__questions li > p { margin: 7px 0 0; color: #65758b; font-size: 12px; }.assign-v2__questions li .analysis { color: #475569; }.assign-v2__actions { display: flex; flex-wrap: wrap; gap: 9px; padding: 16px 20px 20px; }.assign-v2__history { margin-top: 22px; }.assign-v2__assignment { align-items: center; padding: 15px 21px; border-bottom: 1px solid #edf0f4; }.assign-v2__assignment:last-child { border-bottom: 0; }.assign-v2__assignment h3 { margin: 0; font-size: 15px; }.assign-v2__assignment p { margin: 5px 0 0; color: #718096; font-size: 12px; }.assign-v2__assignment span { padding: 5px 8px; border-radius: 999px; font-size: 12px; white-space: nowrap; }.status-published { color: #166534; background: #ecfdf3; }.status-draft { color: #1d4ed8; background: #eff6ff; }.status-closed, .status-archived { color: #65758b; background: #f1f5f9; }
 @media (max-width: 900px) { .assign-v2 { padding: 22px 16px; }.assign-v2__head { flex-direction: column; }.assign-v2__workspace { grid-template-columns: 1fr; }.assign-v2__form { grid-template-columns: 1fr; }.assign-v2__form label.wide { grid-column: auto; } }
+</style>
+
+<style scoped>
+.assign-v2__q-actions { display: flex; justify-content: flex-end; margin-top: 9px; }
+.assign-v2__q-actions .t-btn { padding: 5px 12px; font-size: 12px; }
+.assign-v2__swap-hint { margin: 0 18px 16px; color: #7c8aa0; font-size: 12px; line-height: 1.5; }
 </style>
 
