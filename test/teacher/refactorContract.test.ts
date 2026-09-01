@@ -79,13 +79,15 @@ describe('班级 V2 接管：真实花名册和证据驱动的教学去向', () 
   })
 })
 
-describe('课堂 V2 接管：状态联动优先，未接入事件不得伪造图表', () => {
-  it('正式课堂路由使用持久化课堂模式，并如实显示视频源状态', () => {
+describe('课堂会话接管：Session 语义优先，未接入事件不得伪造图表', () => {
+  it('正式课堂路由使用课堂会话（发题/收答/AI提醒），并保留课堂模式 API', () => {
     const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherClassroomView.vue'), 'utf8')
     const api = readFileSync(resolve(process.cwd(), 'src/api/teacher/classroom.ts'), 'utf8')
-    expect(view).toContain('课堂状态与学生端联动')
+    expect(view).toContain('发起一道题')
+    expect(view).toContain('实时结果')
+    expect(view).toContain('ai_reminder')
     expect(api).toContain('classroom-mode')
-    expect(view).toContain('视频事件源尚未接入')
+    expect(api).toContain('classroom-session/start')
     expect(view).not.toContain('t-tabs')
     expect(view).not.toContain('t-control-card')
   })

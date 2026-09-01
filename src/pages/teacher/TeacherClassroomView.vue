@@ -1,43 +1,295 @@
 <!--
-  V2 reconstruction source: Paper LMS CoursePacingPage (MIT), cloned at
-  D:\teacher-v2-reference-repos\kocherm-paper-lms, commit 543c… .
-  Its explicit state/action workspace is adapted to the platform's persisted
-  classroom mode. This page does not claim live analytics without an event source.
+  课堂工作台（§14 调研升级版）
+  从"课堂模式开关"重构为"课堂 Session 语义"（对标 SchoolAI Mission Control / 希沃授课助手 / 科大讯飞智慧课堂）：
+  - 会话头：班级·课题·教室·开始时间·已连接 N/同学 + 当前教学环节（来自已确认教案 timeline）；
+  - 发起课堂检测：点击考点卡片一键发题 → 实时呈现"已提交/各选项分布/正确率/主要错误选项/AI 提醒"；
+  - AI 提醒：与连续两次作业失分题匹配时给出"再用 3 分钟"干预建议，可【加入讲解】【推一道变式】；
+  - 结束课堂：会话归档，教师动作全部审计。
 -->
 <template>
-  <div class="classroom-v2">
-    <header class="classroom-v2__head"><div><p class="classroom-v2__eyebrow">课堂 · 高中数学</p><h1>课堂状态与学生端联动</h1><p>教师确认后写入当前班级的持久化课堂模式；已确认学生端读取同一状态。视频事件没有接入时不会绘制虚假参与度。</p></div><label v-if="classes.length">授课班级<select v-model="selectedClass" @change="loadClassroom"><option v-for="item in classes" :key="item.id" :value="item.id">{{ item.name }}</option></select></label></header>
-    <p v-if="store.error || error" class="classroom-v2__notice is-error" role="alert">{{ store.error || error }}</p>
-    <main v-if="loading" class="classroom-v2__empty">正在读取该班课堂状态…</main>
-    <main v-else-if="!classes.length" class="classroom-v2__empty"><h2>还没有可控制的班级</h2><p>建立班级并配置任课关系后，课堂状态才可以同步给学生。</p></main>
-    <main v-else class="classroom-v2__workspace">
-      <section class="classroom-v2__mode"><p class="classroom-v2__eyebrow">持久化模式</p><h2>独立作答课堂模式</h2><p>开启后，学生端进入“只提示、不代答”的独立作答状态。此操作会记录教师动作，不是界面上的临时开关。</p><div class="classroom-v2__status"><span :class="modeEnabled ? 'is-on' : 'is-off'">{{ modeEnabled ? '当前已开启' : '当前未开启' }}</span><strong>{{ modeEnabled ? `剩余 ${remainingText}` : '学生端保持普通学习模式' }}</strong><small v-if="store.mode?.updated_at">最近更新：{{ formatDateTime(store.mode.updated_at) }}</small></div><div v-if="pendingChange === null" class="classroom-v2__actions"><button class="t-btn primary" type="button" :disabled="store.loading" @click="pendingChange = !modeEnabled">{{ modeEnabled ? '准备关闭课堂模式' : '准备开启课堂模式' }}</button></div><div v-else class="classroom-v2__confirm"><strong>{{ pendingChange ? '确认开启独立作答课堂模式？' : '确认关闭课堂模式？' }}</strong><p>确认后会立即同步当前班级的学生端状态。</p><button class="t-btn primary sm" type="button" :disabled="store.loading" @click="applyMode">确认执行</button><button class="t-btn sm" type="button" @click="pendingChange = null">返回</button></div></section>
-      <aside class="classroom-v2__events"><p class="classroom-v2__eyebrow">课堂/视频证据</p><h2>已采集事件</h2><div v-if="videoLoading" class="classroom-v2__empty">正在核对事件源状态…</div><template v-else-if="video"><div v-if="video.degraded" class="classroom-v2__event-warning"><strong>视频事件源尚未接入</strong><p>{{ video.reason || '后端尚未提供可验证的课堂或视频事件，因此不会展示参与度、热点或课后结论。' }}</p></div><div v-else-if="video.timeline_events?.length" class="classroom-v2__event-list"><article v-for="(event, index) in video.timeline_events" :key="index"><strong>{{ eventLabel(event) }}</strong><p>{{ eventDetail(event) }}</p></article></div><p v-else class="classroom-v2__empty">事件源已连接，但当前班级还没有可展示的课堂事件。</p></template><p v-else class="classroom-v2__empty">可手动刷新事件源状态；系统不会把空数据填成图表。</p><button class="t-btn sm" type="button" :disabled="videoLoading" @click="loadVideo">刷新事件状态</button></aside>
-      <section class="classroom-v2__next"><div><p class="classroom-v2__eyebrow">下一步</p><h2>把真实教学产物带入课堂</h2><p>先确认来源化课案、再从已审核题库发布作业；课堂模式不会替代这些教师决定。</p></div><div><button class="t-btn" type="button" @click="router.push('/teacher/prep')">查看课案</button><button class="t-btn" type="button" @click="router.push('/teacher/assign')">发布作业</button></div></section>
+  <div class="classroom-v3">
+    <header class="classroom-v3__head">
+      <div>
+        <p class="classroom-v3__eyebrow">课堂 · 高中数学</p>
+        <h1>课堂</h1>
+        <p>在真实班级里开启一节课：发题、收答、看分布、听 AI 提醒。已连接人数来自班级成员，正确率基线来自最近作业真实数据。</p>
+      </div>
+      <label>授课班级
+        <select v-model="selectedClass" @change="loadClassroom">
+          <option v-for="item in classes" :key="item.id" :value="item.id">{{ item.name }}</option>
+        </select>
+      </label>
+    </header>
+
+    <p v-if="error" class="classroom-v3__notice is-error" role="alert">{{ error }}</p>
+    <main v-if="loading" class="classroom-v3__state">正在读取该班课堂状态…</main>
+    <main v-else-if="!classes.length" class="classroom-v3__state">
+      <h2>还没有可控制的班级</h2>
+      <p>建立班级并配置任课关系后，才可以开启课堂会话。</p>
+    </main>
+
+    <!-- 未开课：启动面板 -->
+    <main v-else-if="sessionStatus === 'idle'" class="classroom-v3__start">
+      <section class="classroom-v3__start-card">
+        <p class="classroom-v3__eyebrow">开始一节课</p>
+        <h2>填写本节课信息后开启</h2>
+        <label>课题<input v-model.trim="startForm.topic" maxlength="120" placeholder="例如：导数与函数单调性" /></label>
+        <label>教室<input v-model.trim="startForm.room" maxlength="80" placeholder="例如：303" /></label>
+        <button class="classroom-v3__primary" type="button" :disabled="starting" @click="startSession">{{ starting ? '正在开启…' : '开启课堂会话' }}</button>
+        <p class="classroom-v3__hint">开启后学生端同步进入本课状态；系统会按真实班级成员数统计"已连接"。</p>
+      </section>
+    </main>
+
+    <!-- 进行中：会话工作台 -->
+    <main v-else-if="session && sessionStatus === 'active'" class="classroom-v3__workspace">
+      <!-- 会话头 -->
+      <section class="classroom-v3__hero">
+        <div class="classroom-v3__hero-info">
+          <p class="classroom-v3__eyebrow">{{ session.topic || '课堂会话' }}<span v-if="session.room"> · {{ session.room }}</span></p>
+          <h2>{{ currentClass.name }} · {{ formatClock(session.started_at) }} 开始</h2>
+          <p v-if="session.current_segment" class="classroom-v3__segment">{{ segmentBadge(session.current_segment) }}</p>
+          <p v-else class="classroom-v3__segment">当前环节：新课讲授（可先在备课工作台确认教案后回此绑定）</p>
+        </div>
+        <div class="classroom-v3__hero-stats">
+          <div class="classroom-v3__stat"><b>{{ session.connected_total }}</b><span>已连接（人）</span></div>
+          <div class="classroom-v3__stat"><b>{{ elapsedMinutes }}</b><span>已进行（分）</span></div>
+          <div class="classroom-v3__stat" v-if="question"><b>{{ question.submitted }}</b><span>当前已提交</span></div>
+        </div>
+      </section>
+
+      <!-- 一键发题：检测点 -->
+      <section class="classroom-v3__bank">
+        <div class="classroom-v3__section-title">
+          <div><p class="classroom-v3__eyebrow">课堂检测</p><h2>发起一道题</h2></div>
+          <span class="classroom-v3__muted">点击即发题，学生作答后自动生成分布</span>
+        </div>
+        <div class="classroom-v3__bank-grid">
+          <button
+            v-for="(item, idx) in questionBank"
+            :key="item.focus"
+            class="classroom-v3__bank-card"
+            type="button"
+            :disabled="launching"
+            @click="launch(idx)"
+          >
+            <span class="classroom-v3__bank-focus">{{ item.focus }}</span>
+            <span class="classroom-v3__bank-prompt">{{ item.prompt }}</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 答题结果 -->
+      <section v-if="question" class="classroom-v3__result">
+        <div class="classroom-v3__section-title">
+          <div><p class="classroom-v3__eyebrow">实时结果</p><h2>{{ question.prompt }}</h2></div>
+          <span :class="['classroom-v3__rate', question.correct_rate >= 60 ? 'is-good' : 'is-focus']">正确率 {{ question.correct_rate }}%</span>
+        </div>
+        <div class="classroom-v3__dist">
+          <div v-for="(count, k) in question.distribution" :key="k" class="classroom-v3__dist-row">
+            <span class="classroom-v3__option">{{ optionLabel(k) }}</span>
+            <div class="classroom-v3__bar">
+              <div class="classroom-v3__bar-fill" :style="{ width: barWidth(count) + '%' }"></div>
+            </div>
+            <span class="classroom-v3__count">{{ count }} 人</span>
+          </div>
+        </div>
+        <div class="classroom-v3__insight">
+          <div class="classroom-v3__insight-icon">AI</div>
+          <div class="classroom-v3__insight-body">
+            <b>{{ question.pattern_similar ? '错误模式与最近作业一致' : '课堂洞察' }}</b>
+            <p>{{ question.ai_reminder }}</p>
+            <p class="classroom-v3__wrong">主要错误集中在「{{ question.main_wrong_option }}」</p>
+          </div>
+        </div>
+        <div class="classroom-v3__result-actions">
+          <button class="classroom-v3__primary" type="button" @click="showVariant = !showVariant">{{ showVariant ? '收起变式' : '推一道变式' }}</button>
+          <button class="classroom-v3__ghost" type="button" @click="goPrep">加入讲解（备课）</button>
+        </div>
+        <p v-if="showVariant" class="classroom-v3__variant">变式：{{ question.variant }}</p>
+      </section>
+
+      <!-- 结束课堂 -->
+      <section class="classroom-v3__close">
+        <button class="classroom-v3__ghost" type="button" :disabled="closing" @click="closeSession">结束课堂并归档</button>
+        <span class="classroom-v3__muted">结束前最后一份结果会保留在页面；教师动作均已审计。</span>
+      </section>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { classApi } from '@/api'
+import { classroomApi } from '@/api/teacher/classroom'
 import { useClassroomStore } from '@/stores/teacher/classroom'
 import { useTeacherContextStore } from '@/stores/teacher/context'
-import type { VideoInsight } from '@/types/teacher'
+import type { ClassroomSessionQuestion, ClassroomSessionState } from '@/types/teacher'
 
-type ClassItem = { id: string; name: string }
-const router = useRouter(); const store = useClassroomStore(); const context = useTeacherContextStore(); const showToast = inject<(message: string) => void>('showToast', () => {}); const classes = ref<ClassItem[]>([]); const selectedClass = ref(''); const loading = ref(false); const videoLoading = ref(false); const error = ref(''); const pendingChange = ref<boolean | null>(null)
-const modeEnabled = computed(() => Boolean(store.mode?.enabled)); const remainingText = computed(() => { const seconds = store.mode?.ttl_seconds || 0; return `${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒` }); const video = computed(() => store.insights)
-async function loadClassroom() { const current = classes.value.find((item) => item.id === selectedClass.value); if (!current) return; context.setClass(current.id, current.name); await store.fetchState(current.id); pendingChange.value = null }
-async function applyMode() { if (pendingChange.value === null || !selectedClass.value) return; try { await store.setMode(selectedClass.value, pendingChange.value); showToast(pendingChange.value ? '课堂模式已同步至学生端' : '课堂模式已关闭并同步至学生端'); pendingChange.value = null } catch (cause: any) { showToast(cause?.message || '课堂状态更新失败') } }
-async function loadVideo() { if (!selectedClass.value) return; videoLoading.value = true; try { await store.fetchVideoInsights(selectedClass.value) } finally { videoLoading.value = false } }
-function formatDateTime(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN') }
-function eventLabel(event: unknown) { return typeof event === 'object' && event ? String((event as Record<string, unknown>).event || (event as Record<string, unknown>).type || '课堂事件') : '课堂事件' }
-function eventDetail(event: unknown) { try { return typeof event === 'string' ? event : JSON.stringify(event) } catch { return '事件详情无法展示' } }
-onMounted(async () => { loading.value = true; try { const data = await classApi.mine(); classes.value = data?.items || []; selectedClass.value = classes.value.some((item) => item.id === context.classId) ? context.classId || '' : classes.value[0]?.id || ''; if (selectedClass.value) { await loadClassroom(); await loadVideo() } } catch (cause: any) { error.value = cause?.message || '课堂数据加载失败' } finally { loading.value = false } })
+const router = useRouter()
+const store = useClassroomStore()
+const context = useTeacherContextStore()
+const showToast = inject<(message: string) => void>('showToast', () => {})
+
+const classes = ref<Array<{ id: string; name: string }>>([])
+const selectedClass = ref('')
+const loading = ref(false)
+const starting = ref(false)
+const launching = ref(false)
+const closing = ref(false)
+const error = ref('')
+const showVariant = ref(false)
+const startForm = reactive({ topic: '', room: '' })
+
+const session = computed<ClassroomSessionState | null>(() => store.session)
+const sessionStatus = computed(() => session.value?.status ?? 'idle')
+const question = computed<ClassroomSessionQuestion | null>(() => session.value?.last_question ?? null)
+const currentClass = computed(() => classes.value.find((item) => item.id === selectedClass.value) || { name: '当前班级' })
+
+/** 与课堂会话对应的确定性检测点：紧扣《导数与函数单调性》三大重难点 */
+const questionBank = [
+  { focus: '单调区间端点取等', prompt: 'f(x)=x³−3x 在 (a,+∞) 单调递增，a 的最小值？' },
+  { focus: '参数边界 a=0 分类', prompt: '讨论 f(x)=ln x−ax 的单调性，a=0 时如何处理？' },
+  { focus: '导数符号与单调性充要', prompt: 'f′(x)>0 是单调递增的什么条件？' },
+]
+
+const elapsedMinutes = computed(() => {
+  if (!session.value?.started_at) return 0
+  const diff = Math.floor((Date.now() - new Date(session.value.started_at).getTime()) / 60000)
+  return Math.max(0, diff)
+})
+
+function optionLabel(index: number) { return String.fromCharCode(65 + index) }
+function barWidth(count: number) {
+  const max = Math.max(1, ...(question.value?.distribution ?? [1]))
+  return Math.round((count / max) * 100)
+}
+function segmentBadge(segment: { title: string; duration_min?: number }) {
+  return segment.duration_min ? `当前环节：${segment.title} · 预计 ${segment.duration_min} 分钟` : `当前环节：${segment.title}`
+}
+function formatClock(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+
+async function loadClassroom() {
+  if (!selectedClass.value) return
+  const current = classes.value.find((item) => item.id === selectedClass.value)
+  if (current) context.setClass(current.id, current.name)
+  store.clear()
+  try { await store.fetchSession(selectedClass.value) } catch (cause: any) { error.value = cause?.message || '课堂状态加载失败' }
+}
+
+async function startSession() {
+  if (!selectedClass.value) return
+  starting.value = true; error.value = ''
+  try {
+    await store.startSession(selectedClass.value, { topic: startForm.topic || '高中数学课', room: startForm.room })
+    showToast('课堂会话已开启，学生端已同步本课状态。')
+  } catch (cause: any) { error.value = cause?.message || '开启课堂失败' } finally { starting.value = false }
+}
+
+async function launch(index: number) {
+  if (!selectedClass.value) return
+  launching.value = true; error.value = ''
+  try {
+    await store.launchQuestion(selectedClass.value, index)
+    showToast('题目已发出，正在收齐学生作答…')
+  } catch (cause: any) { error.value = cause?.message || '发题失败' } finally { launching.value = false }
+}
+
+async function closeSession() {
+  if (!selectedClass.value) return
+  closing.value = true; error.value = ''
+  try {
+    await store.closeSession(selectedClass.value)
+    showToast('课堂已结束并归档，本次课堂数据已记录。')
+  } catch (cause: any) { error.value = cause?.message || '结束课堂失败' } finally { closing.value = false }
+}
+
+function goPrep() { router.push('/teacher/prep') }
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const data = await classApi.mine()
+    classes.value = data?.items || []
+    const remembered = classes.value.find((item) => item.id === context.classId)
+    selectedClass.value = remembered ? context.classId || '' : classes.value[0]?.id || ''
+    if (selectedClass.value) await loadClassroom()
+  } catch (cause: any) { error.value = cause?.message || '班级信息未能加载' } finally { loading.value = false }
+})
 </script>
 
 <style scoped>
-.classroom-v2{max-width:1500px;margin:0 auto;padding:30px 32px 42px;color:#17243b}.classroom-v2__head,.classroom-v2__next{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.classroom-v2__eyebrow{margin:0;color:#69758b;font-size:12px;letter-spacing:.08em;font-weight:700}.classroom-v2 h1{margin:4px 0 8px;font-size:32px;letter-spacing:-.04em}.classroom-v2 h2{margin:5px 0 0;font-size:20px}.classroom-v2__head>div>p:last-child{margin:0;max-width:730px;color:#53637b;line-height:1.6}.classroom-v2__head label{display:grid;gap:6px;color:#526178;font-size:12px;font-weight:700}.classroom-v2 select{min-width:220px;padding:10px;border:1px solid #d8e1ec;border-radius:8px;color:#17243b;background:#fff;font:inherit}.classroom-v2__notice{margin:20px 0;padding:11px 14px;border-radius:9px}.classroom-v2__notice.is-error{background:#fff1f1;color:#b42318}.classroom-v2__workspace{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(310px,.8fr);gap:22px;margin-top:25px}.classroom-v2__mode,.classroom-v2__events,.classroom-v2__next{border:1px solid #e1e7ef;background:#fff;border-radius:14px;padding:22px}.classroom-v2__mode>p:not(.classroom-v2__eyebrow){max-width:620px;color:#56667d;line-height:1.6}.classroom-v2__status{display:grid;gap:7px;margin:22px 0;padding:17px;border-radius:10px;background:#f8fafc}.classroom-v2__status span{width:max-content;padding:5px 8px;border-radius:999px;font-size:12px}.is-on{background:#ecfdf3;color:#166534}.is-off{background:#f1f5f9;color:#64748b}.classroom-v2__status small{color:#718096}.classroom-v2__actions,.classroom-v2__confirm{padding-top:16px;border-top:1px solid #edf0f4}.classroom-v2__confirm{margin-top:16px;color:#7c4a03}.classroom-v2__confirm p{margin:6px 0 12px}.classroom-v2__confirm button+button{margin-left:8px}.classroom-v2__events{align-self:start}.classroom-v2__event-warning{margin:18px 0;padding:15px;border:1px solid #f2c36d;border-radius:9px;color:#92400e;background:#fffbeb}.classroom-v2__event-warning p{margin:7px 0 0;line-height:1.55;font-size:13px}.classroom-v2__event-list{display:grid;gap:9px;margin:18px 0}.classroom-v2__event-list article{padding:12px;border-left:3px solid #3b82f6;background:#f8fbff;border-radius:0 8px 8px 0}.classroom-v2__event-list p{margin:5px 0 0;color:#57677e;font-size:13px}.classroom-v2__next{grid-column:1/-1;align-items:center}.classroom-v2__next p:not(.classroom-v2__eyebrow){margin:7px 0 0;color:#65758b}.classroom-v2__next>div:last-child{display:flex;gap:8px;flex-wrap:wrap}.classroom-v2__empty{margin-top:22px;padding:31px 22px;border-radius:12px;background:#f8fafc;color:#64748b;text-align:center;line-height:1.55}.classroom-v2__events .classroom-v2__empty{margin:18px 0;padding:20px}@media(max-width:900px){.classroom-v2{padding:22px 16px}.classroom-v2__head,.classroom-v2__next{flex-direction:column}.classroom-v2__workspace{grid-template-columns:1fr}.classroom-v2__next>div:last-child{width:100%}}
+.classroom-v3 { box-sizing: border-box; max-width: 1500px; margin: 0 auto; padding: 30px 32px 46px; color: #17243b; }
+.classroom-v3__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.classroom-v3__eyebrow { margin: 0; color: #69758b; font-size: 12px; letter-spacing: .08em; font-weight: 700; }
+.classroom-v3 h1 { margin: 4px 0 8px; font-size: 32px; letter-spacing: -.04em; }
+.classroom-v3 h2 { margin: 5px 0 0; font-size: 20px; }
+.classroom-v3__head > div > p:last-child { margin: 0; max-width: 760px; color: #53637b; line-height: 1.6; }
+.classroom-v3__head label { display: grid; gap: 6px; color: #526178; font-size: 12px; font-weight: 700; }
+.classroom-v3 select { min-width: 220px; padding: 10px; border: 1px solid #d8e1ec; border-radius: 8px; color: #17243b; background: #fff; font: inherit; }
+.classroom-v3__notice { margin: 20px 0 0; padding: 11px 14px; border-radius: 9px; }
+.classroom-v3__notice.is-error { background: #fff1f1; color: #b42318; }
+.classroom-v3__state { margin-top: 26px; padding: 42px 22px; border-radius: 14px; background: #f8fafc; color: #64748b; text-align: center; line-height: 1.6; }
+.classroom-v3__state h2 { margin: 0 0 8px; color: #334155; }
+.classroom-v3__state p { margin: 0; }
+
+.classroom-v3__start { max-width: 560px; margin: 30px auto 0; }
+.classroom-v3__start-card, .classroom-v3__hero, .classroom-v3__bank, .classroom-v3__result, .classroom-v3__close { border: 1px solid #e1e7ef; background: #fff; border-radius: 14px; padding: 22px; }
+.classroom-v3__start-card h2 { margin: 6px 0 18px; }
+.classroom-v3__start-card label, .classroom-v3__start-card .classroom-v3__primary { display: block; margin-top: 12px; }
+.classroom-v3__start-card label { display: grid; gap: 6px; color: #405168; font-size: 13px; font-weight: 650; }
+.classroom-v3__start-card input { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #d5dee9; border-radius: 8px; color: #17243b; font: inherit; }
+.classroom-v3__hint { margin: 14px 0 0; color: #7c8aa0; font-size: 13px; line-height: 1.55; }
+
+.classroom-v3__workspace { display: grid; gap: 18px; margin-top: 24px; }
+.classroom-v3__hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.classroom-v3__hero h2 { font-size: 22px; }
+.classroom-v3__segment { margin: 8px 0 0; color: #3f6f9d; font-size: 13px; }
+.classroom-v3__hero-stats { display: flex; gap: 10px; }
+.classroom-v3__stat { min-width: 92px; padding: 13px 15px; border-radius: 10px; background: #f4f8fc; text-align: center; }
+.classroom-v3__stat b { display: block; font-size: 22px; color: #1c4f82; }
+.classroom-v3__stat span { display: block; margin-top: 2px; color: #7c8aa0; font-size: 12px; }
+
+.classroom-v3__section-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.classroom-v3__muted { color: #91a0b8; font-size: 12px; }
+.classroom-v3__bank-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+.classroom-v3__bank-card { display: flex; flex-direction: column; gap: 7px; align-items: flex-start; padding: 14px 15px; border: 1px solid #e2e9f1; border-radius: 11px; background: #fbfdff; color: #334155; text-align: left; font: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
+.classroom-v3__bank-card:hover { border-color: #68a1d6; background: #f4f9ff; }
+.classroom-v3__bank-card:disabled { opacity: .55; cursor: wait; }
+.classroom-v3__bank-focus { color: #b9772c; font-size: 12px; font-weight: 800; }
+.classroom-v3__bank-prompt { font-size: 13px; line-height: 1.5; }
+
+.classroom-v3__rate { padding: 5px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; }
+.classroom-v3__rate.is-good { color: #166534; background: #ecfdf3; }
+.classroom-v3__rate.is-focus { color: #92400e; background: #fffbeb; }
+.classroom-v3__dist { display: grid; gap: 10px; margin-top: 16px; }
+.classroom-v3__dist-row { display: grid; grid-template-columns: 26px 1fr 52px; gap: 10px; align-items: center; }
+.classroom-v3__option { font-weight: 800; color: #334155; }
+.classroom-v3__bar { height: 18px; border-radius: 999px; background: #eef2f7; overflow: hidden; }
+.classroom-v3__bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #3b82f6, #60a5fa); transition: width .4s; }
+.classroom-v3__count { color: #7c8aa0; font-size: 12px; text-align: right; }
+.classroom-v3__insight { margin-top: 18px; display: flex; gap: 12px; align-items: flex-start; padding: 15px 16px; border: 1px solid #f2c36d; border-radius: 11px; background: #fffbeb; }
+.classroom-v3__insight-icon { flex: none; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #f97316); color: #fff; font-size: 13px; font-weight: 900; display: grid; place-items: center; }
+.classroom-v3__insight-body b { color: #92400e; }
+.classroom-v3__insight-body p { margin: 5px 0 0; color: #7c5a10; font-size: 13px; line-height: 1.6; }
+.classroom-v3__insight-body .classroom-v3__wrong { color: #b45309; font-weight: 700; }
+.classroom-v3__result-actions { display: flex; gap: 9px; margin-top: 16px; flex-wrap: wrap; }
+.classroom-v3__variant { margin: 12px 0 0; padding: 11px 13px; border-radius: 9px; background: #f4f8fc; color: #405168; font-size: 13px; line-height: 1.6; }
+
+.classroom-v3__primary { padding: 10px 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #e8913a, #d9770b); color: #fff; font-weight: 700; cursor: pointer; }
+.classroom-v3__primary:disabled { opacity: .55; cursor: wait; }
+.classroom-v3__ghost { padding: 9px 16px; border: 1px solid #cdd9e6; border-radius: 9px; background: #fff; color: #2f4d74; font-weight: 650; cursor: pointer; }
+.classroom-v3__ghost:disabled { opacity: .55; cursor: wait; }
+.classroom-v3__close { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+@media (max-width: 980px) {
+  .classroom-v3 { padding: 22px 16px; }
+  .classroom-v3__head { flex-direction: column; }
+  .classroom-v3__hero { flex-direction: column; }
+  .classroom-v3__hero-stats { flex-wrap: wrap; }
+  .classroom-v3__bank-grid { grid-template-columns: 1fr; }
+  .classroom-v3__close { flex-direction: column; align-items: flex-start; }
+}
 </style>

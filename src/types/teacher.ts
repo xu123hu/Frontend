@@ -307,6 +307,69 @@ export interface VideoSegment {
   event: string
   summary?: string
 }
+/** 课堂会话（§14 调研版：Session 语义，对标 SchoolAI Mission Control / 希沃授课助手） */
+export interface ClassroomSessionSegment {
+  title: string
+  kind?: string
+  duration_min?: number
+}
+
+export interface ClassroomSessionQuestion {
+  question_id: string
+  prompt: string
+  options: string[]
+  correct_index: number
+  focus: string
+  submitted: number
+  /** 各选项人数，顺序与 options 对齐 */
+  distribution: number[]
+  correct_rate: number
+  main_wrong_option: string
+  ai_reminder: string
+  pattern_similar: boolean
+  variant: string
+}
+
+export interface ClassroomSessionState {
+  class_id: string
+  session_id: string | null
+  topic: string
+  room: string
+  started_at: string
+  status: 'idle' | 'active' | 'ended'
+  connected_total: number
+  current_segment: ClassroomSessionSegment | null
+  last_question: ClassroomSessionQuestion | null
+  degraded: boolean
+}
+
+/** 批后讲评建议（调研版「批完→最值得讲的 3 题」） */
+export interface GradingReviewTypicalAnswer {
+  user_id: string
+  submission_item_id: string | null
+  file_id: string | null
+  answer_text: string
+  attachment_count: number
+}
+
+export interface GradingReviewQuestion {
+  item_no: number
+  question_text: string
+  kp_code: string | null
+  wrong_count: number
+  graded_count: number
+  correct_ratio: number
+  typical_answers: GradingReviewTypicalAnswer[]
+  actions: { action: string; label: string }[]
+}
+
+export interface GradingReviewInsights {
+  assignment_id: string | null
+  title: string
+  review_rate: number
+  top_questions: GradingReviewQuestion[]
+}
+
 
 export interface TeacherResource {
   resource_id: string
