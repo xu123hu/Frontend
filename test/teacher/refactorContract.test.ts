@@ -28,6 +28,16 @@ describe('批改 V1/V2 收敛：路由唯一指向 V2，V1 残留清零', () => 
   })
 })
 
+describe('死配置清零（P0-4）：features.js / nav.js 引用不存在路由', () => {
+  it('两个死配置文件已删除，adminNav 内联进唯一消费者', () => {
+    expect(existsSync(resolve(process.cwd(), 'src/config/features.js'))).toBe(false)
+    expect(existsSync(resolve(process.cwd(), 'src/config/nav.js'))).toBe(false)
+    const adminNav = readFileSync(resolve(process.cwd(), 'src/components/admin/AdminNav.vue'), 'utf8')
+    expect(adminNav).toContain('/admin/identity/applications')
+    expect(adminNav).not.toContain("from '@/config/nav'")
+  })
+})
+
 describe('Today 诚实化与通知真源（TC-L1-F03/F07、P0-4）', () => {
   it('today 视图不再写死 17/46 统计文案，证据渲染走文案引擎', () => {
     const view = readFileSync(resolve(process.cwd(), 'src/pages/teacher/TeacherTodayView.vue'), 'utf8')

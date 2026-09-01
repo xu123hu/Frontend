@@ -14,7 +14,17 @@
 </template>
 
 <script setup>
-import { adminNav } from '@/config/nav'
+// 管理后台导航项（原 config/nav.js 死配置清理时内联：studentNav/studentImmersive 引用
+// 的 /student/* 路由早已不存在，随文件一并删除；本数组为唯一幸存消费者）
+const adminNav = [
+  { key: 'identity', icon: '🪪', title: '身份审核', to: '/admin/identity/applications' },
+  { key: 'overview', icon: '📈', title: '总览', to: '/admin/overview' },
+  { key: 'model', icon: '🤖', title: '模型配置', to: '/admin/model' },
+  { key: 'xingchen', icon: '✨', title: '星辰与工作流', to: '/admin/xingchen' },
+  { key: 'cloud-kb', icon: '☁️', title: '云知识库', to: '/admin/cloud-kb' },
+  { key: 'kb-bench', icon: '🔍', title: '检索试验台', to: '/admin/kb-bench' },
+  { key: 'butler', icon: '🔐', title: 'Butler 授权', to: '/admin/butler' },
+]
 </script>
 
 <style scoped>
