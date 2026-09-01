@@ -49,6 +49,7 @@ function parseContext(value: unknown): WorkspaceContext {
         : Array.isArray(questionSource.options)
           ? questionSource.options.map(string)
           : Object.entries(record(questionSource.options)).map(([key, value]) => `${key}. ${string(value)}`),
+      image: Array.isArray(questionSource.image) ? questionSource.image.map(string) : [],
       maxScore: nullableNumber(questionSource.max_score),
     } : null,
     filter: filter(filters.status),

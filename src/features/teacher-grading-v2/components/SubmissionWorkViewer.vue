@@ -15,6 +15,9 @@
           <LatexText :text="String.fromCharCode(65 + index) + '. ' + option" />
         </li>
       </ol>
+      <div v-if="question?.image?.length" class="work-viewer__question-fig">
+        <img v-for="(src, i) in question.image" :key="i" :src="src" alt="题目配图" />
+      </div>
     </section>
     <section class="work-viewer__answer">
       <p>作答内容</p>
@@ -55,6 +58,8 @@ defineEmits<{ 'retry-file': [] }>()
 .work-viewer__question { padding:20px 0; border-bottom:1px solid #e4eaf1; color:#1f334d; line-height:1.7; }
 .work-viewer__question-text { display:block; font-size:16px; font-weight:650; }
 .work-viewer__options { padding-left:22px; margin:11px 0 0; color:#40536a; }
+.work-viewer__question-fig { margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; }
+.work-viewer__question-fig img { max-width:100%; max-height:260px; border:1px solid #dae4ef; border-radius:8px; background:#fff; }
 .work-viewer__answer { padding-top:20px; }
 .work-viewer__answer-text { display:block; min-height:210px; box-sizing:border-box; padding:18px; border:1px solid #dae4ef; border-radius:10px; background:#fbfcfe; color:#172c48; white-space:pre-wrap; font:15px/1.85 ui-monospace, SFMono-Regular, Consolas, monospace; }
 .work-viewer__answer-text :deep(.katex) { font-size:1.03em; }

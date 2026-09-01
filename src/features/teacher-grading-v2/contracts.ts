@@ -18,6 +18,7 @@ export interface WorkspaceContext {
     questionText: string
     questionType: string
     options: string[] | null
+    image: string[]
     maxScore: number | null
   } | null
   filter: WorkspaceFilter

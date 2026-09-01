@@ -1,5 +1,18 @@
 <template>
   <main class="grading-v2" aria-label="题目聚焦批改工作台">
+    <section v-if="review && review.top_questions.length && !reviewDismissed" class="grading-v2__review" aria-label="批后讲评建议">
+      <div class="grading-v2__review-head">
+        <div><p class="grading-v2__review-eyebrow">批后讲评</p><h2>本次作业最值得讲的 {{ review.top_questions.length }} 题</h2><p v-if="review.title">{{ review.title }} · 已判 {{ review.review_rate }}%</p></div>
+        <button class="grading-v2__review-close" type="button" @click="reviewDismissed = true">收起</button>
+      </div>
+      <div class="grading-v2__review-list">
+        <article v-for="q in review.top_questions" :key="q.item_no" class="grading-v2__review-item">
+          <div class="grading-v2__review-q"><span class="grading-v2__review-no">第 {{ q.item_no }} 题</span><p>{{ q.question_text }}</p></div>
+          <div class="grading-v2__review-meta"><span class="grading-v2__review-wrong">{{ q.wrong_count }} 人错</span><span class="grading-v2__review-ratio">正确率 {{ q.correct_ratio }}%</span><RouterLink class="grading-v2__review-link" to="/teacher/prep">加入明天讲评 →</RouterLink></div>
+        </article>
+      </div>
+    </section>
+
     <div v-if="store.loading && !workspace" class="grading-v2__state">正在加载题目与作答队列…</div>
     <div v-else-if="store.error && !workspace" class="grading-v2__state grading-v2__state--error">{{ store.error }}</div>
     <div v-else-if="!workspace || !workspace.selected" class="grading-v2__state">
@@ -53,6 +66,9 @@ import SubmissionQueue from '@/features/teacher-grading-v2/components/Submission
 import SubmissionWorkViewer from '@/features/teacher-grading-v2/components/SubmissionWorkViewer.vue'
 import type { WorkspaceFilter } from '@/features/teacher-grading-v2/contracts'
 import { useGradingWorkspaceStore } from '@/stores/teacher/gradingWorkspace'
+import { gradingApi } from '@/api/teacher/grading'
+import type { GradingReviewInsights } from '@/types/teacher'
+import { useTeacherContextStore } from '@/stores/teacher/context'
 
 defineOptions({ name: 'TeacherGradingV2View' })
 
@@ -66,6 +82,8 @@ const fileUrl = ref('')
 const fileLoading = ref(false)
 const fileError = ref('')
 const notice = ref('')
+const review = ref<GradingReviewInsights | null>(null)
+const reviewDismissed = ref(false)
 const workspace = computed(() => store.workspace)
 const canConfirm = computed(() => Boolean(workspace.value?.selected?.suggestion?.suggestionId) && !store.actionPending)
 
@@ -129,7 +147,15 @@ watch(() => workspace.value?.selected?.submissionItemId, (submissionItemId) => {
   if (!submissionItemId || route.query.submission_item_id === submissionItemId) return
   void router.replace({ query: { ...route.query, submission_item_id: submissionItemId } })
 })
-onMounted(() => { if (!workspace.value) void loadFromRoute() })
+onMounted(async () => {
+  if (!workspace.value) await loadFromRoute()
+  const classId = queryString(route.query.class_id)
+  const fallbackClassId = useTeacherContextStore().classId
+  const effectiveClassId = classId || fallbackClassId || undefined
+  if (effectiveClassId) {
+    try { review.value = await gradingApi.insights(effectiveClassId) } catch { review.value = null }
+  }
+})
 onUnmounted(revokeFile)
 </script>
 
@@ -143,6 +169,21 @@ onUnmounted(revokeFile)
 .grading-v2__state a { color:#1767a8; font-weight:800; }
 .grading-v2__state--error, .grading-v2__error { color:#8d2533; }
 .grading-v2__notice, .grading-v2__error { margin:0; padding:9px 18px; background:#edf7ff; color:#295f8d; font-size:13px; }
+.grading-v2__review { flex:none; padding:16px 22px; border-bottom:1px solid #e4ebf3; background:linear-gradient(180deg,#fffdf7,#fff); }
+.grading-v2__review-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.grading-v2__review-eyebrow { margin:0; color:#b9772c; font-size:12px; font-weight:800; letter-spacing:.08em; }
+.grading-v2__review-head h2 { margin:3px 0 0; font-size:18px; color:#1c3452; }
+.grading-v2__review-head p:last-child { margin:4px 0 0; color:#7c8aa0; font-size:13px; }
+.grading-v2__review-close { border:0; background:transparent; color:#7c8aa0; font:inherit; font-size:13px; cursor:pointer; }
+.grading-v2__review-list { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
+.grading-v2__review-item { display:flex; flex-direction:column; gap:8px; padding:12px 14px; border:1px solid #f2e2c8; border-radius:10px; background:#fffdfa; }
+.grading-v2__review-no { display:inline-block; width:max-content; padding:3px 8px; border-radius:999px; background:#fdeed6; color:#a16207; font-size:12px; font-weight:800; }
+.grading-v2__review-q p { margin:6px 0 0; color:#334155; font-size:13px; line-height:1.5; }
+.grading-v2__review-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; }
+.grading-v2__review-wrong { color:#b42318; font-weight:800; }
+.grading-v2__review-ratio { color:#7c8aa0; }
+.grading-v2__review-link { color:#1767a8; font-weight:800; text-decoration:none; }
+@media (max-width:980px){ .grading-v2__review-list { grid-template-columns:1fr; } }
 .grading-v2__error { background:#fff0f2; }
 @media (max-width: 920px) { .grading-v2 { height:auto; min-height:calc(100vh - 68px); padding:14px; } .grading-v2__workspace { height:auto; } .grading-v2__body { display:grid; overflow:visible; grid-template-columns:1fr; } }
 </style>
