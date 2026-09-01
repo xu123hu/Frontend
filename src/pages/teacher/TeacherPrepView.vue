@@ -68,16 +68,16 @@
             class="t-lesson-step"
           >
             <div class="min">{{ step.timeRange }}</div>
-            <div class="t-step-card" :class="{ added: step.added }">
+            <div class="t-step-card" :class="{ added: step.added, suggested: step.suggested }">
               <div class="t-step-head">
                 <b>{{ idx + 1 }}. {{ step.title }}</b>
                 <span class="t-tag" :class="step.tagClass">{{ step.tagText }}</span>
               </div>
               <div class="t-step-body">{{ step.description }}</div>
               <div class="t-step-tools">
-                <button class="t-ghost-link" type="button" @click="editStep(step)">编辑内容</button>
-                <button class="t-ghost-link" type="button" @click="addMaterial(step)">+ 添加材料</button>
-                <button class="t-ghost-link" type="button" @click="adjustTime(step)">调时长</button>
+                <button class="t-ghost-link" type="button" @click="openEditor(step, 'content')">编辑内容</button>
+                <button class="t-ghost-link" type="button" @click="openEditor(step, 'material')">+ 添加材料</button>
+                <button class="t-ghost-link" type="button" @click="openEditor(step, 'time')">调时长</button>
                 <button class="t-ghost-link" type="button" @click="deleteStep(step, idx)">删除</button>
               </div>
             </div>
@@ -128,41 +128,69 @@
           <div class="t-section-title">
             <h2>这节课可以直接产出</h2>
           </div>
-          <div class="t-grid" style="grid-template-columns: 1fr 1fr; gap: 8px">
-            <button class="t-btn" type="button" @click="generateSlides">
-              <span aria-hidden="true">📊</span>
-              生成PPT
-            </button>
-            <button class="t-btn" type="button" @click="exportWord">
-              <span aria-hidden="true">📄</span>
-              导出Word教案
-            </button>
-            <button class="t-btn" type="button" @click="generatePractice">
-              <span aria-hidden="true">✏️</span>
-              生成当堂练习
-            </button>
-            <button class="t-btn" type="button" @click="generateBoardOutline">
-              <span aria-hidden="true">📋</span>
-              生成板书提纲
-            </button>
+            <div class="t-grid" style="grid-template-columns: 1fr 1fr; gap: 8px">
+              <button class="t-btn" type="button" @click="generateSlides">
+                <span aria-hidden="true">📊</span>
+                生成PPT
+              </button>
+              <button class="t-btn" type="button" @click="exportWord">
+                <span aria-hidden="true">📄</span>
+                导出Word教案
+              </button>
+              <button class="t-btn" type="button" @click="generatePractice">
+                <span aria-hidden="true">✏️</span>
+                生成当堂练习
+              </button>
+              <button class="t-btn" type="button" @click="generateBoardOutline">
+                <span aria-hidden="true">📋</span>
+                生成板书提纲
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+    <!-- 结构化环节编辑抽屉（TC-L2-F05：替代 window.prompt） -->
+    <div v-if="editingStep" class="t-edit-overlay" @click="closeEditor"></div>
+    <aside v-if="editingStep" class="t-edit-drawer" role="dialog" aria-label="结构化编辑教学环节">
+      <div class="t-edit-head">
+        <h3>编辑环节</h3>
+        <button class="t-ghost-link" type="button" @click="closeEditor">关闭</button>
+      </div>
+      <label class="t-edit-field">环节标题<input v-model="editForm.title" aria-label="环节标题" /></label>
+      <label class="t-edit-field">时长（分钟）<input v-model.number="editForm.minutes" aria-label="环节时长分钟" type="number" min="1" /></label>
+      <label class="t-edit-field">师生活动 / 材料（每行一条，支持 $LaTeX$ 公式）
+        <textarea v-model="editForm.activitiesText" aria-label="环节活动内容" rows="6"></textarea>
+      </label>
+      <div class="t-edit-preview">
+        <span class="sub">公式预览</span>
+        <LatexText :text="editForm.activitiesText || '（空）'" />
+      </div>
+      <div class="t-edit-actions">
+        <button class="t-btn primary sm" type="button" @click="saveEditor">保存环节（草稿）</button>
+        <button class="t-btn sm" type="button" @click="closeEditor">取消</button>
+      </div>
+      <p class="t-edit-hint">保存仅更新本地草稿；点击顶部「保存草稿」同步服务器。</p>
+    </aside>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { api, authHeaders } from '@/api/client'
+import { computed, inject, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { api } from '@/api/client'
+import { classApi } from '@/api'
 import { artifactsApi } from '@/api/teacher/artifacts'
+import { classesApi } from '@/api/teacher/classes'
 import { lessonsApi } from '@/api/teacher/lessons'
 import { useTeacherContextStore } from '@/stores/teacher/context'
 import { useLessonArtifactsStore } from '@/stores/teacher/lessonArtifacts'
+import { evidenceText } from '@/utils/insightCopy'
+import LatexText from '@/components/LatexText.vue'
 import type { LessonTimelineItem, TeacherArtifact } from '@/types/teacher'
 
 const router = useRouter()
+const route = useRoute()
 const ctx = useTeacherContextStore()
 const store = useLessonArtifactsStore()
 const showToast = inject('showToast') as (msg: string) => void
@@ -174,6 +202,8 @@ const selectedSource = ref('last-lesson')
 const topic = ref('')
 const requirements = ref('')
 const durationMinutes = ref(45)
+/** 课堂「加入讲解」携带的焦点（L6→L2 闭环） */
+const focusFromQuery = ref('')
 
 interface SourceOption {
   id: string
@@ -197,6 +227,8 @@ interface LessonStep {
   description: string
   activities: string[]
   added?: boolean
+  /** GP-2：洞察建议的目标环节高亮 */
+  suggested?: boolean
 }
 
 const lessonSteps = ref<LessonStep[]>([])
@@ -212,6 +244,68 @@ interface Suggestion {
 }
 
 const suggestions = ref<Suggestion[]>([])
+
+// ---- 结构化环节编辑抽屉（TC-L2-F05：替代 window.prompt×3） ----
+type EditorMode = 'content' | 'material' | 'time'
+const editingStep = ref<LessonStep | null>(null)
+const editForm = reactive({ title: '', minutes: 5, activitiesText: '' })
+
+function openEditor(step: LessonStep, mode: EditorMode) {
+  editingStep.value = step
+  editForm.title = step.title
+  editForm.minutes = stepDuration(step) || 5
+  let lines = step.activities.join('\n')
+  if (mode === 'material') lines = `${lines}${lines ? '\n' : ''}材料：`
+  editForm.activitiesText = lines
+}
+
+function closeEditor() { editingStep.value = null }
+
+/** 建议卡来源 = 班级洞察 error_cluster（GP-2 依据链：证据来自后端字段，非编造） */
+async function loadSuggestions(classId: string) {
+  try {
+    const insights = await classesApi.insights(classId)
+    const targetStepId = lessonSteps.value[1]?.id || lessonSteps.value[0]?.id || ''
+    suggestions.value = insights
+      .filter((ins) => ins.kind === 'error_cluster')
+      .slice(0, 3)
+      .map((ins) => ({
+        id: ins.insight_id,
+        title: ins.summary,
+        description: ins.summary,
+        evidence: evidenceText(ins.evidence),
+        adopted: false,
+        targetStepId,
+      }))
+  } catch { suggestions.value = [] }
+}
+
+/** GP-2：?lesson_id&from=insight:{id} 进入 → 高亮建议目标环节（插入点 diff 标记） */
+function markSuggestedStep(suggestionId: string) {
+  const sug = suggestions.value.find((item) => item.id === suggestionId) || suggestions.value[0]
+  if (!sug) return
+  const step = lessonSteps.value.find((item) => item.id === sug.targetStepId)
+  if (step && !step.added) {
+    step.suggested = true
+    step.tagText = '建议插入'
+    step.tagClass = 'blue'
+  }
+}
+
+function saveEditor() {
+  const step = editingStep.value
+  if (!step) return
+  const minutes = Math.max(1, Math.round(Number(editForm.minutes) || stepDuration(step) || 5))
+  const start = Number(step.timeRange.match(/\d+/)?.[0] || 0)
+  const activities = editForm.activitiesText.split('\n').map((line) => line.trim()).filter(Boolean)
+  step.title = editForm.title.trim() || step.title
+  step.timeRange = `${start}-${start + minutes} min`
+  step.activities = activities
+  step.description = activities.join('；')
+  recalculateRanges()
+  editingStep.value = null
+  showToast?.('环节已保存到本地草稿；点顶部「保存草稿」同步服务器')
+}
 let operationEpoch = 0
 
 function beginOperation() {
@@ -247,6 +341,7 @@ async function selectSource(id: string) {
       if (targetLesson) {
         store.artifact = targetLesson
         applyArtifact()
+        void loadSuggestions(targetClassId)
         showToast?.('已载入服务器中的最近教案')
         return
       }
@@ -276,6 +371,7 @@ async function onClassChange() {
     if (targetLesson) {
       store.artifact = targetLesson
       applyArtifact()
+      void loadSuggestions(targetClassId)
       showToast?.(`已切换到${className}，已载入该班教案`)
       return
     }
@@ -304,10 +400,22 @@ function selectedClassArtifact() {
 async function saveDraft() {
   const artifact = selectedClassArtifact()
   if (!artifact) return
-  await store.save({
-    version: artifact.version,
-    content: { ...artifact.content, timeline: lessonSteps.value.map((s) => ({ phase: s.title, minutes: stepDuration(s) || 5, activities: s.activities })) },
-  })
+  // R06 Phase A：按 artifact 自身的单一数据源回写——segments 版回写 segments，旧版回写 timeline，不做双写
+  const segments = Array.isArray((artifact.content as any).segments) ? ((artifact.content as any).segments as any[]) : null
+  const nextContent: Record<string, unknown> = { ...artifact.content }
+  if (segments) {
+    nextContent.segments = lessonSteps.value.map((step, index) => ({
+      ...(segments[index] || { id: `seg-${index + 1}`, kind: 'teaching', source: 'teacher_edit', locked: false }),
+      title: step.title,
+      duration_min: stepDuration(step) || 5,
+      teacher_action: step.activities[0] || (segments[index]?.teacher_action ?? ''),
+      student_action: step.activities[1] || (segments[index]?.student_action ?? ''),
+      content: step.description,
+    }))
+  } else {
+    nextContent.timeline = lessonSteps.value.map((s) => ({ phase: s.title, minutes: stepDuration(s) || 5, activities: s.activities }))
+  }
+  await store.save({ version: artifact.version, content: nextContent })
   showToast?.('草稿已保存到服务器')
 }
 
@@ -331,30 +439,11 @@ function autoBalance() {
   showToast?.(`已将课堂环节自动平衡为 ${targetMinutes} 分钟`)
 }
 
-function editStep(step: LessonStep) {
-  const value = window.prompt('编辑教学内容', step.description)
-  if (value !== null && value.trim()) {
-    step.activities = [value.trim()]
-    step.description = step.activities.join('；')
-  }
-}
+function editStep(step: LessonStep) { openEditor(step, 'content') }
 
-function addMaterial(step: LessonStep) {
-  const value = window.prompt('输入材料名称或使用说明', '')
-  if (value?.trim()) {
-    step.activities = [...step.activities, `材料：${value.trim()}`]
-    step.description = step.activities.join('；')
-  }
-}
+function addMaterial(step: LessonStep) { openEditor(step, 'material') }
 
-function adjustTime(step: LessonStep) {
-  const value = window.prompt('输入该环节时长（分钟）', String(stepDuration(step)))
-  const minutes = Number(value)
-  if (!Number.isFinite(minutes) || minutes <= 0) return
-  const start = Number(step.timeRange.match(/\d+/)?.[0] || 0)
-  step.timeRange = `${start}-${start + Math.round(minutes)} min`
-  recalculateRanges()
-}
+function adjustTime(step: LessonStep) { openEditor(step, 'time') }
 
 function stepDuration(step: LessonStep) {
   const values = step.timeRange.match(/\d+/g)?.map(Number) || []
@@ -380,8 +469,26 @@ function deleteStep(_step: LessonStep, idx: number) {
   showToast?.('已删除该环节')
 }
 
-function adoptSuggestion(sug: Suggestion) {
+/** 采纳建议：落库到教案 artifact（契约 2026-09-01 accepted）；端点未开通时诚实提示不假装成功 */
+async function adoptSuggestion(sug: Suggestion) {
   if (sug.adopted) return
+  const artifact = selectedClassArtifact()
+  if (!artifact) return
+  try {
+    const updated = await lessonsApi.adoptSuggestion(artifact.artifact_id, {
+      segment_id: sug.targetStepId,
+      suggestion_id: sug.id,
+      content: sug.description,
+    })
+    if (updated?.data && updated.data.version) store.artifact = updated.data
+  } catch (e: any) {
+    if (e?.code === 404) {
+      showToast?.('采纳落库端点尚未开通（契约已受理，后端排期中），建议暂未入库')
+      return
+    }
+    showToast?.(e?.message || '采纳建议失败')
+    return
+  }
   sug.adopted = true
   const step = lessonSteps.value.find((s) => s.id === sug.targetStepId)
   if (step) {
@@ -389,7 +496,7 @@ function adoptSuggestion(sug: Suggestion) {
     step.tagText = '已采纳'
     step.tagClass = 'green'
   }
-  showToast?.(`已采纳建议：${sug.title}`)
+  showToast?.(`已采纳建议并落库：${sug.title}`)
 }
 
 async function generateSlides() {
@@ -401,15 +508,10 @@ async function generateSlides() {
       return
     }
     const slide = (await lessonsApi.createSlides(artifact.artifact_id, { version: artifact.version, style: '简洁课堂' })).data
-    const url = String(slide.content.download_url || '')
-    const response = await fetch(url, { headers: authHeaders() as HeadersInit })
-    if (!response.ok) throw new Error('PPT 下载失败')
-    const objectUrl = URL.createObjectURL(await response.blob())
-    const link = document.createElement('a')
-    link.href = objectUrl
-    link.download = String(slide.content.filename || '课堂课件.pptx')
-    link.click()
-    URL.revokeObjectURL(objectUrl)
+    const url = String(slide?.content?.download_url || '')
+    if (!url) throw new Error('课件服务未返回下载地址')
+    const { blob, filename } = await api.download(url.replace(/^\/api/, ''))
+    downloadBlob(blob, filename || String(slide?.content?.filename || '课堂课件.pptx'))
     showToast?.('PPT 已生成并开始下载')
   } catch (e: any) { showToast?.(e?.message || 'PPT 生成失败') }
 }
@@ -418,32 +520,40 @@ async function exportWord() {
   try {
     const artifact = selectedClassArtifact()
     if (!artifact) return
-    const response = await fetch(`/api/teacher/lessons/${artifact.artifact_id}/download`, { headers: authHeaders() as HeadersInit })
-    if (!response.ok) throw new Error('Word 教案下载失败')
-    downloadBlob(await response.blob(), `${String(artifact.content.topic || '课堂教案')}.docx`)
+    const { blob, filename } = await api.download(`/teacher/lessons/${artifact.artifact_id}/download`)
+    downloadBlob(blob, filename || `${String(artifact.content.topic || '课堂教案')}.txt`)
     showToast?.('Word 教案已生成并开始下载')
   } catch (e: any) {
     showToast?.(e?.message || 'Word 教案生成失败')
   }
 }
 
+/** 当堂练习：携带本节课蓝图（课题/知识点/题量/来源）跳转组卷工作台（GP-6） */
 function generatePractice() {
-  router.push('/teacher/assign')
-  showToast?.('跳转到作业测验工作台')
+  const artifact = store.artifact
+  const kp = topic.value.trim() || String(artifact?.content?.topic || '')
+  const query: Record<string, string> = { count: '3', source: `lesson:${artifact?.artifact_id || 'draft'}` }
+  if (kp) { query.topic = kp; query.kp_codes = kp }
+  router.push({ path: '/teacher/assign', query })
+  showToast?.('已携带本节课蓝图跳转组卷，可在组卷台继续调整')
 }
 
-function generateBoardOutline() {
-  if (!selectedClassArtifact()) return
-  if (!lessonSteps.value.length) {
-    showToast?.('请先生成教案')
-    return
-  }
-  const lines = lessonSteps.value.flatMap((step, index) => [
-    `${index + 1}. ${step.title}（${step.timeRange}）`,
-    `   ${step.description}`,
-  ])
-  downloadBlob(new Blob([`课堂板书提纲\n\n${lines.join('\n')}`], { type: 'text/plain;charset=utf-8' }), '课堂板书提纲.txt')
-  showToast?.('板书提纲已生成并开始下载')
+/** 板书提纲：后端生成（TC-L2-F09，废除前端拼 txt），走 client 下载（401 自动刷新） */
+async function generateBoardOutline() {
+  try {
+    const artifact = selectedClassArtifact()
+    if (!artifact) return
+    if (!lessonSteps.value.length) {
+      showToast?.('请先生成教案')
+      return
+    }
+    const outline = (await lessonsApi.createExplainer(artifact.artifact_id, { kind: 'board_outline', version: artifact.version })).data
+    const url = String(outline?.content?.download_url || '')
+    if (!url) throw new Error('提纲服务未返回下载地址')
+    const { blob, filename } = await api.download(url.replace(/^\/api/, ''))
+    downloadBlob(blob, filename || '课堂板书提纲.txt')
+    showToast?.('板书提纲已生成并开始下载')
+  } catch (e: any) { showToast?.(e?.message || '板书提纲生成失败') }
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -457,18 +567,26 @@ function downloadBlob(blob: Blob, filename: string) {
 
 // ---- 生命周期 ----
 function applyArtifact() {
-  const timeline = (store.artifact?.content?.timeline || []) as LessonTimelineItem[]
+  // R06 Phase A：segments 为单一数据源；旧 artifacts（timeline 兼容层）仍可读
+  const content = (store.artifact?.content || {}) as Record<string, unknown>
+  const segments = Array.isArray(content.segments) && content.segments.length ? (content.segments as any[]) : null
+  const legacy = Array.isArray(content.timeline) ? (content.timeline as LessonTimelineItem[]) : []
+  const source = segments || legacy
   let elapsed = 0
-  lessonSteps.value = timeline.map((step, index) => {
-    const minutes = Number(step.minutes || 5)
-    const activities = Array.isArray(step.activities) ? step.activities.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim()) : []
+  lessonSteps.value = source.map((seg: any, index: number) => {
+    const minutes = Number(seg.duration_min || seg.minutes || 5)
+    const fromStructured = [seg.teacher_action, seg.student_action]
+      .filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
+      .map((item: string) => item.trim())
+    const fromLegacy = Array.isArray(seg.activities) ? seg.activities.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim()) : []
+    const activities = fromStructured.length ? fromStructured : fromLegacy
     const item = {
       id: `step-${index + 1}`,
-      title: step.phase || `环节 ${index + 1}`,
+      title: seg.title || seg.phase || `环节 ${index + 1}`,
       timeRange: `${elapsed}-${elapsed + minutes} min`,
       tagText: '本地草稿',
       tagClass: 'blue',
-      description: activities.join('；'),
+      description: (typeof seg.content === 'string' && seg.content.trim()) || activities.join('；'),
       activities,
     }
     elapsed += minutes
@@ -506,16 +624,53 @@ async function createLesson() {
   }
   store.artifact = generated
   applyArtifact()
+  void loadSuggestions(targetClassId)
 }
 
 onMounted(async () => {
+  // 支持 ?focus={prompt}&from=classroom（课堂「加入讲解」带焦点进入，L6→L2 闭环）
+  focusFromQuery.value = typeof route.query.focus === 'string' ? route.query.focus : ''
+  // GP-2：?lesson_id&from=insight:{id}（Today 洞察「加入下节课」）→ 载入指定教案并高亮插入点
+  const insightParam = typeof route.query.from === 'string' && route.query.from.startsWith('insight:') ? route.query.from.slice('insight:'.length) : ''
+  const lessonParam = typeof route.query.lesson_id === 'string' ? route.query.lesson_id : ''
   try {
-    const data = await api.get('/classes/mine')
+    const data = await classApi.mine()
     classes.value = data?.items || []
     if (classes.value.length) {
       selectedClass.value = classes.value[0].id
       ctx.setClass(classes.value[0].id, classes.value[0].name)
     }
+    if (lessonParam) {
+      try {
+        const loaded = (await lessonsApi.get(lessonParam)).data
+        store.artifact = loaded
+        applyArtifact()
+        await loadSuggestions(loaded?.class_id || selectedClass.value)
+        if (insightParam) markSuggestedStep(insightParam)
+        showToast?.('已载入洞察指向的教案，插入点已高亮')
+      } catch { showToast?.('洞察指向的教案未能载入，可从下方起点重新生成') }
+    } else {
+      if (insightParam) {
+        await loadSuggestions(selectedClass.value)
+        if (lessonSteps.value.length) markSuggestedStep(insightParam)
+      }
+    }
+    if (focusFromQuery.value) showToast?.(`已带入课堂焦点：${focusFromQuery.value}，可粘贴进对应环节`)
   } catch (e: any) { showToast?.(e?.message || '班级加载失败') }
 })
 </script>
+
+<style scoped>
+/* 结构化环节编辑抽屉（TC-L2-F05）：右侧滑出，含 KaTeX 预览 */
+.t-edit-overlay { position: fixed; inset: 0; z-index: 70; background: rgba(23, 36, 59, .28); }
+.t-edit-drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 71; box-sizing: border-box; width: min(440px, 92vw); padding: 22px 24px; overflow-y: auto; background: #fff; border-left: 1px solid #e1e7ef; box-shadow: -18px 0 40px rgba(23, 36, 59, .16); display: grid; gap: 12px; align-content: start; }
+.t-edit-head { display: flex; align-items: center; justify-content: space-between; }
+.t-edit-head h3 { margin: 0; font-size: 17px; color: #1c3452; }
+.t-edit-field { display: grid; gap: 6px; color: #405168; font-size: 13px; font-weight: 650; }
+.t-edit-field input, .t-edit-field textarea { box-sizing: border-box; width: 100%; padding: 9px 10px; border: 1px solid #d5dee9; border-radius: 8px; color: #17243b; background: #fff; font: inherit; font-weight: 400; }
+.t-edit-field textarea { resize: vertical; line-height: 1.5; }
+.t-edit-preview { border: 1px dashed #cdd9e6; border-radius: 9px; padding: 10px 12px; background: #fbfdff; color: #47586e; font-size: 13px; line-height: 1.6; }
+.t-edit-preview .sub { display: block; margin-bottom: 4px; color: #7c8aa0; font-size: 12px; }
+.t-edit-actions { display: flex; gap: 9px; }
+.t-edit-hint { margin: 0; color: #91a0b8; font-size: 12px; line-height: 1.5; }
+</style>

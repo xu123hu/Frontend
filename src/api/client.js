@@ -114,6 +114,33 @@ async function request(method, path, options) {
   return r.data
 }
 
+/** 文件下载：GET 字节流（同源 /api 路径），401 自动刷新重试一次；返回 { blob, filename } */
+async function downloadRaw(path, { signal } = {}, retried = false) {
+  let res
+  try {
+    res = await fetch(BASE + path, { headers: { ...authHeaders() }, signal, credentials: 'include' })
+  } catch (e) {
+    if (e?.name === 'AbortError') throw new ApiError(-2, '请求已取消')
+    throw new ApiError(-1, '网络连接失败，请确认后端已启动')
+  }
+  if (res.status === 401 && !retried) {
+    try {
+      await refreshAccessToken()
+      return await downloadRaw(path, { signal }, true)
+    } catch { /* 落到下方终态处理 */ }
+  }
+  if (res.status === 401) {
+    clearAccessToken(); setCachedUser(null)
+    redirectLogin()
+    throw new ApiError(401, '登录已过期')
+  }
+  if (!res.ok) throw new ApiError(res.status, `文件下载失败 (HTTP ${res.status})`)
+  const disposition = res.headers.get('content-disposition') || ''
+  const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)
+  const filename = match ? decodeURIComponent(match[1]) : ''
+  return { blob: await res.blob(), filename }
+}
+
 export const api = {
   get: (path, query, opts) => request('GET', path, { ...opts, query }),
   post: (path, body, query, opts) => request('POST', path, { ...opts, body, query }),
@@ -122,4 +149,5 @@ export const api = {
   delete: (path, opts) => request('DELETE', path, { ...opts }),
   del: (path, opts) => request('DELETE', path, opts),
   raw: (method, path, opts) => requestRaw(method, path, opts),
+  download: (path, opts) => downloadRaw(path, opts),
 }

@@ -16,6 +16,27 @@ function send(res: any, status: number, obj: any) { res.statusCode = status; res
 function ok(res: any, data: any, status = 200) { send(res, status, { code: 0, message: 'ok', data }) }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function fail(res: any, status: number, code: number, message: string, data: unknown = null) { send(res, status, { code, message, data }) }
+function sendFile(res: any, filename: string, text: string) {
+  res.statusCode = 200
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
+  res.end(text)
+}
+/** 演示文件正文：由教案 artifact 生成（mock 仅服务 e2e 稳定性，真实文件由后端产出） */
+function mockLessonFileText(art: TeacherArtifact | undefined, kind: 'plan' | 'slides' | 'outline') {
+  const content = (art?.content || {}) as { topic?: string; timeline?: Array<{ phase?: string; minutes?: number; activities?: string[] }> }
+  const topic = content.topic || '课堂教案'
+  if (kind === 'slides') {
+    const lines = (content.timeline || []).map((s, i) => `${i + 1}. ${s.phase}（${s.minutes || 5} 分钟）：${(s.activities || []).join('；')}`)
+    return `课堂课件大纲（演示）· ${topic}\n\n${lines.join('\n')}\n`
+  }
+  if (kind === 'outline') {
+    const lines = (content.timeline || []).map((s, i) => `${i + 1}. ${s.phase}（${s.minutes || 5} 分钟）：${(s.activities || []).join('；')}`)
+    return `课堂板书提纲（演示）· ${topic}\n\n${lines.join('\n')}\n`
+  }
+  const lines = (content.timeline || []).map((s, i) => `环节${i + 1} ${s.phase}（${s.minutes || 5} 分钟）：${(s.activities || []).join('；')}`)
+  return `教案（演示）· ${topic}\n\n${lines.join('\n')}\n`
+}
 
 /* ===== 内存状态（E2E 每个 worker 独立进程/数据实例，可确定性重置） ===== */
 let artifacts = new Map<string, TeacherArtifact>()
@@ -192,12 +213,53 @@ export async function handleTeacherApi(req: any, res: any): Promise<boolean> {
     ok(res, Array.from(artifacts.values()).filter((a) => a.artifact_type === 'lesson_plan')); return true
   }
   if (seg[0] === 'teacher' && seg[1] === 'lessons' && seg[2] && seg[3] === 'slides') {
-    const t: TeacherTask = { task_id: nextId('task-slides'), capability: 'create_slides', status: 'queued', progress: 0, stage: '排队中', artifact_id: null, error_code: null, created_at: iso() }
-    tasks.set(t.task_id, t); ok(res, { task_id: t.task_id }); return true
+    // 课件为同步 Artifact（api 层契约注释）；mock 仅产出演示文件（e2e 稳定），真实文件由后端生成
+    const src = artifacts.get(seg[2])
+    const art: TeacherArtifact = {
+      artifact_id: nextId('art-slides'), artifact_type: 'slides', scene: 'teacher.prep', class_id: src?.class_id || 'c1', owner_id: 't1',
+      status: 'draft', version: 1, engine: 'local',
+      content: { slides: [], download_url: `/api/teacher/lessons/${seg[2]}/slides-file`, filename: '课堂课件-演示.txt' },
+      source_refs: [], warnings: [], degraded: false, created_at: iso(), updated_at: iso(),
+    }
+    artifacts.set(art.artifact_id, art); ok(res, art, 201); return true
   }
   if (seg[0] === 'teacher' && seg[1] === 'lessons' && seg[2] && seg[3] === 'explainer') {
-    const t: TeacherTask = { task_id: nextId('task-explain'), capability: 'explain_problem', status: 'queued', progress: 0, stage: '排队中', artifact_id: null, error_code: null, created_at: iso() }
-    tasks.set(t.task_id, t); ok(res, { task_id: t.task_id }); return true
+    // 板书提纲/讲题卡为同步 Artifact（TC-L2-F09：废除前端拼 txt）
+    const src = artifacts.get(seg[2])
+    const art: TeacherArtifact = {
+      artifact_id: nextId('art-outline'), artifact_type: 'explanation', scene: 'teacher.prep', class_id: src?.class_id || 'c1', owner_id: 't1',
+      status: 'draft', version: 1, engine: 'local',
+      content: { outline: mockLessonFileText(src, 'outline'), download_url: `/api/teacher/lessons/${seg[2]}/board-outline-file`, filename: '课堂板书提纲-演示.txt' },
+      source_refs: [], warnings: [], degraded: false, created_at: iso(), updated_at: iso(),
+    }
+    artifacts.set(art.artifact_id, art); ok(res, art, 201); return true
+  }
+  if (seg[0] === 'teacher' && seg[1] === 'lessons' && seg[2] && seg[3] === 'adopt-suggestion') {
+    // 采纳建议落库（契约 2026-09-01 accepted；幂等重放返回同一 artifact）
+    const b = await readBody(req)
+    const key = req.headers?.['idempotency-key'] as string | undefined
+    const art = artifacts.get(seg[2])
+    if (!art) { fail(res, 404, 40400, 'lesson_not_found'); return true }
+    if (!b?.suggestion_id || !b?.segment_id) { fail(res, 422, 40001, 'suggestion_payload_incomplete'); return true }
+    if (key && idem.has(key)) { ok(res, idem.get(key)); return true }
+    art.version += 1
+    art.status = 'draft'
+    art.updated_at = iso()
+    const timeline = (art.content as any)?.timeline
+    if (Array.isArray(timeline) && timeline.length) {
+      const target = timeline.find((s: any) => (s as any).segment_id === b.segment_id) || timeline[0]
+      const activities = Array.isArray(target.activities) ? target.activities : []
+      target.activities = [...activities, b.content || `采纳建议：${b.suggestion_id}`]
+    }
+    artifacts.set(seg[2], art)
+    if (key) idem.set(key, art)
+    ok(res, art); return true
+  }
+  if (method === 'GET' && seg[0] === 'teacher' && seg[1] === 'lessons' && seg[2] && (seg[3] === 'download' || seg[3] === 'slides-file' || seg[3] === 'board-outline-file')) {
+    const art = artifacts.get(seg[2])
+    if (seg[3] === 'download') return sendFile(res, `${String((art?.content as any)?.topic || '课堂教案')}-演示.txt`, mockLessonFileText(art, 'plan')), true
+    if (seg[3] === 'slides-file') return sendFile(res, '课堂课件-演示.txt', mockLessonFileText(art, 'slides')), true
+    return sendFile(res, '课堂板书提纲-演示.txt', mockLessonFileText(art, 'outline')), true
   }
   if (seg[0] === 'teacher' && seg[1] === 'lessons' && seg[2] && seg[3] === 'apply-insight') {
     const art = artifacts.get(seg[2]) || lessonArtifact('c1', '应用洞察', '')

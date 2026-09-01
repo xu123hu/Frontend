@@ -22,6 +22,9 @@ export const lessonsApi = {
   /** 讲题卡为同步 Artifact（explanation draft） */
   createExplainer: (lessonId: string, payload?: unknown, signal?: AbortSignal) =>
     teacherPost<TeacherArtifact>(`/teacher/lessons/${lessonId}/explainer`, payload ?? {}, undefined, signal),
+  /** 采纳学情建议落库（契约 2026-09-01 accepted；出参=更新后 artifact） */
+  adoptSuggestion: (lessonId: string, payload: { segment_id: string; suggestion_id: string; content?: string }, idempotencyKey?: string, signal?: AbortSignal) =>
+    teacherPost<TeacherArtifact>(`/teacher/lessons/${lessonId}/adopt-suggestion`, payload, idempotencyKey ?? `adopt:${lessonId}:${payload.suggestion_id}`, signal),
 }
 
 export const taskApi = {

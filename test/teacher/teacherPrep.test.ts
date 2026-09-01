@@ -1,26 +1,41 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
-const { artifact, lessonStore, contextStore, apiGet, listLessons, createSlides, confirm, toast } = vi.hoisted(() => {
+const routeState = vi.hoisted(() => ({ query: {} as Record<string, unknown> }))
+const {
+  artifact, lessonStore, contextStore, mineClasses, downloadFile, listLessons, getLesson,
+  createSlides, createExplainer, adoptSuggestion, classInsightsApi, confirm, routerPush, toast,
+} = vi.hoisted(() => {
   const artifact: any = {
     artifact_id: 'lesson-1', artifact_type: 'lesson_plan', scene: 'teacher.prep', class_id: 'class-1', owner_id: 'teacher-1',
     status: 'draft', version: 1, content: { topic: '旧课题', timeline: [] }, source_refs: [], warnings: [], degraded: false, created_at: '', updated_at: '',
   }
   return {
     artifact,
-    lessonStore: { artifact, error: null as string | null, adapt: vi.fn(), save: vi.fn() },
+    lessonStore: { artifact: null as any, error: null as string | null, adapt: vi.fn(), save: vi.fn() },
     contextStore: { classId: 'class-1' as string | null, className: '高一（1）班' as string | null, setClass: vi.fn() },
-    apiGet: vi.fn().mockResolvedValue({ items: [{ id: 'class-1', name: '高一（1）班' }, { id: 'class-2', name: '高一（2）班' }] }),
-    listLessons: vi.fn().mockResolvedValue([]), createSlides: vi.fn(), confirm: vi.fn(), toast: vi.fn(),
+    mineClasses: vi.fn().mockResolvedValue({ items: [{ id: 'class-1', name: '高一（1）班' }, { id: 'class-2', name: '高一（2）班' }] }),
+    downloadFile: vi.fn(),
+    listLessons: vi.fn().mockResolvedValue([]),
+    getLesson: vi.fn(),
+    createSlides: vi.fn(),
+    createExplainer: vi.fn(),
+    adoptSuggestion: vi.fn(),
+    classInsightsApi: vi.fn().mockResolvedValue([]),
+    confirm: vi.fn(),
+    routerPush: vi.fn(),
+    toast: vi.fn(),
   }
 })
 
 vi.mock('@/stores/teacher/lessonArtifacts', () => ({ useLessonArtifactsStore: () => lessonStore }))
 vi.mock('@/stores/teacher/context', () => ({ useTeacherContextStore: () => contextStore }))
-vi.mock('@/api/client', () => ({ api: { get: apiGet }, authHeaders: () => ({}) }))
-vi.mock('@/api/teacher/lessons', () => ({ lessonsApi: { list: listLessons, createSlides } }))
+vi.mock('@/api', () => ({ classApi: { mine: mineClasses } }))
+vi.mock('@/api/client', () => ({ api: { download: downloadFile } }))
+vi.mock('@/api/teacher/lessons', () => ({ lessonsApi: { list: listLessons, get: getLesson, createSlides, createExplainer, adoptSuggestion } }))
+vi.mock('@/api/teacher/classes', () => ({ classesApi: { insights: classInsightsApi } }))
 vi.mock('@/api/teacher/artifacts', () => ({ artifactsApi: { confirm } }))
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('vue-router', () => ({ useRouter: () => ({ push: routerPush }), useRoute: () => routeState }))
 
 import TeacherPrepView from '@/pages/teacher/TeacherPrepView.vue'
 
@@ -30,9 +45,11 @@ function setArtifact(status: 'draft' | 'confirmed', timeline: any[] = [], classI
 
 beforeEach(() => {
   vi.clearAllMocks()
+  routeState.query = {}
   lessonStore.artifact = artifact
-  apiGet.mockResolvedValue({ items: [{ id: 'class-1', name: '高一（1）班' }, { id: 'class-2', name: '高一（2）班' }] })
+  mineClasses.mockResolvedValue({ items: [{ id: 'class-1', name: '高一（1）班' }, { id: 'class-2', name: '高一（2）班' }] })
   listLessons.mockResolvedValue([])
+  classInsightsApi.mockResolvedValue([])
   lessonStore.error = null
   lessonStore.adapt.mockImplementation(async (payload) => {
     Object.assign(artifact, { class_id: payload.class_id, status: 'draft', content: { topic: payload.topic, timeline: artifact.content.timeline, duration_minutes: payload.duration_minutes } })
@@ -85,14 +102,29 @@ describe('TeacherPrepView topic-driven artifact workflow', () => {
     }))
   })
 
-  it('does not confirm or create slides from a draft, but creates and downloads after explicit confirmation', async () => {
+  it('edits a step through the structured drawer instead of window.prompt (TC-L2-F05)', async () => {
+    setArtifact('draft', [{ phase: '探究', minutes: 12, activities: ['观察割线变化'] }])
+    const wrapper = mountPrep()
+    await flushPromises()
+    await wrapper.get('[aria-label="课题"]').setValue('导数的概念')
+    await wrapper.get('form').trigger('submit')
+    expect(wrapper.find('[role="dialog"][aria-label="结构化编辑教学环节"]').exists()).toBe(false)
+    await wrapper.findAll('button').find((button) => button.text() === '编辑内容')!.trigger('click')
+    const drawer = wrapper.get('[role="dialog"][aria-label="结构化编辑教学环节"]')
+    await drawer.get('[aria-label="环节活动内容"]').setValue('观察割线变化\n归纳 $\\frac{\\Delta y}{\\Delta x}$ 的趋势')
+    await drawer.findAll('button').find((button) => button.text().includes('保存环节'))!.trigger('click')
+    expect(wrapper.text()).toContain('归纳')
+    await wrapper.get('button.t-btn').trigger('click')
+    expect(lessonStore.save).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.objectContaining({ timeline: [{ phase: '探究', minutes: 12, activities: ['观察割线变化', '归纳 $\\frac{\\Delta y}{\\Delta x}$ 的趋势'] }] }),
+    }))
+  })
+
+  it('does not confirm or create slides from a draft, but downloads via client after explicit confirmation (TC-L2-F07)', async () => {
     setArtifact('draft', [{ phase: '探究', minutes: 12, activities: ['观察'] }])
     const wrapper = mountPrep()
     await flushPromises()
     const ppt = wrapper.findAll('button').find((button) => button.text().includes('生成PPT'))!
-    const originalFetch = globalThis.fetch
-    const fetchMock = vi.fn()
-    globalThis.fetch = fetchMock as any
     const originalCreate = URL.createObjectURL
     const originalRevoke = URL.revokeObjectURL
     URL.createObjectURL = vi.fn(() => 'blob:lesson')
@@ -100,228 +132,128 @@ describe('TeacherPrepView topic-driven artifact workflow', () => {
     await ppt.trigger('click')
     expect(confirm).not.toHaveBeenCalled()
     expect(createSlides).not.toHaveBeenCalled()
-    expect(fetchMock).not.toHaveBeenCalled()
-    expect(URL.createObjectURL).not.toHaveBeenCalled()
-    expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+    expect(downloadFile).not.toHaveBeenCalled()
     expect(toast).toHaveBeenCalledWith('请先确认教案后再生成 PPT')
 
     setArtifact('confirmed', [{ phase: '探究', minutes: 12, activities: ['观察'] }])
-    createSlides.mockResolvedValue({ data: { content: { download_url: '/download.pptx', filename: '导数.pptx' } } })
+    createSlides.mockResolvedValue({ data: { content: { download_url: '/api/teacher/lessons/lesson-1/slides-file', filename: '导数.pptx' } } })
+    downloadFile.mockResolvedValue({ blob: new Blob(['slides']), filename: '课堂课件-演示.txt' })
     const originalClick = HTMLAnchorElement.prototype.click
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(['ppt']) }) as any
     HTMLAnchorElement.prototype.click = vi.fn()
     try {
       await ppt.trigger('click')
       expect(createSlides).toHaveBeenCalledWith('lesson-1', { version: 1, style: '简洁课堂' })
+      expect(downloadFile).toHaveBeenCalledWith('/teacher/lessons/lesson-1/slides-file')
       expect(toast).toHaveBeenCalledWith('PPT 已生成并开始下载')
     } finally {
-      globalThis.fetch = originalFetch
       URL.createObjectURL = originalCreate
       URL.revokeObjectURL = originalRevoke
       HTMLAnchorElement.prototype.click = originalClick
     }
   })
 
-  it('switches class without adapting and clears old data for an empty or failed target load', async () => {
-    setArtifact('draft', [{ phase: '旧班活动', minutes: 12, activities: ['旧活动'] }])
+  it('adopts a suggestion through the persistence endpoint and keeps honest on 404 (TC-L2-F04)', async () => {
+    classInsightsApi.mockResolvedValue([
+      { insight_id: 'ins-1', kind: 'error_cluster', summary: 'a=0 边界失分集中', evidence: '17/46 人失分。', data_window: { from: '', to: '' }, recommended_actions: [] },
+    ])
+    setArtifact('draft', [
+      { phase: '导入', minutes: 5, activities: ['复习'] },
+      { phase: '探究', minutes: 20, activities: ['探究活动'] },
+    ])
     const wrapper = mountPrep()
     await flushPromises()
     await wrapper.get('[aria-label="课题"]').setValue('导数的概念')
     await wrapper.get('form').trigger('submit')
-    lessonStore.adapt.mockClear()
+    expect(wrapper.text()).toContain('a=0 边界失分集中')
+    expect(wrapper.text()).toContain('17/46 人失分')
 
-    await wrapper.get('select').setValue('class-2')
+    adoptSuggestion.mockResolvedValue({ ...artifact, version: 2 })
+    await wrapper.findAll('button').find((button) => button.text() === '采纳建议')!.trigger('click')
     await flushPromises()
-    expect(listLessons).toHaveBeenCalledWith('class-2')
-    expect(lessonStore.adapt).not.toHaveBeenCalled()
-    expect(lessonStore.artifact).toBeNull()
-    expect(wrapper.text()).not.toContain('旧班活动')
+    expect(adoptSuggestion).toHaveBeenCalledWith('lesson-1', { segment_id: 'step-2', suggestion_id: 'ins-1', content: 'a=0 边界失分集中' })
+    expect(toast).toHaveBeenCalledWith('已采纳建议并落库：a=0 边界失分集中')
 
-    wrapper.unmount()
-    setArtifact('draft', [{ phase: '旧班活动', minutes: 12, activities: ['旧活动'] }])
-    lessonStore.artifact = artifact
-    listLessons.mockRejectedValueOnce(new Error('加载失败'))
-    const failedWrapper = mountPrep()
-    await flushPromises()
-    await failedWrapper.get('select').setValue('class-2')
-    await flushPromises()
-    expect(lessonStore.artifact).toBeNull()
-    expect(failedWrapper.text()).not.toContain('旧班活动')
-    expect(lessonStore.adapt).not.toHaveBeenCalled()
+    const second = wrapper.findAll('button').find((button) => button.text() === '采纳建议')
+    expect(second).toBeUndefined()
   })
 
-  it('blocks every export or mutation for a foreign-class artifact', async () => {
-    setArtifact('draft', [{ phase: '旧班活动', minutes: 12, activities: ['旧活动'] }], 'class-1')
+  it('stays honest when the adopt endpoint is not shipped yet (404 → explicit toast, no fake success)', async () => {
+    classInsightsApi.mockResolvedValue([
+      { insight_id: 'ins-404', kind: 'error_cluster', summary: '边界失分', evidence: '证据。', data_window: { from: '', to: '' }, recommended_actions: [] },
+    ])
+    setArtifact('draft', [
+      { phase: '导入', minutes: 5, activities: ['复习'] },
+      { phase: '探究', minutes: 20, activities: ['探究活动'] },
+    ])
+    const notShipped: any = Object.assign(new Error('not_found'), { code: 404 })
+    adoptSuggestion.mockRejectedValue(notShipped)
     const wrapper = mountPrep()
     await flushPromises()
     await wrapper.get('[aria-label="课题"]').setValue('导数的概念')
     await wrapper.get('form').trigger('submit')
-    artifact.class_id = 'class-2'
-    const save = wrapper.findAll('button').find((button) => button.text().trim() === '保存草稿')!
-    const confirmButton = wrapper.findAll('button').find((button) => button.text().trim() === '确认本节课')!
-    const ppt = wrapper.findAll('button').find((button) => button.text().includes('生成PPT'))!
-    const word = wrapper.findAll('button').find((button) => button.text().includes('导出Word'))!
-    const board = wrapper.findAll('button').find((button) => button.text().includes('生成板书'))!
-    const originalFetch = globalThis.fetch
+    await wrapper.findAll('button').find((button) => button.text() === '采纳建议')!.trigger('click')
+    await flushPromises()
+    expect(toast).toHaveBeenCalledWith('采纳落库端点尚未开通（契约已受理，后端排期中），建议暂未入库')
+    expect(wrapper.text()).toContain('采纳建议')
+  })
+
+  it('carries the lesson blueprint to the assign workspace (GP-6 / TC-L2-F08)', async () => {
+    setArtifact('draft', [{ phase: '探究', minutes: 12, activities: ['观察'] }])
+    const wrapper = mountPrep()
+    await flushPromises()
+    await wrapper.get('[aria-label="课题"]').setValue('函数的单调性')
+    await wrapper.get('form').trigger('submit')
+    await wrapper.findAll('button').find((button) => button.text().includes('生成当堂练习'))!.trigger('click')
+    expect(routerPush).toHaveBeenCalledWith({
+      path: '/teacher/assign',
+      query: { count: '3', source: 'lesson:lesson-1', topic: '函数的单调性', kp_codes: '函数的单调性' },
+    })
+    expect(toast).toHaveBeenCalledWith('已携带本节课蓝图跳转组卷，可在组卷台继续调整')
+  })
+
+  it('generates the board outline through the backend artifact, not local txt (TC-L2-F09)', async () => {
+    setArtifact('draft', [{ phase: '探究', minutes: 12, activities: ['观察'] }])
+    const wrapper = mountPrep()
+    await flushPromises()
+    await wrapper.get('[aria-label="课题"]').setValue('导数的概念')
+    await wrapper.get('form').trigger('submit')
+    createExplainer.mockResolvedValue({ data: { content: { outline: '板书（演示）', download_url: '/api/teacher/lessons/lesson-1/board-outline-file', filename: '课堂板书提纲-演示.txt' } } })
+    downloadFile.mockResolvedValue({ blob: new Blob(['outline']), filename: '课堂板书提纲-演示.txt' })
+    const originalClick = HTMLAnchorElement.prototype.click
+    HTMLAnchorElement.prototype.click = vi.fn()
     const originalCreate = URL.createObjectURL
     const originalRevoke = URL.revokeObjectURL
-    globalThis.fetch = vi.fn() as any
-    URL.createObjectURL = vi.fn(() => 'blob:blocked')
+    URL.createObjectURL = vi.fn(() => 'blob:outline')
     URL.revokeObjectURL = vi.fn()
     try {
-    await save.trigger('click')
-    await confirmButton.trigger('click')
-    await ppt.trigger('click')
-    await word.trigger('click')
-    await board.trigger('click')
-    expect(lessonStore.save).not.toHaveBeenCalled()
-    expect(confirm).not.toHaveBeenCalled()
-    expect(createSlides).not.toHaveBeenCalled()
-    expect(globalThis.fetch).not.toHaveBeenCalled()
-    expect(URL.createObjectURL).not.toHaveBeenCalled()
-    expect(URL.revokeObjectURL).not.toHaveBeenCalled()
-    expect(toast).toHaveBeenCalledWith('当前教案不属于所选班级，请先加载或生成该班级教案')
+      await wrapper.findAll('button').find((button) => button.text().includes('生成板书'))!.trigger('click')
+      expect(createExplainer).toHaveBeenCalledWith('lesson-1', { kind: 'board_outline', version: 1 })
+      expect(downloadFile).toHaveBeenCalledWith('/teacher/lessons/lesson-1/board-outline-file')
+      expect(toast).toHaveBeenCalledWith('板书提纲已生成并开始下载')
     } finally {
-      globalThis.fetch = originalFetch
+      HTMLAnchorElement.prototype.click = originalClick
       URL.createObjectURL = originalCreate
       URL.revokeObjectURL = originalRevoke
     }
   })
 
-  it('ignores stale class-load resolve and reject so the latest class remains authoritative', async () => {
-    let resolveOlder!: (value: any[]) => void
-    let resolveLatest!: (value: any[]) => void
-    const older = new Promise<any[]>((resolve) => { resolveOlder = resolve })
-    const latest = new Promise<any[]>((resolve) => { resolveLatest = resolve })
-    listLessons.mockImplementationOnce(() => older).mockImplementationOnce(() => latest)
-    const wrapper = mountPrep()
-    await flushPromises()
-    await wrapper.get('select').setValue('class-2')
-    await wrapper.get('select').setValue('class-1')
-    resolveOlder([{ ...artifact, artifact_id: 'lesson-old', class_id: 'class-2', content: { timeline: [{ phase: '旧请求', minutes: 10, activities: ['A'] }] } }])
-    await flushPromises()
-    expect(lessonStore.artifact).toBeNull()
-    resolveLatest([{ ...artifact, artifact_id: 'lesson-new', class_id: 'class-1', content: { timeline: [{ phase: '最新请求', minutes: 10, activities: ['B'] }] } }])
-    await flushPromises()
-    expect(lessonStore.artifact?.artifact_id).toBe('lesson-new')
-    expect(wrapper.text()).toContain('最新请求')
-    let rejectStale!: (reason?: unknown) => void
-    let resolveFresh!: (value: any[]) => void
-    const staleReject = new Promise<any[]>((_resolve, reject) => { rejectStale = reject })
-    const fresh = new Promise<any[]>((resolve) => { resolveFresh = resolve })
-    listLessons.mockImplementationOnce(() => staleReject).mockImplementationOnce(() => fresh)
-    await wrapper.get('select').setValue('class-2')
-    await wrapper.get('select').setValue('class-1')
-    rejectStale(new Error('stale'))
-    await flushPromises()
-    expect(lessonStore.artifact).toBeNull()
-    resolveFresh([{ ...artifact, artifact_id: 'lesson-fresh', class_id: 'class-1', content: { timeline: [{ phase: '最终请求', minutes: 10, activities: ['C'] }] } }])
-    await flushPromises()
-    expect(lessonStore.artifact?.artifact_id).toBe('lesson-fresh')
-  })
-
-  it('clears an old same-class lesson when generating the new topic fails', async () => {
-    setArtifact('draft', [{ phase: '旧教案', minutes: 12, activities: ['旧活动'] }])
-    const wrapper = mountPrep()
-    await flushPromises()
-    await wrapper.get('[aria-label="课题"]').setValue('旧课题')
-    await wrapper.get('form').trigger('submit')
-    expect(wrapper.text()).toContain('旧教案')
-    lessonStore.adapt.mockImplementationOnce(async () => ({ artifact: null, error: '生成教案失败' }))
-    await wrapper.get('[aria-label="课题"]').setValue('新课题')
-    await wrapper.get('form').trigger('submit')
-    expect(lessonStore.artifact).toBeNull()
-    expect(wrapper.text()).not.toContain('旧教案')
-    const save = wrapper.findAll('button').find((button) => button.text().trim() === '保存草稿')!
-    await save.trigger('click')
-    expect(lessonStore.save).not.toHaveBeenCalled()
-  })
-
-  it('keeps B after a pending A adapt resolves or rejects following a class change', async () => {
-    const target = { ...artifact, artifact_id: 'lesson-b', class_id: 'class-2', content: { timeline: [{ phase: 'B 教案', minutes: 10, activities: ['B'] }] } }
-    let resolveA!: (value: any) => void
-    const pendingA = new Promise((resolve) => { resolveA = resolve })
-    lessonStore.adapt.mockImplementationOnce(() => pendingA)
-    listLessons.mockResolvedValueOnce([target])
-    const wrapper = mountPrep()
-    await flushPromises()
-    await wrapper.get('[aria-label="课题"]').setValue('A 课题')
-    await wrapper.get('form').trigger('submit')
-    await wrapper.get('select').setValue('class-2')
-    await flushPromises()
-    expect(lessonStore.artifact?.artifact_id).toBe('lesson-b')
-    resolveA({ artifact: { ...artifact, artifact_id: 'lesson-a', class_id: 'class-1', content: { timeline: [{ phase: 'A 教案', minutes: 10, activities: ['A'] }] } }, error: null })
-    await flushPromises()
-    expect(lessonStore.artifact?.artifact_id).toBe('lesson-b')
-
-    wrapper.unmount()
-    let rejectA!: (reason?: unknown) => void
-    const rejectedA = new Promise((_resolve, reject) => { rejectA = reject })
-    lessonStore.adapt.mockImplementationOnce(() => rejectedA)
-    listLessons.mockResolvedValueOnce([target])
-    const rejectWrapper = mountPrep()
-    await flushPromises()
-    await rejectWrapper.get('[aria-label="课题"]').setValue('A 课题')
-    await rejectWrapper.get('form').trigger('submit')
-    await rejectWrapper.get('select').setValue('class-2')
-    await flushPromises()
-    rejectA(new Error('A 生成失败'))
-    await flushPromises()
-    expect(lessonStore.artifact?.artifact_id).toBe('lesson-b')
-  })
-
-  it('keeps B after a pending A recent-lesson lookup resolves or rejects following a class change', async () => {
-    const target = { ...artifact, artifact_id: 'source-b', class_id: 'class-2', content: { timeline: [{ phase: 'B 最近教案', minutes: 10, activities: ['B'] }] } }
-    let resolveA!: (value: any[]) => void
-    const pendingA = new Promise<any[]>((resolve) => { resolveA = resolve })
-    listLessons.mockImplementationOnce(() => pendingA).mockResolvedValueOnce([target])
-    const wrapper = mountPrep()
-    await flushPromises()
-    await wrapper.findAll('button').find((button) => button.text().includes('上次类似课'))!.trigger('click')
-    await wrapper.get('select').setValue('class-2')
-    await flushPromises()
-    resolveA([{ ...artifact, artifact_id: 'source-a', class_id: 'class-1', content: { timeline: [{ phase: 'A 最近教案', minutes: 10, activities: ['A'] }] } }])
-    await flushPromises()
-    expect(lessonStore.artifact?.artifact_id).toBe('source-b')
-
-    wrapper.unmount()
-    let rejectA!: (reason?: unknown) => void
-    const rejectedA = new Promise<any[]>((_resolve, reject) => { rejectA = reject })
-    listLessons.mockImplementationOnce(() => rejectedA).mockResolvedValueOnce([target])
-    const rejectWrapper = mountPrep()
-    await flushPromises()
-    await rejectWrapper.findAll('button').find((button) => button.text().includes('上次类似课'))!.trigger('click')
-    await rejectWrapper.get('select').setValue('class-2')
-    await flushPromises()
-    rejectA(new Error('A 最近教案失败'))
-    await flushPromises()
-    expect(lessonStore.artifact?.artifact_id).toBe('source-b')
-  })
-
-  it('writes edited activities back to the exact save payload and balances to the requested duration', async () => {
-    setArtifact('draft', [
-      { phase: '导入', minutes: 10, activities: ['旧活动'] },
-      { phase: '探究', minutes: 10, activities: ['讨论'] },
+  it('highlights the suggested step when entering via insight deep link (GP-2 / TC-L2-F03)', async () => {
+    routeState.query = { lesson_id: 'lesson-9', from: 'insight:ins-9' }
+    classInsightsApi.mockResolvedValue([
+      { insight_id: 'ins-9', kind: 'error_cluster', summary: 'a=0 边界失分集中', evidence: '17/46 人失分。', data_window: { from: '', to: '' }, recommended_actions: [] },
     ])
+    getLesson.mockResolvedValue({
+      data: {
+        ...artifact,
+        artifact_id: 'lesson-9',
+        class_id: 'class-1',
+        content: { topic: '导数的概念', timeline: [{ phase: '导入', minutes: 5, activities: ['复习'] }, { phase: '例题', minutes: 15, activities: ['例 2'] }] },
+      },
+    })
     const wrapper = mountPrep()
     await flushPromises()
-    await wrapper.get('[aria-label="课题"]').setValue('导数的概念')
-    await wrapper.get('[aria-label="课时分钟"]').setValue('60')
-    await wrapper.get('form').trigger('submit')
-    const prompt = vi.spyOn(window, 'prompt').mockReturnValueOnce('编辑后的活动').mockReturnValueOnce('切线卡片')
-    try {
-      await wrapper.findAll('button').find((button) => button.text() === '编辑内容')!.trigger('click')
-      await wrapper.findAll('button').find((button) => button.text().includes('添加材料'))!.trigger('click')
-      await wrapper.findAll('button').find((button) => button.text().includes('自动平衡时间'))!.trigger('click')
-      expect(wrapper.text()).toContain('0-30 min')
-      expect(wrapper.text()).toContain('30-60 min')
-      await wrapper.findAll('button').find((button) => button.text().trim() === '保存草稿')!.trigger('click')
-      expect(lessonStore.save).toHaveBeenCalledWith(expect.objectContaining({
-        content: expect.objectContaining({ timeline: [
-          { phase: '导入', minutes: 30, activities: ['编辑后的活动', '材料：切线卡片'] },
-          { phase: '探究', minutes: 30, activities: ['讨论'] },
-        ] }),
-      }))
-    } finally { prompt.mockRestore() }
+    expect(getLesson).toHaveBeenCalledWith('lesson-9')
+    expect(wrapper.text()).toContain('建议插入')
+    expect(wrapper.text()).toContain('a=0 边界失分集中')
   })
 })

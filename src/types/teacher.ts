@@ -114,6 +114,8 @@ export interface ActionableInsight {
   recommended_actions: string[]
   confidence?: number
   applied?: boolean
+  /** 错题聚类附带的知识点（供「布置变式练习」蓝图预填；可选附加字段） */
+  kp_code?: string
 }
 
 export interface TeacherTodayData {
