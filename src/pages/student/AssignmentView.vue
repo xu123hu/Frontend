@@ -10,6 +10,9 @@
     <template v-else-if="detail">
       <div v-for="item in detail.items" :key="item.item_no" class="card" style="margin-bottom:12px;padding:18px">
         <h3>{{ item.item_no }}. {{ item.question_text }}</h3>
+        <div v-if="item.image && item.image.length" style="margin:8px 0;">
+          <DynamicFigureViewer :items="item.image" :label="'题目配图'" :height="260" />
+        </div>
         <div v-if="item.q_type === 'choice'" style="display:grid;gap:8px">
           <label v-for="(text, key) in item.options || {}" :key="key">
             <input v-model="answers[item.item_no]" type="radio" :value="key"> {{ key }}. {{ text }}
@@ -65,6 +68,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { studentApi, filesApi } from '@/api'
 import HomeworkPhotos from '@/components/student/HomeworkPhotos.vue'
+import DynamicFigureViewer from '@/components/DynamicFigureViewer.vue'
 import { openLightbox } from '@/utils/lightbox'
 import { useToastStore } from '@/stores/toast'
 

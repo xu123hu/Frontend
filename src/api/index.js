@@ -109,9 +109,17 @@ export const butlerApi = {
 
 /* ===== AI 数学课堂 /api/classroom（OpenMAIC 融合：大纲→逐页内容） ===== */
 export const classroomApi = {
-  sessions: () => api.get('/classroom/sessions'),
+  // 会话列表（支持筛选：status/source_type/kp_code/date_from/limit）
+  sessions: (params = {}) => api.get('/classroom/sessions', params),
   createSession: (payload) => api.post('/classroom/sessions', payload),
   session: (id) => api.get(`/classroom/sessions/${encodeURIComponent(id)}`),
+  // 历史闭环端点
+  updateProgress: (id, payload) => api.patch(`/classroom/sessions/${encodeURIComponent(id)}/progress`, payload),
+  updateNotes: (id, notes) => api.patch(`/classroom/sessions/${encodeURIComponent(id)}/notes`, { notes }),
+  appendQa: (id, payload) => api.post(`/classroom/sessions/${encodeURIComponent(id)}/qa`, payload),
+  answerPractice: (id, payload) => api.post(`/classroom/sessions/${encodeURIComponent(id)}/practice-answer`, payload),
+  cloneSession: (id) => api.post(`/classroom/sessions/${encodeURIComponent(id)}/clone`),
+  deleteSession: (id) => api.delete(`/classroom/sessions/${encodeURIComponent(id)}`),
 }
 /* ===== 班级 /api/classes ===== */
 export const classApi = {

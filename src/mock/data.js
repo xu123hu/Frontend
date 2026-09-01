@@ -349,6 +349,24 @@ export const dueQueue = {
   ],
 }
 
+/* GeoGebra 交互构造（mock：抛物线开口参数演示，可拖滑块/点动点） */
+export const mockGgb = {
+  type: 'ggb',
+  view: '2d',
+  caption: '抛物线开口参数演示',
+  commands: [
+    '# perspective: 2d',
+    '# view: -6 -3 6 4',
+    'a=Slider(0.3,2,0.1)',
+    'f(x)=a*x^2',
+    'P=Point(f)',
+    'SetColor(f,40,60,120)',
+    'SetLineThickness(f,4)',
+    'SetCaption(a,"开口系数 a")',
+    'ShowLabel(P,true)',
+  ],
+}
+
 /* GET /student/error-records/{record_id}/detail —— 错题详情扩展（原有字段 + FSRS 字段） */
 export const errorDetailExt = {
   record_id: 'r1',
@@ -368,6 +386,7 @@ export const errorDetailExt = {
   retrievability: 0.58,
   fsrs_level: 'decay',
   variants_hint: '建议出 2 道变式：① 换数字（改三次函数系数）② 换条件（改开区间，讨论端点取不到的情况）。',
+  image: [mockGgb],
 }
 
 /* GET /student/error-records/filter —— 多维筛选（分页） */

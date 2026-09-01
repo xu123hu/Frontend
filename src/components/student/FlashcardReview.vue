@@ -42,6 +42,9 @@
               <div class="fc-face fc-front">
                 <div class="fc-label">题目 · 先独立想一想再翻面</div>
                 <LatexText class="fc-q" :text="card.question_text || '（题干加载中…）'" />
+                <div v-if="card.image?.length || card.photoUrl" class="fc-fig" @click.stop>
+                  <DynamicFigureViewer :items="fcFigItems(card)" :label="'题目配图'" :height="200" :toolbar="false" />
+                </div>
                 <div class="fc-tags" v-if="card.kp_name || card.kp_code || card.error_type">
                   <span class="fc-tag">{{ card.kp_name || card.kp_code || '未标注知识点' }}</span>
                   <span v-if="card.error_type" class="fc-tag err">{{ errorTypeZh(card.error_type) }}</span>
@@ -71,8 +74,10 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { api } from '@/api/client'
+import { filesApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import LatexText from '@/components/LatexText.vue'
+import DynamicFigureViewer from '@/components/DynamicFigureViewer.vue'
 
 const emit = defineEmits(['close'])
 const toast = useToastStore()
@@ -87,6 +92,12 @@ const reviewed = ref(0)
 const stats = reactive({ 1: 0, 2: 0, 3: 0, 4: 0 })
 
 const card = computed(() => cards.value[index.value] || null)
+// 闪卡渲染源：image 列（data-URI + ggb 对象）+ 原图照片
+function fcFigItems(c) {
+  const arr = Array.isArray(c?.image) ? c.image.slice() : []
+  if (c?.photoUrl) arr.push(c.photoUrl)
+  return arr
+}
 const endDone = computed(() => cards.value.length > 0 && index.value >= cards.value.length)
 
 const ERROR_TYPES = { concept: '概念不清', formula: '公式记错', calculation: '计算失误', logic: '思路错误', reading: '审题偏差' }
@@ -114,6 +125,8 @@ async function load() {
       kp_code: it.kp_code || '',
       kp_name: it.kp_name || '',
       note: '',
+      image: [],
+      photoUrl: '',
       _loaded: false,
     }))
   } catch (e) {
@@ -135,6 +148,13 @@ async function ensureDetail() {
       c.kp_name = d?.kp_name || c.kp_name
       c.kp_code = d?.kp_code || c.kp_code
       c.note = d?.note || ''
+      c.image = d?.image || []
+      if (d?.file_id) {
+        try {
+          const du = await filesApi.contentUrl(d.file_id)
+          if (du?.url) c.photoUrl = du.url
+        } catch { /* 图片暂不可用：不阻塞翻面 */ }
+      }
       c._loaded = true
     }
   } catch { /* 详情失败不阻塞翻面，正面仍有题干 */ }
@@ -212,6 +232,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', keydown))
 .fc-label { font-size: 11px; font-weight: 700; color: var(--ink3, #9aa1ac); margin-bottom: 12px; letter-spacing: 1px; }
 .fc-label.ok { color: #16a34a; }
 .fc-q { font-size: 15px; font-weight: 600; line-height: 1.8; color: #1f2937; max-width: 100%; overflow-wrap: break-word; }
+.fc-fig { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+.fc-fig img { max-width: 100%; max-height: 220px; border: 1px solid var(--line, #eef1f5); border-radius: 10px; background: #fff; }
 .fc-tags { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
 .fc-tag { font-size: 11px; font-weight: 700; color: var(--brand, #3b7bff); background: #eaf1ff; border-radius: 999px; padding: 3px 10px; }
 .fc-tag.err { color: #b91c1c; background: #fef2f2; }

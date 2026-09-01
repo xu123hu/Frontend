@@ -38,6 +38,23 @@
           <option value="">🧠 薄弱 Top1（后端推荐）</option>
           <option v-for="w in kpOptions" :key="w.code" :value="w.code">📉 {{ w.name }}（{{ Math.round((w.mastery || 0) * 100) }}%）</option>
         </select>
+        <!-- om5：特定知识点任选（题库有题的章节，可搜索） -->
+        <details class="kp-catalog" style="position:relative;">
+          <summary style="cursor:pointer;padding:5px 10px;border-radius:6px;border:1px solid var(--line);font-size:12px;background:var(--card);color:var(--ink);list-style:none;">
+            🔍 任选知识点
+          </summary>
+          <div style="position:absolute;z-index:30;top:110%;left:0;width:340px;max-height:320px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);">
+            <input v-model="kpFilter" placeholder="搜章节名，如：椭圆 / 导数 / 数列"
+                   style="width:100%;padding:6px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px;margin-bottom:6px;" />
+            <div v-for="k in filteredCatalog" :key="k.code"
+                 style="padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12.5px;display:flex;justify-content:space-between;gap:8px;"
+                 @click="pickCatalog(k)">
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ k.name }}</span>
+              <span style="color:var(--ink3);">真题 {{ k.bank_count }}</span>
+            </div>
+            <div v-if="!filteredCatalog.length" style="padding:8px;color:var(--ink3);font-size:12px;">无匹配章节</div>
+          </div>
+        </details>
         <span>🎯 难度:</span>
         <select v-model="difficulty" style="padding:5px 10px;border-radius:6px;border:1px solid var(--line);font:inherit;font-size:12px;background:var(--card);color:var(--ink);">
           <option>自适应 (推荐)</option>
@@ -60,6 +77,20 @@
           <div class="item">{{ groupError }}</div>
         </div>
         <button class="start-btn" @click="loadGroup">↻ 重新加载</button>
+      </template>
+      <!-- om5：考前冲刺模式显示高考结构卷说明（点开始直接组卷进限时作答） -->
+      <template v-else-if="mode === '考前冲刺'">
+        <div class="badge">🏁 考前冲刺 · 高考结构卷</div>
+        <h2>高考结构全真卷 · <b>8 选择 + 3 填空 + 5 解答</b></h2>
+        <div class="meta-row">
+          <div class="item">💯 <b>150</b> 分制</div>
+          <div class="item">⏱ <b>120</b> 分钟限时</div>
+          <div class="item">📚 真题优先 · AI 补缺过五闸</div>
+          <div class="item">🤖 解答题 AI 批改 + 拍照上传</div>
+        </div>
+        <button class="start-btn" :disabled="starting" @click="start">
+          {{ starting ? '组卷中…' : '🏁 组卷并开始考试' }}
+        </button>
       </template>
       <template v-else-if="group">
         <div class="badge">🎯 今日推荐 · {{ group.kp_code ? '薄弱 Top1' : '摸底训练' }}</div>
@@ -119,7 +150,7 @@
             <LatexText :text="q.text" />
           </div>
           <div v-if="q.image && q.image.length" class="q-fig">
-            <img v-for="(src, fi) in q.image" :key="fi" :src="src" alt="题目配图" />
+            <DynamicFigureViewer :items="q.image" :label="'题目配图'" :height="280" />
           </div>
           <div v-if="q.interaction_type === 'choice'" class="answer-grid">
             <div
@@ -180,7 +211,7 @@
         </template>
       </div>
       <div class="difficulty-pie">
-        <h4>📊 难度配比 · {{ pieTotal }} 题分布</h4>
+        <h4>📊 难度配比 · {{ liveMix.reduce((s, it) => s + (it.count || 0), 0) }} 题分布</h4>
         <div v-if="mixLoading" class="pie-wrap" style="justify-content:center;color:var(--ink3);font-size:13px;">
           配比加载中…
         </div>
@@ -254,13 +285,15 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 import LatexText from '@/components/LatexText.vue'
+import DynamicFigureViewer from '@/components/DynamicFigureViewer.vue'
 
 const route = useRoute()
+const router = useRouter()
 const toast = useToastStore()
 const auth = useAuthStore()
 const modes = ['15 分钟模式', '60 分钟模式', '考前冲刺']
@@ -346,6 +379,16 @@ async function loadMix(count = 5) {
 }
 
 const pieTotal = computed(() => mixItems.value.reduce((s, it) => s + (it.count || 0), 0))
+// om5：作答中时配比面板反映实际题组，而不是计划值
+const liveMix = computed(() => {
+  if (quizState.value !== 'ready' || !questions.value.length) return mixItems.value
+  const diff = { easy: 0, medium: 0, hard: 0 }
+  for (const q of questions.value) diff[q.difficulty] = (diff[q.difficulty] || 0) + 1
+  const zh = { easy: '易（基础巩固）', medium: '中（综合应用）', hard: '难（压轴突破）' }
+  return Object.entries(diff)
+    .filter(([, c]) => c > 0)
+    .map(([k, c]) => ({ level: k, label: zh[k] || k, count: c }))
+})
 
 function polar(angleDeg, r) {
   const a = ((angleDeg - 90) * Math.PI) / 180
@@ -366,7 +409,7 @@ const pieSegments = computed(() => {
   const total = pieTotal.value
   if (!total) return []
   let acc = 0
-  return mixItems.value
+  return liveMix.value
     .filter((it) => (it.count || 0) > 0)
     .map((it) => {
       const start = acc
@@ -411,6 +454,18 @@ function normalizeOptions(options) {
 
 async function start() {
   if (starting.value) return
+  // om5：考前冲刺 = 高考结构卷（8 选择 + 3 填空 + 5 解答 · 120 分钟），走模拟考作答页
+  if (mode.value === '考前冲刺') {
+    starting.value = true
+    try {
+      const data = await api.post('/student/exam/generate', { type: 'full_mock' })
+      toast.success(`高考结构卷已组好（真题 ${data.bank_count} + AI ${data.ai_count}），进入限时作答`)
+      router.push('/exam/' + data.exam_id)
+    } catch (e) {
+      toast.error(e?.message || '组卷失败')
+    } finally { starting.value = false }
+    return
+  }
   starting.value = true
   quizState.value = 'loading'
   try {
@@ -571,13 +626,21 @@ function switchMode(m) {
   if (mode.value === m) return
   mode.value = m
   const cfg = MODE_CONFIG[m]
+  // om5：切换模式时若正在作答，终止当前题组回到计划页——让模式切换真正生效
+  if (quizState.value === 'ready' || quizState.value === 'loading') {
+    quizState.value = 'idle'
+    questions.value = []
+    quizId.value = null
+  }
   if (cfg) {
     // 切换模式：重置计时 + 按模式题量重新拉推荐
     secs = 0
     usedTime.value = '0:00'
     loadGroupWithCount(cfg.count)
   }
-  toast.info(`已切换到${m}（${cfg.count} 题 · ${cfg.minutes} 分钟）`)
+  toast.info(m === '考前冲刺'
+    ? '已切换到考前冲刺：高考结构卷（8 选择 + 3 填空 + 5 解答 · 120 分钟）'
+    : `已切换到${m}（${cfg.count} 题 · ${cfg.minutes} 分钟）`)
 }
 
 const MODE_CONFIG = {
@@ -603,6 +666,26 @@ async function loadGroupWithCount(count, kpCode) {
 // 知识点切换：薄弱 Top5 列表 + 手动选其他
 const kpOptions = ref([])  // [{code, name, mastery, is_weak}]
 const selectedKp = ref('')
+// om5：全知识点目录（题库有题的章节），支持任选特定知识点
+const kpCatalog = ref([])
+const kpFilter = ref('')
+async function loadKpCatalog() {
+  try {
+    const d = await api.get('/student/practice/kp-catalog')
+    kpCatalog.value = d?.items || []
+  } catch { kpCatalog.value = [] }
+}
+const filteredCatalog = computed(() => {
+  const kw = kpFilter.value.trim()
+  if (!kw) return kpCatalog.value.slice(0, 60)
+  return kpCatalog.value.filter((k) => k.name.includes(kw) || k.code.includes(kw)).slice(0, 60)
+})
+function pickCatalog(k) {
+  selectedKp.value = k.code
+  kpFilter.value = k.name
+  selectKp(k.code)
+}
+
 async function loadKpOptions() {
   try {
     const d = await api.get('/student/report/weak-points')
@@ -633,6 +716,7 @@ const timer = setInterval(() => {
 onBeforeUnmount(() => clearInterval(timer))
 
 onMounted(async () => {
+  loadKpCatalog()
   // 迭代18 修复：知识图谱"直接练"带 ?kp= 参数 → 定向该知识点训练
   const qKp = route.query.kp ? String(route.query.kp) : ''
   if (qKp) selectedKp.value = qKp

@@ -51,9 +51,52 @@ marked.setOptions({ breaks: true, gfm: true })
 // 图片白名单：http(s) + data:image（限小图）。其余一律移除 src
 const IMG_SAFE_PREFIX = ['http://', 'https://', 'data:image/']
 
+/**
+ * LaTeX tabular → Markdown 表格（KaTeX 不支持 tabular 环境，23 行真题含频数分布表实测）。
+ * 行按 \ 切、列按 & 切（忽略 \hline/\cline）；单元格内 | 转义为 \| 以保住 gfm 表格；
+ * 首行作表头（频数分布表的第一行本来就是表头）。
+ */
+function renderLatexTabular(s) {
+  return String(s ?? '').replace(
+    /\\begin\{tabular\}\s*\{[^}]*\}([\s\S]*?)\\end\{tabular\}/g,
+    (m, body) => {
+      const rows = body
+        .replace(/\\hline/g, '')
+        .replace(/\\cline\{[^}]*\}/g, '')
+        .split(/\\/)
+        .map((r) => r.trim().replace(/^\{(.*)\}$/, '$1'))
+        .filter(Boolean)
+      if (!rows.length) return m
+      const cell = (c) =>
+        c
+          .trim()
+          .replace(/\\multicolumn\{\d+\}\{[^}]*\}\{([\s\S]*?)\}/g, '$1')
+          .replace(/\|/g, '\\|')
+      const mdRows = rows.map((r) => '| ' + r.split(/(?<!\\)&/).map(cell).join(' | ') + ' |')
+      const sep = '| ' + mdRows[0].split('|').slice(1, -1).map(() => '---').join(' | ') + ' |'
+      return [mdRows[0], sep, ...mdRows.slice(1)].join('\n')
+    }
+  )
+}
+
+/**
+ * OCR 语料的"答案空位"归一：\$ \qquad \$ / $ \qquad $ 这类转义美元+空位命令，
+ * 公式定界判定会失效导致 \qquad 以原码红字裸奔（用户实测）→ 归一为填空线 ____；
+ * 残留的转义美元 \$ → HTML 实体字面 $（不会被 KaTeX 当定界符）。
+ */
+function normalizeOcrArtifacts(s) {
+  let t = String(s ?? '')
+  t = t.replace(/\\\$[\s|]*\\qquad[\s|]*\\\$/gi, ' ____ ')
+  t = t.replace(/\$[\s|]*\\qquad[\s|]*\$/gi, ' ____ ')
+  t = t.replace(/\\\$/g, '&#36;')
+  return t
+}
+
 /** 渲染单段 markdown → 消毒后 HTML（失败回退源码转义，绝不白屏） */
 export function renderMarkdown(src, { streamingTail = false, imgMode = 'question' } = {}) {
-  let s = mergeNestedMath(src || '') // 题库嵌套 $ 语料先归一化，再进 KaTeX
+  let s = normalizeOcrArtifacts(src || '') // OCR 答案空位/转义美元先归一
+  s = renderLatexTabular(s) // LaTeX tabular → Markdown 表格
+  s = mergeNestedMath(s) // 题库嵌套 $ 语料先归一化，再进 KaTeX
   if (streamingTail) {
     // 流式容错：未闭合的 $$ 块按补齐处理，避免半公式报错
     const dollars = (s.match(/\$\$/g) || []).length

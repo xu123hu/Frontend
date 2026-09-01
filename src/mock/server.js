@@ -8,7 +8,7 @@ import {
   MOCK_USER, seedConversations, seedMessages, reviewPlan, masterySummary, labRecommend, knowledgeGraph, iso,
   growthOverview, growthPanel, routeIntentReply, loopProgress,
   practiceGroupRecommend, difficultyMix, smartScore, practiceSummary,
-  memoryHeatmap, dueQueue, errorDetailExt, errorFilter,
+  memoryHeatmap, dueQueue, errorDetailExt, errorFilter, mockGgb,
   reportHighlights, reportWeakPoints, masteryTrendForecast, errorDistribution, reportHonesty,
   kgPie, kgTree, kgNodeDeps, kgNodeRecommend,
   today3, scoreTrend, featureEntries,
@@ -467,6 +467,9 @@ export function mockApi(req, res, next) {
     if (method === 'GET' && url === '/student/error-records') return ok(res, { items: [] })
     if (method === 'POST' && seg[0] === 'student' && seg[1] === 'error-records' && seg[2] && seg[3] === 'review') return ok(res, { graduated: false, next_review: '2026-08-14' })
     if (method === 'POST' && url === '/student/exam/generate') return ok(res, { exam_id: 'exam_' + Date.now() })
+    /* GeoGebra 动态图形（mock） */
+    if (method === 'POST' && seg[0] === 'student' && seg[1] === 'error-records' && seg[2] && seg[3] === 'figure') return ok(res, { ggb: mockGgb, generated: true })
+    if (method === 'POST' && url === '/figures/ggb') return ok(res, { ggb: mockGgb })
 
     /* ---------- M2 迭代16 · 学情聚合（模块0/1/6 growth） ---------- */
     if (method === 'GET' && url === '/student/growth/overview') return ok(res, growthOverview)

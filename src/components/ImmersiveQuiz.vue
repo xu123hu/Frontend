@@ -39,6 +39,9 @@
         <div class="q-text">
           <MarkdownView :text="q.text" mode="question" />
         </div>
+        <div v-if="q.image && q.image.length" class="q-fig">
+          <DynamicFigureViewer :items="q.image" :label="'题目配图'" :height="280" />
+        </div>
         <div class="ans-list">
           <div
             v-for="(opt, oi) in q.options" :key="oi"
@@ -133,6 +136,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { api } from '@/api/client'
 import MarkdownView from '@/components/MarkdownView.vue'
+import DynamicFigureViewer from '@/components/DynamicFigureViewer.vue'
 import { closeImmersive, immersiveOpen } from '@/composables/useImmersive'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToastStore } from '@/stores/toast'
@@ -179,6 +183,7 @@ const items = computed(() =>
     kp_code: it.kp_code || '',
     kp_name: it.kp_name || '',
     text: String(it.question_text ?? it.text ?? ''),
+    image: Array.isArray(it.image) ? it.image : [],
     options: normalizeOptions(it.options ?? it.optionsArr),
   }))
 )
@@ -429,4 +434,6 @@ onBeforeUnmount(() => {
   line-height: 1.7;
   margin-bottom: 10px;
 }
+.q-fig { margin: 10px 0; text-align: center; }
+.q-fig img { max-width: 100%; max-height: 260px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 </style>

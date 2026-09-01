@@ -439,8 +439,9 @@ async function startReview(item) {
   reviewCtx.value = { record_id: item.record_id }
   const kp = item.kp_name ? `「${item.kp_name}」` : ''
   chat.doSend(
-    `我在复习一道${kp}错题，请基于它出一道变式题（换掉数字或条件，不要出原题）让我重新作答巩固：\n${item.question_text}`,
-    { displayText: '🔄 错题复习 · 换个条件再试试', skillKeys: ['quiz_gen'] },
+    `我在复习一道${kp}错题，请基于它出一道变式题（换掉数字或条件，不要出原题）让我重新作答巩固：\n${item.question_text}` +
+      (item.file_id ? '\n（原题图片已随消息附上，请先看图再审题）' : ''),
+    { displayText: '🔄 错题复习 · 换个条件再试试', skillKeys: ['quiz_gen'], attachments: item.file_id ? [{ file_id: item.file_id, kind: 'image' }] : [] },
   )
   reviewStarting.value = false
 }
@@ -476,7 +477,7 @@ function onQuizMore(card) {
   const q = String(it?.question_text || '').slice(0, 400)
   chat.doSend(
     q ? `请基于这道题再来一组难度递进的变式巩固：\n${q}` : '再来一组变式巩固',
-    { displayText: '🔄 再来一组变式', skillKeys: ['quiz_gen'] },
+    { displayText: '🔄 再来一组变式', skillKeys: ['quiz_gen'], attachments: item.file_id ? [{ file_id: item.file_id, kind: 'image' }] : [] },
   )
 }
 

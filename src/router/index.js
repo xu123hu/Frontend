@@ -11,10 +11,11 @@ const studentRoutes = [
   { path: '/report', component: () => import('@/pages/student/ReportView.vue'), meta: studentMeta('学情报告') },
   { path: '/graph', component: () => import('@/pages/student/GraphView.vue'), meta: studentMeta('知识图谱') },
   { path: '/exam', component: () => import('@/pages/student/ExamView.vue'), meta: studentMeta('模拟考试') },
+  { path: '/exam/:id', component: () => import('@/pages/student/ExamPaperView.vue'), meta: studentMeta('模拟考试') },
   { path: '/class', component: () => import('@/pages/student/ClassView.vue'), meta: studentMeta('我的班级') },
   { path: '/tasks', component: () => import('@/pages/student/TasksView.vue'), meta: studentMeta('课堂任务') },
   { path: '/tasks/:id', component: () => import('@/pages/student/AssignmentView.vue'), meta: studentMeta('作业作答') },
-  { path: '/dual', component: () => import('@/pages/student/DualView.vue'), meta: studentMeta('双师课堂') },
+  { path: '/dual', component: () => import('@/pages/student/DualView.vue'), meta: { ...studentMeta('双师课堂'), immersive: true } },
   { path: '/resource', component: () => import('@/pages/student/ResourceView.vue'), meta: studentMeta('资源推荐') },
   { path: '/profile', component: () => import('@/pages/student/ProfileView.vue'), meta: studentMeta('个人中心') },
 ]

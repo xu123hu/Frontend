@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="wb-env">
     <div class="wb-toolbar" v-if="!hidden">
       <button
@@ -10,6 +10,7 @@
       <button class="wb-btn" :class="{ on: tool === 'eraser' }" @click="tool = 'eraser'" title="橡皮">🧽</button>
       <button class="wb-btn" :class="{ on: latexOpen }" @click="latexOpen = !latexOpen" title="板书公式（OpenMAIC wb_draw_latex）">∑</button>
       <button class="wb-btn" @click="clearAll" title="清空板书">🗑</button>
+      <button class="wb-btn" :class="{ on: penetrate }" @click="penetrate = !penetrate" title="穿透交互：暂时不影响下方 3D 图形操作（关闭后恢复圈画）">✋</button>
       <button class="wb-btn" @click="hidden = true" title="收起板书">✕</button>
     </div>
     <button v-else class="wb-fab" title="打开板书（跟老师一样在幻灯片上圈画）" @click="hidden = false">✏️</button>
@@ -37,7 +38,7 @@
     </div>
 
     <canvas
-      ref="cv" class="wb-canvas" :class="{ active: !hidden, laser: tool === 'laser' }"
+      ref="cv" class="wb-canvas" :class="{ active: !hidden, penetrate, laser: tool === 'laser' }"
       @pointerdown="onDown" @pointermove="onMove" @pointerup="onUp" @pointerleave="onUp"
     ></canvas>
   </div>
@@ -56,8 +57,10 @@ const COLORS = [
 ]
 
 const cv = ref(null)
-const hidden = ref(false)
+// 默认收起为 FAB（✏️）：板书是叠加层，收起时下方 3D 交互图形立即可旋转/缩放
+const hidden = ref(true)
 const tool = ref('pen')
+const penetrate = ref(false)
 const color = ref(COLORS[0].value)
 const strokes = [] // [{points, tool, color, width}]
 let cur = null
@@ -232,6 +235,7 @@ onBeforeUnmount(() => {
 .wb-env { position: absolute; inset: 0; z-index: 8; pointer-events: none; }
 .wb-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; touch-action: none; }
 .wb-canvas.active { pointer-events: auto; cursor: crosshair; }
+.wb-canvas.active.penetrate { pointer-events: none; cursor: default; }
 .wb-canvas.active.laser { cursor: none; }
 .wb-toolbar {
   position: absolute; top: 8px; right: 8px; z-index: 10; display: flex; gap: 6px; align-items: center;

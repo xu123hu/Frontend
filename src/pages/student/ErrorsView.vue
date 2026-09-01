@@ -131,17 +131,20 @@
           <div class="q-side">
             <h5>原题</h5>
             <MarkdownView class="q-text" :text="detail.question_text" />
-            <div v-if="detail.image && detail.image.length" class="q-fig">
-              <img v-for="(src, fi) in detail.image" :key="fi" :src="src" alt="题目配图" />
+            <div v-if="(detail.image && detail.image.length) || photoUrl" class="q-fig">
+              <DynamicFigureViewer :items="figItems" :label="'题目配图'" :height="300" />
             </div>
+            <button v-if="detail" class="secondary" style="margin-top:10px;display:block;" @click="genDynamicFigure" :disabled="figBusy">
+              {{ figBusy ? '⏳ AI 生成动态图形中…' : (hasGgb ? '🔄 重新生成动态图形' : '🔍 生成动态图形（可拖动/旋转/缩放）') }}
+            </button>
             <h5>正解 <span v-if="!detailFull" class="text-muted text-xs" style="font-weight:400;">(AI 生成中…)</span></h5>
             <div class="options" :style="reviewing ? { filter: 'blur(6px)', userSelect: 'none' } : {}">
               <div v-if="!detailFull" class="opt right" style="color:var(--ink3);">AI 正在分析题目与错因，生成详细正解…</div>
-              <div v-else class="opt right" style="white-space:pre-line;line-height:1.7;display:block;">{{ detailFull.generated_answer || '暂无正解文本' }}</div>
+              <MarkdownView v-else class="opt right" :text="detailFull.generated_answer || '暂无正解文本'" style="display:block;" />
             </div>
             <div style="font-size:11.5px;color:var(--ink3);display:flex;gap:14px;padding-top:8px;border-top:1px dashed var(--line);">
               <span>📅 {{ detail.next_review_at ? '下次复习 ' + fmtMD(detail.next_review_at) : '已毕业，不再排期' }}</span>
-              <span v-if="detail.source_channel">来源：{{ detail.source_channel }}</span>
+              <span v-if="originZh">来源：{{ originZh }}</span>
             </div>
           </div>
           <!-- 右：错因对话化 + 巩固建议 -->
@@ -204,7 +207,10 @@
                 <li><b>记忆等级</b> · {{ levelZh(detail.fsrs_level) }}</li>
               </ol>
             </div>
-            <button v-if="!reviewing" class="redo-btn" @click="redo">🔄 隐藏答案重做</button>
+            <div v-if="!reviewing" style="display:flex;gap:10px;">
+              <button class="redo-btn" style="flex:1;" @click="redo">🔄 隐藏答案重做</button>
+              <button class="redo-btn" style="flex:1;background:var(--brand-bg,#fff7e6);border-color:var(--brand,#f59e0b);" @click="redoWithSocratic">🎯 引导重解</button>
+            </div>
             <div v-else style="display:flex;gap:10px;">
               <button class="redo-btn" style="flex:1;" :disabled="reviewSubmitting" @click="submitReview('remembered')">✅ 记住了</button>
               <button class="redo-btn" style="flex:1;background:var(--err-bg);border-color:var(--err-border);color:var(--err-deep,#b91c1c);" :disabled="reviewSubmitting" @click="submitReview('forgotten')">❌ 没记住</button>
@@ -257,13 +263,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
-import { butlerApi, studentApi } from '@/api'
+import { butlerApi, filesApi, studentApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import LatexText from '@/components/LatexText.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import HomeworkPhotos from '@/components/student/HomeworkPhotos.vue'
 import FlashcardReview from '@/components/student/FlashcardReview.vue'
+import DynamicFigureViewer from '@/components/DynamicFigureViewer.vue'
 
 const router = useRouter()
 const toast = useToastStore()
@@ -321,6 +328,33 @@ const totalErrors = ref(0)
 const kpOptions = ref([])
 
 const detail = ref(null)
+// 手动拍照入本的原图 URL（file_id -> /files/{id}/content 预签名 URL）
+const photoUrl = ref('')
+// 动态图形（AI → GeoGebra 交互构造）：渲染源 = image 列（data-URI + ggb 对象）+ 原图照片
+const figBusy = ref(false)
+const figItems = computed(() => {
+  const arr = Array.isArray(detail.value?.image) ? detail.value.image.slice() : []
+  if (photoUrl.value) arr.push(photoUrl.value)
+  return arr
+})
+const hasGgb = computed(() =>
+  Array.isArray(detail.value?.image) && detail.value.image.some((e) => e && typeof e === 'object' && e.type === 'ggb')
+)
+async function genDynamicFigure() {
+  if (!detail.value || figBusy.value) return
+  figBusy.value = true
+  try {
+    const data = await api.post(`/student/error-records/${detail.value.record_id}/figure`)
+    if (data?.ggb) {
+      toast.success(data.generated ? '动态图形已生成，可拖动/旋转/缩放 🎉' : '已展示动态图形')
+      await openDetail(detail.value.record_id, selectedSeq.value)
+    }
+  } catch (e) {
+    toast.error(`动态图形生成失败：${e?.message || '请稍后重试'}（可继续用静态图复习）`)
+  } finally {
+    figBusy.value = false
+  }
+}
 const detailLoading = ref(false)
 const detailError = ref('')
 const selectedSeq = ref(1)
@@ -461,6 +495,7 @@ async function openDetail(recordId, seq = 1) {
   diag.value = null
   detailFull.value = null
   tutorHistory.value = []
+  photoUrl.value = ''
   diagLoading.value = true
   try {
     detail.value = await api.get(`/student/error-records/${recordId}/detail`)
@@ -469,6 +504,13 @@ async function openDetail(recordId, seq = 1) {
     detailError.value = `详情加载失败：${e.message || '请稍后重试'}`
   } finally {
     detailLoading.value = false
+  }
+  // 手动拍照入本的原图：file_id -> 预签名内容 URL（与 AssignmentView 照片解析一致）
+  if (detail.value?.file_id) {
+    try {
+      const d = await filesApi.contentUrl(detail.value.file_id)
+      if (d?.url) photoUrl.value = d.url
+    } catch { /* 图片暂不可用：不阻塞详情 */ }
   }
   // AI 错因诊断 + AI 详情（正解）best-effort，并发拉取
   Promise.allSettled([
@@ -521,6 +563,25 @@ function redo() {
   reviewing.value = true
   toast.info('已隐藏答案，请独立重做后选择结果 ⏱')
 }
+// om5 修复轮 D2：错题 → 引导重解（深链 /dialog?explain=，DialogView 已有该入口处理）
+function redoWithSocratic() {
+  const q = new URLSearchParams()
+  q.set('explain', detail.value.question_text || '')
+  if (detail.value.answer_text) q.set('answer', detail.value.answer_text)
+  if (detail.value.error_type) q.set('error_type', detail.value.error_type)
+  if (detail.value.kp_code) q.set('kp', detail.value.kp_code)
+  if (detail.value.file_id) q.set('file_id', detail.value.file_id)
+  router.push('/dialog?' + q.toString())
+}
+const _ORIGIN_ZH = {
+  self_test: '自测练题', chat_quiz: '对话出题', socratic: '引导解题',
+  mock_exam: '模拟考试', variant: '变式巩固', retry: '错题重练',
+  assignment: '老师作业', manual: '手动录入',
+}
+const originZh = computed(() => {
+  const o = detail.value.origin || (detail.value.source_channel === 'manual_photo' ? 'manual' : '')
+  return _ORIGIN_ZH[o] || (detail.value.source_channel === 'auto_judge' ? '练题判分' : detail.value.source_channel)
+})
 async function submitReview(result) {
   if (!detail.value || reviewSubmitting.value) return
   reviewSubmitting.value = true

@@ -19,7 +19,25 @@
       </div>
     </div>
 
-    <div v-if="loading" class="state-box">加载中…</div>
+    <!-- 阶段5：真题套卷 · 按年份 -->
+    <div class="card" style="padding:14px 20px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <strong style="font-size:14px;">📕 真题套卷 · 按年份（全真题，不掺 AI 题）</strong>
+        <span style="font-size:12px;color:var(--ink3);" v-if="realLoading">加载中…</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button v-for="y in realYears" :key="y.year + y.vol" class="year-btn"
+                :disabled="generatingYear !== 0"
+                @click="startRealPaper(y)">
+          {{ generatingYear === y.year + y.vol ? '组卷中…' : `${y.year} ${y.vol} · ${y.count} 题` }}
+        </button>
+        <span v-if="!realLoading && !realYears.length" style="font-size:12.5px;color:var(--ink3);">
+          暂无可组卷年份（真题卷需题库该年份 ≥5 题）
+        </span>
+      </div>
+    </div>
+
+        <div v-if="loading" class="state-box">加载中…</div>
     <div v-else-if="error" class="state-box">⚠ {{ error }}<button style="margin-left:10px;" @click="load">重试</button></div>
     <div v-else-if="!exams.length" class="state-box">
       <div style="font-size:15px;font-weight:800;color:var(--ink);margin-bottom:6px;">📝 还没有模考记录</div>
@@ -30,8 +48,8 @@
     </div>
     <div v-else-if="!shownExams.length" class="state-box">该分类下暂无套卷</div>
 
-    <div v-else class="exam-grid">
-      <div v-for="e in shownExams" :key="e.exam_id" class="exam-card">
+<div v-else class="exam-grid">
+      <div v-for="e in shownExams" :key="e.exam_id" class="exam-card" style="cursor:pointer;" @click="openPaper(e)">
         <div v-if="e.best_score != null" class="badge-best">🏆 最高 {{ e.best_score }}</div>
         <span class="year-tag" :style="e.type === 'topic' ? { background: 'var(--purple)' } : {}">{{ e.typeLabel }}</span>
         <LatexText class="tt" :text="e.title" />
@@ -48,10 +66,12 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
 import LatexText from '@/components/LatexText.vue'
 
+const router = useRouter()
 const toast = useToastStore()
 const activeFilter = ref('all')
 const loading = ref(true)
@@ -66,6 +86,35 @@ const filters = [
   { key: 'topic', label: '专题训练' },
   { key: 'done', label: '已做' },
 ]
+
+// ===== 阶段5：真题套卷（按年份，全真题不掺 AI 题） =====
+const realYears = ref([])
+const realLoading = ref(false)
+const generatingYear = ref(0)
+
+async function loadRealPapers() {
+  realLoading.value = true
+  try {
+    const data = await api.get('/student/exam/real-papers')
+    realYears.value = (data?.years || []).filter((y) => y.count >= 5)
+  } catch { realYears.value = [] } finally { realLoading.value = false }
+}
+
+async function startRealPaper(y) {
+  if (generatingYear.value) return
+  generatingYear.value = y.year + y.vol
+  try {
+    const data = await api.post('/student/exam/generate', { type: 'real_paper', year: y.year, vol: y.vol })
+    toast.success(`真题卷已组好（${data.bank_count} 道真题），开始作答`)
+    router.push('/exam/' + data.exam_id)
+  } catch (e) {
+    toast.error(e instanceof ApiError ? e.message : '真题卷组卷失败')
+  } finally { generatingYear.value = 0 }
+}
+
+function openPaper(e) {
+  router.push('/exam/' + e.exam_id)
+}
 
 function fmtDate(iso) {
   if (!iso) return '--'
@@ -83,7 +132,7 @@ async function load() {
     total.value = data?.total ?? 0
     exams.value = (data?.items || []).map((it) => ({
       ...it,
-      typeLabel: it.type === 'topic' ? '专题训练' : '全真模拟',
+      typeLabel: { topic: '专题训练', real_paper: '真题卷' }[it.type] || '全真模拟',
       dateText: fmtDate(it.created_at),
       note: it.attempts > 0
         ? `✓ 已做 ${it.attempts} 次 · 最高 ${it.best_score ?? '--'} / ${it.total_score ?? '--'} · 最近 ${it.last_score ?? '--'}`
@@ -119,7 +168,7 @@ const shownExams = computed(() => {
   return exams.value.filter((e) => e.type === activeFilter.value)
 })
 
-onMounted(load)
+onMounted(() => { load(); loadRealPapers() })
 </script>
 
 <style scoped>
@@ -153,4 +202,16 @@ onMounted(load)
 .exam-meta .k { width: 76px; flex-shrink: 0; color: var(--ink3); }
 .exam-meta b { font-family: var(--font-num); font-weight: 800; color: var(--ink); }
 .exam-note { font-size: 11.5px; color: var(--ink3); }
+.year-btn {
+  padding: 7px 14px;
+  border: 1.5px solid var(--line, #eee2c8);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink2, #6b6353);
+}
+.year-btn:hover:not(:disabled) { border-color: var(--brand, #f59e0b); color: var(--brand-deep, #b45309); }
+.year-btn:disabled { opacity: 0.6; cursor: wait; }
 </style>
