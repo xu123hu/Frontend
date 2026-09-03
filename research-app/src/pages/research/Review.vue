@@ -10,12 +10,25 @@ import Boundary from '@shared/ui/Boundary.vue';
         <p>作者投稿前自检与评委论文初审；数学分层验证 + Lean 三状态分项。</p>
       </div>
       <div class="actions">
-        <button class="btn" type="button">审查边界</button>
-        <button class="btn primary" type="button">上传论文</button>
+        <button
+          class="btn"
+          type="button"
+        >
+          审查边界
+        </button>
+        <button
+          class="btn primary"
+          type="button"
+        >
+          上传论文
+        </button>
       </div>
     </header>
 
-    <Boundary tone="info" title="F0 占位：评审工作区">
+    <Boundary
+      tone="info"
+      title="F0 占位：评审工作区"
+    >
       F4 阶段交付：作者视图与评委视图（后端裁剪权限）；分层验证 L0–L4（SymPy/Z3）；
       适用时启用 Lean（评审工作区内部）；形式化翻译/内核/科研结论三状态分项。
     </Boundary>

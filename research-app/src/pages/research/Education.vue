@@ -10,12 +10,25 @@ import Boundary from '@shared/ui/Boundary.vue';
         <p>授权数据产品、隐私预检、k≥20 强制检查、统计分析与成果回流。</p>
       </div>
       <div class="actions">
-        <button class="btn" type="button">数据边界</button>
-        <button class="btn primary" type="button">使用授权数据</button>
+        <button
+          class="btn"
+          type="button"
+        >
+          数据边界
+        </button>
+        <button
+          class="btn primary"
+          type="button"
+        >
+          使用授权数据
+        </button>
       </div>
     </header>
 
-    <Boundary tone="info" title="F0 占位：教育研究">
+    <Boundary
+      tone="info"
+      title="F0 占位：教育研究"
+    >
       F4 阶段交付：5 步流程（接收课题 → 隐私预检 → 数据快照 → 统计与图表 → 成果审批）；
       任何切片 k &lt; 20 一律拒绝；不直连学生业务库；图表与参数绑定快照哈希。
     </Boundary>

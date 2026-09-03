@@ -13,7 +13,11 @@ const displayLabel = computed(() => props.label ?? degradedLabel(props.state));
 </script>
 
 <template>
-  <span class="badge" :class="`tone-${tone}`" :data-state="state">{{ displayLabel }}</span>
+  <span
+    class="badge"
+    :class="`tone-${tone}`"
+    :data-state="state"
+  >{{ displayLabel }}</span>
 </template>
 
 <style scoped>

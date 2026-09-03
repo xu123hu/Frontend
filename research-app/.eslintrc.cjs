@@ -20,5 +20,17 @@ module.exports = {
     'vue/multi-word-component-names': 'off',
     'vue/no-multiple-template-root': 'off',
   },
-  ignorePatterns: ['dist', 'node_modules', '*.config.ts', '*.config.js', 'artifacts'],
+  ignorePatterns: [
+    'dist',
+    'node_modules',
+    '*.config.ts',
+    '*.config.js',
+    'artifacts',
+    // 生成/ vendored 产物不参与 lint：Playwright HTML 报告压缩资源、MSW 生成的
+    // Service Worker、openapi-typescript 生成类型（以 .gen.ts 结尾）。
+    'playwright-report',
+    'test-results',
+    'public/mockServiceWorker.js',
+    '**/*.gen.ts',
+  ],
 };

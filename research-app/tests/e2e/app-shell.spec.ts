@@ -10,14 +10,29 @@ const OUT_DIR = 'artifacts/acceptance/f0';
  * 与原型 D:\科研端demo\reference-screenshots\baseline-*.png 做人工对照。
  *
  * 严禁在此 spec 中 mock 业务 API 或伪造页面内容。
+ *
+ * F1 更新：应用接入认证（TC-F01-01），受保护路由需先登录（演示账号，
+ * MSW 契约草案环境）。
  */
+
+const DEMO_PHONE = '13800000001';
+const DEMO_OTP = '888888';
 
 test.beforeAll(() => {
   mkdirSync(OUT_DIR, { recursive: true });
 });
 
+async function login(page: import('@playwright/test').Page): Promise<void> {
+  await page.goto('/research/login');
+  await page.getByLabel('手机号').fill(DEMO_PHONE);
+  await page.getByRole('button', { name: '获取验证码' }).click();
+  await page.getByLabel('验证码').fill(DEMO_OTP);
+  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await expect(page).toHaveURL(/\/research\/home/);
+}
+
 test('F0-视觉 科研首页 1440×900', async ({ page }, testInfo) => {
-  await page.goto('/research/home');
+  await login(page);
   await page.waitForSelector('#app-shell');
   await page.screenshot({
     path: `${OUT_DIR}/f0-home-${testInfo.project.name}.png`,
@@ -29,20 +44,21 @@ test('F0-视觉 科研首页 1440×900', async ({ page }, testInfo) => {
 });
 
 test('F0-视觉 侧栏折叠', async ({ page }) => {
-  await page.goto('/research/home');
+  await login(page);
   await page.locator('#nav-collapse').click();
   await expect(page.locator('#app-shell')).toHaveClass(/nav-collapsed/);
   await page.screenshot({ path: `${OUT_DIR}/f0-sidebar-collapsed.png` });
 });
 
 test('F0-抽屉打开', async ({ page }) => {
-  await page.goto('/research/home');
+  await login(page);
   await page.locator('#assistant-orb').click();
   await expect(page.locator('#agent-drawer')).toHaveClass(/open/);
   await page.screenshot({ path: `${OUT_DIR}/f0-drawer-open.png` });
 });
 
 test('F0-六个一级入口路由可达', async ({ page }) => {
+  await login(page);
   const paths = [
     '/research/home',
     '/research/projects',

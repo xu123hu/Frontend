@@ -39,14 +39,20 @@ const isCollapsed = computed(() => ui.sidebarCollapsed);
       class="nav-brand"
       :aria-label="'返回科研首页'"
     >
-      <span class="brand-mark" aria-hidden="true">知</span>
-      <span v-if="!isCollapsed" class="nav-copy">
+      <span
+        class="brand-mark"
+        aria-hidden="true"
+      >知</span>
+      <span
+        v-if="!isCollapsed"
+        class="nav-copy"
+      >
         <b>智学数研</b>
         <small>可信研究工作台</small>
       </span>
     </RouterLink>
 
-    <div class="nav-links" role="list">
+    <div class="nav-links">
       <RouterLink
         v-for="item in items"
         :key="item.path"
@@ -55,13 +61,24 @@ const isCollapsed = computed(() => ui.sidebarCollapsed);
         :class="{ active: isActive(item.path) }"
         :aria-label="item.label"
         :title="isCollapsed ? item.label : undefined"
-        role="listitem"
       >
-        <span class="nav-icon" aria-hidden="true">
-          <component :is="item.icon" :size="18" />
+        <span
+          class="nav-icon"
+          aria-hidden="true"
+        >
+          <component
+            :is="item.icon"
+            :size="18"
+          />
         </span>
-        <span v-if="!isCollapsed" class="nav-label">{{ item.label }}</span>
-        <span v-if="item.badge && !isCollapsed" class="nav-badge">{{ item.badge }}</span>
+        <span
+          v-if="!isCollapsed"
+          class="nav-label"
+        >{{ item.label }}</span>
+        <span
+          v-if="item.badge && !isCollapsed"
+          class="nav-badge"
+        >{{ item.badge }}</span>
       </RouterLink>
     </div>
 
@@ -73,8 +90,14 @@ const isCollapsed = computed(() => ui.sidebarCollapsed);
         :aria-label="'研究者中心'"
         @click="ui.togglePersonalCenter()"
       >
-        <span class="personal-avatar" aria-hidden="true">研</span>
-        <span v-if="!isCollapsed" class="nav-copy">研究者中心</span>
+        <span
+          class="personal-avatar"
+          aria-hidden="true"
+        >研</span>
+        <span
+          v-if="!isCollapsed"
+          class="nav-copy"
+        >研究者中心</span>
       </button>
       <button
         id="nav-collapse"
@@ -83,8 +106,15 @@ const isCollapsed = computed(() => ui.sidebarCollapsed);
         :aria-label="isCollapsed ? '展开导航' : '折叠导航'"
         @click="ui.toggleSidebar()"
       >
-        <component :is="isCollapsed ? ChevronRight : ChevronLeft" :size="14" aria-hidden="true" />
-        <span v-if="!isCollapsed" class="nav-copy">折叠导航</span>
+        <component
+          :is="isCollapsed ? ChevronRight : ChevronLeft"
+          :size="14"
+          aria-hidden="true"
+        />
+        <span
+          v-if="!isCollapsed"
+          class="nav-copy"
+        >折叠导航</span>
       </button>
     </div>
   </nav>
@@ -220,5 +250,19 @@ const isCollapsed = computed(() => ui.sidebarCollapsed);
   justify-content: center;
   padding-left: 6px;
   padding-right: 6px;
+}
+/* ≤1279px 栅格列固定为 --nav-collapsed（64px），与 ResearchLayout 断点对齐：
+   隐藏文字标签只留图标，避免 nowrap 标签在窄列中被裁成残字（布局破损）。 */
+@media (max-width: 1279px) {
+  .nav-copy,
+  .nav-label {
+    display: none;
+  }
+  .nav-link,
+  .nav-utility {
+    justify-content: center;
+    padding-left: 6px;
+    padding-right: 6px;
+  }
 }
 </style>

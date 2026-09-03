@@ -7,9 +7,23 @@ defineProps<{
 </script>
 
 <template>
-  <div class="boundary" :class="`tone-${tone ?? 'info'}`" role="note">
-    <div v-if="title" class="boundary-title"><slot name="title">{{ title }}</slot></div>
-    <div v-if="message || $slots.default" class="boundary-body">
+  <div
+    class="boundary"
+    :class="`tone-${tone ?? 'info'}`"
+    role="note"
+  >
+    <div
+      v-if="title"
+      class="boundary-title"
+    >
+      <slot name="title">
+        {{ title }}
+      </slot>
+    </div>
+    <div
+      v-if="message || $slots.default"
+      class="boundary-body"
+    >
       <slot>{{ message }}</slot>
     </div>
   </div>

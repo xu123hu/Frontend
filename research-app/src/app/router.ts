@@ -1,12 +1,14 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import ResearchLayout from '@app/layouts/ResearchLayout.vue';
+import { useSessionStore } from '@app/stores/session';
+import { useSession } from '@features/auth/use-session';
 
 /**
  * 路由表严格对应提示词"六个一级入口" + 登录 + 个人中心 + NotFound。
  * 死路由检查：所有 path 必须有对应 page 文件；反之亦然。
  *
- * F0 阶段：所有页面都是占位。
- * F1 阶段：M0 契约冻结后接入守卫（鉴权、租户隔离、project_id 归属检查）。
+ * F1：/research 子树全部要求已认证（黄金链路一 TC-F01-01）；
+ * 未认证访问 → /research/login?redirect=<原路径>；已认证访问 /research/login → 回首页。
  */
 const routes: readonly RouteRecordRaw[] = [
   {
@@ -17,11 +19,12 @@ const routes: readonly RouteRecordRaw[] = [
     path: '/research/login',
     name: 'login',
     component: () => import('@pages/research/Login.vue'),
-    meta: { layout: 'standalone' },
+    meta: { layout: 'standalone', public: true },
   },
   {
     path: '/research',
     component: ResearchLayout,
+    meta: { requiresAuth: true },
     children: [
       {
         path: '',
@@ -40,7 +43,7 @@ const routes: readonly RouteRecordRaw[] = [
       {
         path: 'projects/:id',
         name: 'project',
-        component: () => import('@pages/research/Projects.vue'),
+        component: () => import('@pages/research/ProjectDetail.vue'),
         props: true,
       },
       {
@@ -101,6 +104,24 @@ export const router = createRouter({
   scrollBehavior(_to, _from, savedPosition) {
     return savedPosition ?? { top: 0 };
   },
+});
+
+router.beforeEach(async (to) => {
+  const session = useSessionStore();
+  if (to.meta.public) {
+    // 已认证访问登录页 → 回首页（TC-F01-01 反向）
+    if (session.isAuthenticated) return { name: 'home' };
+    return true;
+  }
+  if (to.matched.some((record) => record.meta.requiresAuth)) {
+    if (session.status === 'probing') {
+      await useSession().probeSession();
+    }
+    if (!session.isAuthenticated) {
+      return { name: 'login', query: { redirect: to.fullPath } };
+    }
+  }
+  return true;
 });
 
 export default router;

@@ -14,15 +14,28 @@ function percent(p: { current: number; total: number }): number {
 </script>
 
 <template>
-  <div class="skeleton-wrap" role="status" :aria-label="label">
+  <div
+    class="skeleton-wrap"
+    role="status"
+    :aria-label="label"
+  >
     <template v-if="progress">
-      <div class="progress" :aria-label="`${label} ${percent(progress)}%`">
+      <div
+        class="progress"
+        :aria-label="`${label} ${percent(progress)}%`"
+      >
         <span :style="{ width: percent(progress) + '%' }" />
       </div>
-      <p class="muted small">{{ progress.message }}（{{ percent(progress) }}%）</p>
+      <p class="muted small">
+        {{ progress.message }}（{{ percent(progress) }}%）
+      </p>
     </template>
     <template v-else>
-      <div class="skeleton" v-for="i in 3" :key="i" />
+      <div
+        v-for="i in 3"
+        :key="i"
+        class="skeleton"
+      />
     </template>
   </div>
 </template>

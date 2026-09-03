@@ -29,7 +29,8 @@
       "@features/*": ["src/features/*"],
       "@entities/*": ["src/entities/*"],
       "@shared/*": ["src/shared/*"],
-      "@assets/*": ["src/assets/*"]
+      "@assets/*": ["src/assets/*"],
+      "@mocks/*": ["src/mocks/*"]
     },
     "types": ["vite/client", "node"]
   },

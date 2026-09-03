@@ -9,7 +9,10 @@ withDefaults(
 </script>
 
 <template>
-  <div class="empty" role="status">
+  <div
+    class="empty"
+    role="status"
+  >
     <b>{{ title }}</b>
     <p>{{ hint }}</p>
     <slot />

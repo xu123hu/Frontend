@@ -10,12 +10,25 @@ import Boundary from '@shared/ui/Boundary.vue';
         <p>LaTeX 写作、引用插入、编译、修订 diff 与公式保真翻译。</p>
       </div>
       <div class="actions">
-        <button class="btn" type="button">作者投稿前自检</button>
-        <button class="btn primary" type="button">编译 PDF</button>
+        <button
+          class="btn"
+          type="button"
+        >
+          作者投稿前自检
+        </button>
+        <button
+          class="btn primary"
+          type="button"
+        >
+          编译 PDF
+        </button>
       </div>
     </header>
 
-    <Boundary tone="info" title="F0 占位：写作工作台">
+    <Boundary
+      tone="info"
+      title="F0 占位：写作工作台"
+    >
       F3 阶段交付：CodeMirror 6 编辑器 + LaTeX language pack + 文件树 + 编译 PDF 预览 +
       SyncTeX 双向定位 + AI diff 逐项接受/拒绝 + 引用仅来自已核验 CitationRecord。
     </Boundary>

@@ -10,7 +10,10 @@ import Boundary from '@shared/ui/Boundary.vue';
         <p>您访问的路由不存在或尚未在 F0 阶段占位实现。</p>
       </div>
     </header>
-    <Boundary tone="warning" title="死路由检查">
+    <Boundary
+      tone="warning"
+      title="死路由检查"
+    >
       本占位页用于满足 08 §5.2 死路由检查；任何 4xx 路径必须 fallback 到此处，而不是显示空白。
     </Boundary>
   </div>

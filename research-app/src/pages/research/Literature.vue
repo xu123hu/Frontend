@@ -10,12 +10,25 @@ import Boundary from '@shared/ui/Boundary.vue';
         <p>个人文献库与项目文献库，按集合、列表与原文详情管理文献。</p>
       </div>
       <div class="actions">
-        <button class="btn" type="button">查找重复项</button>
-        <button class="btn primary" type="button">导入文献</button>
+        <button
+          class="btn"
+          type="button"
+        >
+          查找重复项
+        </button>
+        <button
+          class="btn primary"
+          type="button"
+        >
+          导入文献
+        </button>
       </div>
     </header>
 
-    <Boundary tone="info" title="F0 占位：文献库 Zotero 式关系">
+    <Boundary
+      tone="info"
+      title="F0 占位：文献库 Zotero 式关系"
+    >
       F2 阶段交付：检索（OpenAlex + Crossref + arXiv）、详情、附件/批注/笔记/集合/标签关系，
       PDF 阅读（PDF.js）、批注层、证据定位（page_index + bbox）。
     </Boundary>

@@ -1,10 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { X } from 'lucide-vue-next';
 import { useUiStore } from '@app/stores/ui';
+import { useDialogA11y } from '@shared/lib/use-dialog-a11y';
 import EmptyState from '@shared/ui/EmptyState.vue';
 
 const ui = useUiStore();
+
+const drawerRoot = ref<HTMLElement | null>(null);
+const closeButton = ref<HTMLButtonElement | null>(null);
+const isOpen = computed(() => ui.agentOpen);
+// TC-X01-05：抽屉 Escape 关闭 + 焦点陷阱；层栈保证与弹窗同开时只关最上层。
+useDialogA11y(
+  drawerRoot,
+  isOpen,
+  () => {
+    if (ui.agentOpen) ui.toggleAgent();
+  },
+  () => closeButton.value,
+);
 
 const tabDefs = [
   { id: 'evidence', label: '证据' },
@@ -14,7 +28,6 @@ const tabDefs = [
 ] as const;
 type TabId = (typeof tabDefs)[number]['id'];
 
-const isOpen = computed(() => ui.agentOpen);
 const activeTab = computed(() => ui.agentTab);
 
 function selectTab(tab: TabId): void {
@@ -25,6 +38,7 @@ function selectTab(tab: TabId): void {
 <template>
   <aside
     id="agent-drawer"
+    ref="drawerRoot"
     :class="{ open: isOpen }"
     :data-active-tab="activeTab"
     :aria-hidden="!isOpen ? 'true' : 'false'"
@@ -36,11 +50,20 @@ function selectTab(tab: TabId): void {
         <h2>AI 管家</h2>
         <p>当前项目的证据、批注、引用与任务集中在此。</p>
       </div>
-      <button class="icon-btn" :aria-label="'关闭 AI 管家'" @click="ui.toggleAgent()">
+      <button
+        ref="closeButton"
+        class="icon-btn"
+        :aria-label="'关闭 AI 管家'"
+        @click="ui.toggleAgent()"
+      >
         <X :size="16" />
       </button>
     </header>
-    <div class="drawer-tabs" role="tablist" aria-label="AI 管家上下文">
+    <div
+      class="drawer-tabs"
+      role="tablist"
+      aria-label="AI 管家上下文"
+    >
       <button
         v-for="tab in tabDefs"
         :id="`agent-tab-${tab.id}`"

@@ -37,7 +37,10 @@ const label = computed(() => {
     aria-controls="agent-drawer"
     @click="ui.toggleAgent()"
   >
-    <span class="assistant-orb-label" aria-hidden="true">
+    <span
+      class="assistant-orb-label"
+      aria-hidden="true"
+    >
       <Sparkles :size="20" />
     </span>
     <span

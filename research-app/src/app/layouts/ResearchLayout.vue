@@ -9,12 +9,19 @@ const ui = useUiStore();
 </script>
 
 <template>
-  <div id="app-shell" :class="{ 'nav-collapsed': ui.sidebarCollapsed }">
+  <div
+    id="app-shell"
+    :class="{ 'nav-collapsed': ui.sidebarCollapsed }"
+  >
     <GlobalNav />
     <div class="shell-main">
       <AppHeader />
       <div class="app-layout">
-        <main id="view-root" tabindex="-1" role="main">
+        <main
+          id="view-root"
+          tabindex="-1"
+          role="main"
+        >
           <RouterView />
         </main>
       </div>
