@@ -153,7 +153,11 @@ MSW browser bundle            不在产物中（__USE_MOCK__ 编译期常量剔�
 - ✅ 15 张三视口截图（本轮 E2E 重新生成并目检）
 - ⏳ trace.zip 全量归档→F5；CWV 实测→F3（理由见 known-limitations）
 
-## 9. 提交准备
+## 9. 提交记录
+
+- **本阶段提交：`f8cafce`**（research(f1): 黄金链路一——认证/首页/项目/个人中心，2026-09-04）
+- 前置：F0 `81c2d24`
+- 合并目标位置：`D:\frontend\research-app`（由集成负责人执行）
 
 ```text
 research(f1): 黄金链路一——认证/首页/项目/个人中心
