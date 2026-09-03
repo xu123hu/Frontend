@@ -1,0 +1,167 @@
+/**
+ * 科研端设计令牌（F0 阶段）
+ *
+ * 数据来源：原型 D:\科研端demo\index.html 的 :root CSS 变量
+ * 1:1 复刻；任何 SaaS 体验修正将在 F1 阶段基于真实用户链路记录到 handoff。
+ *
+ * 严禁在此文件中硬编码模型名称、URL 或业务字段。
+ */
+
+:root {
+  /* ===== 颜色：表面 ===== */
+  --app-bg: #f3f6fb;
+  --subtle-bg: #f7f9fc;
+  --surface: #ffffff;
+  --primary: #3157d5;
+  --primary-hover: #284ac0;
+  --primary-soft: #edf2ff;
+
+  /* ===== 颜色：文本 ===== */
+  --text: #172b4d;
+  --text-muted: #667085;
+  --text-weak: #8491a5;
+  --border: #dfe5ee;
+
+  /* ===== 颜色：状态 ===== */
+  --success: #25a46f;
+  --warning: #f2a93b;
+  --danger: #d64545;
+  --info: #3157d5;
+  --success-bg: #eaf8f1;
+  --warning-bg: #fff6e4;
+  --danger-bg: #fff0f0;
+  --info-bg: #edf2ff;
+
+  /* ===== 语义别名 ===== */
+  --bg: var(--app-bg);
+  --surface-2: var(--subtle-bg);
+  --surface-3: var(--primary-soft);
+  --ink: var(--text);
+  --ink-2: var(--text-muted);
+  --muted: var(--text-muted);
+  --line: var(--border);
+  --line-2: var(--border);
+  --accent: var(--primary);
+  --accent-2: var(--primary-soft);
+  --focus: var(--primary);
+
+  /* ===== 布局 ===== */
+  --nav-expanded: 224px;
+  --nav-collapsed: 64px;
+  --header-height: 58px;
+  --r: 10px;
+  --shadow: 0 8px 20px rgba(23, 43, 77, 0.08);
+
+  /* ===== Z-Index ===== */
+  --z-drawer: 30;
+  --z-backdrop: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+  --z-orb: 29;
+
+  /* ===== 字体 ===== */
+  --font: Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --font-size-base: 14px;
+  --font-size-sm: 12px;
+  --font-size-xs: 11px;
+  --font-size-lg: 15px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 21px;
+  --font-size-3xl: 24px;
+  --line-height: 1.55;
+
+  /* ===== 动画（受 prefers-reduced-motion 约束） ===== */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+}
+
+/* 全局基线 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--app-bg);
+  color: var(--text);
+  font: var(--font-size-base) / var(--line-height) var(--font);
+}
+
+body {
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.skip {
+  position: fixed;
+  left: 12px;
+  top: -80px;
+  z-index: 80;
+  background: var(--text);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.skip:focus {
+  top: 10px;
+}
+
+/* 暗色模式留作 F5 视觉收尾阶段（届时需重新评审对比度） */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.toast-region {
+  position: fixed;
+  right: 17px;
+  bottom: 17px;
+  z-index: var(--z-toast);
+  display: grid;
+  gap: 7px;
+  pointer-events: none;
+}
+
+.toast-region > * {
+  pointer-events: auto;
+}
