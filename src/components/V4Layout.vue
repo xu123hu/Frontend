@@ -191,6 +191,9 @@
         </div>
       </template>
     </aside>
+
+    <!-- AI 管家悬浮球：后台任务中心 + 站内通知（仅登录学生态显示） -->
+    <FloatingButler v-if="auth.isLoggedIn" />
   </div>
 </template>
 
@@ -203,6 +206,7 @@ import { useToastStore } from '@/stores/toast'
 import { useConvStore } from '@/stores/conv'
 import { useSkillStore } from '@/stores/skill'
 import ConversationSidebar from '@/components/chat/ConversationSidebar.vue'
+import FloatingButler from '@/components/butler/FloatingButler.vue'
 
 const route = useRoute()
 const router = useRouter()

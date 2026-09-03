@@ -118,6 +118,7 @@ export const classroomApi = {
   updateNotes: (id, notes) => api.patch(`/classroom/sessions/${encodeURIComponent(id)}/notes`, { notes }),
   appendQa: (id, payload) => api.post(`/classroom/sessions/${encodeURIComponent(id)}/qa`, payload),
   answerPractice: (id, payload) => api.post(`/classroom/sessions/${encodeURIComponent(id)}/practice-answer`, payload),
+  regenSlide: (id, order) => api.post(`/classroom/sessions/${encodeURIComponent(id)}/slides/${order}/regenerate`),
   cloneSession: (id) => api.post(`/classroom/sessions/${encodeURIComponent(id)}/clone`),
   deleteSession: (id) => api.delete(`/classroom/sessions/${encodeURIComponent(id)}`),
 }

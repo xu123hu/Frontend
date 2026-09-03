@@ -25,8 +25,11 @@
           <p class="role-note">登录后将进入所选身份对应的端口。</p>
         </div>
         <PhoneField v-model="phone" :error="phoneError" />
-        <OtpField v-if="mode === 'sms'" v-model="code" :phone="phone" purpose="login" @challenge="challengeId = $event" @error="showError" />
+        <p v-if="lastPhone" class="role-note last-phone">上次登录：<button type="button" class="last-phone-fill" @click="fillLastPhone">{{ maskPhone(lastPhone) }}</button></p>
+        <p v-if="phoneMismatch" class="warn" role="status">本次输入的号码与上次登录（{{ maskPhone(lastPhone) }}）不同，将进入另一个账号；如果并非有意，请核对号码。</p>
+        <OtpField v-if="mode === 'sms'" v-model="code" :phone="phone" purpose="login" @challenge="onChallenge" @error="showError" />
         <PasswordField v-else v-model="password" />
+        <p v-if="mode === 'sms' && accountExists === false" class="warn" role="status">该号码还未注册过，验证通过后将自动创建新账号；如果你以为已有账号，请核对号码是否输错。</p>
         <label class="remember"><input v-model="remember" type="checkbox" /> 在这台设备上保持登录</label>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
         <button class="btn btn-primary submit" :disabled="loading || !canSubmit">{{ loading ? '正在验证…' : '安全登录' }}</button>
@@ -39,7 +42,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OtpField from '@/components/auth/OtpField.vue'
 import PasswordField from '@/components/auth/PasswordField.vue'
@@ -47,12 +50,23 @@ import PhoneField from '@/components/auth/PhoneField.vue'
 import { roleHome } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 
+const LAST_PHONE_KEY = 'ma_last_login_phone'
 const router = useRouter(); const route = useRoute(); const auth = useAuthStore()
 const mode = ref('sms'); const phone = ref(''); const code = ref(''); const password = ref('')
 const challengeId = ref(''); const remember = ref(false); const loading = ref(false); const error = ref('')
 const preferredRole = ref('student')
+const lastPhone = ref(''); const accountExists = ref(null)
+onMounted(() => { try { lastPhone.value = localStorage.getItem(LAST_PHONE_KEY) || '' } catch { lastPhone.value = '' } })
+watch(phone, () => { accountExists.value = null })
 const phoneError = computed(() => phone.value && !/^1[3-9]\d{9}$/.test(phone.value) ? '请输入有效的 11 位手机号' : '')
+const phoneMismatch = computed(() => /^1[3-9]\d{9}$/.test(phone.value) && lastPhone.value !== '' && phone.value !== lastPhone.value)
 const canSubmit = computed(() => !phoneError.value && /^1[3-9]\d{9}$/.test(phone.value) && (mode.value === 'sms' ? code.value.length === 6 && !!challengeId.value : password.value.length >= 1))
+function maskPhone(value) { return value ? `${value.slice(0, 3)}****${value.slice(7)}` : '' }
+function fillLastPhone() { phone.value = lastPhone.value }
+function onChallenge(id, data) {
+  challengeId.value = id
+  accountExists.value = typeof data?.account_exists === 'boolean' ? data.account_exists : null
+}
 const errorCopy = {
   AUTH_PASSWORD_INVALID: '手机号或密码不正确',
   AUTH_PASSWORD_LOCKED: '失败次数过多，请 15 分钟后再试',
@@ -80,6 +94,8 @@ async function submit() {
     const data = mode.value === 'sms'
       ? await auth.loginSms({ ...payload, phone: phone.value, challenge_id: challengeId.value, code: code.value })
       : await auth.loginPassword({ ...payload, phone: phone.value, password: password.value })
+    lastPhone.value = phone.value
+    try { localStorage.setItem(LAST_PHONE_KEY, phone.value) } catch { /* 隐私模式下允许失败 */ }
     const activeRole = data.user?.active_role
     const destination = data.onboarding_required && activeRole === 'student'
         ? '/onboarding/student'
@@ -104,6 +120,9 @@ async function submit() {
 .tabs button { border: 0; padding: 10px; border-radius: 9px; background: transparent; color: var(--ink2); cursor: pointer; font-weight: 600; }
 .tabs button.active { background: white; color: var(--ink); box-shadow: var(--shadow-sm); }
 .role-note { margin-top: 6px; color: var(--ink3); font-size: 12px; }
+.last-phone { display: flex; gap: 4px; align-items: center; }
+.last-phone-fill { border: 0; background: none; padding: 0; color: var(--brand-deep); font-weight: 700; font-size: 12px; cursor: pointer; }
+.warn { padding: 9px 12px; background: #fff7ed; color: var(--warn-deep, #b45309); border-radius: 9px; margin-bottom: 12px; font-size: 13px; }
 .remember { display: flex; gap: 8px; align-items: center; color: var(--ink2); font-size: 13px; margin: 4px 0 16px; }
 .submit { width: 100%; height: 46px; font-weight: 700; }
 .error { padding: 9px 12px; background: var(--err-bg); color: var(--err-deep); border-radius: 9px; margin-bottom: 12px; font-size: 13px; }

@@ -16,6 +16,7 @@ const studentRoutes = [
   { path: '/tasks', component: () => import('@/pages/student/TasksView.vue'), meta: studentMeta('课堂任务') },
   { path: '/tasks/:id', component: () => import('@/pages/student/AssignmentView.vue'), meta: studentMeta('作业作答') },
   { path: '/dual', component: () => import('@/pages/student/DualView.vue'), meta: { ...studentMeta('双师课堂'), immersive: true } },
+  { path: '/dual/:sessionId', component: () => import('@/pages/student/DualView.vue'), meta: { ...studentMeta('双师课堂'), immersive: true } },
   { path: '/resource', component: () => import('@/pages/student/ResourceView.vue'), meta: studentMeta('资源推荐') },
   { path: '/profile', component: () => import('@/pages/student/ProfileView.vue'), meta: studentMeta('个人中心') },
 ]
@@ -41,6 +42,39 @@ const routes = [
   { path: '/teacher/classes', name: 'teacher-classes', component: () => import('@/pages/teacher/TeacherClassesView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.class.insights', title: '班级' } },
   { path: '/teacher/resources', name: 'teacher-resources', component: () => import('@/pages/teacher/TeacherResourcesView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.resources', title: '资源' } },
   { path: '/teacher/profile', name: 'teacher-profile', component: () => import('@/pages/teacher/TeacherProfileView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.profile', title: '个人中心' } },
+
+  /* ===== 教师工作台 V2（独立布局 TeacherV2Layout，教师端专属设计系统） ===== */
+  {
+    path: '/teacher-v2',
+    component: () => import('@/layouts/TeacherV2Layout.vue'),
+    children: [
+      { path: 'today', name: 'tv2-today', component: () => import('@/pages/teacher-v2/TodayView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.today', title: '今日工作台' } },
+      { path: 'prep', name: 'tv2-prep', component: () => import('@/pages/teacher-v2/PrepView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.prep', title: '备课中心' } },
+      { path: 'slides', name: 'tv2-slides', component: () => import('@/pages/teacher-v2/SlidesView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.slides', title: '课件工坊' } },
+      { path: 'quiz', name: 'tv2-quiz', component: () => import('@/pages/teacher-v2/QuizView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.quiz', title: '组卷中心' } },
+      { path: 'assign', name: 'tv2-assign', component: () => import('@/pages/teacher-v2/AssignView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.assign', title: '作业与批改' } },
+      { path: 'classroom', name: 'tv2-classroom', component: () => import('@/pages/teacher-v2/ClassroomView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.classroom', title: '课堂互动' } },
+      { path: 'insights', name: 'tv2-insights', component: () => import('@/pages/teacher-v2/InsightsView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.insights', title: '学情洞察' } },
+      { path: 'resources', name: 'tv2-resources', component: () => import('@/pages/teacher-v2/ResourcesView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.resources', title: '资源中心' } },
+    ],
+  },
+
+  /* ===== 教师工作台 V3（V2.1 SPEC 落地：数学编辑内核 + 五区编辑器 + 拍照链路 + 批改三视图） ===== */
+  {
+    path: '/teacher-v3',
+    component: () => import('@/layouts/TeacherV3Layout.vue'),
+    children: [
+      { path: 'today', name: 'tv3-today', component: () => import('@/pages/teacher-v3/TodayView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.today', title: '今日工作台' } },
+      { path: 'prep', name: 'tv3-prep', component: () => import('@/pages/teacher-v3/PrepView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.prep', title: '备课中心' } },
+      { path: 'slides', name: 'tv3-slides', component: () => import('@/pages/teacher-v3/SlidesView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.slides', title: '课件工坊' } },
+      { path: 'bank', name: 'tv3-bank', component: () => import('@/pages/teacher-v3/BankView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.bank', title: '题库' } },
+      { path: 'quiz', name: 'tv3-quiz', component: () => import('@/pages/teacher-v3/QuizView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.quiz', title: '组卷中心' } },
+      { path: 'assign', name: 'tv3-assign', component: () => import('@/pages/teacher-v3/AssignView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.assign', title: '作业与批改' } },
+      { path: 'classroom', name: 'tv3-classroom', component: () => import('@/pages/teacher-v3/ClassroomView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.classroom', title: '课堂互动' } },
+      { path: 'insights', name: 'tv3-insights', component: () => import('@/pages/teacher-v3/InsightsView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.insights', title: '学情洞察' } },
+      { path: 'resources', name: 'tv3-resources', component: () => import('@/pages/teacher-v3/ResourcesView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.resources', title: '资源中心' } },
+    ],
+  },
 
   /* ===== 管理后台（唯一 admin 布局） ===== */
   { path: '/admin/overview', name: 'admin-overview', component: () => import('@/pages/admin/AdminOverviewView.vue'), meta: { admin: true, requiresRole: 'admin', title: '总览' } },

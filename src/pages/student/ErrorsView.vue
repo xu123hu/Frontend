@@ -137,9 +137,18 @@
             <button v-if="detail" class="secondary" style="margin-top:10px;display:block;" @click="genDynamicFigure" :disabled="figBusy">
               {{ figBusy ? '⏳ AI 生成动态图形中…' : (hasGgb ? '🔄 重新生成动态图形' : '🔍 生成动态图形（可拖动/旋转/缩放）') }}
             </button>
-            <h5>正解 <span v-if="!detailFull" class="text-muted text-xs" style="font-weight:400;">(AI 生成中…)</span></h5>
+            <h5>正解
+              <span v-if="detailFullLoading" class="text-muted text-xs" style="font-weight:400;">(正解加载中…)</span>
+              <span v-else-if="detailFull?.cached" class="text-muted text-xs" style="font-weight:400;">(已缓存，秒开)</span>
+            </h5>
+            <!-- 正解示意图（后端持久化；与原题图独立渲染、独立错误态） -->
+            <div v-if="solutionFigItems.length" style="margin:8px 0 4px;">
+              <div style="font-size:12px;font-weight:700;color:var(--ink2, #4b5563);margin-bottom:4px;">📈 正解示意图</div>
+              <DynamicFigureViewer :items="solutionFigItems" :label="'正解示意图'" :height="260" />
+            </div>
             <div class="options" :style="reviewing ? { filter: 'blur(6px)', userSelect: 'none' } : {}">
-              <div v-if="!detailFull" class="opt right" style="color:var(--ink3);">AI 正在分析题目与错因，生成详细正解…</div>
+              <div v-if="detailFullLoading" class="opt right" style="color:var(--ink3);">正解加载中…（首次打开由 AI 生成，之后直接读缓存）</div>
+              <div v-else-if="detailFullError" class="opt right" style="color:var(--ink3);">正解暂不可用（{{ detailFullError }}），稍后重新打开本题可重试。</div>
               <MarkdownView v-else class="opt right" :text="detailFull.generated_answer || '暂无正解文本'" style="display:block;" />
             </div>
             <div style="font-size:11.5px;color:var(--ink3);display:flex;gap:14px;padding-top:8px;border-top:1px dashed var(--line);">
@@ -364,7 +373,15 @@ const reviewSubmitting = ref(false)
 const diag = ref(null)
 const diagLoading = ref(false)
 // 迭代17：AI 详情（正解，取代"暂无正解文本"）+ AI 答疑苏格拉底 chat
+// om8：正解后端持久化缓存——loading/error 独立状态，缓存命中不再显示"生成中"
 const detailFull = ref(null)
+const detailFullLoading = ref(false)
+const detailFullError = ref('')
+// 正解示意图（后端 solution_figure，规范 image/ggb 契约；空数组不渲染区块）
+const solutionFigItems = computed(() => {
+  const arr = Array.isArray(detailFull.value?.solution_figure) ? detailFull.value.solution_figure : []
+  return arr.filter((e) => e && typeof e === 'object' && (e.type === 'image' || e.type === 'ggb'))
+})
 const tutorInput = ref('')
 const tutorHistory = ref([])
 const tutorSending = ref(false)
@@ -513,10 +530,12 @@ async function openDetail(recordId, seq = 1) {
     } catch { /* 图片暂不可用：不阻塞详情 */ }
   }
   // AI 错因诊断 + AI 详情（正解）best-effort，并发拉取
+  detailFullLoading.value = true
+  detailFullError.value = ''
   Promise.allSettled([
     butlerApi.errorDiagnosis(recordId).then((d) => { diag.value = d }).catch((e) => { diag.value = null; console.warn('[ErrorsView] error-diagnosis 失败：', e?.message || e) }),
-    butlerApi.errorDetail(recordId).then((d) => { detailFull.value = d }).catch((e) => { detailFull.value = null; console.warn('[ErrorsView] error-detail 失败：', e?.message || e) }),
-  ]).finally(() => { diagLoading.value = false })
+    butlerApi.errorDetail(recordId).then((d) => { detailFull.value = d }).catch((e) => { detailFull.value = null; detailFullError.value = e?.message || '请稍后重试'; console.warn('[ErrorsView] error-detail 失败：', e?.message || e) }),
+  ]).finally(() => { diagLoading.value = false; detailFullLoading.value = false })
 }
 
 async function sendTutorMsg() {

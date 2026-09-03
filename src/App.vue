@@ -5,6 +5,10 @@
   <!-- 公共页面（登录/认证流）直接渲染；student 走 V4Layout；teacher 走 TeacherLayout；admin 走 AdminLayout；research 走 ResearchLayout -->
   <!-- 沉浸式页面（双师课堂 /dual）脱离全局学生壳：自带顶栏/大纲/画布/助教抽屉，不显示今日任务等侧栏 -->
   <router-view v-else-if="route.meta.immersive" />
+  <!-- 教师工作台 V2：路由内部自带 TeacherV2Layout，不套旧版 TeacherLayout -->
+  <router-view v-else-if="route.meta.teacherV2" />
+  <!-- 教师工作台 V3：路由内部自带 TeacherV3Layout，不套旧版 TeacherLayout -->
+  <router-view v-else-if="route.meta.teacherV3" />
   <V4Layout v-else-if="!route.meta.public && !route.meta.teacher && !route.meta.admin && !route.meta.research && !route.meta.authFlow" />
   <TeacherLayout v-else-if="route.meta.teacher" />
   <AdminLayout v-else-if="route.meta.admin" />

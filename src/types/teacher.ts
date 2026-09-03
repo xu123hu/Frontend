@@ -130,6 +130,8 @@ export interface TeacherTodayData {
     missing_items?: string[]
     /** 上课时长（分钟），供倒计时与节奏提示 */
     duration_minutes?: number
+    /** 下节课标识（GP-2 洞察深链），mock 未提供时省略 */
+    lesson_id?: string
   } | null
   grading_queue: { count: number; action: string }
   deadlines: Deadline[]

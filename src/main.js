@@ -10,6 +10,8 @@ import './styles/tokens.css'
 import './styles/base.css'
 import './styles/v4.css'
 import './styles/teacher.css'
+import './styles/teacher-v2.css'
+import './styles/teacher-v3.css'
 import './styles/research.css'
 
 // 本地预览便捷引导：只有 VITE_USE_MOCK=1 才预置 mock 身份（默认真实 API 模式绝不预置）。

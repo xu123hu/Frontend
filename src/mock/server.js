@@ -15,6 +15,8 @@ import {
   classFeed, classHotErrors, resourceRecommend, assignmentsList,
 } from './data'
 import { handleTeacherApi } from './teacherServer'
+import { handleTeacherV2Api } from './teacherV2Server'
+import { handleTeacherV3Api } from './teacherV3Server'
 
 /* ================= 内存仓库 ================= */
 const conversations = seedConversations.map((c) => ({ ...c }))
@@ -31,11 +33,12 @@ function readBody(req) {
 }
 
 function ok(res, data) {
+  if (res.headersSent || res.writableEnded) return
   res.setHeader('Content-Type', 'application/json')
   res.end(JSON.stringify({ code: 0, message: 'ok', data }))
 }
-
 function fail(res, status, code, message) {
+  if (res.headersSent || res.writableEnded) return
   res.statusCode = status
   res.setHeader('Content-Type', 'application/json')
   res.end(JSON.stringify({ code, message, data: null }))
@@ -45,6 +48,7 @@ function fail(res, status, code, message) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 function sendSse(res, event, data) {
+  if (res.writableEnded || res.destroyed) return
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
 }
 
@@ -528,6 +532,16 @@ export function mockApi(req, res, next) {
 
   handleTeacherApi(req, res).then((handled) => {
     if (handled) return
-    route().catch((e) => fail(res, 500, 500, e?.message || 'mock 内部错误'))
+    return handleTeacherV2Api(req, res)
+  }).then((handled) => {
+    if (handled) return
+    return handleTeacherV3Api(req, res)
+  }).then((handled) => {
+    if (handled) return
+    return route()
+  }).catch((e) => {
+    console.error('[mock] unhandled route error:', req.method, req.url, e?.stack || e)
+    if (!res.headersSent) fail(res, 500, 500, e?.message || 'mock 内部错误')
+    else if (!res.writableEnded) { try { res.end() } catch { /* socket already gone */ } }
   })
 }

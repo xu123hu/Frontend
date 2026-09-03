@@ -20,6 +20,7 @@
             <div class="rn-title">复习时间到 · {{ reviewNudge.due_today }} 道错题到了复习期</div>
             <div class="rn-text">
               <IncrementalMarkdown :text="reviewNudgeText" :zoomable="false" />
+              <img v-if="reviewImgUrl && !reviewImgError" :src="reviewImgUrl" class="rn-img" alt="原题图片" @error="reviewImgError = true" />
             </div>
             <div class="rn-actions">
               <button class="btn btn-sm btn-primary" :disabled="reviewStarting" @click="startReview(reviewNudge.due_items[0])">
@@ -121,6 +122,7 @@ import SuggestionsGrid from '@/components/chat/SuggestionsGrid.vue'
 import UiIcon from '@/components/common/UiIcon.vue'
 import { useFileUpload } from '@/components/chat/useFileUpload'
 import { useChat } from '@/composables/useChat'
+import { filesApi } from '@/api'
 import { studentApi } from '@/api'
 import { useConfirm } from '@/composables/useConfirm'
 import { uuid } from '@/components/chat/messageModel'
@@ -426,6 +428,19 @@ const reviewNudgeText = computed(() => {
 })
 const reviewCtx = ref(null)
 const reviewStarting = ref(false)
+// om5：复习提醒卡带上原题缩略图（"如图"类错题，光看 OCR 文本容易丢图形信息）
+const reviewImgUrl = ref('')
+const reviewImgError = ref(false)
+watch(reviewNudge, async (n) => {
+  reviewImgUrl.value = ''
+  reviewImgError.value = false
+  const fid = n?.due_items?.[0]?.file_id
+  if (!fid) return
+  try {
+    const d = await filesApi.contentUrl(String(fid))
+    if (d?.url) reviewImgUrl.value = d.url
+  } catch { /* 拉不到原图不影响复习 */ }
+})
 
 function dismissReviewNudge() {
   reviewNudge.value = null
@@ -636,4 +651,5 @@ watch(
 .v4-thinking .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); animation: pulse 1.4s infinite; }
 .v4-thinking .dot:nth-child(2) { animation-delay: .2s; }
 .v4-thinking .dot:nth-child(3) { animation-delay: .4s; }
+.rn-img { max-width: 100%; max-height: 180px; margin-top: 8px; border-radius: 8px; display: block; }
 </style>

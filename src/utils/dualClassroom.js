@@ -53,12 +53,13 @@ function isLegacyWarning(block) {
 
 /** 把一页 slide 归类为课堂版式结构（每段均为数组，缺失时为空数组由模板兜底） */
 export function groupSlideSections(slide) {
+  /** @type {{ goals: any[], theorems: any[], lecture: any[], examples: any[], tables: any[], figures: any[], formulas: any[], summary: any[], textbook: any, practice: any[] }} */
   const empty = {
     goals: [], theorems: [], lecture: [], examples: [], tables: [],
-    figures: [], formulas: [], summary: [], textbook: null,
+    figures: [], formulas: [], summary: [], textbook: null, practice: [],
   }
   if (!slide || !Array.isArray(slide.blocks)) {
-    return { ...empty, practice: [] }
+    return { ...empty }
   }
   const sections = { ...empty }
   const examples = []
@@ -81,15 +82,48 @@ export function groupSlideSections(slide) {
   return sections
 }
 
-/** 例题解析 → 分步板书（按 ①②③/换行/分号切分，保留编号） */
+/** 例题解析 → 分步板书（按 ①②③/换行/分号切分，保留编号）。
+ *  切分必须数学感知：$...$ 内部的 ①/分号/换行不是步骤边界，否则会把
+ *  一个公式腰斩成两步，各步拿到半个公式渲染出"乱码"。 */
+function splitTopLayer(text, isSep) {
+  const parts = []
+  let buf = ''
+  let inMath = false
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (ch === '$' && text[i - 1] !== '\\') inMath = !inMath
+    if (!inMath && isSep(ch)) {
+      parts.push(buf)
+      buf = ''
+      continue
+    }
+    buf += ch
+  }
+  parts.push(buf)
+  return parts
+}
+
 export function splitSolutionSteps(analysis) {
   const text = String(analysis || '').trim()
   if (!text) return []
-  const byMark = text.split(/(?=[①②③④⑤⑥⑦⑧⑨⑩])/g).map((s) => s.trim()).filter(Boolean)
-  const parts = byMark.length >= 2
-    ? byMark
-    : text.split(/\n+|；|;/g).map((s) => s.trim()).filter(Boolean)
-  return parts.length ? parts : [text]
+  const isMarker = (ch) => /[①②③④⑤⑥⑦⑧⑨⑩]/.test(ch)
+  let inMath = false
+  const cutIdx = []
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (ch === '$' && text[i - 1] !== '\\') inMath = !inMath
+    if (!inMath && isMarker(ch)) cutIdx.push(i)
+  }
+  let parts
+  if (cutIdx.length >= 2) {
+    parts = cutIdx.map((idx, i) =>
+      text.slice(idx, i + 1 < cutIdx.length ? cutIdx[i + 1] : undefined),
+    )
+  } else {
+    parts = splitTopLayer(text, (ch) => ch === '\n' || ch === '；' || ch === ';')
+  }
+  const cleaned = parts.map((s) => s.trim()).filter(Boolean)
+  return cleaned.length ? cleaned : [text]
 }
 
 /** 分层练习正确率（跨档汇总）：返回 0-100 整数 */
@@ -104,6 +138,13 @@ export function practiceAccuracy(stats) {
   }
   if (!total) return 0
   return Math.round((correct / total) * 100)
+}
+
+/** 练习异步生成状态：只有明确 pending 才显示加载，旧数据不能无限转圈。 */
+export function practiceGenerationMeta(verification) {
+  const info = verification?.practice_generation || {}
+  const state = ['pending', 'ready', 'fallback', 'failed'].includes(info.status) ? info.status : 'unknown'
+  return { state, error: info.error || '' }
 }
 
 /** 页面结构序数（渲染六段标题用） */

@@ -37,7 +37,7 @@ async function send() {
     const data = await authApi.challengeSms(props.phone, props.purpose)
     demoCode.value = data.demo_code || ''
     countdown(data.retry_after || 60)
-    emit('challenge', data.challenge_id)
+    emit('challenge', data.challenge_id, data)
   } catch (error) {
     if (error?.retryAfter) countdown(error.retryAfter)
     emit('error', error)

@@ -62,3 +62,55 @@ export function streamChat(payload, { onEvent, signal, path = '/api/agent/chat' 
     }),
   }
 }
+
+/**
+ * 课堂生成进度事件流（GET /api/classroom/sessions/{id}/events）。
+ * 事件契约：status / title / outlines / slide / practice → done。
+ * 服务端先回放历史事件再直播增量，重连/刷新不丢进度；
+ * 断线不自动重连（调用方决定回退轮询）。
+ */
+export function streamClassroomEvents(sessionId, { onEvent, signal } = {}) {
+  const ctrl = new AbortController()
+  if (signal) {
+    if (signal.aborted) ctrl.abort()
+    else signal.addEventListener('abort', () => ctrl.abort(), { once: true })
+  }
+
+  const finished = fetchEventSource(
+    `/api/classroom/sessions/${encodeURIComponent(sessionId)}/events`,
+    {
+      method: 'GET',
+      headers: { ...authHeaders(), Accept: 'text/event-stream' },
+      signal: ctrl.signal,
+      openWhenHidden: true,
+      async onopen(res) {
+        const ct = res.headers.get('content-type') || ''
+        if (res.status === 401) {
+          redirectLogin()
+          throw new SseHttpError(401, '登录已过期')
+        }
+        if (!res.ok || !ct.includes('text/event-stream')) {
+          let detail = `HTTP ${res.status}`
+          try { const j = await res.json(); detail = j.message || detail } catch { /* ignore */ }
+          throw new SseHttpError(res.status, detail)
+        }
+      },
+      onmessage(ev) {
+        if (!ev.event) return // 心跳/注释行
+        let data
+        try { data = JSON.parse(ev.data) } catch { data = { raw: ev.data } }
+        onEvent?.(ev.event, data)
+      },
+      onclose() { /* 服务端发完 done 正常关闭 */ },
+      onerror(err) { throw err }, // 抛出以禁止自动重连
+    },
+  )
+
+  return {
+    abort: () => ctrl.abort(),
+    finished: finished.catch((err) => {
+      if (ctrl.signal.aborted) return { aborted: true }
+      throw err
+    }),
+  }
+}

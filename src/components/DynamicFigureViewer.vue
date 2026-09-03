@@ -20,13 +20,15 @@
     </div>
 
     <!-- 静态图兜底（离线 / 无 ggb 构造 / 图片加载失败） -->
-    <div v-if="staticImages.length" class="dfv__static" :class="{ 'dfv__static--grid': staticImages.length > 1 }">
+    <div v-if="shownImages.length" class="dfv__static" :class="{ 'dfv__static--grid': shownImages.length > 1 }">
       <img
-        v-for="(src, i) in staticImages" :key="'s' + i"
-        :src="src" :alt="label" class="dfv__img"
-        @click="lightbox(src)"
+        v-for="(im, i) in shownImages" :key="'s' + i"
+        :src="im.src" :alt="im.alt" class="dfv__img"
+        @error="onImgError(im.src)"
+        @click="lightbox(im.src)"
       />
     </div>
+    <div v-if="allImagesFailed" class="dfv__state">配图暂不可用</div>
 
     <div v-if="loading" class="dfv__state">⏳ 正在加载交互图形引擎…</div>
     <div v-else-if="engineError" class="dfv__state">{{ engineError }}</div>
@@ -41,10 +43,12 @@ import { openLightbox } from '@/utils/lightbox'
 /**
  * 动态数学图形查看器（GeoGebra 内核，MathMover 同款交互）
  *
- * items 每项可为：
- * - string：静态图（data URI / URL）→ <img> 兜底
+ * items 每项可为（后端 normalize_error_assets 规范契约，仅两类）：
+ * - { type:'image', src, alt }：静态图（data URI / URL）→ <img> 兜底
  * - { type:'ggb', view:'2d'|'3d', commands:[...], caption? } → GeoGebra 交互画布
  *   （拖拽平移、滚轮缩放、3D 按住旋转、滑块动点、工具栏缩放/全屏）
+ * 兼容历史字符串形态（直接当 src）。图片加载失败（如本地原图 .bin 丢失 → raw 404）
+ * 时移除该图并显示"配图暂不可用"空态，不留破损图标。
  *
  * 引擎来源：www.geogebra.org/apps/deployggb.js（CDN）。
  * 引擎加载失败 → 自动降级为静态 <img>，绝不阻塞页面。
@@ -69,9 +73,23 @@ const applets = computed(() =>
     .filter((it) => it && typeof it === 'object' && it.type === 'ggb' && Array.isArray(it.commands) && it.commands.length)
     .map((it) => ({ view: it.view === '3d' ? '3d' : '2d', commands: it.commands, caption: it.caption || '' }))
 )
+/* 静态图：规范 {type:'image'} 对象优先，历史字符串兼容 */
 const staticImages = computed(() =>
-  (props.items || []).filter((it) => typeof it === 'string' && it)
+  (props.items || [])
+    .map((it) => {
+      if (typeof it === 'string' && it) return { src: it, alt: props.label }
+      if (it && typeof it === 'object' && it.type === 'image' && it.src) return { src: it.src, alt: it.alt || props.label }
+      return null
+    })
+    .filter(Boolean)
 )
+/* 加载失败的 src（onerror 记入；items 变化时重置重试） */
+const failedSrcs = ref(new Set())
+const shownImages = computed(() => staticImages.value.filter((im) => !failedSrcs.value.has(im.src)))
+const allImagesFailed = computed(() =>
+  staticImages.value.length > 0 && shownImages.value.length === 0 && !applets.value.length
+)
+function onImgError(src) { failedSrcs.value.add(src) }
 
 function containerId(ai) { return `dfv-ggb-${uid}-${ai}` }
 const uid = Math.random().toString(36).slice(2, 8)
@@ -228,7 +246,8 @@ function lightbox(src) { openLightbox(src) }
 watch(
   () => props.items,
   () => {
-    // items 变化（如错题本生成动态图后）→ 重新挂载
+    // items 变化（如错题本生成动态图后）→ 重新挂载；失败记录重置（新图重试）
+    failedSrcs.value = new Set()
     applets.value.forEach((_, ai) => {
       const id = containerId(ai)
       const el = document.getElementById(id)

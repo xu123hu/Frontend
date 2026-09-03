@@ -12,7 +12,7 @@ function readBody(req: any) {
     req.on('end', () => { try { resolve(buf ? JSON.parse(buf) : {}) } catch { resolve({}) } })
   })
 }
-function send(res: any, status: number, obj: any) { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(obj)) }
+function send(res: any, status: number, obj: any) { if (res.headersSent || res.writableEnded) return; res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(obj)) }
 function ok(res: any, data: any, status = 200) { send(res, status, { code: 0, message: 'ok', data }) }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function fail(res: any, status: number, code: number, message: string, data: unknown = null) { send(res, status, { code, message, data }) }

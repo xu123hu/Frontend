@@ -118,7 +118,7 @@ async function request(method, path, options) {
 async function downloadRaw(path, { signal } = {}, retried = false) {
   let res
   try {
-    res = await fetch(BASE + path, { headers: { ...authHeaders() }, signal, credentials: 'include' })
+    res = await fetch(BASE + path, { headers: { ...authHeaders() }, signal, credentials: 'include', cache: 'no-store' })
   } catch (e) {
     if (e?.name === 'AbortError') throw new ApiError(-2, '请求已取消')
     throw new ApiError(-1, '网络连接失败，请确认后端已启动')

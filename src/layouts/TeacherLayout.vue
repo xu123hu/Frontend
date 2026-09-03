@@ -40,6 +40,15 @@
             </template>
           </div>
         </div>
+        <button
+          class="t-v2-entry"
+          type="button"
+          title="进入 V2 高保真原型：备课中心 / 课件工坊 / 组卷中心 / 学情洞察全新工作台"
+          @click="router.push('/teacher-v2/today')"
+        >
+          <span aria-hidden="true">✧</span>
+          新版工作台
+        </button>
         <button class="t-butler-top" type="button" @click="butlerOpen = true">
           <span aria-hidden="true">✦</span>
           教学助手
@@ -65,6 +74,9 @@
     <!-- AI 管家浮动面板 -->
     <ButlerPanel :open="butlerOpen" @close="butlerOpen = false" />
 
+    <!-- AI 管家悬浮球（教师态）：点击复用 ButlerPanel 展开逻辑；⌘K 行为保持不变 -->
+    <FloatingButler v-if="auth.isLoggedIn" delegate-open @ball-click="butlerOpen = true" />
+
     <!-- Toast 容器 -->
     <div ref="toastEl" class="t-toast" role="status" aria-live="polite"></div>
   </div>
@@ -78,6 +90,7 @@ import { useTeacherContextStore } from '@/stores/teacher/context'
 import { useTeacherTodayStore } from '@/stores/teacher/today'
 import TeacherNav from '@/components/teacher/TeacherNav.vue'
 import ButlerPanel from '@/components/teacher/ButlerPanel.vue'
+import FloatingButler from '@/components/butler/FloatingButler.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -165,4 +178,8 @@ onUnmounted(() => {
 .t-notif-item { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: 9px; background: transparent; color: #24344d; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
 .t-notif-item:hover { background: #f4f8fc; }
 .t-notif-count { flex: none; min-width: 22px; padding: 1px 8px; border-radius: 999px; background: #fdeed6; color: #a16207; font-size: 12px; font-weight: 700; text-align: center; }
+
+/* V2 原型入口：学术蓝，与琥珀色「教学助手」区分 */
+.t-v2-entry { height: 40px; border: 1px solid #bfd9f5; border-radius: 12px; background: #edf5ff; color: #1d5fa8; padding: 0 14px; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(29, 95, 168, .12); transition: .15s; cursor: pointer; }
+.t-v2-entry:hover { background: #dfeeff; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(29, 95, 168, .2); }
 </style>
