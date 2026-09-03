@@ -34,31 +34,6 @@ const routes = [
   { path: '/research', component: () => import('@/pages/research/ResearchWorkspace.vue'), meta: { authFlow: true, research: true, requiresRole: 'researcher' } },
   { path: '/', component: { template: '<div />' } },
   ...studentRoutes,
-  { path: '/teacher/today', name: 'teacher-today', component: () => import('@/pages/teacher/TeacherTodayView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.today', title: '今天' } },
-  { path: '/teacher/prep', name: 'teacher-prep', component: () => import('@/pages/teacher/TeacherPrepView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.prep', title: '备课' } },
-  { path: '/teacher/assign', name: 'teacher-assign', component: () => import('@/pages/teacher/TeacherAssignView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.assessment', title: '布置作业' } },
-  { path: '/teacher/grading', name: 'teacher-grading', component: () => import('@/pages/teacher-v2/TeacherGradingV2View.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.grading', title: '批改' } },
-  { path: '/teacher/classroom', name: 'teacher-classroom', component: () => import('@/pages/teacher/TeacherClassroomView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.classroom', title: '课堂' } },
-  { path: '/teacher/classes', name: 'teacher-classes', component: () => import('@/pages/teacher/TeacherClassesView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.class.insights', title: '班级' } },
-  { path: '/teacher/resources', name: 'teacher-resources', component: () => import('@/pages/teacher/TeacherResourcesView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.resources', title: '资源' } },
-  { path: '/teacher/profile', name: 'teacher-profile', component: () => import('@/pages/teacher/TeacherProfileView.vue'), meta: { teacher: true, requiresRole: 'teacher', scene: 'teacher.profile', title: '个人中心' } },
-
-  /* ===== 教师工作台 V2（独立布局 TeacherV2Layout，教师端专属设计系统） ===== */
-  {
-    path: '/teacher-v2',
-    component: () => import('@/layouts/TeacherV2Layout.vue'),
-    children: [
-      { path: 'today', name: 'tv2-today', component: () => import('@/pages/teacher-v2/TodayView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.today', title: '今日工作台' } },
-      { path: 'prep', name: 'tv2-prep', component: () => import('@/pages/teacher-v2/PrepView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.prep', title: '备课中心' } },
-      { path: 'slides', name: 'tv2-slides', component: () => import('@/pages/teacher-v2/SlidesView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.slides', title: '课件工坊' } },
-      { path: 'quiz', name: 'tv2-quiz', component: () => import('@/pages/teacher-v2/QuizView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.quiz', title: '组卷中心' } },
-      { path: 'assign', name: 'tv2-assign', component: () => import('@/pages/teacher-v2/AssignView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.assign', title: '作业与批改' } },
-      { path: 'classroom', name: 'tv2-classroom', component: () => import('@/pages/teacher-v2/ClassroomView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.classroom', title: '课堂互动' } },
-      { path: 'insights', name: 'tv2-insights', component: () => import('@/pages/teacher-v2/InsightsView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.insights', title: '学情洞察' } },
-      { path: 'resources', name: 'tv2-resources', component: () => import('@/pages/teacher-v2/ResourcesView.vue'), meta: { teacher: true, teacherV2: true, requiresRole: 'teacher', scene: 'teacher.v2.resources', title: '资源中心' } },
-    ],
-  },
-
   /* ===== 教师工作台 V3（V2.1 SPEC 落地：数学编辑内核 + 五区编辑器 + 拍照链路 + 批改三视图） ===== */
   {
     path: '/teacher-v3',
@@ -117,7 +92,7 @@ const routes = [
 ]
 
 export function roleHome(role) {
-  return role === 'teacher' ? '/teacher/today' : role === 'researcher' ? '/research' : role === 'admin' ? '/admin/identity/applications' : '/overview'
+  return role === 'teacher' ? '/teacher-v3/today' : role === 'researcher' ? '/research' : role === 'admin' ? '/admin/identity/applications' : '/overview'
 }
 
 export function resolveAuthNavigation(to, auth) {

@@ -219,7 +219,7 @@ const skillStore = useSkillStore()
 async function switchToTeacher() {
   try {
     await auth.switchRole('teacher')
-    router.push('/teacher/today')
+    router.push('/teacher-v3/today')
   } catch { /* 未绑定教师角色时静默 */ }
 }
 

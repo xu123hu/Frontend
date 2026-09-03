@@ -19,11 +19,7 @@
         <n-icon :size="17"><component :is="m.icon" /></n-icon>{{ m.label }}
       </router-link>
 
-      <div class="tv3-nav__footer">
-        <router-link to="/teacher-v2/today" class="tv3-nav__item">
-          <n-icon :size="16"><ArrowBackOutline /></n-icon>返回 V2 工作台
-        </router-link>
-      </div>
+      <div class="tv3-nav__footer"></div>
     </aside>
 
     <div class="tv3-main">
@@ -72,7 +68,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import {
-  AnalyticsOutline, ArrowBackOutline, BookOutline, ClipboardOutline, DocumentTextOutline, EaselOutline,
+  AnalyticsOutline, BookOutline, ClipboardOutline, DocumentTextOutline, EaselOutline,
   FolderOpenOutline, LibraryOutline, NotificationsOutline, SchoolOutline, TodayOutline,
 } from '@vicons/ionicons5'
 import { v3Api } from '@/api/teacherV3'

@@ -14,8 +14,6 @@ import {
   today3, scoreTrend, featureEntries,
   classFeed, classHotErrors, resourceRecommend, assignmentsList,
 } from './data'
-import { handleTeacherApi } from './teacherServer'
-import { handleTeacherV2Api } from './teacherV2Server'
 import { handleTeacherV3Api } from './teacherV3Server'
 
 /* ================= 内存仓库 ================= */
@@ -530,13 +528,7 @@ export function mockApi(req, res, next) {
     return fail(res, 404, 404, `mock 未实现：${method} ${url}`)
   }
 
-  handleTeacherApi(req, res).then((handled) => {
-    if (handled) return
-    return handleTeacherV2Api(req, res)
-  }).then((handled) => {
-    if (handled) return
-    return handleTeacherV3Api(req, res)
-  }).then((handled) => {
+  handleTeacherV3Api(req, res).then((handled) => {
     if (handled) return
     return route()
   }).catch((e) => {

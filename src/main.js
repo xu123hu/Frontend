@@ -9,8 +9,6 @@ import 'highlight.js/styles/github-dark.css'
 import './styles/tokens.css'
 import './styles/base.css'
 import './styles/v4.css'
-import './styles/teacher.css'
-import './styles/teacher-v2.css'
 import './styles/teacher-v3.css'
 import './styles/research.css'
 
