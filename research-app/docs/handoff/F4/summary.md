@@ -38,5 +38,5 @@
 
 ## 5. 提交
 
-- 分支：`refactor/agent-01-frontend`（worktree agent-01-frontend）
-- 提交信息：`feat(f4): math review dual-view, Lean three-states, AI steward research cycle (golden paths 5-6)`
+- 分支：`research/agent-01-frontend`（worktree agent-01-frontend）
+- 提交：`75f4ea1`（research(f4): 黄金链路五/六——数学评审 Lean 三状态与 AI 管家科研循环，92 files / +5253）
