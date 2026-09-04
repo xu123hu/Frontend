@@ -1,49 +1,20 @@
-﻿/**
+/**
  * MSW 请求处理器：按契约草案（CR-F1-01..04）与 M4 v2.0（/projects、/runs）实现。
  * 响应一律使用 M4 SuccessEnvelope / ErrorEnvelope；错误码与重试语义与 client.ts 对齐。
+ * F2：文献域 handlers（CR-F2-01..08 + M0 冻结 runs/SSE）拆分在 literature-handlers.ts。
  */
 import { http, HttpResponse, delay } from 'msw';
 import {
   DEMO_OTP,
   db,
   findTenantByPhone,
-  findTenantBySession,
   seedDb,
   uuidv7Mock,
 } from './db';
-import type { TenantRecord } from './db';
 import type { ProjectCreate } from '@entities/project/types';
 import { persistSessions } from './session-persistence';
-
-const SESSION_COOKIE = 'rsid';
-
-function envelope<T>(data: T, requestId: string) {
-  return { success: true as const, data, meta: { request_id: requestId } };
-}
-
-function errorEnvelope(code: string, message: string, retryable: boolean, requestId: string, status: number) {
-  return HttpResponse.json(
-    { success: false as const, error: { code, message, retryable }, meta: { request_id: requestId } },
-    { status },
-  );
-}
-
-function requestId(): string {
-  return `req-${crypto.randomUUID().slice(0, 12)}`;
-}
-
-function readCookieHeader(request: Request): string {
-  // 浏览器端：MSW handlers 在页面上下文执行，SW 转发的请求会丢失 Cookie 头
-  // （实测 MSW 2.15），而 Set-Cookie 已真实写入 document.cookie —— 直接读同源
-  // Cookie jar，语义等价于服务端读取会话 Cookie。node 契约测试读请求头。
-  if (typeof document !== 'undefined') return document.cookie;
-  return request.headers.get('cookie') ?? '';
-}
-
-function readSession(request: Request): { tenant: TenantRecord; userId: string } | null {
-  const match = readCookieHeader(request).match(new RegExp(`${SESSION_COOKIE}=([^;]+)`));
-  return match ? findTenantBySession(decodeURIComponent(match[1])) : null;
-}
+import { envelope, errorEnvelope, readCookieHeader, requestId, readSession, SESSION_COOKIE } from './http-helpers';
+import { literatureHandlers } from './literature-handlers';
 
 function sessionCookie(sessionId: string): string {
   return `${SESSION_COOKIE}=${sessionId}; Path=/; SameSite=Lax`;
@@ -53,7 +24,7 @@ function clearSessionCookie(): string {
   return `${SESSION_COOKIE}=; Path=/; Max-Age=0`;
 }
 
-export const handlers = [
+const coreHandlers = [
   // ---------- 认证（CR-F1-01..03 契约草案） ----------
   http.post('*/auth/session/otp', async ({ request }) => {
     const body = (await request.json()) as { phone?: string };
@@ -221,5 +192,7 @@ export const handlers = [
   http.get('*/health/live', () => HttpResponse.json({ status: 'ok' })),
   http.get('*/health/ready', () => HttpResponse.json({ status: 'ready', checks: { db: 'ok' } })),
 ];
+
+export const handlers = [...coreHandlers, ...literatureHandlers];
 
 export { seedDb };

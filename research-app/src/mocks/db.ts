@@ -11,6 +11,7 @@
 import type { Account, UserPreferences } from '@entities/session/types';
 import type { Project } from '@entities/project/types';
 import type { Run } from '@entities/run/types';
+import type { LiteratureStore } from './literature-db';
 
 /** 伪 UUIDv7（48bit 毫秒时间戳 + 随机段），仅 mock 使用。 */
 export function uuidv7Mock(): string {
@@ -30,6 +31,8 @@ export interface TenantRecord {
   runs: Run[];
   projectCreatedKeys: Map<string, Project>; // idempotency key -> project
   otpRequestCount: number;
+  /** 文献域（CR-F2-01..08 草案）：懒初始化（首次命中文献端点时播种）。 */
+  literature?: LiteratureStore;
 }
 
 const now = Date.now();

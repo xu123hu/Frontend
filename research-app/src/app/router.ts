@@ -54,7 +54,7 @@ const routes: readonly RouteRecordRaw[] = [
       {
         path: 'literature/:id/reading',
         name: 'reading',
-        component: () => import('@pages/research/Literature.vue'),
+        component: () => import('@pages/research/Reading.vue'),
         props: true,
       },
       {

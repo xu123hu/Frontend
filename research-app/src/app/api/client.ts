@@ -167,7 +167,7 @@ async function parseErrorPayload(response: Response): Promise<{ message: string;
 }
 
 export interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
   /** 幂等键（M4 v2.0 /projects POST 的 IdempotencyKey 参数）。 */
   idempotencyKey?: string;
@@ -258,3 +258,85 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 }
 
 export { buildUrl };
+
+/**
+ * 文件上传（XHR：fetch 无法观测上传字节进度）。
+ * 进度只来自真实字节流（0-100），禁止静态假进度（06 §4）。
+ * 错误映射与 apiRequest 保持同一套 ApiError 分类。
+ */
+export function apiUpload<T>(
+  path: string,
+  options: { file: File; field?: string; onProgress?: (percent: number) => void; signal?: AbortSignal },
+): Promise<ApiSuccess<T>> {
+  const { file, field = 'file', onProgress, signal } = options;
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', buildUrl(path));
+    xhr.responseType = 'text';
+    xhr.withCredentials = true;
+    if (signal) {
+      const abort = (): void => xhr.abort();
+      signal.addEventListener('abort', abort, { once: true });
+    }
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onerror = () =>
+      reject(new ApiError({ kind: 'network', status: null, retryable: true, message: fallbackMessage('network') }));
+    xhr.onabort = () =>
+      reject(new ApiError({ kind: 'aborted', status: null, retryable: false, message: fallbackMessage('aborted') }));
+    xhr.onload = async () => {
+      const status = xhr.status;
+      if (status === 0) return; // 已由 onerror/onabort 处理
+      if (status >= 200 && status < 300) {
+        try {
+          const payload = JSON.parse(xhr.responseText) as { success?: boolean; data?: T; meta?: ApiMeta };
+          if (payload && typeof payload === 'object' && 'success' in payload) {
+            if (payload.success !== true || !('data' in payload)) {
+              reject(
+                new ApiError({
+                  kind: 'server',
+                  status,
+                  retryable: false,
+                  message: '成功状态码携带非成功信封，契约不匹配。',
+                  code: 'contract_violation',
+                }),
+              );
+              return;
+            }
+            resolve({ success: true, data: payload.data as T, meta: payload.meta ?? {} });
+            return;
+          }
+          resolve({ success: true, data: payload as T, meta: {} });
+        } catch {
+          reject(
+            new ApiError({
+              kind: 'server',
+              status,
+              retryable: false,
+              message: '响应不是合法 JSON，契约不匹配。',
+              code: 'contract_violation',
+            }),
+          );
+        }
+        return;
+      }
+      // 错误响应：复用 fetch 路径的解析逻辑
+      const response = new Response(xhr.responseText, { status });
+      const parsed = await parseErrorPayload(response);
+      reject(
+        new ApiError({
+          kind: kindFromStatus(status),
+          status,
+          retryable: parsed.retryable,
+          message: parsed.message,
+          code: parsed.code,
+          fieldErrors: parsed.fieldErrors,
+        }),
+      );
+    };
+    const form = new FormData();
+    form.append(field, file);
+    xhr.send(form);
+  });
+}

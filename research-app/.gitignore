@@ -9,3 +9,4 @@ coverage
 artifacts/acceptance/baseline
 test-results
 playwright-report
+tsconfig.tsbuildinfo
