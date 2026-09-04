@@ -5,6 +5,7 @@
  * - 403：跨租户越权 → 通用文案 + Problem Details 语义，不泄露项目存在性（06 §3 步骤 6）
  * - 404：项目不存在
  * - 一期用列表 + 状态时间线呈现研究问题/阶段，不做巨型图可视化（提示词 §项目工作区）
+ * - F4：研究问题—假设—证据—验证面板（假设来自研究循环计划；证据支持度来自评审批次主张）
  */
 import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -13,6 +14,9 @@ import Skeleton from '@shared/ui/Skeleton.vue';
 import { useProject } from '@features/projects/use-projects';
 import { useUiStore } from '@app/stores/ui';
 import { ApiError } from '@app/api/client';
+import { useClaims, useReviewPapers } from '@features/review/queries';
+import { useStewardPlans } from '@features/steward/queries';
+import EvidenceSupportList from '@widgets/EvidenceSupportList/EvidenceSupportList.vue';
 
 const route = useRoute();
 const ui = useUiStore();
@@ -52,6 +56,18 @@ function formatDate(iso: string): string {
     return iso;
   }
 }
+
+// ---------- F4：研究问题—假设—证据—验证面板（一期用列表，不做巨型图） ----------
+const plansQuery = useStewardPlans();
+const latestPlan = computed(() => plansQuery.data.value?.[0] ?? null);
+
+const papersQuery = useReviewPapers();
+/** 本项目的评审批次（mock 单项目；多批次取最新）。 */
+const projectPaper = computed(() =>
+  papersQuery.data.value?.find((p) => p.project_id === projectId.value) ?? papersQuery.data.value?.[0] ?? null,
+);
+const paperId = computed(() => projectPaper.value?.id ?? '');
+const claimsQuery = useClaims(paperId);
 </script>
 
 <template>
@@ -132,6 +148,64 @@ function formatDate(iso: string): string {
 
       <section
         class="panel"
+        aria-label="研究问题—假设—证据—验证"
+      >
+        <h2>研究问题—假设—证据—验证</h2>
+        <p class="panel-desc">
+          假设来自 AI 管家研究循环（一律标记 hypothesis）；主张证据支持度来自评审批次；
+          分层验证（L0-L4）与 Lean 三状态在评审工作区内查看。
+        </p>
+
+        <!-- 假设（研究循环产出，标记 hypothesis 非结论） -->
+        <div class="sub-block">
+          <h3>候选假设（AI 管家 · hypothesis）</h3>
+          <ul
+            v-if="latestPlan && latestPlan.hypotheses.length > 0"
+            class="hyp-list"
+          >
+            <li
+              v-for="h in latestPlan.hypotheses"
+              :key="h.id"
+            >
+              <span
+                class="hyp-tag"
+                aria-label="假设标记"
+              >假设</span>
+              {{ h.text }}
+            </li>
+          </ul>
+          <p
+            v-else
+            class="muted small"
+          >
+            暂无研究循环假设（可在 AI 管家抽屉中发起研究循环）。
+          </p>
+        </div>
+
+        <!-- 主张证据支持度 -->
+        <div class="sub-block">
+          <h3>主张证据支持度</h3>
+          <template v-if="claimsQuery.data.value && claimsQuery.data.value.length > 0">
+            <EvidenceSupportList :claims="claimsQuery.data.value" />
+            <RouterLink
+              v-if="projectPaper"
+              class="panel-link"
+              :to="{ name: 'review-paper', params: { paperId: projectPaper.id } }"
+            >
+              在评审工作区查看分层验证与 Lean 三状态 →
+            </RouterLink>
+          </template>
+          <p
+            v-else-if="!claimsQuery.isPending.value"
+            class="muted small"
+          >
+            本项目暂无评审批次主张。
+          </p>
+        </div>
+      </section>
+
+      <section
+        class="panel"
         aria-label="项目事实"
       >
         <h2>项目信息</h2>
@@ -150,13 +224,6 @@ function formatDate(iso: string): string {
           <div><dt>创建时间</dt><dd>{{ formatDate(project.created_at) }}</dd></div>
           <div><dt>更新时间</dt><dd>{{ formatDate(project.updated_at) }}</dd></div>
         </dl>
-        <Boundary
-          tone="info"
-          title="研究问题—假设—证据—验证视图将在 F4 接入"
-        >
-          主张、证据与验证记录的数据契约（ClaimRecord/EvidenceRecord/VerificationRecord）已在 M0 冻结，
-          场景接线与作者/评审者视图在 F4 里程碑交付。
-        </Boundary>
       </section>
     </template>
   </div>
@@ -284,6 +351,51 @@ function formatDate(iso: string): string {
 }
 .small {
   font-size: var(--font-size-xs);
+}
+.panel-desc {
+  margin: -6px 0 4px;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  max-width: 80ch;
+}
+.sub-block + .sub-block {
+  margin-top: 14px;
+}
+.sub-block h3 {
+  margin: 0 0 8px;
+  font-size: var(--font-size-sm);
+}
+.hyp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.hyp-list li {
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+.hyp-tag {
+  display: inline-flex;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px dashed var(--warning);
+  color: var(--warning);
+  font-weight: 800;
+  margin-right: 6px;
+  font-size: 11px;
+}
+.panel-link {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+}
+.panel-link:hover {
+  text-decoration: underline;
 }
 .mono {
   font-family: var(--mono);

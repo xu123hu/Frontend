@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * 教育研究（F4 降级为明确边界声明，design.md §5）：
+ * 隐私红线（不直连学生业务库、切片 k<20 一律拒绝）是后端数据侧职责，
+ * 前端在 mock 环境无法验证真实隐私规则——此处仅静态展示流程与边界；真实数据流由 Agent 2 端到端，F5 收口。
+ */
 import Boundary from '@shared/ui/Boundary.vue';
 </script>
 
@@ -9,28 +14,28 @@ import Boundary from '@shared/ui/Boundary.vue';
         <h1>教育研究</h1>
         <p>授权数据产品、隐私预检、k≥20 强制检查、统计分析与成果回流。</p>
       </div>
-      <div class="actions">
-        <button
-          class="btn"
-          type="button"
-        >
-          数据边界
-        </button>
-        <button
-          class="btn primary"
-          type="button"
-        >
-          使用授权数据
-        </button>
-      </div>
     </header>
 
-    <Boundary
-      tone="info"
-      title="F0 占位：教育研究"
+    <section
+      class="panel"
+      aria-label="教育研究流程（草案边界）"
     >
-      F4 阶段交付：5 步流程（接收课题 → 隐私预检 → 数据快照 → 统计与图表 → 成果审批）；
-      任何切片 k &lt; 20 一律拒绝；不直连学生业务库；图表与参数绑定快照哈希。
+      <h2>五步流程（草案）</h2>
+      <ol class="steps">
+        <li><b>接收课题</b> — 教师/研究者发起授权数据课题申请。</li>
+        <li><b>隐私预检</b> — 数据边界审查；不满足授权范围的请求直接拒绝。</li>
+        <li><b>数据快照</b> — 仅对授权快照做分析；图表与参数绑定快照哈希。</li>
+        <li><b>统计与图表</b> — 分层模型等统计分析产出。</li>
+        <li><b>成果审批</b> — 成果回流前需人工审批（HumanDecision 审计语义）。</li>
+      </ol>
+    </section>
+
+    <Boundary
+      tone="warning"
+      title="边界声明（诚实性）"
+    >
+      本页为草案边界展示，不含真实教育数据流：隐私预检与「任何切片 k &lt; 20 一律拒绝」规则由后端数据侧强制执行
+      （前端无法在 mock 环境验证真实隐私规则）；不直连学生业务库。真实教育数据端到端由 Agent 2 承担，F5 收口。
     </Boundary>
   </div>
 </template>
@@ -39,13 +44,8 @@ import Boundary from '@shared/ui/Boundary.vue';
 .page {
   max-width: 1460px;
   margin: 0 auto;
-}
-.page-head {
-  display: flex;
-  gap: 18px;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 18px;
+  display: grid;
+  gap: 16px;
 }
 .page-head h1 {
   font-size: var(--font-size-3xl);
@@ -56,23 +56,22 @@ import Boundary from '@shared/ui/Boundary.vue';
   color: var(--text-muted);
   max-width: 75ch;
 }
-.actions {
-  display: flex;
-  gap: 7px;
-}
-.btn {
-  min-height: 34px;
-  padding: 6px 11px;
+.panel {
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r);
   background: var(--surface);
-  font-weight: 650;
-  color: var(--text);
-  cursor: pointer;
+  padding: 16px;
 }
-.btn.primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+.panel h2 {
+  margin: 0 0 10px;
+  font-size: var(--font-size-lg);
+}
+.steps {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+  font-size: var(--font-size-sm);
 }
 </style>
+

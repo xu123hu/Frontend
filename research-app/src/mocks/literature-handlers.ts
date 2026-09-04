@@ -11,8 +11,9 @@ import { envelope, errorEnvelope, requestId, readSession } from './http-helpers'
 import { emptyCollection, generateStressItems, seedLiterature } from './literature-db';
 import type { LiteratureStore } from './literature-db';
 import { loadLitDelta, saveLitDelta } from './lit-persistence';
-import { buildDocumentParseEvents, buildCompileEvents, buildTranslationEvents } from './run-simulator';
+import { buildDocumentParseEvents, buildCompileEvents, buildTranslationEvents, buildMathVerificationEvents, buildLeanEvents, buildResearchCycleEvents } from './run-simulator';
 import { registerCompileRun, registerTranslationRun, writingOf } from './writing-db';
+import { seedLivePlan } from './steward-handlers';
 import type { LitAnnotation, LitChunk, LitCollection, LitItem, LitNote, SearchHit } from '@entities/literature/types';
 
 /** 租户文献库懒初始化（首次访问文献端点时播种；批注/笔记回放持久化增量）。 */
@@ -436,6 +437,9 @@ export const literatureHandlers = [
     if (body.run_type === 'writing' || body.run_type === 'translation') {
       return createWritingOrTranslationRun(session, body);
     }
+    if (body.run_type === 'math_verification' || body.run_type === 'research_cycle') {
+      return createF4Run(session, body);
+    }
     if (body.run_type !== 'document_parse') {
       return errorEnvelope('validation_failed', 'M0 冻结 run_type 枚举外的值被拒绝。', false, requestId(), 422);
     }
@@ -607,6 +611,55 @@ async function createWritingOrTranslationRun(
     const store = writingOf(session.tenant);
     registerCompileRun(store, runId, targetId, scenario);
     lit.runEventScripts.set(runId, buildCompileEvents(runId, { manuscriptId: targetId, scenario }));
+  }
+  await delay(120);
+  return HttpResponse.json(
+    envelope({ run_id: runId, events_url: `/api/research/v1/runs/${runId}/events`, status: 'queued' as const }, requestId()),
+    { status: 202 },
+  );
+}
+
+/**
+ * F4 run 创建（M0 冻结：POST /runs 202 + SSE；run_type=math_verification / research_cycle）。
+ * - math_verification：input_artifact_ids[0] = claimId；mock_method=lean 走 Lean 两段脚本（草案演练钩子）。
+ * - research_cycle：research_question（CR-F4-05 草案扩展字段）+ 播种实时计划（步骤 id 与脚本对齐）。
+ */
+async function createF4Run(
+  session: { tenant: TenantRecord; userId: string },
+  body: { run_type?: string; input_artifact_ids?: string[]; reasoning_policy_id?: string; research_question?: string; mock_method?: string },
+): Promise<Response> {
+  const runType = body.run_type === 'research_cycle' ? 'research_cycle' : 'math_verification';
+  const claimId = body.input_artifact_ids?.[0];
+  if (runType === 'math_verification' && !claimId) {
+    return errorEnvelope('validation_failed', '数学验证 run 需要 input_artifact_ids[0] = claimId。', false, requestId(), 422);
+  }
+  const runId = `run-${crypto.randomUUID().slice(0, 8)}`;
+  session.tenant.runs.unshift({
+    id: runId,
+    tenant_id: session.tenant.tenantId,
+    project_id: tenantFirstProject(session.tenant),
+    run_type: runType,
+    status: 'queued',
+    reasoning_policy_id: (body.reasoning_policy_id ?? 'standard') as 'quick' | 'standard' | 'rigorous',
+    budget: { max_cost_minor_units: 5000, currency: 'CNY', max_runtime_seconds: 1800, max_parallel_tasks: 4, max_sources: 20 },
+    spent: { cost_minor_units: 0, model_tokens: 0, runtime_seconds: 0, tool_calls: 0 },
+    created_by: session.userId,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    version: 0,
+  } satisfies import('@entities/run/types').Run);
+
+  const lit = literatureOf(session.tenant);
+  if (runType === 'math_verification') {
+    const script = body.mock_method === 'lean' ? buildLeanEvents(runId, { claimId: claimId! }) : buildMathVerificationEvents(runId, { claimId: claimId! });
+    lit.runEventScripts.set(runId, script);
+  } else {
+    const question = body.research_question?.trim() || '学校资源投入如何影响分层模型下的数学成绩差异？';
+    lit.runEventScripts.set(runId, buildResearchCycleEvents(runId, { question }));
+    seedLivePlan(session, runId, question, [
+      { id: 'h-1', text: '分层模型成绩差异受学校资源影响', marked: 'hypothesis' },
+      { id: 'h-2', text: '个体层面 SES 效应跨校稳定', marked: 'hypothesis' },
+    ]);
   }
   await delay(120);
   return HttpResponse.json(

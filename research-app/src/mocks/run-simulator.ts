@@ -148,3 +148,126 @@ export function buildCompileEvents(
   push({ event_id: eid(), event_type: 'run.failed', occurred_at: at(600), step_id: 'compile', error: fail, progress: null, artifact_ids: [], payload }, 100);
   return frames;
 }
+
+/** 数学验证 run 事件脚本（run_type=math_verification，M4 §8.3 五能力独立执行）。
+ * 逐层推进：L0 语法 → L1 定义域 → L2 符号 → L3 数值 → L4 反例；
+ * 事件 payload 携带逐层结果摘要与反例（L4 演示一个反例发现）。 */
+export function buildMathVerificationEvents(runId: string, input: { claimId: string }): { frame: RunEventView; delayMs: number }[] {
+  const seqBase = { run_id: runId, actor_id: 'svc-mathverify', actor_type: 'service' as const, trace_id: `trace-${runId.slice(0, 8)}` };
+  let seq = 1;
+  const now = Date.now();
+  const at = (offset: number) => new Date(now + offset).toISOString();
+  const frames: { frame: RunEventView; delayMs: number }[] = [];
+  const push = (frame: RunEventDraft, delayMs: number) => {
+    frames.push({ frame: { ...seqBase, ...frame, sequence: seq++ }, delayMs });
+  };
+  const eid = () => `evt-${crypto.randomUUID().slice(0, 12)}`;
+
+  push({ event_id: eid(), event_type: 'run.created', occurred_at: at(0), step_id: null, error: null, progress: null, artifact_ids: [] }, 80);
+  push({ event_id: eid(), event_type: 'run.started', occurred_at: at(100), step_id: 'verify', error: null, progress: null, artifact_ids: [] }, 120);
+  const layers = [
+    { label: 'L0 语法', result: 'passed' },
+    { label: 'L1 定义域', result: 'passed' },
+    { label: 'L2 符号', result: 'passed' },
+    { label: 'L3 数值', result: 'passed' },
+    { label: 'L4 反例', result: 'counterexample' },
+  ];
+  layers.forEach((l, i) => {
+    push(
+      {
+        event_id: eid(),
+        event_type: 'step.progress',
+        occurred_at: at(200 + i * 120),
+        step_id: 'verify',
+        error: null,
+        progress: { current: i + 1, total: layers.length, unit: '层', message: `${l.label} 检查完成：${l.result}` },
+        artifact_ids: [],
+        payload: { layer: `L${i}`, result: l.result, claim_id: input.claimId },
+      },
+      Math.max(90, 900 / layers.length),
+    );
+  });
+  push({ event_id: eid(), event_type: 'artifact.created', occurred_at: at(900), step_id: 'verify', error: null, progress: null, artifact_ids: [`art-verify-${runId.slice(0, 8)}`], payload: { artifact_type: 'verification' } }, 120);
+  push({ event_id: eid(), event_type: 'run.completed', occurred_at: at(1050), step_id: null, error: null, progress: null, artifact_ids: [`art-verify-${runId.slice(0, 8)}`], payload: { claim_id: input.claimId } }, 100);
+  return frames;
+}
+
+/** Lean 形式化 run 事件脚本（run_type=math_verification + mock_method=lean，CR-F4-03 草案钩子）。
+ * 两段独立：lean_translation（形式化翻译忠实度）→ lean_kernel（内核状态）；
+ * 演示样例与 review-db 种子对齐：翻译 partial + 内核 succeeded → 综合 partial_supported。 */
+export function buildLeanEvents(runId: string, input: { claimId: string }): { frame: RunEventView; delayMs: number }[] {
+  const seqBase = { run_id: runId, actor_id: 'svc-lean', actor_type: 'service' as const, trace_id: `trace-${runId.slice(0, 8)}` };
+  let seq = 1;
+  const now = Date.now();
+  const at = (offset: number) => new Date(now + offset).toISOString();
+  const frames: { frame: RunEventView; delayMs: number }[] = [];
+  const push = (frame: RunEventDraft, delayMs: number) => {
+    frames.push({ frame: { ...seqBase, ...frame, sequence: seq++ }, delayMs });
+  };
+  const eid = () => `evt-${crypto.randomUUID().slice(0, 12)}`;
+
+  push({ event_id: eid(), event_type: 'run.created', occurred_at: at(0), step_id: null, error: null, progress: null, artifact_ids: [] }, 80);
+  push({ event_id: eid(), event_type: 'run.started', occurred_at: at(100), step_id: 'lean', error: null, progress: null, artifact_ids: [] }, 120);
+  push(
+    {
+      event_id: eid(),
+      event_type: 'step.progress',
+      occurred_at: at(300),
+      step_id: 'lean',
+      error: null,
+      progress: { current: 1, total: 2, unit: '段', message: 'lean_translation 完成：形式化翻译降低断言强度（partial）' },
+      artifact_ids: [],
+      payload: { method: 'lean_translation', result: 'partial', claim_id: input.claimId },
+    },
+    300,
+  );
+  push(
+    {
+      event_id: eid(),
+      event_type: 'step.progress',
+      occurred_at: at(600),
+      step_id: 'lean',
+      error: null,
+      progress: { current: 2, total: 2, unit: '段', message: 'lean_kernel 完成：内核接受，无 sorry/admit' },
+      artifact_ids: [],
+      payload: { method: 'lean_kernel', result: 'succeeded', claim_id: input.claimId },
+    },
+    300,
+  );
+  push({ event_id: eid(), event_type: 'artifact.created', occurred_at: at(800), step_id: 'lean', error: null, progress: null, artifact_ids: [`art-lean-${runId.slice(0, 8)}`], payload: { artifact_type: 'lean_report' } }, 120);
+  push({ event_id: eid(), event_type: 'run.completed', occurred_at: at(950), step_id: null, error: null, progress: null, artifact_ids: [`art-lean-${runId.slice(0, 8)}`], payload: { claim_id: input.claimId } }, 100);
+  return frames;
+}
+
+/** 研究循环 run 事件脚本（run_type=research_cycle，06 §8）。
+ * 计划 → 假设生成 → 步骤执行 → 高风险审批 → 拒绝保留证据 → 完成。 */
+export function buildResearchCycleEvents(runId: string, input: { question: string }): { frame: RunEventView; delayMs: number }[] {
+  const seqBase = { run_id: runId, actor_id: 'svc-steward', actor_type: 'service' as const, trace_id: `trace-${runId.slice(0, 8)}` };
+  let seq = 1;
+  const now = Date.now();
+  const at = (offset: number) => new Date(now + offset).toISOString();
+  const frames: { frame: RunEventView; delayMs: number }[] = [];
+  const push = (frame: RunEventDraft, delayMs: number) => {
+    frames.push({ frame: { ...seqBase, ...frame, sequence: seq++ }, delayMs });
+  };
+  const eid = () => `evt-${crypto.randomUUID().slice(0, 12)}`;
+
+  push({ event_id: eid(), event_type: 'run.created', occurred_at: at(0), step_id: null, error: null, progress: null, artifact_ids: [] }, 80);
+  push({ event_id: eid(), event_type: 'run.started', occurred_at: at(100), step_id: 'plan', error: null, progress: null, artifact_ids: [], payload: { plan: { research_question: input.question, reasoning_policy: 'rigorous' } } }, 150);
+  // 步骤 1：文献检索（独立分片可并行）
+  push({ event_id: eid(), event_type: 'step.started', occurred_at: at(300), step_id: 'retrieve', error: null, progress: null, artifact_ids: [], payload: { step: 'retrieve', title: '文献检索与分片' } }, 120);
+  push({ event_id: eid(), event_type: 'step.progress', occurred_at: at(420), step_id: 'retrieve', error: null, progress: { current: 3, total: 3, unit: '片', message: '3 片文献分片完成' }, artifact_ids: [] }, 200);
+  push({ event_id: eid(), event_type: 'artifact.created', occurred_at: at(650), step_id: 'retrieve', error: null, progress: null, artifact_ids: [`art-src-${runId.slice(0, 8)}`], payload: { artifact_type: 'parsed_document' } }, 120);
+  // 步骤 2：候选假设生成（全部标记 hypothesis）
+  push({ event_id: eid(), event_type: 'step.started', occurred_at: at(800), step_id: 'hypothesis', error: null, progress: null, artifact_ids: [], payload: { step: 'hypothesis', title: '候选假设生成', hypotheses: ['假设 H1：分层模型成绩差异受学校资源影响', '假设 H2：个体层面 SES 效应跨校稳定'] } }, 200);
+  // 步骤 3：高风险工具触发审批（代码执行）
+  push({ event_id: eid(), event_type: 'step.started', occurred_at: at(1100), step_id: 'compute', error: null, progress: null, artifact_ids: [], payload: { step: 'compute', title: '数值复算（高风险工具）' } }, 120);
+  push({ event_id: eid(), event_type: 'approval.requested', occurred_at: at(1250), step_id: 'compute', error: null, progress: null, artifact_ids: [], payload: { approval: { id: `appr-${runId.slice(0, 6)}`, risk_tier: 'high', action: 'run_python_compute', arguments_redacted: { dataset: 'schools_2024.csv', model: 'hlm_2level' }, arguments_hash: 'sha256:abc123' } } }, 300);
+  // 步骤 4：用户拒绝该步（保留证据）
+  push({ event_id: eid(), event_type: 'step.failed', occurred_at: at(1800), step_id: 'compute', error: { code: 'step_rejected', message: '用户拒绝数值复算步骤。', retryable: false }, progress: null, artifact_ids: [], payload: { step: 'compute', alternative_paths: ['改用已核验文献中的数值结果', '仅保留符号验证'] } }, 200);
+  // 步骤 5：替代路径 → 完成
+  push({ event_id: eid(), event_type: 'step.started', occurred_at: at(2100), step_id: 'symbolic', error: null, progress: null, artifact_ids: [], payload: { step: 'symbolic', title: '符号验证（替代路径）' } }, 200);
+  push({ event_id: eid(), event_type: 'artifact.created', occurred_at: at(2400), step_id: 'symbolic', error: null, progress: null, artifact_ids: [`art-cycle-${runId.slice(0, 8)}`], payload: { artifact_type: 'research_report' } }, 120);
+  push({ event_id: eid(), event_type: 'run.completed', occurred_at: at(2600), step_id: null, error: null, progress: null, artifact_ids: [`art-cycle-${runId.slice(0, 8)}`], payload: { research_question: input.question } }, 100);
+  return frames;
+}
