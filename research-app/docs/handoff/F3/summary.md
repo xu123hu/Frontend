@@ -163,6 +163,6 @@ MSW browser bundle                不在产物中（__USE_MOCK__ 剔除）✅
 
 ## 9. 提交记录
 
-- **本阶段提交：`<commit-hash>`**（research(f3): 黄金链路三/四——公式保真翻译与 LaTeX 写作，2026-09-04）
+- **本阶段提交：`ebc7d30`**（research(f3): 黄金链路三/四——公式保真翻译与 LaTeX 写作，2026-09-04）
 - 前置：F2 `c427aa4`（含回填提交 `ea77ae5`）
 - 合并目标位置：`D:\frontend\research-app`（由集成负责人执行）
