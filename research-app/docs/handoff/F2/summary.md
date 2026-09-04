@@ -156,6 +156,6 @@ MSW browser bundle              不在产物中（__USE_MOCK__ 剔除）✅
 
 ## 9. 提交记录
 
-- **本阶段提交：`<commit-hash>`**（research(f2): 黄金链路二——文献库/批量导入/PDF 阅读，2026-09-04）
+- **本阶段提交：`c427aa4`**（research(f2): 黄金链路二——文献库/批量导入/PDF 阅读，2026-09-04）
 - 前置：F1 `f8cafce`（含回填提交 `84952cd`）
 - 合并目标位置：`D:\frontend\research-app`（由集成负责人执行）
