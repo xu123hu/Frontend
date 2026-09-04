@@ -11,11 +11,12 @@ import { envelope, errorEnvelope, requestId, readSession } from './http-helpers'
 import { emptyCollection, generateStressItems, seedLiterature } from './literature-db';
 import type { LiteratureStore } from './literature-db';
 import { loadLitDelta, saveLitDelta } from './lit-persistence';
-import { buildDocumentParseEvents } from './run-simulator';
+import { buildDocumentParseEvents, buildCompileEvents, buildTranslationEvents } from './run-simulator';
+import { registerCompileRun, registerTranslationRun, writingOf } from './writing-db';
 import type { LitAnnotation, LitChunk, LitCollection, LitItem, LitNote, SearchHit } from '@entities/literature/types';
 
 /** 租户文献库懒初始化（首次访问文献端点时播种；批注/笔记回放持久化增量）。 */
-function literatureOf(tenant: TenantRecord): LiteratureStore {
+export function literatureOf(tenant: TenantRecord): LiteratureStore {
   if (!tenant.literature) {
     const projectId = tenant.projects[0]?.id ?? 'proj-alpha-1';
     tenant.literature = seedLiterature(tenant.tenantId, projectId);
@@ -57,7 +58,7 @@ function problemDedupe(doi: string): string {
  * 故改用 pdf-lib（成熟库，仅 dev/test bundle）保证文本可提取、可划选。
  */
 let cachedPdf: Promise<Uint8Array> | null = null;
-function minimalPdf(): Promise<Uint8Array> {
+export function minimalPdf(): Promise<Uint8Array> {
   cachedPdf ??= (async () => {
     const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
     const doc = await PDFDocument.create();
@@ -432,6 +433,9 @@ export const literatureHandlers = [
     const session = readSession(request);
     if (!session) return errorEnvelope('unauthenticated', '未登录。', false, requestId(), 401);
     const body = (await request.json()) as { run_type?: string; input_artifact_ids?: string[]; reasoning_policy_id?: string };
+    if (body.run_type === 'writing' || body.run_type === 'translation') {
+      return createWritingOrTranslationRun(session, body);
+    }
     if (body.run_type !== 'document_parse') {
       return errorEnvelope('validation_failed', 'M0 冻结 run_type 枚举外的值被拒绝。', false, requestId(), 422);
     }
@@ -562,6 +566,53 @@ export const literatureHandlers = [
 
 function tenantFirstProject(tenant: TenantRecord): string {
   return tenant.projects[0]?.id ?? 'proj-alpha-1';
+}
+
+/**
+ * writing（编译）与 translation（翻译）run 创建（M0 冻结：POST /runs 202 + SSE）。
+ * - run_type=writing：compile run，事件脚本由 mock_scenario 控制（success/missing_resource/unsafe_command，
+ *   与 F2 的 simulate_unavailable 同性质：仅 dev/test 演练钩子）。
+ * - run_type=translation：翻译 run，事件脚本含逐段进度与预算。
+ */
+async function createWritingOrTranslationRun(
+  session: { tenant: TenantRecord; userId: string },
+  body: { run_type?: string; input_artifact_ids?: string[]; reasoning_policy_id?: string; mock_scenario?: string },
+): Promise<Response> {
+  const targetId = body.input_artifact_ids?.[0];
+  if (!targetId) return errorEnvelope('validation_failed', '缺少 input_artifact_ids。', false, requestId(), 422);
+  const runId = `run-${crypto.randomUUID().slice(0, 8)}`;
+  const run = {
+    id: runId,
+    tenant_id: session.tenant.tenantId,
+    project_id: tenantFirstProject(session.tenant),
+    run_type: body.run_type === 'translation' ? ('translation' as const) : ('writing' as const),
+    status: 'queued' as const,
+    reasoning_policy_id: (body.reasoning_policy_id ?? 'standard') as 'quick' | 'standard' | 'rigorous',
+    budget: { max_cost_minor_units: 5000, currency: 'CNY', max_runtime_seconds: 1800, max_parallel_tasks: 4, max_sources: 20 },
+    spent: { cost_minor_units: 0, model_tokens: 0, runtime_seconds: 0, tool_calls: 0 },
+    created_by: session.userId,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    version: 0,
+  } satisfies import('@entities/run/types').Run;
+  session.tenant.runs.unshift(run);
+
+  const lit = literatureOf(session.tenant);
+  if (body.run_type === 'translation') {
+    const store = writingOf(session.tenant);
+    registerTranslationRun(store, runId, targetId);
+    lit.runEventScripts.set(runId, buildTranslationEvents(runId, { itemId: targetId, unitCount: 4 }));
+  } else {
+    const scenario = body.mock_scenario === 'missing_resource' || body.mock_scenario === 'unsafe_command' ? body.mock_scenario : 'success';
+    const store = writingOf(session.tenant);
+    registerCompileRun(store, runId, targetId, scenario);
+    lit.runEventScripts.set(runId, buildCompileEvents(runId, { manuscriptId: targetId, scenario }));
+  }
+  await delay(120);
+  return HttpResponse.json(
+    envelope({ run_id: runId, events_url: `/api/research/v1/runs/${runId}/events`, status: 'queued' as const }, requestId()),
+    { status: 202 },
+  );
 }
 
 function syncCollectionCounts(lit: LiteratureStore): void {

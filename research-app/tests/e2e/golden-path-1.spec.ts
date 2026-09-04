@@ -25,10 +25,16 @@ async function login(page: Page, phone: string = DEMO_PHONE, otp: string = DEMO_
   await page.goto('/research/login');
   await page.getByLabel('手机号').fill(phone);
   await page.getByRole('button', { name: '获取验证码' }).click();
+  await waitOtpIssued(page);
   await page.getByLabel('验证码').fill(otp);
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page).toHaveURL(/\/research\/home/);
   await expect(page.getByRole('heading', { name: '科研首页' })).toBeVisible();
+}
+
+/** 等待 OTP 请求完成（handler 含 300ms 延迟），避免登录先于服务端 passwordless 落库。 */
+async function waitOtpIssued(page: Page): Promise<void> {
+  await page.waitForResponse((r) => r.url().includes('/auth/session/otp') && r.request().method() === 'POST');
 }
 
 test.describe('认证与回跳（TC-F01-01/02）', () => {

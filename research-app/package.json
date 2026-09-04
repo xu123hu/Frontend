@@ -16,8 +16,12 @@
     "bundle-report": "vite build --mode production && du -sh dist/assets/*.js | sort -k1 -h"
   },
   "dependencies": {
+    "@citation-js/core": "^0.8.2",
+    "@citation-js/plugin-bibtex": "^0.8.2",
     "@codemirror/commands": "^6.6.0",
     "@codemirror/language": "^6.10.2",
+    "@codemirror/language-data": "^6.5.2",
+    "@codemirror/legacy-modes": "^6.5.4",
     "@codemirror/state": "^6.4.1",
     "@codemirror/view": "^6.28.0",
     "@headlessui/vue": "^1.7.22",

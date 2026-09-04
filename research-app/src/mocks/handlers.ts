@@ -15,6 +15,7 @@ import type { ProjectCreate } from '@entities/project/types';
 import { persistSessions } from './session-persistence';
 import { envelope, errorEnvelope, readCookieHeader, requestId, readSession, SESSION_COOKIE } from './http-helpers';
 import { literatureHandlers } from './literature-handlers';
+import { writingHandlers } from './writing-handlers';
 
 function sessionCookie(sessionId: string): string {
   return `${SESSION_COOKIE}=${sessionId}; Path=/; SameSite=Lax`;
@@ -193,6 +194,6 @@ const coreHandlers = [
   http.get('*/health/ready', () => HttpResponse.json({ status: 'ready', checks: { db: 'ok' } })),
 ];
 
-export const handlers = [...coreHandlers, ...literatureHandlers];
+export const handlers = [...coreHandlers, ...literatureHandlers, ...writingHandlers];
 
 export { seedDb };

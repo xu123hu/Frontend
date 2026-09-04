@@ -9,11 +9,12 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowLeft, MessageSquareText, NotebookPen, TriangleAlert, Trash2 } from 'lucide-vue-next';
+import { ArrowLeft, MessageSquareText, NotebookPen, TriangleAlert, Trash2, Languages } from 'lucide-vue-next';
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import Boundary from '@shared/ui/Boundary.vue';
 import Skeleton from '@shared/ui/Skeleton.vue';
+import TranslationPane from '@widgets/TranslationPane/TranslationPane.vue';
 import {
   useLiteratureItem,
   useAnnotations,
@@ -29,6 +30,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const route = useRoute();
 const router = useRouter();
 const itemId = computed(() => String(route.params.id ?? ''));
+
+/** 阅读模式：批注/笔记 或 阅读与翻译（06 §5 步骤 1：从文献条目进入，非孤立工具页）。 */
+const readMode = ref<'annotate' | 'translate'>('annotate');
 
 const itemQuery = useLiteratureItem(itemId);
 const item = computed(() => itemQuery.data.value);
@@ -134,6 +138,12 @@ async function jumpToEvidence(): Promise<void> {
   highlightBbox.value = bboxQ && bboxQ.length === 4 && bboxQ.every((n) => !Number.isNaN(n)) ? bboxQ : null;
   await nextTick();
   pageContainers.value.get(pageQ)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/** 译文段落 → 定位原文块（TC-F03-05）：滚动到对应页。 */
+function locateTranslationBlock(_blockId: string, page: number): void {
+  activePage.value = page;
+  void nextTick(() => pageContainers.value.get(page)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
 }
 
 // ---------- 划选批注（TC-F02-09） ----------
@@ -277,6 +287,28 @@ function goBack(): void {
           </p>
         </div>
       </div>
+      <div class="mode-switch">
+        <button
+          type="button"
+          class="btn"
+          :class="{ primary: readMode === 'annotate' }"
+          :aria-pressed="readMode === 'annotate'"
+          @click="readMode = 'annotate'"
+        >
+          <MessageSquareText :size="13" />
+          批注 / 笔记
+        </button>
+        <button
+          type="button"
+          class="btn"
+          :class="{ primary: readMode === 'translate' }"
+          :aria-pressed="readMode === 'translate'"
+          @click="readMode = 'translate'"
+        >
+          <Languages :size="13" />
+          阅读与翻译
+        </button>
+      </div>
     </header>
 
     <Skeleton
@@ -343,159 +375,167 @@ function goBack(): void {
         </div>
       </section>
 
-      <!-- 批注 / 笔记侧栏 -->
+      <!-- 批注 / 笔记 或 阅读与翻译 侧栏 -->
       <aside
         class="side-pane"
-        aria-label="批注与笔记"
+        :aria-label="readMode === 'translate' ? '译文与保真' : '批注与笔记'"
       >
-        <!-- 划选批注草稿 -->
-        <div
-          v-if="selectionDraft"
-          class="draft"
-          role="form"
-          aria-label="新建批注"
-        >
-          <p class="side-title">
-            <MessageSquareText :size="13" />
-            新批注（第 {{ selectionDraft.page }} 页）
-          </p>
-          <blockquote class="quote">
-            “{{ selectionDraft.text.slice(0, 160) }}{{ selectionDraft.text.length > 160 ? '…' : '' }}”
-          </blockquote>
-          <textarea
-            v-model="annoComment"
-            rows="2"
-            placeholder="批注（可选）"
-            aria-label="批注内容"
-          />
-          <p
-            v-if="annoError"
-            class="mini-error"
-            role="alert"
+        <template v-if="readMode === 'annotate'">
+          <!-- 划选批注草稿 -->
+          <div
+            v-if="selectionDraft"
+            class="draft"
+            role="form"
+            aria-label="新建批注"
           >
-            {{ annoError }}
-          </p>
-          <div class="draft-actions">
-            <button
-              type="button"
-              class="btn primary"
-              :disabled="createAnnotationMutation.isPending.value"
-              @click="saveAnnotation"
-            >
-              保存批注
-            </button>
-            <button
-              type="button"
-              class="btn"
-              @click="discardSelection"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-        <p
-          v-else
-          class="hint"
-        >
-          在正文划选文字即可创建批注；批注携带引文原文与 bbox，锚点失效会显式警示。
-        </p>
-
-        <div class="anno-list-block">
-          <p class="side-title">
-            批注（{{ annotationsQuery.data.value?.length ?? 0 }}）
-          </p>
-          <p
-            v-if="annotationsQuery.isError.value"
-            class="mini-error"
-            role="alert"
-          >
-            {{ annotationsQuery.error.value?.message }}
-          </p>
-          <ul class="anno-list">
-            <li
-              v-for="a in annotationsQuery.data.value ?? []"
-              :key="a.id"
-              class="anno"
-              :class="{ broken: a.anchor_status === 'needs_reanchor' }"
-            >
-              <p
-                v-if="a.anchor_status === 'needs_reanchor'"
-                class="anchor-warn"
-                role="alert"
-              >
-                <TriangleAlert :size="11" />
-                锚点已失效，按引文哈希回退展示
-              </p>
-              <blockquote class="quote">
-                “{{ a.quoted_text.slice(0, 100) }}{{ a.quoted_text.length > 100 ? '…' : '' }}”
-              </blockquote>
-              <p
-                v-if="a.comment"
-                class="anno-comment"
-              >
-                {{ a.comment }}
-              </p>
-              <div class="anno-foot">
-                <span>p{{ a.page_index ?? '?' }} · {{ new Date(a.created_at).toLocaleDateString('zh-CN') }}</span>
-                <button
-                  type="button"
-                  class="icon-btn"
-                  :aria-label="`删除批注 ${a.id}`"
-                  @click="removeAnnotation(a.id)"
-                >
-                  <Trash2 :size="12" />
-                </button>
-              </div>
-            </li>
-          </ul>
-          <p
-            v-if="(annotationsQuery.data.value?.length ?? 0) === 0 && !annotationsQuery.isError.value"
-            class="empty-hint"
-          >
-            暂无批注。
-          </p>
-        </div>
-
-        <div class="notes-block">
-          <p class="side-title">
-            <NotebookPen :size="13" />
-            笔记（{{ notesQuery.data.value?.length ?? 0 }}）
-          </p>
-          <form
-            class="note-form"
-            @submit.prevent="saveNote"
-          >
+            <p class="side-title">
+              <MessageSquareText :size="13" />
+              新批注（第 {{ selectionDraft.page }} 页）
+            </p>
+            <blockquote class="quote">
+              “{{ selectionDraft.text.slice(0, 160) }}{{ selectionDraft.text.length > 160 ? '…' : '' }}”
+            </blockquote>
             <textarea
-              v-model="noteDraft"
+              v-model="annoComment"
               rows="2"
-              placeholder="写下随读笔记…"
-              aria-label="笔记内容"
+              placeholder="批注（可选）"
+              aria-label="批注内容"
             />
-            <button
-              type="submit"
-              class="btn"
-              :disabled="!noteDraft.trim() || createNoteMutation.isPending.value"
+            <p
+              v-if="annoError"
+              class="mini-error"
+              role="alert"
             >
-              保存笔记
-            </button>
-          </form>
+              {{ annoError }}
+            </p>
+            <div class="draft-actions">
+              <button
+                type="button"
+                class="btn primary"
+                :disabled="createAnnotationMutation.isPending.value"
+                @click="saveAnnotation"
+              >
+                保存批注
+              </button>
+              <button
+                type="button"
+                class="btn"
+                @click="discardSelection"
+              >
+                取消
+              </button>
+            </div>
+          </div>
           <p
-            v-if="noteError"
-            class="mini-error"
-            role="alert"
+            v-else
+            class="hint"
           >
-            {{ noteError }}
+            在正文划选文字即可创建批注；批注携带引文原文与 bbox，锚点失效会显式警示。
           </p>
-          <ul class="note-list">
-            <li
-              v-for="n in notesQuery.data.value ?? []"
-              :key="n.id"
-              class="note"
+
+          <div class="anno-list-block">
+            <p class="side-title">
+              批注（{{ annotationsQuery.data.value?.length ?? 0 }}）
+            </p>
+            <p
+              v-if="annotationsQuery.isError.value"
+              class="mini-error"
+              role="alert"
             >
-              {{ n.content }}
-            </li>
-          </ul>
-        </div>
+              {{ annotationsQuery.error.value?.message }}
+            </p>
+            <ul class="anno-list">
+              <li
+                v-for="a in annotationsQuery.data.value ?? []"
+                :key="a.id"
+                class="anno"
+                :class="{ broken: a.anchor_status === 'needs_reanchor' }"
+              >
+                <p
+                  v-if="a.anchor_status === 'needs_reanchor'"
+                  class="anchor-warn"
+                  role="alert"
+                >
+                  <TriangleAlert :size="11" />
+                  锚点已失效，按引文哈希回退展示
+                </p>
+                <blockquote class="quote">
+                  “{{ a.quoted_text.slice(0, 100) }}{{ a.quoted_text.length > 100 ? '…' : '' }}”
+                </blockquote>
+                <p
+                  v-if="a.comment"
+                  class="anno-comment"
+                >
+                  {{ a.comment }}
+                </p>
+                <div class="anno-foot">
+                  <span>p{{ a.page_index ?? '?' }} · {{ new Date(a.created_at).toLocaleDateString('zh-CN') }}</span>
+                  <button
+                    type="button"
+                    class="icon-btn"
+                    :aria-label="`删除批注 ${a.id}`"
+                    @click="removeAnnotation(a.id)"
+                  >
+                    <Trash2 :size="12" />
+                  </button>
+                </div>
+              </li>
+            </ul>
+            <p
+              v-if="(annotationsQuery.data.value?.length ?? 0) === 0 && !annotationsQuery.isError.value"
+              class="empty-hint"
+            >
+              暂无批注。
+            </p>
+          </div>
+
+          <div class="notes-block">
+            <p class="side-title">
+              <NotebookPen :size="13" />
+              笔记（{{ notesQuery.data.value?.length ?? 0 }}）
+            </p>
+            <form
+              class="note-form"
+              @submit.prevent="saveNote"
+            >
+              <textarea
+                v-model="noteDraft"
+                rows="2"
+                placeholder="写下随读笔记…"
+                aria-label="笔记内容"
+              />
+              <button
+                type="submit"
+                class="btn"
+                :disabled="!noteDraft.trim() || createNoteMutation.isPending.value"
+              >
+                保存笔记
+              </button>
+            </form>
+            <p
+              v-if="noteError"
+              class="mini-error"
+              role="alert"
+            >
+              {{ noteError }}
+            </p>
+            <ul class="note-list">
+              <li
+                v-for="n in notesQuery.data.value ?? []"
+                :key="n.id"
+                class="note"
+              >
+                {{ n.content }}
+              </li>
+            </ul>
+          </div>
+        </template>
+        <TranslationPane
+          v-else
+          :item-id="itemId"
+          :active="readMode === 'translate'"
+          @locate-block="locateTranslationBlock"
+        />
       </aside>
     </div>
   </div>
@@ -507,12 +547,23 @@ function goBack(): void {
   margin: 0 auto;
 }
 .page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 14px;
+  flex-wrap: wrap;
 }
 .title-wrap {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+}
+.mode-switch {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .title-wrap h1 {
   font-size: var(--font-size-2xl);

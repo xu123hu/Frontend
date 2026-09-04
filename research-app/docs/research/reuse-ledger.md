@@ -346,6 +346,45 @@ decision: adopt
 decision_reason: 提示词已批准
 ```
 
+### card-18 · Citation.js（BibTeX/CSL 引用管理）
+
+```yaml
+name: Citation.js
+official_url: https://github.com/citation-js/citation-js
+checked_at: 2026-09-04（F3 调研核验）
+commit_or_version: @citation-js/core ^0.7 + @citation-js/plugin-bibtex ^0.8（打包前再核）
+license_spdx: MIT
+license_file_sha256: 待打包前重新计算
+maintenance_signal: 活跃；M4 §66 行列为参考
+capability_used: BibTeX/BibLaTeX 双向解析与输出、CSL 格式化（引用插入生成 .bib、导出）
+integration_mode: dependency（@citation-js/core + @citation-js/plugin-bibtex）
+copied_code: none
+modified_code: none
+required_notices: MIT
+security_notes: 引文真实性必须另行核验（CitationRecord 已核验才可插入，M4 §66）
+decision: adopt
+decision_reason: F3 benchmark §3.2；MIT；浏览器 ~100kB；与 CitationRecord.csl_json 对齐
+```
+
+### card-19 · @codemirror/language-data（LaTeX 高亮基底）
+
+```yaml
+name: CodeMirror language-data
+official_url: https://github.com/codemirror/language-data
+checked_at: 2026-09-04（F3 调研核验）
+commit_or_version: 6.x latest
+license_spdx: MIT
+license_file_sha256: 待打包前重新计算
+maintenance_signal: CodeMirror 官方维护
+capability_used: LaTeX（stex，来自 legacy-modes）语法高亮基底
+integration_mode: dependency（@codemirror/language-data，仅 stex 高亮）
+copied_code: none
+required_notices: MIT
+security_notes: 仅高亮；补全/环境闭合由自研扩展承担（引用 key 来自已核验 CitationRecord）
+decision: adopt
+decision_reason: F3 benchmark §3.1；MIT；避免自研完整 LaTeX 解析器；完整 lint 由后端 Tectonic 承担
+```
+
 ---
 
 ## 3. 显式拒绝清单（reference_only / reject）
@@ -362,6 +401,7 @@ decision_reason: 提示词已批准
 | Monaco Editor | 包体 > 1MB gzip；违反 08 §2 首包 ≤500KB | reject for product |
 | Nuxt 3 | 一期不启用 SSR；与 M0 解耦不必要 | reject for product（一期） |
 | MathJax（默认） | KaTeX 已覆盖；只在 KaTeX 复杂宏不支持时 lazy import | reference_only fallback |
+| codemirror-lang-latex（TeXlyre） | **AGPL-3.0**（2026 由 MIT 切换，因基于 Overleaf lezer-latex grammar）；完整 LaTeX 语言包 | reject for product（自研轻量补全替代） |
 
 ---
 

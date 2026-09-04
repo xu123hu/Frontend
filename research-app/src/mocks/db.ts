@@ -12,6 +12,7 @@ import type { Account, UserPreferences } from '@entities/session/types';
 import type { Project } from '@entities/project/types';
 import type { Run } from '@entities/run/types';
 import type { LiteratureStore } from './literature-db';
+import type { WritingStore } from './writing-db';
 
 /** 伪 UUIDv7（48bit 毫秒时间戳 + 随机段），仅 mock 使用。 */
 export function uuidv7Mock(): string {
@@ -33,6 +34,8 @@ export interface TenantRecord {
   otpRequestCount: number;
   /** 文献域（CR-F2-01..08 草案）：懒初始化（首次命中文献端点时播种）。 */
   literature?: LiteratureStore;
+  /** 写作域（CR-F3-01..04 草案）：懒初始化（首次命中写作端点时播种）。 */
+  writing?: WritingStore;
 }
 
 const now = Date.now();
