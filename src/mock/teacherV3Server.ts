@@ -84,6 +84,43 @@ function removeKp(nodes: any[], id: string): boolean {
   return false
 }
 
+/**
+ * 中文数学口语 → LaTeX（mock 规则层演示；real = 规则 → LLM → KaTeX 编译验证三层）。
+ * 覆盖高中高频结构：根号下 / n次方 / 分之 / 加减 / 绝对值 / 三角对数。
+ * 仅做确定性替换供原型演示，完整语义解析由后端 P1 实现。
+ */
+function voiceToLatex(spoken: string): string {
+  let s = String(spoken || '').trim()
+  // 句式引导词
+  s = s.replace(/^(帮我|请|把|转换成|转成|输入|说出|说)(可编辑)?(的)?(公式)?/g, '')
+  s = s.replace(/(转换|转)成(可编辑)?(的)?公式$/g, '')
+  // "x分之y"（分母在前）→ \frac{y}{x}
+  s = s.replace(/([^，。 ]{1,12}?)分之([^，。 ]{1,12}?)(?=[，。]|$)/g, '\\frac{$2}{$1}')
+  // "根号下 X"（到逗号/句号/结尾）
+  s = s.replace(/根号下([^，。 ]{1,20}?)(?=[，。 ]|$)/g, '\\sqrt{$1}')
+  // "X的n次方 / X平方 / X立方"
+  s = s.replace(/的平方/g, '^{2}').replace(/平方/g, '^{2}')
+  s = s.replace(/的立方/g, '^{3}')
+  s = s.replace(/的(\d+)次方/g, '^{$1}')
+  s = s.replace(/的([a-z])次方/g, '^{$1}')
+  // 运算与符号词
+  s = s.replace(/加减/g, '\\pm')
+  s = s.replace(/乘以|乘/g, '\\times').replace(/除以/g, '\\div')
+  s = s.replace(/绝对值([^，。 ]{1,12}?)(?=[，。 ]|$)/g, '\\left|$1\\right|')
+  s = s.replace(/等于/g, '=').replace(/大于等于/g, '\\geq').replace(/小于等于/g, '\\leq').replace(/不等于/g, '\\neq')
+  s = s.replace(/约等于/g, '\\approx')
+  s = s.replace(/无穷大/g, '\\infty')
+  // 三角/对数/指数
+  s = s.replace(/正弦/g, '\\sin ').replace(/余弦/g, '\\cos ').replace(/正切/g, '\\tan ')
+  s = s.replace(/自然对数/g, '\\ln ').replace(/对数/g, '\\log ')
+  s = s.replace(/e的/g, 'e^')
+  // 单字母变量间补乘号省略（保持可读），英文数字字母原样
+  s = s.replace(/\s+/g, ' ').trim()
+  // 结果若仍含中文且无 LaTeX 指令，包 \text{} 兜底展示
+  if (/[\u4e00-\u9fa5]/.test(s) && !/\\/.test(s)) s = `\\text{${s}}`
+  return s
+}
+
 /** 大纲环节目标草案（围绕课题与课型的可执行表述，教师可改） */
 function goalOf(b: { id: string; name: string }, topic: string, lessonType: string): string {
   const map: Record<string, string> = {
@@ -157,7 +194,7 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
   if (method === 'GET' && path === '/teacher-v3/quiz/questions') {
     // 服务端筛选：kp（多码逗号分隔）/ q（题干模糊）/ difficulty / q_type / source / folder（专题夹引用过滤）
     let items = quizQuestions as any[]
-    const q = url.includes('?') ? Object.fromEntries(new URL(url).searchParams.entries()) : {}
+    const q = url.includes('?') ? Object.fromEntries(new URL(url, 'http://mock.local').searchParams.entries()) : {}
     if (q.kp) { const codes = String(q.kp).split(','); items = items.filter((x) => codes.includes(x.kp_code)) }
     if (q.q) { const kw = String(q.q).trim(); if (kw) items = items.filter((x) => (x.stem_latex || '').includes(kw)) }
     if (q.difficulty) items = items.filter((x) => x.difficulty === q.difficulty)
@@ -619,6 +656,159 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
     sendSse(res, 'done', { editable: true, note: '识别结果已生成，请在编辑器中审查修改后使用' })
     res.end()
     return true
+  }
+
+  /* ============ butler AI 管家域（悬浮球 chat-to-action） ============ */
+  if (method === 'GET' && path === '/teacher-v3/butler/tools') {
+    return ok(res, {
+      tools: [
+        { name: 'search_web', label: '联网搜索', kind: 'read', confirm_required: false, description: '联网检索教学资料，返回带引用的结果' },
+        { name: 'kb_search', label: '个人知识库检索', kind: 'read', confirm_required: false, description: '在教师上传的教材/教案/课件中检索' },
+        { name: 'quiz_import_question', label: '题目入库', kind: 'write', confirm_required: true, description: '识别/编辑后的题目结构化写入题库（教师确认后执行）' },
+        { name: 'navigate', label: '页面跳转', kind: 'frontend', confirm_required: false, description: '跳转到课件工坊/备课中心等页面并预填参数' },
+        { name: 'prefill', label: '表单预填', kind: 'frontend', confirm_required: false, description: '在当前页面预填生成表单参数' },
+        { name: 'insert_element', label: '插入画布元素', kind: 'frontend', confirm_required: false, description: '把公式/图形卡片插入当前课件页（teacher_confirmed=false）' },
+      ],
+    }), true
+  }
+
+  if (method === 'POST' && path === '/teacher-v3/butler/chat') {
+    startSse(res)
+    const msg = String(body.message || '')
+    const text = msg.toLowerCase()
+    const hasImages = Array.isArray(body.images) && body.images.length > 0
+    const ctx = body.context || {}
+    const sessionId = uid('bs')
+
+    /* 意图路由（P0 规则层演示；real = 规则 + 小模型分类 + 大模型 FC 三层） */
+    const wantsDeck = /做.{0,16}?(课件|ppt|演示文稿)|生成.{0,12}?(课件|ppt)|备课/.test(text)
+    const wantsQuizImport = (hasImages && /存(入|到).{0,6}(题库|题目|错题)|入库/.test(text)) || (/存(入|到).{0,6}(题库|错题)/.test(text) && hasImages)
+    const wantsSearch = body.web_search === true || /联网|搜索|查一查|最新/.test(text)
+    const wantsFormula = /根号|平方|分之|阶乘|绝对值|正弦|余弦|正切|对数|极限|导数/.test(msg)
+
+    if (wantsQuizImport) {
+      /* 剧本B：题目图片 + 存入题库 → 识别预览卡 → 确认动作卡（R2：教师确认后才入库） */
+      sendSse(res, 'meta', { session_id: sessionId, intent: 'quiz_import', note: '图片已附带，走拍照识别链路' })
+      await sleep(300)
+      sendSse(res, 'thinking', { text: '先解读题目照片，再生成入库草稿；原图保留对照，入库前由教师确认。' })
+      await sleep(260)
+      sendSse(res, 'tool_call', { tool: 'photo_recognize', label: '识别题目照片' })
+      await sleep(620)
+      const kp = /圆锥|椭圆|双曲线|抛物线/.test(msg) ? '圆锥曲线' : /函数|导数/.test(msg) ? '导数及其应用' : /三角/.test(msg) ? '三角函数' : '数列'
+      sendSse(res, 'tool_result', { tool: 'photo_recognize', ok: true, summary: `已识别题干与解答（知识点建议：${kp}），识别块均可编辑` })
+      await sleep(200)
+      sendSse(res, 'card', {
+        type: 'action', id: uid('act'), title: '存入题库', confirm_required: true, status: 'pending',
+        summary: `将识别的题目写入「${kp}」分类，题干与解析可在题库中继续编辑`,
+        params: { kp_name: kp, q_type: 'solve', difficulty: 'medium' },
+      })
+      await sleep(180)
+      sendSse(res, 'token', { text: '已生成入库草稿。请核对右侧动作卡的内容，点击「执行」后才会真正写入题库；原图与识别结果均可在题库中查看修改。' })
+    } else if (wantsDeck) {
+      /* 剧本A：我要做PPT → 理解摘要 + 预填跳转（进入既有生成工作流，模板选择/大纲确认保留） */
+      sendSse(res, 'meta', { session_id: sessionId, intent: 'deck_generate', note: '跳转课件工坊并预填' })
+      await sleep(300)
+      const topicMatch = msg.match(/[《「“"]([^》」”"]+)[》」”"]/)
+      const topic = topicMatch ? topicMatch[1] : msg.replace(/帮|我|请|做|个|一|份|生成|课件|ppt|演示文稿|关于|的|主题/g, '').slice(0, 18) || '椭圆及其标准方程'
+      sendSse(res, 'thinking', { text: '生成课件需要教师控制模板与大纲，跳转课件工坊并预填表单最合适。' })
+      await sleep(240)
+      sendSse(res, 'token', { text: `好的，将前往课件工坊并预填：主题「${topic}」、班级高二(3)班、模板学术蓝。模板与大纲仍由您在工坊内选定确认。` })
+      await sleep(220)
+      sendSse(res, 'card', {
+        type: 'link', id: uid('lnk'), title: `课件工坊 · 主题生成（${topic}）`,
+        route: '/teacher-v3/slides', query: { mode: 'topic', topic, class_id: 'c2-03', template_id: 'tpl-academic-blue' },
+        note: '预填后仍需您确认模板与大纲',
+      })
+      await sleep(160)
+      sendSse(res, 'action', { action: 'navigate', route: '/teacher-v3/slides', query: { mode: 'topic', topic, class_id: 'c2-03', template_id: 'tpl-academic-blue' }, toast: `已预填主题「${topic}」` })
+    } else if (wantsSearch) {
+      sendSse(res, 'meta', { session_id: sessionId, intent: 'web_search' })
+      await sleep(280)
+      sendSse(res, 'tool_call', { tool: 'search_web', label: '联网检索' })
+      await sleep(560)
+      sendSse(res, 'tool_result', { tool: 'search_web', ok: true, summary: '检索到 3 条相关来源' })
+      await sleep(200)
+      sendSse(res, 'token', { text: '结合检索结果：椭圆的第一定义为平面上到两定点距离之和为常数（大于两定点间距）的点的轨迹，人教A版教材同时给出第二定义（焦点-准线）。建议课堂用绳长实验引入第一定义，再从第二定义过渡到离心率。' })
+      await sleep(240)
+      sendSse(res, 'citation', { sources: [
+        { index: 1, title: '人教A版选择性必修一 · 2.2 椭圆', url: 'https://www.pep.com.cn/gzsx/xrjdgzsx/ssl', snippet: '教材原文：平面内与两个定点F₁、F₂的距离的和等于常数…' },
+        { index: 2, title: '课程标准（2017版2020修订）· 圆锥曲线', url: 'http://www.moe.gov.cn', snippet: '经历从具体情境中抽象出椭圆的过程…' },
+        { index: 3, title: '椭圆定义的六种引入方式比较', url: 'https://example.com/ellipse-intro', snippet: '绳长实验引入在课堂实测中概念留存率最高…' },
+      ] })
+    } else if (wantsFormula) {
+      /* 数学口语直接出公式卡（与语音公式链路同一解析层） */
+      sendSse(res, 'meta', { session_id: sessionId, intent: 'formula_parse' })
+      await sleep(260)
+      const latex = voiceToLatex(msg)
+      sendSse(res, 'token', { text: '识别为如下公式，可拖入课件或点开编辑：' })
+      await sleep(200)
+      sendSse(res, 'card', { type: 'formula', id: uid('fml'), latex, confidence: 0.88, source: 'chat' })
+    } else {
+      /* 默认：数学对话（流式 + KaTeX 内联） */
+      sendSse(res, 'meta', { session_id: sessionId, intent: 'math_chat' })
+      await sleep(280)
+      sendSse(res, 'thinking', { text: ctx.route_title ? `结合当前页面（${ctx.route_title}）回答。` : '直接回答数学问题。' })
+      await sleep(200)
+      const reply = `好的。以 $\\frac{x^{2}}{a^{2}}+\\frac{y^{2}}{b^{2}}=1\\;(a>b>0)$ 为例：这个方程里 $a$ 定长轴、$b$ 定短轴，离心率 $e=\\frac{c}{a}$ 反映扁圆程度。需要我把它做成公式卡片拖进课件，还是展开讲解推导？`
+      for (const seg of reply.match(/[\s\S]{1,14}/g) || []) {
+        sendSse(res, 'token', { text: seg })
+        await sleep(90)
+      }
+      await sleep(140)
+      sendSse(res, 'card', { type: 'formula', id: uid('fml'), latex: '\\frac{x^{2}}{a^{2}}+\\frac{y^{2}}{b^{2}}=1\\;(a>b>0)', confidence: 0.92, source: 'chat' })
+    }
+    await sleep(160)
+    sendSse(res, 'done', { finish_reason: 'stop' })
+    res.end()
+    return true
+  }
+
+  if (method === 'POST' && path === '/teacher-v3/butler/voice-formula') {
+    /* 语音公式链（P0：text 模拟语音；P1 挂真 ASR）：
+       asr_partial*（教师能看到 AI 听到了什么）→ asr_final → card(formula) → done。
+       解析三层 = 规则引擎（下述映射）→ LLM（real）→ KaTeX 编译验证；结果必须进编辑器审查（R2）。 */
+    startSse(res)
+    const spoken = String(body.text || '')
+    sendSse(res, 'meta', { session_id: uid('bs'), intent: 'voice_formula', note: 'P0 文本模拟语音输入；P1 接入讯飞/Whisper ASR' })
+    const chunks = spoken.match(/[\s\S]{1,6}/g) || []
+    for (const c of chunks) {
+      await sleep(150)
+      sendSse(res, 'asr_partial', { text: c })
+    }
+    await sleep(180)
+    sendSse(res, 'asr_final', { text: spoken })
+    await sleep(260)
+    const latex = voiceToLatex(spoken)
+    const alts = latex.includes('sqrt') ? [latex.replace(/\\sqrt\{([^{}]+)\}/, '$1'), latex] : [latex]
+    sendSse(res, 'card', { type: 'formula', id: uid('fml'), latex, confidence: 0.86, alternatives: alts, source: 'voice' })
+    await sleep(160)
+    sendSse(res, 'done', { finish_reason: 'stop', note: '识别结果可编辑可拖拽，未直接定稿' })
+    res.end()
+    return true
+  }
+
+  const butlerConfirmMatch = path.match(/^\/teacher-v3\/butler\/actions\/([^/]+)\/confirm$/)
+  if (method === 'POST' && butlerConfirmMatch) {
+    /* 写动作确认（R 红线：教师点了执行才入库；这里复用题库 quizQuestions 的内存态） */
+    const kp = String((body.params as Record<string, unknown>)?.kp_name || '圆锥曲线')
+    const q = {
+      id: uid('q'),
+      kp_name: kp,
+      kp_code: 'CV-01',
+      kp_path: ['数学', '圆锥曲线'],
+      q_type: 'solve',
+      difficulty: 'medium',
+      stem_latex: '\\text{（管家识别入库）设椭圆}\\frac{x^{2}}{4}+\\frac{y^{2}}{3}=1\\text{的左右焦点为}F_1,F_2\\text{，过}F_1\\text{的直线交椭圆于}A,B\\text{，求}\\triangle ABF_2\\text{的周长。}',
+      answer: '8',
+      analysis: '由椭圆定义 |AF₁|+|AF₂|=2a=4，|BF₁|+|BF₂|=4，周长=8。',
+      source: '拍照入库',
+      year: '2026',
+      use_count: 0,
+      folder_refs: [],
+    }
+    quizQuestions.unshift(q)
+    tasks.unshift({ task_id: uid('task'), title: `管家入库：${kp}题目`, capability: 'butler', status: 'succeeded', progress: 100, stage: '完成' })
+    return ok(res, { ok: true as const, result: { question_id: q.id, kp_name: kp } }), true
   }
 
   /* ============ grading 批改域 ============ */

@@ -126,7 +126,7 @@ const emit = defineEmits<{
   (e: 'select-element', id: string): void
   (e: 'delete-element', id: string): void
   (e: 'move-element', id: string, left: number, top: number): void
-  (e: 'drop-latex', payload: { latex: string; left: number; top: number }): void
+  (e: 'drop-latex', payload: { latex: string; left: number; top: number; from?: 'keyboard' | 'butler'; width?: number; height?: number; font_size?: number; teacher_confirmed?: boolean }): void
 }>()
 
 const pxW = computed(() => `${props.width}px`)
@@ -226,18 +226,27 @@ function onElDown(ev: MouseEvent, elx: V3Element) {
   window.addEventListener('mouseup', onUp)
 }
 
-/* 公式键盘拖入画布 → 生成公式元素（dataTransfer mx/latex）
+/* 拖入画布 → 生成元素。双通道：
+ *  ① application/x-v3-element（管家公式卡等通用元素源，带 width/height/font_size/teacher_confirmed）
+ *  ② mx/latex（公式键盘既有通道）
  * 坐标用画布 rect 计算：offsetX 相对命中子元素，拖到公式/图形上方会错位 */
 function onDrop(ev: DragEvent) {
   if (!props.editable || !ev.dataTransfer) return
-  const latex = ev.dataTransfer.getData('mx/latex')
-  if (!latex) return
   const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect()
-  emit('drop-latex', {
-    latex,
-    left: Math.round((ev.clientX - rect.left) / k.value),
-    top: Math.round((ev.clientY - rect.top) / k.value),
-  })
+  const left = Math.round((ev.clientX - rect.left) / k.value)
+  const top = Math.round((ev.clientY - rect.top) / k.value)
+  const raw = ev.dataTransfer.getData('application/x-v3-element')
+  if (raw) {
+    try {
+      const el = JSON.parse(raw) as { latex?: string; width?: number; height?: number; font_size?: number; teacher_confirmed?: boolean }
+      if (el.latex) {
+        emit('drop-latex', { latex: el.latex, left, top, from: 'butler', width: el.width, height: el.height, font_size: el.font_size, teacher_confirmed: el.teacher_confirmed })
+        return
+      }
+    } catch { /* 非法 JSON 走 latex 通道兜底 */ }
+  }
+  const latex = ev.dataTransfer.getData('mx/latex')
+  if (latex) emit('drop-latex', { latex, left, top, from: 'keyboard' })
 }
 </script>
 

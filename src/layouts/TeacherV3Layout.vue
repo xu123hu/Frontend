@@ -1,5 +1,5 @@
 <template>
-  <div class="tv3-app">
+  <div class="tv3-app" :class="{ 'tv3-app--butler': butlerOpen }">
     <aside class="tv3-nav">
       <div class="tv3-nav__brand">
         <div class="tv3-nav__brand-badge">∫</div>
@@ -60,11 +60,15 @@
         <router-view />
       </main>
     </div>
+
+    <!-- AI 管家：右下角悬浮球 + 侧边栏（展开时主区右侧避让，不遮挡内容） -->
+    <ButlerFab v-if="!butlerOpen" :open="false" :unread="butlerUnread" @toggle="butlerOpen = true" />
+    <ButlerPanel :open="butlerOpen" @close="butlerOpen = false" @activity="onButlerActivity" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import {
@@ -72,12 +76,19 @@ import {
   FolderOpenOutline, LibraryOutline, NotificationsOutline, SchoolOutline, TodayOutline,
 } from '@vicons/ionicons5'
 import { v3Api } from '@/api/teacherV3'
+import ButlerFab from '@/components/teacherV3/ButlerFab.vue'
+import ButlerPanel from '@/components/teacherV3/ButlerPanel.vue'
 import type { V3Task } from '@/types/teacherV3'
 
 const route = useRoute()
 const taskOpen = ref(false)
 const tasks = ref<V3Task[]>([])
 let timer: number | undefined
+
+const butlerOpen = ref(false)
+const butlerUnread = ref(0)
+watch(butlerOpen, (v) => { if (v) butlerUnread.value = 0 })
+function onButlerActivity() { if (!butlerOpen.value) butlerUnread.value += 1 }
 
 const dailyMenus = [
   { path: '/teacher-v3/today', label: '今日工作台', icon: TodayOutline },
@@ -124,6 +135,12 @@ onBeforeUnmount(() => { if (timer) window.clearInterval(timer) })
 </script>
 
 <style scoped>
+/* AI 管家侧栏展开：主区右侧避让（与面板同宽 400px，同步过渡），小屏不压缩改为覆盖 */
+.tv3-main { transition: margin-right .22s ease; }
+.tv3-app--butler :deep(.tv3-main) { margin-right: 400px; }
+@media (max-width: 980px) {
+  .tv3-app--butler :deep(.tv3-main) { margin-right: 0; }
+}
 .tv3-bell-badge {
   min-width: 16px; height: 16px; border-radius: 999px;
   background: var(--tv3-rose); color: #fff; font-size: 10.5px; font-weight: 700;

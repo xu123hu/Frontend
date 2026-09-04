@@ -353,9 +353,11 @@
  * 红线落实：AI 草稿待确认（teacher_confirmed）、原图锚定不可删、分页不缩内容（fill_rate 可视）
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { v3Api, type V3DeckSummary, type V3PlanSummary } from '@/api/teacherV3'
 import { FIGURE_PRESETS, type FigurePresetDef } from '@/components/mathx/presets'
 import { cleanPlaceholder, renderLatex } from '@/components/mathx/latex'
+import { useToastStore } from '@/stores/toast'
 import SlideCanvasV3 from '@/components/teacherV3/SlideCanvasV3.vue'
 import MathField from '@/components/mathx/MathField.vue'
 import MathKeyboard from '@/components/mathx/MathKeyboard.vue'
@@ -366,6 +368,9 @@ import type { V3DrawInsert } from '@/components/mathx/draw/drawCore'
 import type { V3ClassInfo, V3Deck, V3Element, V3FigureRebuildCandidate, V3Slide } from '@/types/teacherV3'
 
 type View = 'list' | 'new' | 'editor'
+
+const route = useRoute()
+const toast = useToastStore()
 
 const view = ref<View>('list')
 const newMode = ref<'photo' | 'topic' | 'plan'>('photo')
@@ -486,6 +491,7 @@ function fillBarStyle(s: V3Slide) {
 
 /* ---------- 数据加载 ---------- */
 onMounted(async () => {
+  window.addEventListener('tv3-butler-insert', onButlerInsert as EventListener)
   const [d, c, p, t] = await Promise.all([
     v3Api.decks.list().then((r) => r.data.items).catch(() => []),
     v3Api.catalog.classes().then((r) => r.data.items).catch(() => []),
@@ -496,6 +502,19 @@ onMounted(async () => {
   classes.value = c
   plans.value = p
   templates.value = (t && t.length ? t : DECK_TEMPLATE_FALLBACK) as typeof templates.value
+
+  /* 管家 navigate 落点（剧本A）：
+   *  deck=<id>          → 直接打开该课件编辑器
+   *  mode=topic&topic=… → 打开主题生成并预填（模板/大纲仍由教师确认） */
+  const q = route.query
+  if (typeof q.deck === 'string' && q.deck) {
+    void openDeck(q.deck)
+  } else if (q.mode === 'topic' || q.mode === 'photo' || q.mode === 'plan') {
+    openNew(q.mode)
+    if (typeof q.topic === 'string' && q.topic) form.value.topic = q.topic
+    if (typeof q.class_id === 'string' && q.class_id) form.value.class_id = q.class_id
+    if (typeof q.template_id === 'string' && q.template_id) form.value.template_id = q.template_id
+  }
 })
 
 async function openDeck(id: string) {
@@ -597,16 +616,36 @@ function onElementMoved(id: string, left: number, top: number) {
   const el = currentSlide.value.elements.find((e) => e.id === id)
   if (el) { el.left = left; el.top = top }
 }
-function onDropLatex(p: { latex: string; left: number; top: number }) {
-  addFormulaElement(cleanPlaceholder(p.latex), p.left, p.top)
-  // 存清洗值（KaTeX 可渲染），随后把原始模板塞进属性面板 MathField：教师光标落槽立即输入
-  nextTick(() => { if (selectedEl.value?.type === 'formula') propsMathField.value?.insert(p.latex) })
+function onDropLatex(p: { latex: string; left: number; top: number; from?: 'keyboard' | 'butler'; width?: number; height?: number; font_size?: number; teacher_confirmed?: boolean }) {
+  addFormulaElement(cleanPlaceholder(p.latex), p.left, p.top, p)
+  // 公式键盘拖入的是占位符模板：存清洗值后把原始模板塞进属性面板 MathField，教师光标落槽立即输入；
+  // 管家公式卡是完整公式（含字号等要素），直接落布不再追加插入
+  if (p.from !== 'butler') {
+    nextTick(() => { if (selectedEl.value?.type === 'formula') propsMathField.value?.insert(p.latex) })
+  }
 }
-function addFormulaElement(latex: string, left = 480, top = 320) {
+function addFormulaElement(latex: string, left = 480, top = 320, opts?: { width?: number; height?: number; font_size?: number; teacher_confirmed?: boolean }) {
   if (!deck.value) return
-  const el: V3Element = { id: `e${Date.now()}`, type: 'formula', left, top, width: 420, height: 56, z: 5, latex, font_size: 22, display: false, teacher_confirmed: false }
+  const el: V3Element = {
+    id: `e${Date.now()}`, type: 'formula', left, top,
+    width: opts?.width ?? 420, height: opts?.height ?? 56, z: 5,
+    latex, font_size: opts?.font_size ?? 22, display: false,
+    teacher_confirmed: opts?.teacher_confirmed ?? false,
+  }
   currentSlide.value.elements.push(el)
   selectedId.value = el.id
+}
+
+/* 管家「插入本页」全局事件（ButlerPanel dispatch）：编辑器打开则落布当前页，否则引导先打开课件 */
+function onButlerInsert(ev: Event) {
+  const d = (ev as CustomEvent).detail as { latex?: string }
+  if (!d?.latex) return
+  if (view.value !== 'editor' || !deck.value) {
+    toast.info('请先打开一个课件，管家公式会插入当前页并可继续编辑')
+    return
+  }
+  addFormulaElement(cleanPlaceholder(d.latex), 460, 300)
+  toast.success('已插入当前页（未确认态，可在属性面板继续编辑）')
 }
 function addGeometry(p: FigurePresetDef) {
   if (!deck.value) return
@@ -772,7 +811,11 @@ function onKeydown(ev: KeyboardEvent) {
   if (ev.key === 'Escape') selectedId.value = ''
 }
 onMounted(() => window.addEventListener('keydown', onKeydown))
-onBeforeUnmount(() => { window.removeEventListener('keydown', onKeydown); sseCtrl?.abort() })
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('tv3-butler-insert', onButlerInsert as EventListener)
+  sseCtrl?.abort()
+})
 </script>
 
 <style scoped>

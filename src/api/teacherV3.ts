@@ -9,8 +9,8 @@ import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { authHeaders } from '@/api/client'
 import { teacherGet, teacherPost, teacherRequest } from './teacher/client'
 import type {
-  V3ClassInfo, V3Deck, V3DeckTemplate, V3DrawRecord, V3ElementDiff, V3FigureLibraryItem, V3FigurePreset, V3FigureRebuildCandidate, V3GradingAssignment,
-  V3LessonPlan, V3LessonTemplate, V3PlanGenForm, V3PlanOutline, V3Recipe, V3RecognizePageResult, V3Slide, V3Task, V3TemplateQualityReport, V3TodayData,
+  V3ButlerAction, V3ButlerCard, V3ButlerChatInput, V3ButlerContext, V3ClassInfo, V3Deck, V3DeckTemplate, V3DrawRecord, V3ElementDiff, V3FigureLibraryItem, V3FigurePreset, V3FigureRebuildCandidate, V3GradingAssignment,
+  V3LessonPlan, V3LessonTemplate, V3PlanGenForm, V3PlanOutline, V3Recipe, V3RecognizePageResult, V3Slide, V3Task, V3TemplateQualityReport, V3TodayData, V3VoiceFormulaInput,
 } from '@/types/teacherV3'
 
 /* ============ 试卷/学情/资源 等目录数据的本地形状（catalog 域返回） ============ */
@@ -273,9 +273,30 @@ export const v3Api = {
     reviewPack: (assignId: string, onEvent: (event: string, data: any) => void, signal?: AbortSignal) =>
       v3Sse('POST', `/teacher-v3/grading/assignments/${assignId}/review-pack`, {}, onEvent, signal),
   },
+
+  /* ==================== butler AI 管家域（悬浮球 chat-to-action） ==================== */
+  butler: {
+    /**
+     * 主对话（SSE）：meta → thinking → token* → (tool_call → tool_result)* → card* → action? → citation? → done
+     * 意图路由在后端（P0：规则 + 大模型 FC）：数学对话 / 联网搜索 / 图片存题库 / 跳转生成 / 语音公式
+     */
+    chat: (body: V3ButlerChatInput, onEvent: (event: string, data: any) => void, signal?: AbortSignal) =>
+      v3Sse('POST', '/teacher-v3/butler/chat', body, onEvent, signal),
+    /**
+     * 语音公式专用链（SSE）：asr_partial* → asr_final → card(formula) → done
+     * P0 原型用 text 模拟语音输入；P1 挂真 ASR（讯飞/Whisper）
+     */
+    voiceFormula: (body: V3VoiceFormulaInput, onEvent: (event: string, data: any) => void, signal?: AbortSignal) =>
+      v3Sse('POST', '/teacher-v3/butler/voice-formula', body, onEvent, signal),
+    /** 动作确认执行（写操作教师点「执行」后才真正调领域 API，带审计） */
+    confirmAction: (actionId: string, body: { params?: Record<string, unknown> }) =>
+      teacherPost<{ ok: true; result?: unknown }>(`/teacher-v3/butler/actions/${actionId}/confirm`, body),
+    /** 工具目录（文档/调试用） */
+    tools: () => teacherGet<{ tools: { name: string; label: string; kind: 'read' | 'write' | 'frontend'; confirm_required: boolean; description: string }[] }>('/teacher-v3/butler/tools'),
+  },
 }
 
-export type { V3ElementDiff }
+export type { V3ButlerAction, V3ButlerCard, V3ButlerContext }
 
 /** V3 SSE 通用通道（与 V2 同构）：onEvent(event, data)，abort() 可取消 */
 export function v3Sse(method: 'GET' | 'POST', path: string, body?: unknown, onEvent?: (event: string, data: any) => void, signal?: AbortSignal) {

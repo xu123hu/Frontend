@@ -378,3 +378,79 @@ export interface V3ElementDiff {
   after?: V3Element
   reason?: string
 }
+
+/* ============ AI 管家 butler（悬浮球 + 侧边栏，chat-to-action） ============ */
+
+/** 前端自动采集的页面上下文（Copilot 式自动附加；上下文条可视，教师知道 AI 看到了什么） */
+export interface V3ButlerContext {
+  route: string                       // 当前路由，如 /teacher-v3/slides
+  route_title?: string                // 页面名，如 课件工坊
+  deck_id?: string                    // 当前打开的课件
+  slide_index?: number                // 当前页
+  selection?: { type: V3Element['type']; summary: string }   // 当前选中元素摘要
+  class_id?: string
+}
+
+/** 对话输入：文本 + 可选附件（图片 dataURL / 文件名） + 两个能力开关 */
+export interface V3ButlerChatInput {
+  message: string
+  context: V3ButlerContext
+  images?: string[]                   // 题目照片等（dataURL）
+  files?: string[]                    // 文件名列表（PDF/Word/PPT）
+  web_search?: boolean
+  kb_search?: boolean
+}
+
+/** 会话消息（前端渲染模型：正文气泡 + 任意数量卡片） */
+export interface V3ButlerMessage {
+  id: string
+  role: 'teacher' | 'butler'
+  text?: string                       // markdown（$..$ 公式内联）
+  cards?: V3ButlerCard[]
+  citations?: V3ButlerCitation[]
+  pending?: boolean                   // 流式接收中
+}
+
+/** 卡片四类：公式/图形可拖拽进画布，action/link 为动作确认卡 */
+export type V3ButlerCard =
+  | { type: 'formula'; id: string; latex: string; confidence: number; alternatives?: string[]; source: 'voice' | 'photo' | 'chat' }
+  | { type: 'figure'; id: string; preset_id: string; params: Record<string, number>; label: string }
+  | { type: 'action'; id: string; title: string; summary: string; params?: Record<string, unknown>; status: 'pending' | 'executed' | 'cancelled'; confirm_required: true }
+  | { type: 'link'; id: string; title: string; route: string; query?: Record<string, string>; note?: string }
+
+export interface V3ButlerCitation {
+  index: number
+  title: string
+  url: string
+  snippet?: string
+}
+
+/** 后端下发的结构化前端动作（前端 Action Registry 执行） */
+export interface V3ButlerAction {
+  action: 'navigate' | 'prefill' | 'insert'
+  route?: string
+  query?: Record<string, string>
+  element?: V3Element                 // insert：落布元素（teacher_confirmed=false）
+  toast?: string
+}
+
+/** 语音公式链专用（POST /butler/voice-formula SSE） */
+export interface V3VoiceFormulaInput {
+  text?: string                       // P0 原型：文本模拟语音输入（"负b加减根号下…"）
+  audio?: string                      // P1：音频 dataURL
+  context: V3ButlerContext
+}
+
+/** butler SSE 事件（复用 v3Sse 通道，与 photo-ingest/generation 同构） */
+export type V3ButlerSseEvent =
+  | { event: 'meta'; data: { session_id: string; intent: string; note?: string } }
+  | { event: 'thinking'; data: { text: string } }
+  | { event: 'token'; data: { text: string } }
+  | { event: 'tool_call'; data: { tool: string; label: string } }
+  | { event: 'tool_result'; data: { tool: string; ok: boolean; summary: string } }
+  | { event: 'card'; data: V3ButlerCard }
+  | { event: 'action'; data: V3ButlerAction }
+  | { event: 'citation'; data: { sources: V3ButlerCitation[] } }
+  | { event: 'asr_partial'; data: { text: string } }
+  | { event: 'asr_final'; data: { text: string } }
+  | { event: 'done'; data: { finish_reason?: string } }

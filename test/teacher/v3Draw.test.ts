@@ -3,6 +3,7 @@
 // jsdom 不跑真实 JSXGraph / MathLive：jsxgraph → fake board，MathField → stub。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { createPinia } from 'pinia'
 
 const mocks = vi.hoisted(() => {
   // JSXGraph board.create 返回元素对象；FreeMode 拖拽预览直接写 dataX/dataY、调 point2.setPosition / setRadius
@@ -23,6 +24,11 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('jsxgraph', () => ({
   default: { JSXGraph: { initBoard: () => mocks.fakeBoard, freeBoard: vi.fn() } },
+}))
+
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ path: '/teacher-v3/slides', query: {} }),
+  useRouter: () => ({ push: vi.fn() }),
 }))
 
 vi.mock('@/components/mathx/MathField.vue', async () => {
@@ -576,7 +582,7 @@ describe('SlidesView 集成：绘图工作台入口与插入落盘', () => {
   })
 
   async function openEditor() {
-    const w = mount(SlidesView, { global: { stubs: { teleport: true } } })
+    const w = mount(SlidesView, { global: { plugins: [createPinia()], stubs: { teleport: true } } })
     await flushPromises()
     await w.find('.tv3-qcard').trigger('click')
     await flushPromises()
