@@ -185,3 +185,27 @@ describe('项目契约（M4 v2.0 /projects）', () => {
     }
   });
 });
+
+describe('断网模拟钩子（F5：simulatedNetworkError 契约层验证）', () => {
+  it('携带 X-Simulate-Network-Error: 1 → fetch 以 TypeError reject（非 5xx）', async () => {
+    const cookie = await loginAs(DEMO_PHONE);
+    let rejected = false;
+    let name = '';
+    try {
+      await fetch(`${BASE}/projects?limit=5`, {
+        headers: { cookie, 'X-Simulate-Network-Error': '1' },
+      });
+    } catch (e) {
+      rejected = true;
+      name = e instanceof TypeError ? 'TypeError' : String(e);
+    }
+    expect(rejected).toBe(true);
+    expect(name).toBe('TypeError');
+  });
+
+  it('不携带钩子头 → 正常 200（钩子仅按需触发）', async () => {
+    const cookie = await loginAs(DEMO_PHONE);
+    const res = await fetch(`${BASE}/projects?limit=5`, { headers: { cookie } });
+    expect(res.status).toBe(200);
+  });
+});

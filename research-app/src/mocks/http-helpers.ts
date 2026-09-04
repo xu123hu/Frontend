@@ -35,3 +35,22 @@ export function readSession(request: Request): { tenant: TenantRecord; userId: s
   const match = readCookieHeader(request).match(new RegExp(`${SESSION_COOKIE}=([^;]+)`));
   return match ? findTenantBySession(decodeURIComponent(match[1])) : null;
 }
+
+/**
+ * 断网模拟测试钩子（F5，06 §2「一次短暂断网」验收条件）。
+ *
+ * MSW(browser worker) 在页面上下文拦截请求，真实网络层断网（Playwright setOffline /
+ * route.abort / CDP emulateNetworkConditions 三种均实测被 SW 屏蔽，请求仍返回 200，
+ * 见 F5 实证记录）。因此断网体验 E2E 通过在请求头携带 `X-Simulate-Network-Error: 1`
+ * 触发 handler 返回 `HttpResponse.error()` —— 该响应让客户端 fetch 以 TypeError 真实
+ * reject（已单测验证），走 api client 的 kind='network' 降级路径（Boundary + 重试），
+ * 不伪造成功。生产构建不包含 MSW，此钩子随 mock 层被整体剔除。
+ */
+export const SIMULATE_NETWORK_ERROR_HEADER = 'x-simulate-network-error';
+
+export function simulatedNetworkError(request: Request): Response | undefined {
+  if (request.headers.get(SIMULATE_NETWORK_ERROR_HEADER) === '1') {
+    return HttpResponse.error();
+  }
+  return undefined;
+}

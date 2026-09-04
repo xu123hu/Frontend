@@ -13,11 +13,12 @@ import {
 } from './db';
 import type { ProjectCreate } from '@entities/project/types';
 import { persistSessions } from './session-persistence';
-import { envelope, errorEnvelope, readCookieHeader, requestId, readSession, SESSION_COOKIE } from './http-helpers';
+import { envelope, errorEnvelope, readCookieHeader, requestId, readSession, simulatedNetworkError, SESSION_COOKIE } from './http-helpers';
 import { literatureHandlers } from './literature-handlers';
 import { writingHandlers } from './writing-handlers';
 import { reviewHandlers } from './review-handlers';
 import { stewardHandlers } from './steward-handlers';
+import { educationHandlers } from './education-handlers';
 
 function sessionCookie(sessionId: string): string {
   return `${SESSION_COOKIE}=${sessionId}; Path=/; SameSite=Lax`;
@@ -126,6 +127,8 @@ const coreHandlers = [
 
   // ---------- 项目（M4 v2.0 /projects） ----------
   http.get('*/projects', ({ request }) => {
+    const netErr = simulatedNetworkError(request);
+    if (netErr) return netErr;
     const session = readSession(request);
     if (!session) return errorEnvelope('unauthenticated', '未登录。', false, requestId(), 401);
     const url = new URL(request.url);
@@ -183,6 +186,8 @@ const coreHandlers = [
 
   // ---------- 运行（M4 v2.0 GET /runs；M0 冻结契约无列表端点 → CR-F1-06） ----------
   http.get('*/runs', ({ request }) => {
+    const netErr = simulatedNetworkError(request);
+    if (netErr) return netErr;
     const session = readSession(request);
     if (!session) return errorEnvelope('unauthenticated', '未登录。', false, requestId(), 401);
     const url = new URL(request.url);
@@ -196,6 +201,6 @@ const coreHandlers = [
   http.get('*/health/ready', () => HttpResponse.json({ status: 'ready', checks: { db: 'ok' } })),
 ];
 
-export const handlers = [...coreHandlers, ...literatureHandlers, ...writingHandlers, ...reviewHandlers, ...stewardHandlers];
+export const handlers = [...coreHandlers, ...literatureHandlers, ...writingHandlers, ...reviewHandlers, ...stewardHandlers, ...educationHandlers];
 
 export { seedDb };

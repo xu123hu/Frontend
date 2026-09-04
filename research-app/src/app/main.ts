@@ -41,6 +41,12 @@ async function bootstrap(): Promise<void> {
   });
   app.use(VueQueryPlugin, { queryClient });
 
+  // 断网体验 E2E 专用 dev 钩子（仅 mock 构建；生产折叠）：供测试触发真实 refetch，
+  // 在断网下走 api client 的 kind='network' 降级路径（Boundary + 重试），不伪造成功。
+  if (__USE_MOCK__) {
+    (window as unknown as { __queryClient?: QueryClient }).__queryClient = queryClient;
+  }
+
   app.use(router);
   await router.isReady();
   app.mount('#app');

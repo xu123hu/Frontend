@@ -14,6 +14,7 @@ import type { Run } from '@entities/run/types';
 import type { LiteratureStore } from './literature-db';
 import type { WritingStore } from './writing-db';
 import type { StewardStore } from './steward-db';
+import type { EducationStore } from './education-db';
 
 /** 伪 UUIDv7（48bit 毫秒时间戳 + 随机段），仅 mock 使用。 */
 export function uuidv7Mock(): string {
@@ -39,6 +40,8 @@ export interface TenantRecord {
   writing?: WritingStore;
   /** 管家域（CR-F4-05/06 草案）：懒初始化（首次命中管家端点/发起研究循环时播种）。 */
   steward?: StewardStore;
+  /** 教育研究域（CR-F5-01 草案）：懒初始化（首次命中教育端点时播种）。 */
+  education?: EducationStore;
 }
 
 const now = Date.now();
