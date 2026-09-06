@@ -396,6 +396,7 @@
             <div class="ws-genorb">✦</div>
             <div class="ws-progress"><div class="ws-progress-bar" :style="{ width: ws.genProgress + '%' }" /></div>
             <p class="ws-genstage" data-testid="tv3-gen-stage">{{ ws.genStage }}</p>
+            <button v-if="ws.genFailed" class="ws-btn-primary" style="margin-top: 14px" data-testid="tv3-gen-retry" @click="ws.retryGenerate()">重试生成</button>
             <div v-if="ws.genBlocks.length" class="ws-genblocks">
               <div v-for="(b, i) in ws.genBlocks" :key="i" class="ws-genblock" data-testid="tv3-recog-block">
                 <span class="ws-pill" :class="b.type === 'figure' ? 'ws-pill--warn' : 'ws-pill--brand'">

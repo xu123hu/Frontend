@@ -496,7 +496,7 @@ import { detectCliche, dejargonize } from '@/components/mathx/cliche'
 import { enhanceSrcToDataUrl, SCAN_DEFAULTS } from '@/components/mathx/scanEnhance'
 import MathKeyboard from '@/components/mathx/MathKeyboard.vue'
 import VisualChoiceCard from '@/components/mathx/VisualChoiceCard.vue'
-import { V3_TEN_BOARDS } from '@/mock/teacherV3Data'
+import { V3_TEN_BOARDS } from './tenBoards'
 import type { V3ClassInfo, V3LessonPlan, V3LessonTemplate, V3PlanOutline, V3PlanSection, V3TemplateQualityReport, V3AttachedExample } from '@/types/teacherV3'
 
 type View = 'list' | 'new' | 'editor'

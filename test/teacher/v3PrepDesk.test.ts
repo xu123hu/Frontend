@@ -7,6 +7,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
+/* M3 接真：PrepDeskHome 课表改由 catalog/today 加载——测试环境给定确定课表（原同步 V3_TODAY 的等效替换） */
+vi.mock('@/api/teacherV3', () => ({
+  v3Api: {
+    catalog: {
+      today: vi.fn(async () => ({ data: {
+        teacher: { name: '李老师', subject: '数学', grade_group: '高二' },
+        schedule: [
+          { time: '08:00', class_name: '高二(5)班', topic: '椭圆及其标准方程（第1课时）', status: 'next', missing: ['课件'] },
+          { time: '14:00', class_name: '高二(3)班', topic: '双曲线及其标准方程', status: 'later' },
+        ],
+        todos: [{ id: 't1', time: '12:00', text: '批改周末作业', kind: 'grade' as const }],
+        class_brief: [],
+      } })),
+    },
+  },
+}))
+
 import {
   configurePrepDeskSeed, usePrepDesk, loadDeskState, saveDeskState, clearDeskState, DESK_NS,
   buildDeckCandidates, buildCompletionChecks, resetPrepDeskSessionForTest,
@@ -267,9 +284,10 @@ describe('prepDesk · 投影与完成检查', () => {
 /* ==================== 组件：首页三等权 ==================== */
 
 describe('PrepDeskHome · 三等权入口', () => {
-  it('三张入口卡等权出现；AI 卡无输入框、无"生成教案"主按钮；续接项真实可见', () => {
+  it('三张入口卡等权出现；AI 卡无输入框、无"生成教案"主按钮；续接项真实可见', async () => {
     desk.init()
     const w = mount(PrepDeskHome, { props: { plans: [] } })
+    await flushPromises() // 课表来自 catalog/today（异步）
     expect(w.find('[data-testid="tv3-entry-resume"]').exists()).toBe(true)
     expect(w.find('[data-testid="tv3-entry-textbook"]').exists()).toBe(true)
     expect(w.find('[data-testid="tv3-entry-ai"]').exists()).toBe(true)

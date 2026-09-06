@@ -501,83 +501,33 @@ function onScanComplete(data: { name: string; pages: number }) {
   })
 }
 
-// ===== 初始化 Mock 数据 =====
+// ===== 初始化（M3 接真：资源来自 catalog/resources；演示数据在演示服务端 fixture 中） =====
 onMounted(async () => {
-  // 构造配方
-  try {
-    const r = await v3Api.catalog.recipes().then((r) => r.data.items).catch(() => [])
-    recipes.value = r
-  } catch { /* ignore */ }
-
-  // 资源 mock 数据
-  resources.value = [
-    {
-      id: 'r1', name: '《函数与导数》复习课件.pptx', type: 'deck',
-      subject: '数学', chapter: '高三一轮复习', owner: '张老师',
-      updated_at: '2小时前', shared: true, size_bytes: 45 * 1024 * 1024,
-      status: 'ready', tags: ['高三', '一轮复习', '函数', '导数'],
-    },
-    {
-      id: 'r2', name: '一元二次方程教案.docx', type: 'plan',
-      subject: '数学', chapter: '九年级上册', owner: '李老师',
-      updated_at: '昨天', shared: true, size_bytes: 2.3 * 1024 * 1024,
-      status: 'ready', tags: ['九年级', '一元二次方程', '优质课'],
-    },
-    {
-      id: 'r3', name: '期中数学试卷.pdf', type: 'paper',
-      subject: '数学', chapter: '高二期中', owner: '我',
-      updated_at: '3天前', shared: false, size_bytes: 8.5 * 1024 * 1024,
-      status: 'ready', tags: ['高二', '期中', '试卷'],
-    },
-    {
-      id: 'r4', name: '三角函数图像专题课件.pptx', type: 'deck',
-      subject: '数学', chapter: '高一必修四', owner: '王老师',
-      updated_at: '1周前', shared: true, size_bytes: 28 * 1024 * 1024,
-      status: 'ready', tags: ['高一', '三角函数', '图像'],
-    },
-    {
-      id: 'r5', name: '立体几何证明题集锦.pdf', type: 'paper',
-      subject: '数学', chapter: '高二必修二', owner: '我',
-      updated_at: '5天前', shared: false, size_bytes: 12 * 1024 * 1024,
-      status: 'processing', tags: ['高二', '立体几何', 'AI解析中'],
-    },
-    {
-      id: 'r6', name: '函数单调性微课.mp4', type: 'video',
-      subject: '数学', chapter: '高一必修一', owner: '赵老师',
-      updated_at: '2周前', shared: true, size_bytes: 156 * 1024 * 1024,
-      status: 'ready', tags: ['高一', '函数', '微课视频'],
-    },
-    {
-      id: 'r7', name: '2023高考数学真题.pdf', type: 'paper',
-      subject: '数学', chapter: '高考真题', owner: '我',
-      updated_at: '1个月前', shared: false, size_bytes: 5.2 * 1024 * 1024,
-      status: 'ready', tags: ['高考', '真题', '2023'],
-    },
-    {
-      id: 'r8', name: '英语听力专项训练.mp3', type: 'audio',
-      subject: '英语', chapter: '高三', owner: '陈老师',
-      updated_at: '3天前', shared: true, size_bytes: 45 * 1024 * 1024,
-      status: 'ready', tags: ['高三', '英语', '听力'],
-    },
-    {
-      id: 'r9', name: '物理实验演示课件.pptx', type: 'deck',
-      subject: '物理', chapter: '高二选修3-1', owner: '刘老师',
-      updated_at: '1周前', shared: true, size_bytes: 62 * 1024 * 1024,
-      status: 'ready', tags: ['高二', '物理', '实验'],
-    },
-    {
-      id: 'r10', name: '古诗文鉴赏教案.pdf', type: 'plan',
-      subject: '语文', chapter: '高二必修五', owner: '周老师',
-      updated_at: '4天前', shared: true, size_bytes: 3.8 * 1024 * 1024,
-      status: 'ready', tags: ['高二', '语文', '古诗文'],
-    },
-  ]
-
-  // 更新导航计数
+  const [rc, rs] = await Promise.all([
+    v3Api.catalog.recipes().then((r) => r.data.items).catch(() => []),
+    v3Api.catalog.resources().then((r) => r.data.items).catch(() => []),
+  ])
+  recipes.value = rc
+  // V3ResourceItem（契约）→ 视图条目：size/status/tags 为呈现层默认值，真实数据以后端为准
+  resources.value = (rs as Array<Record<string, unknown>>).map((x) => ({
+    id: String(x.id),
+    name: String(x.name),
+    type: x.kind as typeof resources.value[number]['type'],
+    subject: String(x.subject || ''),
+    chapter: x.chapter ? String(x.chapter) : undefined,
+    owner: String(x.owner || ''),
+    updated_at: String(x.updated_at || ''),
+    shared: !!x.shared,
+    size_bytes: 0,
+    status: 'ready' as const,
+    tags: [],
+  }))
+  // 导航计数一律来自真实列表，不再伪造「校本 128 / 收藏 12」
   navItems[0].count = resources.value.length
-  navItems[2].count = 128
-  navItems[3].count = 12
-  navItems[4].count = 8
+  navItems[1].count = resources.value.filter((r) => r.shared).length
+  navItems[2].count = 0
+  navItems[3].count = 0
+  navItems[4].count = 0
 })
 </script>
 

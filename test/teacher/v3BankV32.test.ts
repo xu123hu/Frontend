@@ -51,6 +51,7 @@ beforeEach(() => {
   foldersList.mockResolvedValue({ data: { items: [] } })
   resourcesFn.mockResolvedValue({ data: { items: [
     { id: 'r1', name: '椭圆 · 课件', kind: 'deck', subject: '圆锥曲线', chapter: '椭圆及其标准方程', updated_at: '2026-09-02', owner: '李文澜', shared: true },
+    { id: 'r8', name: '英语阅读训练 · 课件', kind: 'deck', subject: '英语', chapter: '阅读专项', updated_at: '2026-08-20', owner: '陈老师', shared: true },
     { id: 'r6', name: '导数 · 教案', kind: 'plan', subject: '导数', chapter: '导数及其应用', updated_at: '2026-08-15', owner: '李文澜', shared: false },
   ] } })
   recipesFn.mockResolvedValue({ data: { items: [] } })
@@ -163,16 +164,16 @@ describe('V3.2 · ResourcesView 分类（V2 改版）', () => {
     expect(w.find(".rv2-res-group__label[data-type='deck']").text()).toContain('课件')
     expect(w.find(".rv2-res-group__label[data-type='plan']").text()).toContain('教案')
 
-    // 搜索过滤：命中名称即只剩该项
+    // 搜索过滤：命中名称即只剩该项（数据来自 catalog/resources mock）
     const search = w.find('.rv2-search__input')
-    await search.setValue('英语听力')
-    expect(w.text()).toContain('英语听力专项训练')
-    expect(w.text()).not.toContain('函数与导数')
+    await search.setValue('英语')
+    expect(w.text()).toContain('英语阅读训练 · 课件')
+    expect(w.text()).not.toContain('椭圆 · 课件')
 
     // 清空搜索 → 侧栏类型标签（deck）→ 平铺只显示课件类
     await search.setValue('')
     await w.find(".rv2-tag[data-type='deck']").trigger('click')
-    expect(w.text()).toContain('《函数与导数》复习课件.pptx')
-    expect(w.text()).not.toContain('一元二次方程教案.docx')
+    expect(w.text()).toContain('椭圆 · 课件')
+    expect(w.text()).not.toContain('导数 · 教案')
   })
 })

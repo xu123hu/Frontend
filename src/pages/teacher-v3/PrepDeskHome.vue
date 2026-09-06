@@ -4,11 +4,12 @@
     <!-- 上下文条：只帮教师确认"我现在备哪节课"，不要求先填五件套 -->
     <div class="tv3-card tv3-dh__ctx" data-testid="tv3-home-ctx">
       <div class="tv3-dh__ctx-main">
-        <span class="tv3-tag tv3-tag--primary">今天 · {{ today.teacher.grade_group }}</span>
-        <span v-for="(s, i) in today.schedule" :key="i" class="tv3-dh__ctx-chip" :title="`演示课表 · ${s.time}`">
+        <span class="tv3-tag tv3-tag--primary">今天<template v-if="today?.teacher.grade_group"> · {{ today.teacher.grade_group }}</template></span>
+        <span v-for="(s, i) in todaySchedule" :key="i" class="tv3-dh__ctx-chip" :title="`课表 · ${s.time}`">
           {{ s.time }} {{ s.class_name }} · {{ s.topic }}<span v-if="s.missing?.length" style="color: var(--tv3-gold-deep)">（{{ s.missing[0] }}）</span>
         </span>
-        <span class="tv3-tag">待办 {{ today.todos.length }} 项</span>
+        <span v-if="today?.todos?.length" class="tv3-tag">待办 {{ today.todos.length }} 项</span>
+        <span v-if="!today" class="tv3-tag">课表加载中…</span>
       </div>
       <span class="tv3-tag" style="font-size: 10px" title="课表与班情为演示数据，未接入真实教务">课表/班情为演示数据</span>
     </div>
@@ -25,7 +26,7 @@
           <div v-if="!resumeLesson" class="tv3-dh__empty">暂无续备课例——可先「从教材开始」建一份空白共备稿。</div>
           <template v-else>
             <div class="tv3-dh__next-line" data-testid="tv3-resume-task">
-              <span class="tv3-dh__next-dot" />明天 {{ nextTask?.time || '14:00' }} · {{ nextTask?.class_name || '高二(5)班' }}《{{ resumeLesson.topic }}》
+              <span class="tv3-dh__next-dot" />{{ nextTask ? `明天 ${nextTask.time} · ${nextTask.class_name}` : '下节课时间待定' }}《{{ resumeLesson.topic }}》
             </div>
             <div class="tv3-dh__next-line tv3-dh__next-line--minor">
               <span class="tv3-dh__next-dot tv3-dh__next-dot--minor" />去年同课已就绪 · 上次停留：{{ resumeLesson.lastStop || '例题 · 例 1' }}
@@ -107,8 +108,9 @@
  * V3.4 教案首页（PrepDeskHome）：三等权起点 + 上下文条 + 最近工作。
  * 三卡尺寸/色彩/位置/交互成本一致；AI 卡不大不亮、输入折叠；首页无"生成教案"主按钮。
  */
-import { computed } from 'vue'
-import { V3_TODAY } from '@/mock/teacherV3Data'
+import { computed, onMounted, ref } from 'vue'
+import { v3Api } from '@/api/teacherV3'
+import type { V3TodayData } from '@/types/teacherV3'
 import { usePrepDesk } from './prepDesk'
 import type { V3PlanSummary } from '@/api/teacherV3'
 
@@ -116,7 +118,12 @@ defineProps<{ plans: V3PlanSummary[] }>()
 const emit = defineEmits<{ (e: 'continue', lessonId: string): void; (e: 'textbook'): void; (e: 'ai'): void; (e: 'open-plan', id: string): void }>()
 void emit
 
-const today = V3_TODAY
+/* M3 接真：今日课表/待办来自 catalog/today（mock 模式= 演示数据，真实模式= 服务端数据）；加载失败留空不阻塞首页 */
+const today = ref<V3TodayData | null>(null)
+onMounted(async () => {
+  try { today.value = (await v3Api.catalog.today()).data } catch { today.value = null }
+})
+const todaySchedule = computed(() => today.value?.schedule || [])
 
 const desk = usePrepDesk()
 /** 续接项：默认给"去年同课"（最近更新的非空白课例） */
@@ -124,10 +131,12 @@ const resumeLesson = computed(() => {
   const real = desk.state.lessons.filter((l) => l.originLabel.includes('去年课例'))
   return real[0] || desk.state.lessons[0] || null
 })
-/** 任务锚定（清单5）：演示课表里明天最近一节与续备课例同课题的课 */
+
+/** 任务锚定（清单5）：课表里下一节与续备课例同课题的课 */
 const nextTask = computed(() => {
-  const t = V3_TODAY.schedule.find((s) => resumeLesson.value && s.topic === resumeLesson.value.topic && s.status !== 'done')
-  return t || V3_TODAY.schedule.find((s) => s.status !== 'done') || null
+  const sched = todaySchedule.value
+  const t = sched.find((s) => resumeLesson.value && s.topic === resumeLesson.value.topic && s.status !== 'done')
+  return t || sched.find((s) => s.status !== 'done') || null
 })
 </script>
 

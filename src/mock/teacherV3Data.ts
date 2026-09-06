@@ -126,18 +126,8 @@ export const V3_LESSON_TEMPLATES = [
  * attachable=true 的板块支持「挂例题」（结构化题，可复用到试卷）。
  * 教案生成与编辑均以本框架为骨架；课型（习题/讲评）只裁剪内容，不替换骨架。
  */
-export const V3_TEN_BOARDS: { id: string; name: string; minutes: number; attachable: boolean; non_instructional?: boolean }[] = [
-  { id: 'bd-context',    name: '课标与学情',     minutes: 2, attachable: false },
-  { id: 'bd-objectives', name: '教学目标',       minutes: 0, attachable: false, non_instructional: true },
-  { id: 'bd-keypoints',  name: '教学重难点',     minutes: 0, attachable: false, non_instructional: true },
-  { id: 'bd-intro',      name: '情境引入',       minutes: 4, attachable: false },
-  { id: 'bd-explore',    name: '新知探究',       minutes: 12, attachable: false },
-  { id: 'bd-examples',   name: '例题精讲',       minutes: 14, attachable: true },
-  { id: 'bd-variation',  name: '变式训练',       minutes: 8, attachable: true },
-  { id: 'bd-pitfalls',   name: '易错辨析',       minutes: 5, attachable: false },
-  { id: 'bd-summary',    name: '课堂小结与检测', minutes: 3, attachable: false },
-  { id: 'bd-homework',   name: '分层作业',       minutes: 2, attachable: true },
-]
+// 十板块框架已迁出为共享常量（M3 审计：应用代码禁 import mock 文件）；此处再导出保持 mock server/测试引用不变
+export { V3_TEN_BOARDS } from '../pages/teacher-v3/tenBoards'
 
 export const V3_LESSON_PLANS = [
   {

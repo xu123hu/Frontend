@@ -33,6 +33,11 @@
         </div>
       </div>
 
+      <div v-if="loadError" class="tv3-ai-load-error" data-testid="tv3-today-error">
+        <span>今日课表与待办加载失败：AI 服务暂时不可用，你的数据没有丢失。</span>
+        <button @click="loadToday">点此重试</button>
+      </div>
+
       <div class="tv3-ai-context">
         <button v-for="ctx in contextPills" :key="ctx.key" class="tv3-ai-ctx-pill">
           <n-icon :size="13"><component :is="ctx.icon" /></n-icon>
@@ -169,12 +174,16 @@ const todayDate = computed(() => {
 const inputText = ref('')
 const recentTab = ref('all')
 
-onMounted(async () => {
+/* M3 错误态兜底：加载失败给出可理解文案 + 重试，绝不静默空白（教师会误以为「今天没事」） */
+const loadError = ref(false)
+async function loadToday() {
+  loadError.value = false
   try {
     const r = await v3Api.catalog.today()
     today.value = r.data
-  } catch (e) {}
-})
+  } catch (e) { loadError.value = true }
+}
+onMounted(loadToday)
 
 const capabilityChips = [
   { key: 'prep', label: '备课教案', icon: BookOutline, path: '/teacher-v3/prep' },
@@ -505,5 +514,15 @@ function statusClass(s: string) {
   .tv3-ai-welcome__title { font-size: 30px; }
   .tv3-ai-cap-grid { grid-template-columns: 1fr; }
 }
+.tv3-ai-load-error {
+  display: flex; align-items: center; gap: 10px; justify-content: space-between;
+  background: #fdf1ef; border: 1px solid #f3c9c2; color: #b1382c;
+  border-radius: 10px; padding: 10px 14px; font-size: 12.5px; margin-bottom: 12px;
+}
+.tv3-ai-load-error button {
+  border: 1px solid #b1382c; background: #fff; color: #b1382c; border-radius: 8px;
+  padding: 4px 12px; font-size: 12px; cursor: pointer;
+}
+.tv3-ai-load-error button:hover { background: #b1382c; color: #fff; }
 </style>
 

@@ -459,6 +459,7 @@ const form = ref({
 
 const genProgress = ref(0)
 const genStage = ref('')
+const genFailed = ref(false)
 const genBlocks = ref<{ type: string; latex?: string; text?: string; confidence: number }[]>([])
 let sseCtrl: { abort: () => void } | null = null
 
@@ -699,6 +700,7 @@ function openNew(mode: 'photo' | 'topic' | 'plan') {
   genProgress.value = 0
   genStage.value = ''
   genBlocks.value = []
+  genFailed.value = false
   view.value = 'new'
 }
 
@@ -759,8 +761,14 @@ async function startGenerate() {
       } as any, onEvent)
     }
   } catch {
-    genStage.value = '生成失败（mock 服务未启动？用 VITE_USE_MOCK=1 npm run dev）'
+    genFailed.value = true
+    genStage.value = 'AI 服务暂时不可用，生成已中断。你的大纲与选择都已保留，可点击重试。'
   }
+}
+/** M3 错误态兜底：生成中断后一键重试（保留大纲/模板选择） */
+function retryGenerate() {
+  genFailed.value = false
+  void startGenerate()
 }
 
 /* ---------- 备小研工坊控制器：注入 WorkshopFlow 的响应式状态 + 动作（IFC-WS-a） ---------- */
@@ -786,7 +794,7 @@ const ws = reactive({
   view, newMode, step, form, briefCtx, heroText, photos, recogCards, recogLoading, recogNote,
   plans, planDetail, planMap, decks, todaySchedule, classes, chapters, templates,
   gateOutline, gateReqs, gateAdjust, gateMatched, gateNote, outlineLoading,
-  genStage, genProgress, genBlocks, applyScope, tplFilter, currentTemplate, previewTopic, className, tplFiltered,
+  genStage, genProgress, genBlocks, genFailed, retryGenerate, applyScope, tplFilter, currentTemplate, previewTopic, className, tplFiltered,
   kindLabel, chapterShort, sourceLabel, templateName, renderLatex, scopeCards, modeCards, fontCards,
   openHome, openNew, submitHero, onDocFiles, adaptFromDeck, prefillLesson, openDeck,
   removePhoto, nextPhoto, selectPlan, nextPlan, prepareOutline, regenWithAdjust, quickAdjust,
