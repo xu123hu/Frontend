@@ -27,7 +27,7 @@ function Hero({ onSend }: { onSend: (t: string) => void }) {
   return (
     <div className="mx-auto max-w-3xl pt-16 text-center">
       <p className="text-[15px] text-slate-500">晚上好，同学 👋</p>
-      <h1 className="mt-2 text-4xl font-extrabold tracking-tight">
+      <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
         今天想<span className="text-gradient">学点</span>什么？
       </h1>
       <p className="mt-3 text-[15px] text-slate-500">引导解题、举一反三、错题讲解、按你的教材出题——一句话交给 AI</p>
@@ -55,10 +55,10 @@ function Hero({ onSend }: { onSend: (t: string) => void }) {
             <button
               key={r.text}
               onClick={() => onSend(r.text)}
-              className="flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 text-left text-[15px] shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/40"
+              className="flex w-full min-w-0 items-center gap-3 rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 text-left text-[15px] shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/40"
             >
-              <span className="text-lg">{r.icon}</span>
-              <span className="text-slate-700">{r.text}</span>
+              <span className="shrink-0 text-lg">{r.icon}</span>
+              <span className="min-w-0 flex-1 break-words text-slate-700">{r.text}</span>
             </button>
           ))}
         </div>

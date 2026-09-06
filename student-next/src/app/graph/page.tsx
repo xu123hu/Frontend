@@ -88,12 +88,12 @@ export default function GraphPage() {
     <div className="pt-8">
       <h1 className="text-xl font-bold">知识图谱 · 圆锥曲线</h1>
       <p className="mt-1 text-sm text-slate-500">拖拽平移 / 滚轮缩放 / 点节点看详情并直达专项练习</p>
-      <div className="mt-5 flex gap-4">
+      <div className="mt-5 flex flex-col gap-4 lg:flex-row">
         <div
           ref={containerRef}
-          className="h-[560px] flex-1 overflow-hidden rounded-3xl border border-slate-100 bg-white/90 shadow-sm"
+          className="h-[420px] w-full overflow-hidden rounded-3xl border border-slate-100 bg-white/90 shadow-sm lg:h-[560px] lg:flex-1"
         />
-        <aside className="w-72 shrink-0">
+        <aside className="w-full shrink-0 lg:w-72">
           {selected ? (
             <div className="rounded-3xl border border-slate-100 bg-white/90 p-5 shadow-sm">
               <h2 className="text-[15px] font-semibold">{selected.name}</h2>

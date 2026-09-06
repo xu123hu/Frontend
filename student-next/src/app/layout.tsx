@@ -1,10 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import AppShell from "@/components/shell/AppShell";
 
 export const metadata: Metadata = {
   title: "小研同学 · AI 学习助手",
   description: "数学学生端重构：AI 对话首页、知识库、错题本、练题中心、知识图谱、双师课堂、模拟试卷",
+};
+
+// 移动端按设备宽布局（缺失时浏览器按 ~980px 布局再缩放，导致全部页面横向溢出）
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
