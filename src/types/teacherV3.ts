@@ -487,3 +487,103 @@ export type V3ButlerSseEvent =
   | { event: 'asr_partial'; data: { text: string } }
   | { event: 'asr_final'; data: { text: string } }
   | { event: 'done'; data: { finish_reason?: string } }
+
+/* ============ Classroom 契约（teacher-v3.1 新增，IFC-002；事实源 02-ARCHITECTURE §12） ============ */
+
+/** 会话层状态机：created → open → ended → archived */
+export type V3ClassroomSessionStatus = 'created' | 'open' | 'ended' | 'archived'
+/** 活动层状态机：draft → ready → pushed → collecting → locked → revealed → completed */
+export type V3ClassroomActivityStatus = 'draft' | 'ready' | 'pushed' | 'collecting' | 'locked' | 'revealed' | 'completed'
+export type V3ClassroomActivityKind = 'question' | 'poll' | 'game' | 'photo_submit'
+/** AI 生成层状态机（HITL 子流程，awaiting_teacher 即教师确认卡） */
+export type V3ClassroomAiStatus = 'not_requested' | 'generating' | 'verifying' | 'awaiting_teacher' | 'approved' | 'pushed' | 'rejected'
+
+export interface V3ClassroomParticipant {
+  participant_id: string
+  student_name: string
+  anon_id?: string
+  joined_at: string
+  /** 在线状态走 live 通道（允许丢失，snapshot 兜底），投影字段可选 */
+  online?: boolean
+}
+
+export interface V3ClassroomActivityStats {
+  /** 已作答人数（服务端聚合，前端禁止本地推算——G7） */
+  answered: number
+  /** 选项分布 / 投票分布（key=选项序号或标识） */
+  distribution?: Record<string, number>
+  correct_rate?: number
+  /** 聚合里程碑提示（如「80% 已作答」），服务端 durable 事件下发 */
+  milestone?: string
+  /** 学生视角投影专用：当前参与人是否已提交（student-stream snapshot/事件载荷） */
+  my_submitted?: boolean
+}
+
+export interface V3ClassroomActivity {
+  activity_id: string
+  kind: V3ClassroomActivityKind
+  question_id?: string
+  config?: Record<string, unknown>
+  ord: number
+  status: V3ClassroomActivityStatus
+  stats?: V3ClassroomActivityStats
+  pushed_at?: string
+  locked_at?: string
+  /** AI 变式子流程状态（question 类活动可选） */
+  ai_generation?: { status: V3ClassroomAiStatus; content?: Record<string, unknown>; verifier_result?: Record<string, unknown> | null }
+}
+
+/** 题面投影（教师/学生视角由服务端区分：学生视角 revealed 前 answer 为空） */
+export interface V3ClassroomQuestionBrief {
+  question_id: string
+  stem_latex: string
+  options?: string[]
+  /** 仅 revealed 后下发（学生视角） */
+  answer?: string
+  analysis?: string
+}
+
+export interface V3ClassroomSession {
+  session_id: string
+  class_id: string
+  class_name?: string
+  join_code: string
+  status: V3ClassroomSessionStatus
+  started_at?: string
+  ended_at?: string
+  participants: V3ClassroomParticipant[]
+  activities: V3ClassroomActivity[]
+  /** 实时在线数（live 通道投影，允许短暂滞后） */
+  online_count?: number
+}
+
+/** 权威快照（GET snapshot / SSE 首事件，重连恢复锚点） */
+export interface V3ClassroomSnapshot {
+  session: V3ClassroomSession
+  /** 与 session.activities 关联的题面（question_id → 题面） */
+  questions?: V3ClassroomQuestionBrief[]
+  /** 权威事件序号（Last-Event-ID 补拉锚点，§7.1/§12.4） */
+  seq: number
+  /** 结课后生成的课堂小结 */
+  summary?: { stats: Record<string, unknown>; insight?: string } | null
+}
+
+/** 学生 H5 join 结果（无账号；课堂作用域短时 token，§10） */
+export interface V3ClassroomJoinResult {
+  session_id: string
+  participant_id: string
+  student_name: string
+  token: string
+  session_name?: string
+}
+
+/** 课堂 durable 事件（classroom_events 行投影，event_type 由 §12 状态机驱动） */
+export interface V3ClassroomEvent {
+  seq: number
+  event_id: string
+  event_type: 'session_opened' | 'participant_joined' | 'activity_pushed' | 'response_submitted'
+    | 'activity_locked' | 'activity_revealed' | 'ai_generation_updated' | 'session_ended'
+    | 'summary_ready' | (string & {})
+  payload: Record<string, any>
+  created_at: string
+}

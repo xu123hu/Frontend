@@ -5,7 +5,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 
 const rawFn = vi.fn()
-const routerPush = vi.fn()
+const routerPush = vi.fn(async (_to?: string) => undefined)
 
 vi.mock('@/api/client', () => ({
   ApiError: class ApiError extends Error {
@@ -14,7 +14,7 @@ vi.mock('@/api/client', () => ({
   },
   api: { raw: (...a: unknown[]) => rawFn(...a) },
 }))
-vi.mock('@/router', () => ({ router: { push: (...a: unknown[]) => routerPush(...a) } }))
+vi.mock('@/router', () => ({ router: { push: (to: string) => routerPush(to) } }))
 
 import { ApiError } from '@/api/client'
 import { teacherRequest } from '@/api/teacher/client'

@@ -7,9 +7,10 @@
  */
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { authHeaders } from '@/api/client'
+import { redirectTeacherDenied } from './teacher/client'
 import { teacherGet, teacherPost, teacherRequest } from './teacher/client'
 import type {
-  V3ButlerAction, V3ButlerCard, V3ButlerChatInput, V3ButlerContext, V3ClassInfo, V3Deck, V3DeckTemplate, V3DrawRecord, V3ElementDiff, V3FigureLibraryItem, V3FigurePreset, V3FigureRebuildCandidate, V3GradingAssignment,
+  V3ButlerAction, V3ButlerCard, V3ButlerChatInput, V3ButlerContext, V3ClassInfo, V3ClassroomActivity, V3ClassroomActivityKind, V3ClassroomJoinResult, V3ClassroomParticipant, V3ClassroomSession, V3ClassroomSnapshot, V3Deck, V3DeckTemplate, V3DrawRecord, V3ElementDiff, V3FigureLibraryItem, V3FigurePreset, V3FigureRebuildCandidate, V3GradingAssignment,
   V3LessonPlan, V3LessonTemplate, V3PlanGenForm, V3PlanOutline, V3Recipe, V3RecognizePageResult, V3Slide, V3Task, V3TemplateQualityReport, V3TodayData, V3VoiceFormulaInput,
 } from '@/types/teacherV3'
 
@@ -312,21 +313,97 @@ export const v3Api = {
     /** 工具目录（文档/调试用） */
     tools: () => teacherGet<{ tools: { name: string; label: string; kind: 'read' | 'write' | 'frontend'; confirm_required: boolean; description: string }[] }>('/teacher-v3/butler/tools'),
   },
+
+  /* ==================== classroom 课堂互动域（teacher-v3.1，IFC-002；事实源 02-ARCHITECTURE §12） ==================== */
+  classroom: {
+    /* 开课（返回 join_code=6 位）；POST /classroom/join 供学生 H5 用（无 JWT）见 join */
+    createSession: (body: { class_id: string }) =>
+      teacherPost<V3ClassroomSession>('/teacher-v3/classroom/sessions', body),
+    /** 学生加入（无 JWT，换课堂作用域 token；调端点时以 opts.headers 覆盖 Authorization） */
+    join: (body: { join_code: string; student_name: string }) =>
+      teacherPost<V3ClassroomJoinResult>('/teacher-v3/classroom/join', body),
+    /** 结课 → 归档 → 生成 classroom_summary */
+    endSession: (id: string) =>
+      teacherPost<V3ClassroomSession>(`/teacher-v3/classroom/sessions/${id}/end`),
+    /** 推互动（question/poll/game/photo_submit + question_id/config） */
+    pushActivity: (id: string, body: { kind: V3ClassroomActivityKind; question_id?: string; config?: Record<string, unknown> }) =>
+      teacherPost<V3ClassroomActivity>(`/teacher-v3/classroom/sessions/${id}/activities`, body),
+    lockActivity: (id: string, activityId: string) =>
+      teacherPost<V3ClassroomActivity>(`/teacher-v3/classroom/sessions/${id}/activities/${activityId}/lock`),
+    revealActivity: (id: string, activityId: string) =>
+      teacherPost<V3ClassroomActivity>(`/teacher-v3/classroom/sessions/${id}/activities/${activityId}/reveal`),
+    /** 学生作答提交（课堂 token；幂等靠 UNIQUE(activity_id, participant_id, attempt_no)，重复提交返回首次结果） */
+    submitResponse: (id: string, body: { activity_id: string; answer: unknown; image_key?: string; attempt_no?: number }, idempotencyKey?: string) =>
+      teacherPost<{ ok: true; activity: V3ClassroomActivity; duplicate?: boolean }>(`/teacher-v3/classroom/sessions/${id}/responses`, body, idempotencyKey),
+    /** 触发 AI 变式（AiGeneration 状态机：generating → verifying → awaiting_teacher） */
+    variation: (id: string, activityId: string) =>
+      teacherPost<V3ClassroomActivity>(`/teacher-v3/classroom/sessions/${id}/activities/${activityId}/variation`),
+    /** 公平随机点名 */
+    callRandom: (id: string) =>
+      teacherPost<{ participant: V3ClassroomParticipant }>(`/teacher-v3/classroom/sessions/${id}/call-random`),
+    /** 权威快照（重连恢复/首次进入） */
+    snapshot: (id: string, signal?: AbortSignal) =>
+      teacherGet<V3ClassroomSnapshot>(`/teacher-v3/classroom/sessions/${id}/snapshot`, undefined, signal),
+    /** 教师 SSE（durable 重放 + live）：snapshot → event*；常驻通道，断线自动重连（Last-Event-ID 补拉） */
+    stream: (id: string, onEvent: (event: string, data: any) => void, signal?: AbortSignal, opts?: V3SseOptions) =>
+      v3Sse('GET', `/teacher-v3/classroom/sessions/${id}/stream`, undefined, onEvent, signal, { reconnect: true, ...opts }),
+    /** 学生 SSE（学生视角投影；课堂 token 经 opts.headers 注入） */
+    studentStream: (id: string, token: string, onEvent: (event: string, data: any) => void, signal?: AbortSignal, opts?: V3SseOptions) =>
+      v3Sse('GET', `/teacher-v3/classroom/sessions/${id}/student-stream`, undefined, onEvent, signal, {
+        reconnect: true,
+        ...opts,
+        headers: { ...(opts?.headers || {}), Authorization: `Bearer ${token}` },
+      }),
+  },
 }
 
 export type { V3ButlerAction, V3ButlerCard, V3ButlerContext }
 
-/** V3 SSE 通用通道（与 V2 同构）：onEvent(event, data)，abort() 可取消 */
-export function v3Sse(method: 'GET' | 'POST', path: string, body?: unknown, onEvent?: (event: string, data: any) => void, signal?: AbortSignal) {
+/** V3 SSE 通用通道选项（IFC-002）：reconnect 默认 false＝既有 8 条任务型通道行为不变 */
+export interface V3SseOptions {
+  /** 断线自动重连（指数退避 ×maxRetries，自动携带 Last-Event-ID）；课堂双通道常驻必开 */
+  reconnect?: boolean
+  /** 最大重试次数（默认 3，退避 1s/2s/4s） */
+  maxRetries?: number
+  /** 追加请求头（学生课堂 token 注入 Authorization 用） */
+  headers?: Record<string, string>
+  /** 断线后重连成功（每次恢复触发；调用方 toast「连接已恢复，正在补齐进度…」） */
+  onRecover?: () => void
+  /** 每次进入重试等待（attempt 从 1 起） */
+  onRetry?: (attempt: number, delayMs: number) => void
+}
+
+/** SSE 致命错误（onopen 的 HTTP/业务错误）：永不重试；code=40301 时已统一跳提示页 */
+export class SseFatalError extends Error {
+  status?: number
+  code?: number
+  constructor(message: string, status?: number, code?: number) {
+    super(message)
+    this.status = status
+    this.code = code
+  }
+}
+
+const SSE_RETRY_BASE_MS = 1000
+
+/** V3 SSE 通用通道（与 V2 同构）：onEvent(event, data)，abort() 可取消。
+ * 断线语义：默认 onerror 抛出即终止（不自动重连，src/api/sse.js 同纪律）；
+ * opts.reconnect=true 时指数退避重连，Last-Event-ID 由 fetch-event-source 内建跨重试携带（fetch.js getMessages→headers 持久化）。 */
+export function v3Sse(method: 'GET' | 'POST', path: string, body?: unknown, onEvent?: (event: string, data: any) => void, signal?: AbortSignal, opts: V3SseOptions = {}) {
   const ctrl = new AbortController()
   if (signal) {
     if (signal.aborted) ctrl.abort()
     else signal.addEventListener('abort', () => ctrl.abort(), { once: true })
   }
+  const maxRetries = opts.maxRetries ?? 3
+  let attempts = 0
+  let everFailed = false
+
   const finished = fetchEventSource(`/api${path}`, {
     method,
     headers: {
       ...authHeaders(),
+      ...(opts.headers || {}),
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       Accept: 'text/event-stream',
     } as Record<string, string>,
@@ -336,8 +413,18 @@ export function v3Sse(method: 'GET' | 'POST', path: string, body?: unknown, onEv
     async onopen(res: Response) {
       if (!res.ok || !(res.headers.get('content-type') || '').includes('text/event-stream')) {
         let detail = `HTTP ${res.status}`
-        try { const j = await res.json(); detail = (j as any).message || detail } catch { /* ignore */ }
-        throw new Error(detail)
+        let code: number | undefined
+        try {
+          const j = await res.json()
+          detail = (j as any).message || detail
+          code = (j as any).code
+        } catch { /* ignore */ }
+        if (code === 40301) redirectTeacherDenied()
+        throw new SseFatalError(detail, res.status, code) // 致命：onerror 直接上抛，不进重试
+      }
+      if (everFailed) {
+        attempts = 0
+        opts.onRecover?.()
       }
     },
     onmessage(ev: any) {
@@ -346,7 +433,16 @@ export function v3Sse(method: 'GET' | 'POST', path: string, body?: unknown, onEv
       try { data = JSON.parse(ev.data) } catch { data = { raw: ev.data } }
       onEvent?.(ev.event, data)
     },
-    onerror(err: unknown) { throw err },
+    onerror(err: unknown) {
+      if (err instanceof SseFatalError) throw err
+      if (!opts.reconnect) throw err
+      if (attempts >= maxRetries) throw err
+      attempts += 1
+      const delay = SSE_RETRY_BASE_MS * 2 ** (attempts - 1)
+      everFailed = true
+      opts.onRetry?.(attempts, delay)
+      return delay // 返回数字 → fetch-event-source 按该毫秒数自动重试
+    },
   })
   return {
     abort: () => ctrl.abort(),
