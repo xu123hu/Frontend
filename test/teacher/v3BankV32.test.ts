@@ -154,26 +154,25 @@ describe('V3.2 · BankView AI 识别知识点 + 树编辑', () => {
   })
 })
 
-describe('V3.2 · ResourcesView 分类', () => {
-  it('未选类型时按类型分组渲染；章节筛选与搜索生效', async () => {
+describe('V3.2 · ResourcesView 分类（V2 改版）', () => {
+  it('未选类型时按类型分组渲染；搜索与类型标签过滤生效', async () => {
     const w = mountPage(ResourcesView)
     await flushPromises()
 
-    // 分组头：课件 1 项 / 教案 1 项
-    expect(w.find('[data-testid="tv3-res-group-deck"]').text()).toContain('课件')
-    expect(w.find('[data-testid="tv3-res-group-plan"]').text()).toContain('教案')
-    // 类型 seg 带计数
-    expect(w.find('[data-testid="tv3-res-kind-deck"]').text()).toContain('1')
+    // 分组头：未选类型时按类型分组（课件组/教案组）
+    expect(w.find(".rv2-res-group__label[data-type='deck']").text()).toContain('课件')
+    expect(w.find(".rv2-res-group__label[data-type='plan']").text()).toContain('教案')
 
-    // 章节筛选
-    await w.find('[data-testid="tv3-res-chapter"]').setValue('椭圆及其标准方程')
-    expect(w.text()).toContain('椭圆 · 课件')
-    expect(w.text()).not.toContain('导数 · 教案')
+    // 搜索过滤：命中名称即只剩该项
+    const search = w.find('.rv2-search__input')
+    await search.setValue('英语听力')
+    expect(w.text()).toContain('英语听力专项训练')
+    expect(w.text()).not.toContain('函数与导数')
 
-    // 搜索
-    await w.find('[data-testid="tv3-res-chapter"]').setValue('')
-    await w.find('[data-testid="tv3-res-search"]').setValue('教案')
-    expect(w.text()).toContain('导数 · 教案')
-    expect(w.text()).not.toContain('椭圆 · 课件')
+    // 清空搜索 → 侧栏类型标签（deck）→ 平铺只显示课件类
+    await search.setValue('')
+    await w.find(".rv2-tag[data-type='deck']").trigger('click')
+    expect(w.text()).toContain('《函数与导数》复习课件.pptx')
+    expect(w.text()).not.toContain('一元二次方程教案.docx')
   })
 })
