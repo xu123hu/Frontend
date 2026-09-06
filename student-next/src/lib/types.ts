@@ -85,7 +85,8 @@ export interface GraphNode {
   id: string;
   code: string;
   name: string;
-  path: string;
+  /** 知识点路径（真实后端为数组，如 ["数学","解析几何","圆锥曲线"]） */
+  path: string | string[];
   source: string;
 }
 export interface GraphEdge {

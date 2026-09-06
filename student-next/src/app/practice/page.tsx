@@ -41,7 +41,14 @@ function PracticeInner() {
   useEffect(() => {
     fetch(apiUrl("/knowledge-graph/nodes?limit=20"))
       .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((d) => setKps((d.items as GraphNode[]).filter((n) => n.code.startsWith("conic.")).map((n) => n.code)))
+      .then((d) =>
+        setKps(
+          (d.items as GraphNode[])
+            .map((n) => n.code)
+            .filter((c) => c.startsWith("conic.") || c.startsWith("kp."))
+            .slice(0, 12),
+        ),
+      )
       .catch(() => setKps([]));
   }, []);
 

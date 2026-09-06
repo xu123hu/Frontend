@@ -86,8 +86,8 @@ export default function GraphPage() {
 
   return (
     <div className="pt-8">
-      <h1 className="text-xl font-bold">知识图谱 · 圆锥曲线</h1>
-      <p className="mt-1 text-sm text-slate-500">拖拽平移 / 滚轮缩放 / 点节点看详情并直达专项练习</p>
+      <h1 className="text-xl font-bold">知识图谱</h1>
+      <p className="mt-1 text-sm text-slate-500">知识点全景 · 拖拽平移 / 滚轮缩放 / 点节点看详情并直达专项练习</p>
       <div className="mt-5 flex flex-col gap-4 lg:flex-row">
         <div
           ref={containerRef}
@@ -98,7 +98,9 @@ export default function GraphPage() {
             <div className="rounded-3xl border border-slate-100 bg-white/90 p-5 shadow-sm">
               <h2 className="text-[15px] font-semibold">{selected.name}</h2>
               <p className="mt-1 text-xs text-slate-400">{selected.code}</p>
-              <p className="mt-2 text-xs text-slate-400">{selected.path}</p>
+              <p className="mt-2 text-xs text-slate-400">
+                {Array.isArray(selected.path) ? selected.path.join(" / ") : selected.path}
+              </p>
               <div className="mt-4 rounded-2xl bg-indigo-50/70 p-3 text-sm leading-6 text-slate-600">
                 围绕该知识点出题练手，AI 会在对话中引导补弱。
               </div>
