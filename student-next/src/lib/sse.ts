@@ -1,14 +1,17 @@
 /**
- * SSE 消费器（fetch + ReadableStream）。
- * 契约：`event: <type>\ndata: <json>\n\n`（contracts/README.md 统一基线）。
+ * SSE 消费器（fetch + ReadableStream），对齐 event-contracts v1.0-rc1：
+ * - 帧含 `id: <seq>` 行（断线续传键）→ 通过 onEvent 第三参上报
+ * - 心跳为注释帧 `: ping` → 忽略
+ * - data 为 JSON 信封（type/seq/session_id/turn_id/...）
  * 不用 EventSource：需要 POST + 鉴权头 + 请求体 + 主动取消。
  */
 
-export type SseListener = (event: string, data: unknown) => void;
+export type SseListener = (event: string, data: unknown, id: string | null) => void;
 
 export interface StreamOptions {
   body?: unknown;
   signal?: AbortSignal;
+  headers?: Record<string, string>;
   onEvent: SseListener;
   /** 首事件到达回调（用于关闭"连接中"骨架） */
   onFirstEvent?: () => void;
@@ -31,25 +34,30 @@ export class StreamAbortedError extends Error {
 }
 
 export async function streamSse(url: string, opts: StreamOptions): Promise<void> {
-  const { body, signal, onEvent, onFirstEvent, firstEventTimeoutMs = 8000 } = opts;
+  const { body, signal, headers, onEvent, onFirstEvent, firstEventTimeoutMs = 8000 } = opts;
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream", ...headers },
     body: JSON.stringify(body ?? {}),
     signal,
   });
   if (!res.ok || !res.body) {
-    throw new Error(`后端连接失败（HTTP ${res.status}）`);
+    let code = "";
+    try {
+      code = ((await res.json()) as { code?: string }).code ?? "";
+    } catch {
+      /* 非 JSON 错误体 */
+    }
+    throw new Error(`后端连接失败（HTTP ${res.status}${code ? ` ${code}` : ""}）`);
   }
 
-  // 首 token 看门狗：超时中断并抛出，UI 层给出可重试提示
+  // 首 token 看门狗
   let gotFirst = false;
+  const controller = new AbortController();
   const watchdog = setTimeout(() => {
     if (!gotFirst) controller.abort(new FirstTokenTimeoutError());
   }, firstEventTimeoutMs);
-
-  const controller = new AbortController();
   const onOuterAbort = () => controller.abort(new StreamAbortedError());
   signal?.addEventListener("abort", onOuterAbort, { once: true });
 
@@ -63,15 +71,17 @@ export async function streamSse(url: string, opts: StreamOptions): Promise<void>
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
 
-      // 帧以空行分隔
       let sep: number;
       while ((sep = buffer.indexOf("\n\n")) >= 0) {
         const frame = buffer.slice(0, sep);
         buffer = buffer.slice(sep + 2);
         let type = "message";
+        let id: string | null = null;
         const dataLines: string[] = [];
         for (const line of frame.split("\n")) {
-          if (line.startsWith("event:")) type = line.slice(6).trim();
+          if (line.startsWith(":")) continue; // 心跳注释帧
+          if (line.startsWith("id:")) id = line.slice(3).trim();
+          else if (line.startsWith("event:")) type = line.slice(6).trim();
           else if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
         }
         if (dataLines.length === 0) continue;
@@ -86,7 +96,7 @@ export async function streamSse(url: string, opts: StreamOptions): Promise<void>
           clearTimeout(watchdog);
           onFirstEvent?.();
         }
-        onEvent(type, payload);
+        onEvent(type, payload, id);
       }
     }
   } catch (err) {

@@ -1,4 +1,4 @@
-/** 与共享契约对齐的前端类型（字段名即契约草案，见 deliverables/.../Mock拆解表.md） */
+/** 与共享契约对齐的前端类型（contracts/api-contracts.md v1.0 + event-contracts v1.0-rc1） */
 
 export interface QuestionImage {
   image_url: string;
@@ -10,85 +10,130 @@ export interface QuestionImage {
 
 export type ChatStatus = "idle" | "connecting" | "streaming" | "error";
 
+/** event-contracts §3 wait_for_input 的追问 */
+export interface PendingQuestion {
+  id: string;
+  prompt: string;
+  kind: "text" | "choice";
+  options?: { label: string }[];
+}
+
+/** event-contracts §3 sources 的引用 */
+export interface SourceRef {
+  title: string;
+  locator: string;
+  url?: string;
+  snippet?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
-  /** 流式/定稿文本 */
+  /** 流式/定稿文本（仅拼接 call_kind="answer" 的 delta） */
   text: string;
-  /** 题目图片卡（图片直出，禁止转文字） */
+  /** 题目/图形图片卡（quiz_item.stem_images、figure blocks） */
   images: QuestionImage[];
-  /** 工具调用/进度步骤 */
+  /** stage/tool/progress 的过程标签 */
   steps: string[];
+  sources: SourceRef[];
+  /** wait_for_input 追问（done{waiting_input} 后显示作答卡） */
+  pendingQuestion?: PendingQuestion;
   done?: boolean;
   error?: { code: string; message: string; retryable: boolean };
 }
 
-export type KbStage = "upload" | "parse" | "chunk" | "embed" | "ready" | "failed";
+/** B2-1 知识库文档（FE 轮询进度） */
+export type KbStatus = "pending" | "parsing" | "embedding" | "ready" | "failed";
 export interface KbDoc {
-  doc_id: string;
-  filename: string;
-  status: KbStage;
+  id: string;
+  title: string;
+  status: KbStatus;
   progress: number;
-  chunks?: number;
-  size_hint?: string;
+  page_count: number;
+  error: string | null;
+  created_at: number | string;
 }
 
+/** B4-1 错题记录（图片可能为 null → 文本卡兜底） */
 export interface ErrorRecord {
-  record_id: string;
-  image_url: string;
-  hires_url?: string;
-  kp: string;
+  error_id: string;
+  question_text: string | null;
+  original_image_url: string | null;
+  enhanced_image_url: string | null;
+  kp_code: string;
+  error_type: string | null;
+  source_channel: "manual" | "auto_judge";
   created_at: string;
-  diagnosis?: string;
+  error_cause?: string;
 }
 
+/** B4-2/B4-3 题目（options 可为 null → 文本作答兜底） */
 export interface PracticeQuestion {
   question_id: string;
-  stem_image: string;
-  stem_image_hires?: string;
-  options?: { key: string; text: string }[];
-  answer?: string;
-  analysis_image?: string;
+  source: "imported" | "bank" | "ai";
+  stem_text: string;
+  stem_image_url: string | null;
+  images?: { url: string; page_no?: number }[];
+  options?: Record<string, string> | null;
+  kp_codes: string[];
+  difficulty: string;
+  ai_mock?: boolean;
 }
 
-export interface KpItem {
-  kp_code: string;
-  name: string;
-  mastery: number;
-}
-
+/** B2-2 图谱（v1 无 mastery 字段，FE 已增补请求） */
 export interface GraphNode {
-  kp_code: string;
+  id: string;
+  code: string;
   name: string;
-  mastery: number;
+  path: string;
+  source: string;
 }
 export interface GraphEdge {
-  source: string;
-  target: string;
-  relation: string;
-}
-export interface GraphData {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
+  src: string;
+  dst: string;
+  edge_type: string;
+  weight?: number;
+  source?: string;
+  evidence?: string | null;
 }
 
+/** B4-3 试卷 */
 export interface ExamPaper {
   paper_id: string;
   title: string;
+  year: number | null;
   question_count: number;
-  duration_min: number;
+  source_import_id?: string | null;
+}
+export interface ExamItem {
+  position: number;
+  question_id: string;
+  source: string;
+  stem_text: string;
+  stem_image_url: string | null;
+  options?: Record<string, string> | null;
+  kp_codes?: string[];
+  difficulty?: string;
+}
+export interface ExamPaperDetail {
+  paper_id: string;
+  title: string;
+  year: number | null;
+  items: ExamItem[];
 }
 
-export interface ExamPaperDetail extends ExamPaper {
-  questions: PracticeQuestion[];
+/** B4-5 双师讲义 slide blocks */
+export interface SlideBlock {
+  kind: "text" | "latex" | "example" | "figure_ref";
+  content?: string;
+  analysis?: string[];
+  artifact_url?: string;
+  artifact_type?: string;
+  expr?: string;
 }
-
-/** 双师课堂画布指令（消费 B4 结构化绘图事件） */
-export interface CanvasOp {
-  op: "axes" | "draw" | "label" | "clear";
-  /** 归一化路径点 [x,y]（0..1） */
-  points?: [number, number][];
-  label?: string;
-  at?: [number, number];
-  color?: string;
+export interface Slide {
+  index: number;
+  blocks: SlideBlock[];
+  kp_path?: string[];
+  total?: number;
 }

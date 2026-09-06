@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="400" viewBox="0 0 560 400">
+<rect width="560" height="400" fill="#8a8578"/>
+<g transform="rotate(-2 280 200)">
+<rect x="40" y="30" width="480" height="340" fill="#b8b2a4"/>
+<rect x="40" y="30" width="480" height="340" fill="none" stroke="#948e80"/>
+<g font-family="'KaiTi','楷体',cursive" font-size="18" fill="#57534e" opacity="0.75">
+<text x="70" y="90">点 M 到点 F(1,0) 与到直线 x=-1</text>
+<text x="70" y="126">的距离相等，则 M 的轨迹为___</text>
+<text x="70" y="180">解：设 M(x,y)，√((x-1)²+y²)=|x+1|</text>
+<text x="70" y="216">两边平方化简得 y²=4x</text>
+<text x="70" y="270">所以轨迹为抛物线（没写范围）</text>
+</g>
+<circle cx="150" cy="208" r="34" fill="none" stroke="#7f1d1d" stroke-width="2.5" opacity="0.4"/>
+</g>
+</svg>

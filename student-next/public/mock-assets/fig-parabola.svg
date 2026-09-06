@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+<rect width="640" height="420" fill="#ffffff"/>
+<rect x="1" y="1" width="638" height="418" fill="none" stroke="#e2e8f0"/>
+<g stroke="#334155" stroke-width="1.4" fill="none">
+<line x1="60" y1="210" x2="600" y2="210"/>
+<line x1="330" y1="40" x2="330" y2="390"/>
+<path d="M 110 60 Q 330 470 550 60" stroke="#4f46e5" stroke-width="2.6"/>
+<line x1="205" y1="50" x2="205" y2="380" stroke="#0891b2" stroke-width="1.6" stroke-dasharray="6 4"/>
+</g>
+<circle cx="330" cy="210" r="4" fill="#dc2626"/>
+<line x1="450" y1="180" x2="344" y2="205" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="205" y1="120" x2="240" y2="180" stroke="#94a3b8" stroke-width="1.2"/>
+<g font-family="'Times New Roman',serif" font-size="17" fill="#0f172a">
+<text x="352" y="196">F</text>
+<text x="470" y="172">|PF| = d(P, l)</text>
+<text x="182" y="108" fill="#0891b2">l: x = −p/2</text>
+<text x="588" y="226">x</text><text x="338" y="52">y</text>
+<text x="322" y="230" fill="#dc2626">p/2</text>
+</g>
+</svg>

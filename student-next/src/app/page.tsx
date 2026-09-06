@@ -19,7 +19,7 @@ const ENTRIES = [
   { href: "/errors", icon: "📷", title: "错题本", desc: "拍照增强，自动归知识点" },
   { href: "/practice", icon: "✏️", title: "练题中心", desc: "按薄弱点精准练" },
   { href: "/graph", icon: "🕸️", title: "知识图谱", desc: "看清章节脉络与漏洞" },
-  { href: "/classroom", icon: "👨‍🏫", title: "双师课堂", desc: "讲解 + 动态画布演示" },
+  { href: "/classroom", icon: "👨‍🏫", title: "双师课堂", desc: "讲义逐页 + 图形演示" },
   { href: "/exam", icon: "📝", title: "模拟试卷", desc: "限时组卷，自动批改" },
 ];
 
@@ -82,7 +82,7 @@ function Hero({ onSend }: { onSend: (t: string) => void }) {
 }
 
 function Conversation() {
-  const { messages, status, send, stop, retry } = useChat();
+  const { messages, status, send, stop, retry, reply } = useChat();
   const bottomRef = useRef<HTMLDivElement>(null);
   const streaming = status === "connecting" || status === "streaming";
 
@@ -99,6 +99,7 @@ function Conversation() {
             message={m}
             streaming={streaming && i === messages.length - 1 && m.role === "assistant"}
             onRetry={retry}
+            onReply={reply}
           />
         ))}
         <div ref={bottomRef} />

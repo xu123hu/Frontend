@@ -1,66 +1,74 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiUrl } from "@/lib/api";
-import { streamSse } from "@/lib/sse";
-import type { KbDoc, KbStage } from "@/lib/types";
 import { Pill, StageProgress } from "@/components/ui/ui";
+import type { KbDoc, KbStatus } from "@/lib/types";
 
+/** B2-1：上传后轮询 documents 进度（契约用轮询，不占 SSE 通道） */
 const STAGES = ["上传", "解析", "切片", "向量化"];
-const STAGE_MAP: Record<string, string> = { upload: "上传", parse: "解析", chunk: "切片", embed: "向量化" };
-
-interface Uploading {
-  filename: string;
-  stage: KbStage;
-  pct: number;
-  note: string;
+function stageOf(status: KbStatus, pct: number): string {
+  if (status === "ready") return "向量化";
+  if (status === "failed") return "解析";
+  if (status === "embedding") return "向量化";
+  if (status === "parsing") return pct >= 40 ? "切片" : "解析";
+  return "上传";
 }
 
 export default function KbPage() {
   const [docs, setDocs] = useState<KbDoc[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState<Uploading | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    fetch(apiUrl("/kb/docs"))
-      .then((r) => r.json())
-      .then((d) => setDocs(d.items))
-      .finally(() => setLoading(false));
+  const refresh = useCallback(async (): Promise<KbDoc[]> => {
+    const res = await fetch(apiUrl("/kb/documents"));
+    const d = (await res.json()) as { items: KbDoc[] };
+    setDocs(d.items);
+    return d.items;
   }, []);
 
-  const startUpload = (file: File) => {
-    setUploading({ filename: file.name, stage: "upload", pct: 0, note: "准备上传…" });
-    const controller = new AbortController();
-    streamSse(apiUrl("/kb/docs/import"), {
-      body: { filename: file.name },
-      signal: controller.signal,
-      onEvent: (type, data) => {
-        const d = data as Record<string, unknown>;
-        if (type === "progress") {
-          setUploading({
-            filename: file.name,
-            stage: (d.stage as KbStage) ?? "upload",
-            pct: Number(d.pct ?? 0),
-            note: String(d.label ?? ""),
-          });
-        } else if (type === "done") {
-          setDocs((prev) => [
-            {
-              doc_id: String(d.doc_id),
-              filename: String(d.filename),
-              status: "ready",
-              progress: 100,
-              chunks: Number(d.chunks),
-            },
-            ...prev,
-          ]);
-          setUploading(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 异步取数后关闭骨架屏，非同步级联
+    refresh().finally(() => setLoading(false));
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [refresh]);
+
+  const startPolling = useCallback(
+    (docId: string) => {
+      setUploadingId(docId);
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = setInterval(async () => {
+        const items = await refresh();
+        const me = items.find((x) => x.id === docId);
+        if (!me || me.status === "ready" || me.status === "failed") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setUploadingId(null);
         }
-      },
-    }).catch(() => setUploading(null));
+      }, 1200);
+    },
+    [refresh],
+  );
+
+  const startUpload = async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(apiUrl("/kb/upload"), { method: "POST", body: form });
+    if (res.status === 202) {
+      const d = (await res.json()) as { document_id: string };
+      await refresh();
+      startPolling(d.document_id);
+    } else {
+      const err = (await res.json().catch(() => ({}))) as { message?: string };
+      alert(err.message ?? "上传失败");
+    }
   };
+
+  const uploading = docs.find((d) => d.id === uploadingId) ?? null;
 
   return (
     <div className="pt-8">
@@ -69,7 +77,6 @@ export default function KbPage() {
         上传教材/笔记 → 自动解析、切片、向量化 → AI 按你的资料出题
       </p>
 
-      {/* 上传区（拖拽/点击） */}
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -80,9 +87,9 @@ export default function KbPage() {
           e.preventDefault();
           setDragOver(false);
           const f = e.dataTransfer.files?.[0];
-          if (f && !uploading) startUpload(f);
+          if (f && !uploadingId) startUpload(f);
         }}
-        onClick={() => !uploading && inputRef.current?.click()}
+        onClick={() => !uploadingId && inputRef.current?.click()}
         className={
           "mt-5 cursor-pointer rounded-3xl border-2 border-dashed bg-white/70 p-10 text-center transition " +
           (dragOver ? "border-indigo-400 bg-indigo-50/60" : "border-indigo-200 hover:border-indigo-300")
@@ -91,7 +98,7 @@ export default function KbPage() {
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.docx,.pptx,.md,image/*"
+          accept=".pdf,.png,.jpg,.jpeg,.txt,.md,.docx"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -101,12 +108,12 @@ export default function KbPage() {
         />
         {uploading ? (
           <div className="mx-auto max-w-md">
-            <p className="mb-3 text-sm font-medium text-slate-700">{uploading.filename}</p>
+            <p className="mb-3 text-sm font-medium text-slate-700">{uploading.title}</p>
             <StageProgress
               stages={STAGES}
-              currentStage={STAGE_MAP[uploading.stage] ?? "上传"}
-              pct={uploading.pct}
-              note={uploading.note}
+              currentStage={stageOf(uploading.status, uploading.progress)}
+              pct={uploading.progress}
+              note={uploading.status === "pending" ? "排队中…" : uploading.status === "failed" ? uploading.error ?? "解析失败" : "后端处理中（轮询进度）"}
             />
           </div>
         ) : (
@@ -115,7 +122,7 @@ export default function KbPage() {
               ⇪
             </div>
             <p className="mt-3 text-[15px] font-medium">拖拽文件到这里，或点击选择上传</p>
-            <p className="mt-1 text-xs text-slate-400">支持 PDF / Word / PPT / Markdown / 图片，单个 ≤ 50MB</p>
+            <p className="mt-1 text-xs text-slate-400">支持 PDF / Word / 图片 / TXT / Markdown，单个 ≤ 50MB</p>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -129,37 +136,41 @@ export default function KbPage() {
         )}
       </div>
 
-      {/* 文档列表 */}
       <div className="mt-6 space-y-3">
         {loading && [1, 2, 3].map((i) => <div key={i} className="skeleton h-20 rounded-2xl" />)}
         {docs.map((doc) => (
           <div
-            key={doc.doc_id}
+            key={doc.id}
             className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white/90 p-4 shadow-sm"
           >
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-lg">📄</span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-medium">{doc.filename}</p>
+              <p className="truncate text-[15px] font-medium">{doc.title}</p>
               <p className="mt-0.5 text-xs text-slate-400">
-                {doc.chunks ? `${doc.chunks} 个切片 · ` : ""}
-                {doc.size_hint ?? "刚上传"}
+                {doc.status === "ready"
+                  ? `${doc.page_count} 页 · 已就绪`
+                  : doc.status === "failed"
+                    ? doc.error ?? "解析失败"
+                    : `处理中 ${doc.progress}%`}
               </p>
             </div>
             {doc.status === "ready" ? (
               <>
                 <Pill tone="green">已就绪</Pill>
                 <a
-                  href="/practice"
+                  href="/practice?mode=special"
                   className="rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-600 hover:bg-indigo-100"
                 >
                   按这份资料出题 →
                 </a>
               </>
-            ) : (
+            ) : doc.status === "failed" ? (
               <>
                 <Pill tone="red">解析失败</Pill>
                 <button className="rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-500">重试</button>
               </>
+            ) : (
+              <Pill tone="indigo">处理中 {doc.progress}%</Pill>
             )}
           </div>
         ))}

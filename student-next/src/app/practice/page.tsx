@@ -1,54 +1,86 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { apiUrl } from "@/lib/api";
 import QuestionImageCard from "@/components/chat/QuestionImageCard";
 import { Pill } from "@/components/ui/ui";
-import type { KpItem, PracticeQuestion } from "@/lib/types";
+import type { GraphNode, PracticeQuestion } from "@/lib/types";
 
-type Feedback = { correct: boolean; comment: string; standard_answer: string; analysis_image: string } | null;
+type Feedback = { verdict: "right" | "wrong"; error_id?: string } | null;
 
-export default function PracticePage() {
-  const [kps, setKps] = useState<KpItem[]>([]);
-  const [activeKp, setActiveKp] = useState<KpItem | null>(null);
+const MODES = [
+  { key: "daily", label: "每日练" },
+  { key: "retry", label: "错题重练" },
+  { key: "special", label: "专项练" },
+];
+
+function StemCard({ q }: { q: PracticeQuestion }) {
+  if (q.stem_image_url) {
+    return <QuestionImageCard image={{ image_url: q.stem_image_url, hires_url: q.stem_image_url, caption: "题干原图" }} />;
+  }
+  return (
+    <div className="max-w-xl whitespace-pre-wrap rounded-2xl border border-slate-100 bg-slate-50/80 p-4 text-[15px] leading-7 text-slate-700">
+      {q.stem_text}
+    </div>
+  );
+}
+
+function PracticeInner() {
+  const sp = useSearchParams();
+  const [mode, setMode] = useState(sp.get("mode") ?? "daily");
+  const [kps, setKps] = useState<string[]>([]);
+  const [activeKp, setActiveKp] = useState<string | null>(null);
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
   const [qIdx, setQIdx] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
+  const [textAnswer, setTextAnswer] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
-  const [starting, setStarting] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetch(apiUrl("/student/practice/kp-catalog"))
-      .then((r) => r.json())
-      .then((d) => setKps(d.items));
+    fetch(apiUrl("/knowledge-graph/nodes?limit=20"))
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((d) => setKps((d.items as GraphNode[]).filter((n) => n.code.startsWith("conic.")).map((n) => n.code)))
+      .catch(() => setKps([]));
   }, []);
 
-  const start = async (kp: KpItem) => {
-    setActiveKp(kp);
-    setStarting(true);
-    setFeedback(null);
-    setPicked(null);
-    setQIdx(0);
-    const res = await fetch(apiUrl("/student/practice/start"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kp_code: kp.kp_code }),
-    });
-    const d = await res.json();
-    setQuestions(d.questions);
-    setStarting(false);
-  };
+  const start = useCallback(
+    async (m: string, kp: string | null) => {
+      setLoading(true);
+      setFeedback(null);
+      setPicked(null);
+      setTextAnswer("");
+      setQIdx(0);
+      const params = new URLSearchParams({ mode: m, count: "5" });
+      if (kp) params.set("kp_codes", kp);
+      const res = await fetch(apiUrl(`/practice/questions?${params}`));
+      const d = (await res.json()) as { items: PracticeQuestion[] };
+      setQuestions(d.items);
+      setLoading(false);
+    },
+    [],
+  );
+
+  // URL 带 mode/kp_codes 时自动开始
+  useEffect(() => {
+    const kp = sp.get("kp_codes");
+    const m = sp.get("mode");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 异步取数前置 loading，非同步级联
+    if (m || kp) start(m ?? "special", kp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const submit = async () => {
-    if (!picked) return;
     const q = questions[qIdx];
-    const res = await fetch(apiUrl("/student/practice/submit"), {
+    const answer = q.options ? picked : textAnswer.trim();
+    if (!answer) return;
+    const res = await fetch(apiUrl("/practice/submit"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question_id: q.question_id, answer: picked }),
+      body: JSON.stringify({ question_id: q.question_id, answer }),
     });
-    const d = await res.json();
-    setFeedback(d);
+    setFeedback(await res.json());
   };
 
   const current = questions[qIdx];
@@ -56,85 +88,122 @@ export default function PracticePage() {
   return (
     <div className="pt-8">
       <h1 className="text-xl font-bold">练题中心</h1>
-      <p className="mt-1 text-sm text-slate-500">按薄弱知识点精准练习 · 题目一律原图直出</p>
+      <p className="mt-1 text-sm text-slate-500">按薄弱知识点精准练 · 题目一律原图直出（无图题文字呈现）</p>
 
-      {/* 知识点选择 */}
       <div className="mt-5 flex flex-wrap gap-2">
-        {kps.map((kp) => (
+        {MODES.map((m) => (
           <button
-            key={kp.kp_code}
-            onClick={() => start(kp)}
+            key={m.key}
+            onClick={() => {
+              setMode(m.key);
+              setActiveKp(null);
+              start(m.key, null);
+            }}
             className={
               "rounded-full border px-4 py-2 text-sm transition " +
-              (activeKp?.kp_code === kp.kp_code
+              (mode === m.key
                 ? "border-indigo-400 bg-indigo-50 font-medium text-indigo-600"
                 : "border-slate-200 bg-white/80 text-slate-600 hover:border-indigo-300")
             }
           >
-            {kp.name}
-            <span className="ml-2 text-xs text-slate-400">掌握 {(kp.mastery * 100).toFixed(0)}%</span>
+            {m.label}
           </button>
         ))}
       </div>
 
-      {starting && <div className="skeleton mt-6 h-72 rounded-2xl" />}
+      {kps.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {kps.map((kp) => (
+            <button
+              key={kp}
+              onClick={() => {
+                setActiveKp(kp);
+                setMode("special");
+                start("special", kp);
+              }}
+              className={
+                "rounded-full border px-3 py-1 text-xs transition " +
+                (activeKp === kp
+                  ? "border-indigo-400 bg-indigo-50 font-medium text-indigo-600"
+                  : "border-slate-200 bg-white/70 text-slate-500 hover:border-indigo-300")
+              }
+            >
+              {kp}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {current && !starting && (
+      {loading && <div className="skeleton mt-6 h-72 rounded-2xl" />}
+
+      {current && !loading && (
         <div className="mt-6 rounded-3xl border border-slate-100 bg-white/90 p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <Pill tone="indigo">{activeKp?.name}</Pill>
+            <div className="flex gap-2">
+              <Pill tone="indigo">{current.kp_codes[0] ?? "综合"}</Pill>
+              <Pill tone={current.source === "ai" ? "amber" : "slate"}>
+                {current.source === "ai" ? "AI 兜底题" : current.source === "imported" ? "真题导入" : "题库"}
+              </Pill>
+            </div>
             <span className="text-xs text-slate-400">
               第 {qIdx + 1} / {questions.length} 题
             </span>
           </div>
 
-          <QuestionImageCard image={{ image_url: current.stem_image, hires_url: current.stem_image_hires, caption: "题干原图" }} />
+          <StemCard q={current} />
 
-          <div className="mt-4 space-y-2">
-            {current.options?.map((o) => {
-              const isPicked = picked === o.key;
-              const isAnswer = feedback && o.key === feedback.standard_answer;
-              return (
-                <button
-                  key={o.key}
-                  disabled={!!feedback}
-                  onClick={() => setPicked(o.key)}
-                  className={
-                    "flex w-full items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-[15px] transition " +
-                    (isAnswer
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                      : isPicked
+          {current.options ? (
+            <div className="mt-4 space-y-2">
+              {Object.entries(current.options).map(([key, text]) => {
+                const isPicked = picked === key;
+                return (
+                  <button
+                    key={key}
+                    disabled={!!feedback}
+                    onClick={() => setPicked(key)}
+                    className={
+                      "flex w-full items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-[15px] transition " +
+                      (isPicked
                         ? "border-indigo-400 bg-indigo-50 text-indigo-700"
                         : "border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/40")
-                  }
-                >
-                  <span
-                    className={
-                      "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold " +
-                      (isPicked || isAnswer ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500")
                     }
                   >
-                    {o.key}
-                  </span>
-                  {o.text}
-                </button>
-              );
-            })}
-          </div>
+                    <span
+                      className={
+                        "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold " +
+                        (isPicked ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500")
+                      }
+                    >
+                      {key}
+                    </span>
+                    {text}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-4">
+              <textarea
+                value={textAnswer}
+                disabled={!!feedback}
+                onChange={(e) => setTextAnswer(e.target.value)}
+                placeholder="此题为填空/解答题，输入你的答案…"
+                className="w-full rounded-2xl border border-slate-200 p-3 text-[15px] leading-7 outline-none focus:border-indigo-300"
+                rows={2}
+              />
+            </div>
+          )}
 
           {feedback && (
             <div
               className={
                 "mt-4 rounded-2xl border p-4 " +
-                (feedback.correct ? "border-emerald-100 bg-emerald-50/70" : "border-amber-100 bg-amber-50/70")
+                (feedback.verdict === "right" ? "border-emerald-100 bg-emerald-50/70" : "border-amber-100 bg-amber-50/70")
               }
             >
-              <p className={"text-sm font-semibold " + (feedback.correct ? "text-emerald-600" : "text-amber-600")}>
-                {feedback.correct ? "✓ 回答正确" : "✗ 未答对"} · {feedback.comment}
+              <p className={"text-sm font-semibold " + (feedback.verdict === "right" ? "text-emerald-600" : "text-amber-600")}>
+                {feedback.verdict === "right" ? "✓ 回答正确" : "✗ 未答对 · 已自动加入错题本"}
               </p>
-              <div className="mt-3 max-w-md">
-                <QuestionImageCard image={{ image_url: feedback.analysis_image, caption: "答案解析（图片直出）" }} />
-              </div>
             </div>
           )}
 
@@ -142,7 +211,7 @@ export default function PracticePage() {
             {!feedback ? (
               <button
                 onClick={submit}
-                disabled={!picked}
+                disabled={!picked && !textAnswer.trim()}
                 className="bg-brand-gradient rounded-full px-6 py-2 text-sm font-medium text-white shadow hover:opacity-90 disabled:opacity-30"
               >
                 提交答案
@@ -152,6 +221,7 @@ export default function PracticePage() {
                 onClick={() => {
                   setQIdx((i) => i + 1);
                   setPicked(null);
+                  setTextAnswer("");
                   setFeedback(null);
                 }}
                 className="bg-brand-gradient rounded-full px-6 py-2 text-sm font-medium text-white shadow hover:opacity-90"
@@ -160,7 +230,7 @@ export default function PracticePage() {
               </button>
             ) : (
               <button
-                onClick={() => start(activeKp!)}
+                onClick={() => start(mode, activeKp)}
                 className="bg-brand-gradient rounded-full px-6 py-2 text-sm font-medium text-white shadow hover:opacity-90"
               >
                 这一组练完了 · 再来一组
@@ -170,11 +240,19 @@ export default function PracticePage() {
         </div>
       )}
 
-      {!current && !starting && (
+      {!current && !loading && (
         <div className="mt-10 rounded-3xl border border-dashed border-indigo-200 bg-white/60 p-10 text-center text-sm text-slate-400">
-          选择一个知识点开始练习（题目来自题库，带图题一律图片直出）
+          选择模式开始练习（带图题一律图片直出；判分错题自动进错题本）
         </div>
       )}
     </div>
+  );
+}
+
+export default function PracticePage() {
+  return (
+    <Suspense fallback={<div className="skeleton mt-8 h-72 rounded-2xl" />}>
+      <PracticeInner />
+    </Suspense>
   );
 }

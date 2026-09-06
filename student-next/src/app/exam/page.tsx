@@ -5,6 +5,17 @@ import { apiUrl } from "@/lib/api";
 import QuestionImageCard from "@/components/chat/QuestionImageCard";
 import type { ExamPaper, ExamPaperDetail } from "@/lib/types";
 
+function Stem({ stemText, imageUrl, label }: { stemText: string; imageUrl: string | null; label: string }) {
+  if (imageUrl) {
+    return <QuestionImageCard image={{ image_url: imageUrl, caption: label }} />;
+  }
+  return (
+    <div className="max-w-xl whitespace-pre-wrap rounded-2xl border border-slate-100 bg-slate-50/80 p-4 text-[15px] leading-7 text-slate-700">
+      {stemText}
+    </div>
+  );
+}
+
 export default function ExamPage() {
   const [papers, setPapers] = useState<ExamPaper[]>([]);
   const [detail, setDetail] = useState<ExamPaperDetail | null>(null);
@@ -13,16 +24,15 @@ export default function ExamPage() {
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    fetch(apiUrl("/student/exam/papers"))
+    fetch(apiUrl("/exams/papers"))
       .then((r) => r.json())
       .then((d) => setPapers(d.items));
   }, []);
 
   const open = async (p: ExamPaper) => {
     setLoadingId(p.paper_id);
-    const res = await fetch(apiUrl(`/student/exam/paper?id=${p.paper_id}`));
-    const d = (await res.json()) as ExamPaperDetail;
-    setDetail(d);
+    const res = await fetch(apiUrl(`/exams/papers/${p.paper_id}`));
+    setDetail(await res.json());
     setAnswers({});
     setSubmitted(false);
     setLoadingId(null);
@@ -42,7 +52,7 @@ export default function ExamPage() {
             <div className="flex-1">
               <p className="text-[15px] font-medium">{p.title}</p>
               <p className="mt-0.5 text-xs text-slate-400">
-                {p.question_count} 题 · 建议 {p.duration_min} 分钟
+                {p.question_count} 题{p.year ? ` · ${p.year}` : ""}
               </p>
             </div>
             <button
@@ -61,38 +71,48 @@ export default function ExamPage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-[15px] font-semibold">{detail.title}</h2>
             <span className="text-xs text-slate-400">
-              已答 {answeredCount}/{detail.questions.length}
+              已答 {answeredCount}/{detail.items.length}
             </span>
           </div>
 
           <div className="mt-4 space-y-6">
-            {detail.questions.map((q, i) => (
+            {detail.items.map((q) => (
               <div key={q.question_id} className="rounded-2xl border border-slate-100 p-4">
-                <p className="mb-3 text-sm font-medium text-slate-500">第 {i + 1} 题</p>
-                <QuestionImageCard image={{ image_url: q.stem_image, caption: `第 ${i + 1} 题题干原图` }} />
-                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {q.options?.map((o) => {
-                    const active = answers[q.question_id] === o.key;
-                    return (
-                      <button
-                        key={o.key}
-                        disabled={submitted}
-                        onClick={() => setAnswers((a) => ({ ...a, [q.question_id]: o.key }))}
-                        className={
-                          "flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition " +
-                          (active
-                            ? "border-indigo-400 bg-indigo-50 font-medium text-indigo-700"
-                            : "border-slate-200 hover:border-indigo-200")
-                        }
-                      >
-                        <span className={"flex h-5 w-5 items-center justify-center rounded-full text-[11px] " + (active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500")}>
-                          {o.key}
-                        </span>
-                        {o.text}
-                      </button>
-                    );
-                  })}
-                </div>
+                <p className="mb-3 text-sm font-medium text-slate-500">第 {q.position} 题</p>
+                <Stem stemText={q.stem_text} imageUrl={q.stem_image_url} label={`第 ${q.position} 题题干原图`} />
+                {q.options ? (
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {Object.entries(q.options).map(([key, text]) => {
+                      const active = answers[q.question_id] === key;
+                      return (
+                        <button
+                          key={key}
+                          disabled={submitted}
+                          onClick={() => setAnswers((a) => ({ ...a, [q.question_id]: key }))}
+                          className={
+                            "flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition " +
+                            (active
+                              ? "border-indigo-400 bg-indigo-50 font-medium text-indigo-700"
+                              : "border-slate-200 hover:border-indigo-200")
+                          }
+                        >
+                          <span className={"flex h-5 w-5 items-center justify-center rounded-full text-[11px] " + (active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500")}>
+                            {key}
+                          </span>
+                          {text}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <textarea
+                    disabled={submitted}
+                    onChange={(e) => setAnswers((a) => ({ ...a, [q.question_id]: e.target.value }))}
+                    placeholder="解答题：输入你的答案…"
+                    className="mt-3 w-full rounded-2xl border border-slate-200 p-3 text-sm leading-7 outline-none focus:border-indigo-300"
+                    rows={2}
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -100,7 +120,7 @@ export default function ExamPage() {
           <div className="mt-5 flex items-center justify-between">
             {submitted ? (
               <span className="rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-600">
-                ✓ 已交卷（mock）：本次练习不计入排名，错题将自动进入错题本
+                ✓ 已交卷（mock）：错题将自动进入错题本
               </span>
             ) : (
               <span className="text-xs text-slate-400">带图题目均为原图直出，可点击放大作答</span>
