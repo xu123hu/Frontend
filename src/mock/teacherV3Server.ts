@@ -310,6 +310,17 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
   const path = url.split('?')[0]
   const body = method === 'GET' || method === 'DELETE' ? {} : await readBody(req)
 
+  /* ============ upload 预签名直传（IFC-004，M2-C）：demo 模式只发 key 不发字节 ============ */
+  if (method === 'POST' && path === '/teacher-v3/upload/presign') {
+    const name = String(body.filename || 'upload.bin').replace(/[^\w.\-\u4e00-\u9fa5]/g, '_')
+    return ok(res, {
+      key: `mock-uploads/${uid('u')}/${name}`,
+      url: null, // demo：无 MinIO，跳过 PUT；real = presigned PUT URL（短时效）
+      demo: true,
+      note: '演示模式：原图不出浏览器，仅登记对象 key',
+    }), true
+  }
+
   /* ============ catalog 基础目录域 ============ */
   if (method === 'GET' && path === '/teacher-v3/today') return ok(res, V3_TODAY), true
   if (method === 'GET' && path === '/teacher-v3/classes') return ok(res, { items: V3_CLASSES }), true
@@ -995,6 +1006,15 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
     const hasImages = Array.isArray(body.images) && body.images.length > 0
     const ctx = body.context || {}
     const sessionId = uid('bs')
+    /* KNR 上下文条（V2.1 §4.10 前端映射，additive 可选字段）：教师当前工作上下文随 meta 下发 */
+    const sessionContext = {
+      textbook: '人教A版选择性必修一',
+      chapter: (ctx as any).deck_id ? '圆锥曲线 ▸ 椭圆' : undefined,
+      class_name: (ctx as any).class_id || undefined,
+      deck_title: (ctx as any).deck_title || undefined,
+      curriculum: '课标（2017版2020修订）',
+      preferences: ['板书推导优先', '例题配变式'],
+    }
 
     /* 意图路由（P0 规则层演示；real = 规则 + 小模型分类 + 大模型 FC 三层） */
     const wantsDeck = /做.{0,16}?(课件|ppt|演示文稿)|生成.{0,12}?(课件|ppt)|备课/.test(text)
@@ -1009,7 +1029,7 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
 
     if (wantsQuizImport) {
       /* 剧本B：题目图片 + 存入题库 → 识别预览卡 → 确认动作卡（R2：教师确认后才入库） */
-      sendSse(res, 'meta', { session_id: sessionId, intent: 'quiz_import', note: '图片已附带，走拍照识别链路' })
+      sendSse(res, 'meta', { ...sessionContext, session_id: sessionId, intent: 'quiz_import', note: '图片已附带，走拍照识别链路' })
       await sleep(300)
       sendSse(res, 'thinking', { text: '先解读题目照片，再生成入库草稿；原图保留对照，入库前由教师确认。' })
       await sleep(260)
@@ -1027,7 +1047,7 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       sendSse(res, 'token', { text: '已生成入库草稿。请核对右侧动作卡的内容，点击「执行」后才会真正写入题库；原图与识别结果均可在题库中查看修改。' })
     } else if (wantsFindResource) {
       /* C2 剧本：找题/找素材/找资源 → 打开伴随资源台（AI 调用工具，不在聊天里丢题） */
-      sendSse(res, 'meta', { session_id: sessionId, intent: 'find_resource', note: '资源检索带上下文进伴随资源台，教师确认后才插入' })
+      sendSse(res, 'meta', { ...sessionContext, session_id: sessionId, intent: 'find_resource', note: '资源检索带上下文进伴随资源台，教师确认后才插入' })
       await sleep(280)
       sendSse(res, 'thinking', { text: '找资源应该带着当前课题/环节去伴随资源台，候选有来源和推荐理由，而不是在聊天里丢几道题。' })
       await sleep(240)
@@ -1036,7 +1056,7 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       sendSse(res, 'card', { type: 'tool', id: uid('tl'), tool: 'resource', title: '打开伴随资源', summary: '按当前上下文找题 / 素材 / 视频卡' })
     } else if (wantsDrawFigure) {
       /* C2 剧本：画图/动态演示 → 打开数学绘图（含构图导演），完成后插回当前工作位 */
-      sendSse(res, 'meta', { session_id: sessionId, intent: 'draw_figure', note: '数学绘图是全局工具：任何页面画完插回当前工作' })
+      sendSse(res, 'meta', { ...sessionContext, session_id: sessionId, intent: 'draw_figure', note: '数学绘图是全局工具：任何页面画完插回当前工作' })
       await sleep(280)
       sendSse(res, 'thinking', { text: '数学图形应在绘图工作台里做成结构化对象（函数 / 构图导演 / 手写公式），我可以直接帮你打开。' })
       await sleep(240)
@@ -1045,7 +1065,7 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       sendSse(res, 'card', { type: 'tool', id: uid('tl'), tool: 'draw', title: '打开数学绘图', summary: '函数绘图 / 构图导演 / 手写公式' })
     } else if (wantsDeck) {
       /* 剧本A：我要做PPT → 理解摘要 + 预填跳转（进入既有生成工作流，模板选择/大纲确认保留） */
-      sendSse(res, 'meta', { session_id: sessionId, intent: 'deck_generate', note: '跳转课件工坊并预填' })
+      sendSse(res, 'meta', { ...sessionContext, session_id: sessionId, intent: 'deck_generate', note: '跳转课件工坊并预填' })
       await sleep(300)
       const topicMatch = msg.match(/[《「“"]([^》」”"]+)[》」”"]/)
       const topic = topicMatch ? topicMatch[1] : msg.replace(/帮|我|请|做|个|一|份|生成|课件|ppt|演示文稿|关于|的|主题/g, '').slice(0, 18) || '椭圆及其标准方程'
@@ -1062,7 +1082,7 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       sendSse(res, 'action', { action: 'navigate', route: '/teacher-v3/slides', query: { mode: 'topic', topic, class_id: 'c2-03', template_id: 'tpl-academic-blue' }, toast: `已预填主题「${topic}」` })
     } else if (wantsInsert) {
       /* 跨工件插入：诚实说明当前边界 + 给出可达路径，不伪造插入结果（回执与真实执行在 B6 实现） */
-      sendSse(res, 'meta', { session_id: sessionId, intent: 'insert_request', note: '跨工件操作在原型阶段的边界说明' })
+      sendSse(res, 'meta', { ...sessionContext, session_id: sessionId, intent: 'insert_request', note: '跨工件操作在原型阶段的边界说明' })
       await sleep(280)
       const pageM = msg.match(/第\s*(\d+)\s*页/)
       const target = pageM ? `第 ${pageM[1]} 页` : '目标页'
@@ -1072,7 +1092,7 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       await sleep(180)
       sendSse(res, 'card', { type: 'link', id: uid('lnk'), title: '课件工坊 · 打开目标课件后可插入', route: '/teacher-v3/slides', query: {}, note: '在编辑器内通过「资源/管家卡片拖入」完成插入' })
     } else if (wantsSearch) {
-      sendSse(res, 'meta', { session_id: sessionId, intent: 'web_search' })
+      sendSse(res, 'meta', { ...sessionContext, session_id: sessionId, intent: 'web_search' })
       await sleep(280)
       sendSse(res, 'tool_call', { tool: 'search_web', label: '联网检索' })
       await sleep(560)
@@ -1081,12 +1101,12 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       sendSse(res, 'token', { text: '结合检索结果：椭圆的第一定义为平面上到两定点距离之和为常数（大于两定点间距）的点的轨迹，人教A版教材同时给出第二定义（焦点-准线）。建议课堂用绳长实验引入第一定义，再从第二定义过渡到离心率。' })
       await sleep(240)
       sendSse(res, 'citation', { sources: [
-        { index: 1, title: '人教A版选择性必修一 · 2.2 椭圆', url: 'https://www.pep.com.cn/gzsx/xrjdgzsx/ssl', snippet: '教材原文：平面内与两个定点F₁、F₂的距离的和等于常数…' },
-        { index: 2, title: '课程标准（2017版2020修订）· 圆锥曲线', url: 'http://www.moe.gov.cn', snippet: '经历从具体情境中抽象出椭圆的过程…' },
+        { index: 1, title: '人教A版选择性必修一 · 2.2 椭圆', url: 'https://www.pep.com.cn/gzsx/xrjdgzsx/ssl', snippet: '教材原文：平面内与两个定点F₁、F₂的距离的和等于常数…', source_type: 'web', ref: 'P42' },
+        { index: 2, title: '课程标准（2017版2020修订）· 圆锥曲线', url: 'http://www.moe.gov.cn', snippet: '经历从具体情境中抽象出椭圆的过程…', source_type: 'curriculum', ref: '2.2' },
       ] })
     } else if (wantsFormula) {
       /* 数学口语直接出公式卡（与语音公式链路同一解析层） */
-      sendSse(res, 'meta', { session_id: sessionId, intent: 'formula_parse' })
+      sendSse(res, 'meta', { ...sessionContext, session_id: sessionId, intent: 'formula_parse' })
       await sleep(260)
       const latex = voiceToLatex(msg)
       sendSse(res, 'token', { text: '识别为如下公式，可拖入课件或点开编辑：' })
@@ -1094,7 +1114,7 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       sendSse(res, 'card', { type: 'formula', id: uid('fml'), latex, confidence: 0.88, source: 'chat' })
     } else {
       /* 默认：诚实的能力边界说明（B0 反假执行：不用固定椭圆问答冒充任意问题的回答） */
-      sendSse(res, 'meta', { session_id: sessionId, intent: 'fallback' })
+      sendSse(res, 'meta', { ...sessionContext, session_id: sessionId, intent: 'fallback' })
       await sleep(280)
       sendSse(res, 'thinking', { text: ctx.route_title ? `结合当前页面（${ctx.route_title}）判断意图。` : '判断意图。' })
       await sleep(200)

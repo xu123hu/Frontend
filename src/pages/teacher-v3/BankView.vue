@@ -291,6 +291,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { v3Api, type V3QuizQuestion, type V3KpTreeNode, type V3QuestionFolder } from '@/api/teacherV3'
 import { renderLatex } from '@/components/mathx/latex'
+import { presignUpload } from '@/api/teacherV3Upload'
 import { updateTv3Context } from '@/stores/teacherContext'
 import { setReceipt, registerUndo } from '@/stores/companion'
 
@@ -310,6 +311,9 @@ const detailOpen = ref('')
 const scanOpen = ref(false)
 const scanSrc = ref('')
 const scanSolSrc = ref('')
+/* M2-C：直传后的对象 key（预签名 PUT 完成）；无 key 时回落 dataURL（示例图/演示） */
+const scanKey = ref('')
+const scanSolKey = ref('')
 const scanKpCode = ref('')
 const mode = ref<'image' | 'recognize'>('image')
 const dragHint = ref('点击或拖入试卷/手写照片')
@@ -518,6 +522,8 @@ async function deleteQuestion(q: V3QuizQuestion) {
 }
 
 /* ---- 拍照入库（与组卷中心同款；V3.2 双图分开 + AI 识别归属） ---- */
+/* M2-C 预签名直传（IFC-004）：FileReader dataURL 仅作本地预览；后端收对象 key，
+ * 原图 File 经 XHR PUT 原样直传 MinIO（红线 3：前端零压缩零改写） */
 function onFilePick(e: Event) {
   const f = (e.target as HTMLInputElement).files?.[0]
   if (f) readFile(f)
@@ -528,6 +534,7 @@ function onSolPick(e: Event) {
   const r = new FileReader()
   r.onload = () => { scanSolSrc.value = String(r.result || '') }
   r.readAsDataURL(f)
+  presignUpload(f).then((h) => { scanSolKey.value = h.key }).catch(() => { dragHint.value = '解答图上传失败，请重选' })
 }
 function onFileDrop(e: DragEvent) {
   const f = e.dataTransfer?.files?.[0]
@@ -537,6 +544,10 @@ function readFile(f: File) {
   const r = new FileReader()
   r.onload = () => { scanSrc.value = String(r.result || '') }
   r.readAsDataURL(f)
+  dragHint.value = '上传中 0%'
+  presignUpload(f, { onProgress: (p) => { dragHint.value = `上传中 ${Math.round(p * 100)}%` } })
+    .then((h) => { scanKey.value = h.key; dragHint.value = '原图已直传入库' })
+    .catch(() => { dragHint.value = '上传失败，请重选图片' })
 }
 function useSample() {
   scanSrc.value = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="180" height="80"><rect x="2" y="2" width="176" height="76" fill="#fbfaf6" stroke="#0f4787"/><text x="10" y="24" font-size="13" fill="#0f4787">过椭圆 x²/4+y²/3=1 右焦点 F 作倾斜角 60° 的直线 l，</text><text x="10" y="46" font-size="13" fill="#0f4787">交椭圆于 A、B，求 |AB|。</text><polygon points="120,60 150,60 160,72 130,72" fill="#dbe7f5" stroke="#c97"/></svg>'
@@ -547,17 +558,19 @@ async function doScanImport() {
   const opt = kpLeafOptions.value.find((o) => o.code === scanKpCode.value)
   try {
     await v3Api.catalog.quizScanImport({
-      src: scanSrc.value,
+      src: scanKey.value || scanSrc.value,
       kp_code: scanKpCode.value,
       kp_name: opt?.path.split(' ▸ ').pop() || '拍照入库',
       kp_path: opt?.path.split(' ▸ ') || [],
       as_image: mode.value === 'image',
-      solution_src: scanSolSrc.value || undefined,
+      solution_src: scanSolKey.value || scanSolSrc.value || undefined,
     })
     await loadQuestions()
     scanOpen.value = false
     scanSrc.value = ''
     scanSolSrc.value = ''
+    scanKey.value = ''
+    scanSolKey.value = ''
     suggest.value = null
   } catch { /* mock */ }
 }

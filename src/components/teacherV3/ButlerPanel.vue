@@ -117,6 +117,21 @@
               <div v-if="m.citations?.length" class="tv3-butler__cites" data-testid="tv3-butler-citations">
                 <span v-for="s in m.citations" :key="s.index" class="tv3-butler__cite" :title="s.snippet">[{{ s.index }}] {{ s.title }}</span>
               </div>
+
+              <!-- KNR 依据折叠（V2.1 §4.10 前端映射）：来源带 source_type/ref 时给出「依据 N 份资料」；无则保持现状 -->
+              <template v-if="hasEvidence(m)">
+                <button class="tv3-butler__evid-toggle" type="button" data-testid="tv3-butler-evid-toggle" @click="evidOpen[m.id] = !evidOpen[m.id]">
+                  {{ evidOpen[m.id] ? '▾' : '▸' }} 依据 {{ m.citations!.length }} 份资料
+                </button>
+                <div v-if="evidOpen[m.id]" class="tv3-butler__evid" data-testid="tv3-butler-evid">
+                  <div v-for="s in m.citations" :key="s.index" class="tv3-butler__evid-item">
+                    <span class="tv3-butler__evid-type" :data-type="s.source_type">{{ evidTypeLabel(s.source_type) }}</span>
+                    <a v-if="s.url" :href="s.url" target="_blank" rel="noopener">{{ s.title }}</a>
+                    <span v-else>{{ s.title }}</span>
+                    <span v-if="s.ref" class="tv3-butler__evid-ref">{{ s.ref }}</span>
+                  </div>
+                </div>
+              </template>
             </template>
             <template v-else>
               <div class="tv3-butler__bubble" v-text="m.text" />
@@ -148,9 +163,23 @@
           </div>
         </div>
 
+        <!-- KNR 上下文条（服务端 meta.session_context）：输入框上方一排 chips，点击展开明细；无该字段整条隐藏 -->
+        <div v-if="sessionContext" class="tv3-butler__sctx" data-testid="tv3-butler-sctx">
+          <div class="tv3-butler__sctx-chips">
+            <button v-for="chip in sctxChips" :key="chip" class="tv3-butler__chip" type="button" @click="sctxOpen = !sctxOpen">{{ chip }}</button>
+          </div>
+          <div v-if="sctxOpen" class="tv3-butler__sctx-detail" data-testid="tv3-butler-sctx-detail">
+            <div>当前教材：{{ sessionContext.textbook || '未关联（可在资源中心上传教材后关联）' }}</div>
+            <div>当前章节：{{ sessionContext.chapter || '未定位' }}</div>
+            <div>当前课件：{{ sessionContext.deck_title || '尚未打开' }}</div>
+            <div>课标：{{ sessionContext.curriculum ? `✓ ${sessionContext.curriculum}` : '未关联' }}</div>
+            <div>教师偏好：{{ sessionContext.preferences?.length ? sessionContext.preferences.map((p) => `✓ ${p}`).join('　') : '暂无' }}</div>
+          </div>
+        </div>
+
         <div v-if="images.length" class="tv3-butler__attach">
           <img v-for="(img, i) in images" :key="i" :src="img" alt="" class="tv3-butler__thumb" />
-          <button class="tv3-butler__mini" type="button" @click="images = []">清空</button>
+          <button class="tv3-butler__mini" type="button" @click="clearImages">清空</button>
         </div>
 
         <div class="tv3-butler__row">
@@ -191,6 +220,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { v3Api } from '@/api/teacherV3'
+import { presignUpload } from '@/api/teacherV3Upload'
 import { renderLatex, renderRich } from '@/components/mathx/latex'
 import { useToastStore } from '@/stores/toast'
 import { useTv3Context, contextBelongsTo, logDecision, decisionLog } from '@/stores/teacherContext'
@@ -208,6 +238,8 @@ const toast = useToastStore()
 const messages = ref<Msg[]>([])
 const input = ref('')
 const images = ref<string[]>([])
+/* M2-C 预签名直传（IFC-004）：预览 dataURL 仅本地显示；发送给后端的是直传后的对象 key */
+const imageKeys = ref<string[]>([])
 const webSearch = ref(false)
 const kbSearch = ref(false)
 const streaming = ref(false)
@@ -320,8 +352,10 @@ async function send() {
   const butlerMsg: Msg = { id: `m${Date.now()}b`, role: 'butler', text: '', cards: [], pending: true, toolLines: [] }
   messages.value.push(teacherMsg, butlerMsg)
   input.value = ''
-  const sentImages = images.value
+  // 附件：有直传 key 发 key（后端可从 MinIO 取原图）；key 未就绪回落 dataURL（P0 兼容）
+  const sentImages = imageKeys.value.length === images.value.length && imageKeys.value.length > 0 ? [...imageKeys.value] : [...images.value]
   images.value = []
+  imageKeys.value = []
   streaming.value = true
   scrollToBottom()
   try {
@@ -342,7 +376,11 @@ async function send() {
 }
 
 function handleEvent(m: Msg, event: string, data: any) {
-  if (event === 'meta') return
+  if (event === 'meta') {
+    // KNR 上下文条（§4.10）：服务端可选下发 session_context；缺省整条隐藏（不动布局）
+    sessionContext.value = data.session_context || null
+    return
+  }
   if (event === 'thinking') { m.thinking = data.text; return }
   if (event === 'token') { m.text = (m.text || '') + String(data.text); scrollToBottom(); return }
   if (event === 'tool_call') { m.toolLines = [...(m.toolLines || []), `⚙ ${data.label}…`]; return }
@@ -430,7 +468,7 @@ function insertFormula(c: Extract<V3ButlerCard, { type: 'formula' }>) {
   }))
 }
 
-/* ---------- 图片附件 ---------- */
+/* ---------- 图片附件：预签名直传（M2-C，原图原样进 MinIO，红线 3） ---------- */
 function onFiles(ev: Event) {
   const files = (ev.target as HTMLInputElement).files
   if (!files) return
@@ -439,8 +477,27 @@ function onFiles(ev: Event) {
     const rd = new FileReader()
     rd.onload = () => { if (typeof rd.result === 'string') images.value.push(rd.result) }
     rd.readAsDataURL(f)
+    presignUpload(f)
+      .then((h) => { imageKeys.value.push(h.key) })
+      .catch(() => { toast.info('原图直传失败：将随消息以内联方式发送') })
   }
   ;(ev.target as HTMLInputElement).value = ''
+}
+function clearImages() { images.value = []; imageKeys.value = [] }
+
+/* ---------- KNR 两 slot（V2.1 §4.10，additive；不动既有布局） ---------- */
+const sessionContext = ref<{ textbook?: string; chapter?: string; class_name?: string; deck_title?: string; curriculum?: string; preferences?: string[] } | null>(null)
+const sctxOpen = ref(false)
+const sctxChips = computed(() => {
+  const s = sessionContext.value
+  if (!s) return []
+  return [s.textbook, s.chapter, s.class_name, s.deck_title].filter((x): x is string => !!x)
+})
+/** 依据折叠：来源带 source_type/ref 才出现；无可选字段保持现状渲染 */
+function hasEvidence(m: Msg) { return !!m.citations?.some((s) => s.source_type || s.ref) }
+const evidOpen = ref<Record<string, boolean>>({})
+function evidTypeLabel(t?: string) {
+  return ({ textbook: '教材', curriculum: '课标', benchmark: '基准', quiz: '题库', deck: '课件', class_data: '学情', web: '网页' } as Record<string, string>)[t || ''] || '资料'
 }
 
 function scrollToBottom() {
@@ -551,6 +608,22 @@ watch(() => props.open, (v) => { if (v) scrollToBottom() })
 .tv3-butler__voice-input:focus { border-color: var(--tv3-navy, #0f4787); }
 .tv3-butler__voice-ops { display: flex; gap: 8px; }
 .tv3-butler__attach { display: flex; gap: 6px; align-items: center; }
+/* KNR 上下文条（输入框上方一排 chips，点击展开明细） */
+.tv3-butler__sctx { display: flex; flex-direction: column; gap: 6px; }
+.tv3-butler__sctx-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tv3-butler__sctx-chips .tv3-butler__chip { font-size: 11px; padding: 3px 10px; background: #f0f4fb; border-color: #dce6f5; cursor: pointer; }
+.tv3-butler__sctx-detail { font-size: 11.5px; color: var(--tv3-ink3, #8a94a6); background: #f7f9fd; border: 1px solid var(--tv3-line, #e2e7ef); border-radius: 8px; padding: 8px 10px; line-height: 1.7; }
+/* 依据折叠（AI 产物卡底部） */
+.tv3-butler__evid-toggle { border: none; background: none; cursor: pointer; font-size: 11px; color: var(--tv3-ink3, #8a94a6); padding: 2px 0; text-align: left; }
+.tv3-butler__evid-toggle:hover { color: var(--tv3-navy, #0f4787); }
+.tv3-butler__evid { display: flex; flex-direction: column; gap: 4px; border-left: 2px solid var(--tv3-line, #e2e7ef); padding: 2px 0 2px 10px; }
+.tv3-butler__evid-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; }
+.tv3-butler__evid-item a { color: var(--tv3-navy, #0f4787); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+.tv3-butler__evid-item a:hover { text-decoration: underline; }
+.tv3-butler__evid-type { flex: none; font-size: 10px; border-radius: 4px; padding: 1px 6px; background: #f0f4fb; color: var(--tv3-ink2, #4a5568); }
+.tv3-butler__evid-type[data-type='textbook'], .tv3-butler__evid-type[data-type='curriculum'] { background: #ecfdf5; color: #047857; }
+.tv3-butler__evid-type[data-type='class_data'], .tv3-butler__evid-type[data-type='deck'] { background: #f0f4fb; color: #0f4787; }
+.tv3-butler__evid-ref { color: var(--tv3-ink3, #8a94a6); font-size: 10.5px; flex: none; }
 .tv3-butler__row { display: flex; }
 .tv3-butler__ta {
   flex: 1; border: 1px solid var(--tv3-line, #e2e7ef); border-radius: 10px; padding: 9px 11px;

@@ -458,6 +458,9 @@ export interface V3ButlerCitation {
   title: string
   url: string
   snippet?: string
+  /** KNR（V2.1 §4.10 前端映射，IFC-002/KNR 增补）：来源类型与定位（页码/题号）——无可选字段时保持现状渲染 */
+  source_type?: 'textbook' | 'curriculum' | 'benchmark' | 'quiz' | 'deck' | 'class_data' | 'web'
+  ref?: string
 }
 
 /** 后端下发的结构化前端动作（前端 Action Registry 执行） */
@@ -478,7 +481,7 @@ export interface V3VoiceFormulaInput {
 
 /** butler SSE 事件（复用 v3Sse 通道，与 photo-ingest/generation 同构） */
 export type V3ButlerSseEvent =
-  | { event: 'meta'; data: { session_id: string; intent: string; note?: string } }
+  | { event: 'meta'; data: { session_id: string; intent: string; note?: string; /** KNR 上下文条（§4.10）：教材/章节/班级/当前课件 chips；缺省整条隐藏 */ session_context?: { textbook?: string; chapter?: string; class_name?: string; deck_title?: string; curriculum?: string; preferences?: string[] } } }
   | { event: 'thinking'; data: { text: string } }
   | { event: 'token'; data: { text: string } }
   | { event: 'tool_call'; data: { tool: string; label: string } }
