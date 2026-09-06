@@ -126,6 +126,8 @@ export interface V3DeckTemplate {
   page_kinds: string[]       // 该模板覆盖的版式页
   recommended_for: string
   sample_topic: string       // 自渲染小样的示例课题
+  /** 服务端渲染缩略图（presign GET URL；IFC-003，03-ACCEPTANCE L4 判定①）。缺省/加载失败回落 swatch 自渲染骨架 */
+  thumb?: string
 }
 
 /* ============ 拍照链路（SPEC §5.10/§5.11） ============ */

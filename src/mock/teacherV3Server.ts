@@ -284,6 +284,22 @@ function renderRichSafe(text: string): string {
   return escaped.replace(/\$([^$]+)\$/g, '<i style="font-family:Georgia,serif">$1</i>')
 }
 
+/** 服务端渲染模板缩略图（IFC-003）：mock 用 SVG data URL 模拟「MinIO 预签名 GET 图」——
+ * 真实部署由 B4 渲染管线产 PNG 入 teacher-thumbs bucket（02-ARCHITECTURE §5）。 */
+function templateThumb(t: { name: string; swatch: { bg: string; primary: string; accent: string; light: boolean } }): string {
+  const fg = t.swatch.light ? '#ffffff' : '#1a2332'
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">`
+    + `<rect width="320" height="180" fill="${t.swatch.bg}"/>`
+    + `<rect x="24" y="26" width="128" height="16" rx="4" fill="${t.swatch.primary}"/>`
+    + `<rect x="24" y="56" width="272" height="10" rx="4" fill="${t.swatch.accent}" opacity="0.9"/>`
+    + `<rect x="24" y="78" width="220" height="10" rx="4" fill="${fg}" opacity="0.35"/>`
+    + `<rect x="24" y="98" width="244" height="10" rx="4" fill="${fg}" opacity="0.22"/>`
+    + `<rect x="24" y="132" width="88" height="26" rx="6" fill="${t.swatch.accent}"/>`
+    + `<text x="298" y="164" font-size="13" fill="${fg}" opacity="0.7" text-anchor="end" font-family="sans-serif">${t.name}</text>`
+    + `</svg>`
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
 export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
   const url = String(req.url || '')
   if (!url.startsWith('/teacher-v3/')) return false
@@ -302,7 +318,10 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
     if (t && t.status === 'running') { t.progress = Math.min(100, t.progress + 11); if (t.progress >= 100) { t.status = 'succeeded'; t.stage = '完成' } }
     return ok(res, { items: tasks, running: tasks.filter((x) => x.status === 'running' || x.status === 'queued').length }), true
   }
-  if (method === 'GET' && path === '/teacher-v3/deck-templates') return ok(res, { items: V3_DECK_TEMPLATES }), true
+  if (method === 'GET' && path === '/teacher-v3/deck-templates') {
+    // IFC-003：服务端渲染缩略图（mock = SVG data URL；real = MinIO presign GET，L4 判定①）
+    return ok(res, { items: V3_DECK_TEMPLATES.map((t) => ({ ...t, thumb: templateThumb(t) })) }), true
+  }
   if (method === 'GET' && path === '/teacher-v3/lesson-templates') return ok(res, { items: lessonTemplates }), true
   if (method === 'GET' && path === '/teacher-v3/recipes') return ok(res, { items: recipes }), true
   if (method === 'GET' && path === '/teacher-v3/textbook-chapters') return ok(res, V3_TEXTBOOK_CHAPTERS), true

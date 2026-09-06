@@ -331,13 +331,20 @@
                 >
                   <span v-if="ws.form.template_id === t.id" class="ws-tplcheck">✓</span>
                   <div class="ws-tplpreview">
-                    <div class="ws-tplprev-cover" :style="{ background: t.swatch.bg, color: t.swatch.light ? '#fff' : '#e2e8f0' }">
-                      <i class="bar w-1/3" /><i class="bar big" /><i class="bar w-1/2" />
-                    </div>
-                    <div class="ws-tplprev-page">
-                      <i class="bar big" :style="{ background: t.swatch.primary }" />
-                      <i class="bar" style="background: rgba(100,116,139,0.25)" /><i class="bar" style="background: rgba(100,116,139,0.18)" />
-                    </div>
+                    <!-- IFC-003：服务端真实缩略图优先；缺省/加载失败回落 swatch 自渲染骨架（绝不破图） -->
+                    <img
+                      v-if="t.thumb && !thumbFail[t.id]" :src="t.thumb" class="ws-tplthumb" loading="lazy"
+                      :alt="`${t.name} 模板缩略图`" @error="thumbFail[t.id] = true"
+                    >
+                    <template v-else>
+                      <div class="ws-tplprev-cover" :style="{ background: t.swatch.bg, color: t.swatch.light ? '#fff' : '#e2e8f0' }">
+                        <i class="bar w-1/3" /><i class="bar big" /><i class="bar w-1/2" />
+                      </div>
+                      <div class="ws-tplprev-page">
+                        <i class="bar big" :style="{ background: t.swatch.primary }" />
+                        <i class="bar" style="background: rgba(100,116,139,0.25)" /><i class="bar" style="background: rgba(100,116,139,0.18)" />
+                      </div>
+                    </template>
                   </div>
                   <h3>{{ t.name }}</h3>
                   <div class="ws-tplmeta">
@@ -414,11 +421,13 @@
  * 结构对齐 D:\课件工坊\pages\*.html：首页 hero 输入台 / 识别确认 / 教案映射 / 大纲确认卡片 / 模板画廊+实时预览 / 生成进度。
  * 红线不变：AI 只出草稿，教师确认后才生成；识别/重写等未接真实服务的位置如实标注。
  */
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 
 defineProps<{ ws: any }>()
 const docInput = ref<HTMLInputElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+/** IFC-003：缩略图加载失败 → 回落 swatch 自渲染骨架（记录失败 id，绝不破图） */
+const thumbFail = reactive<Record<string, boolean>>({})
 </script>
 
 <style scoped>
@@ -634,6 +643,7 @@ const fileInput = ref<HTMLInputElement | null>(null)
 .ws-tplcard.is-selected { border-color: var(--ailp-primary-600); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
 .ws-tplcheck { position: absolute; top: 12px; right: 12px; width: 24px; height: 24px; border-radius: 9999px; display: grid; place-items: center; color: #fff; background: var(--ailp-primary-600); font-size: 12px; }
 .ws-tplpreview { display: flex; border-radius: 12px; overflow: hidden; border: 1px solid var(--ailp-border); margin-bottom: 10px; height: 88px; }
+.ws-tplthumb { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ws-tplprev-cover { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 12px; }
 .ws-tplprev-page { flex: 1; display: flex; flex-direction: column; gap: 5px; padding: 12px; background: #fff; }
 .bar { display: block; height: 5px; border-radius: 9999px; width: 100%; opacity: 0.75; }
