@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --color-brand: #4f46e5;
+  --color-brand-soft: #6366f1;
+  --color-brand-mist: #818cf8;
+  --color-accent: #06b6d4;
+  --color-vio: #7c3aed;
+  --color-ink: #0f172a;
+  --color-ink-2: #334155;
+  --color-page: #f8fafc;
+}
+
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 设计稿签名渐变：135deg #4f46e5 → #7c3aed → #06b6d4 */
+.text-gradient {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-brand-gradient {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%);
+}
+
+/* 流式光标 */
+.stream-cursor::after {
+  content: "▍";
+  margin-left: 1px;
+  color: #6366f1;
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* 骨架屏微光 */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #eef1f8;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="400" viewBox="0 0 560 400">
+<rect width="560" height="400" fill="#fffdf8"/>
+<rect x="6" y="6" width="548" height="388" fill="none" stroke="#e7e5e4"/>
+<g font-family="'KaiTi','楷体','STKaiti',cursive" font-size="19" fill="#1c1917">
+<text x="30" y="52">新入本错题（拍照增强后）</text>
+<text x="30" y="104">点 M 到点 F(1, 0) 与到直线 x = −1 的距离相等，</text>
+<text x="30" y="140">则 M 的轨迹方程为 ____。</text>
+<text x="30" y="200">我的答案：y² = 2x（漏掉范围检验）</text>
+<text x="30" y="260">错因：轨迹方程化简后未验证 x 的取值范围，</text>
+<text x="30" y="292">由定义直接得抛物线 y² = 4x ✓</text>
+<text x="30" y="352" fill="#16a34a">正确答案：y² = 4x（x≥0）</text>
+</g>
+<circle cx="240" cy="236" r="42" fill="none" stroke="#dc2626" stroke-width="3" opacity="0.55"/>
+</svg>

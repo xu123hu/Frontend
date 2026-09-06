@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
+<rect width="640" height="400" fill="#ffffff"/>
+<rect x="1" y="1" width="638" height="398" fill="none" stroke="#e2e8f0"/>
+<g font-family="'Times New Roman','SimSun',serif" font-size="17" fill="#0f172a">
+<text x="28" y="46" font-weight="bold" font-size="18">12．（本题 12 分）抛物线与焦点弦</text>
+<text x="28" y="88">已知抛物线 C：y² = 2px（p＞0）经过点 P(2, 2√2)。</text>
+<text x="28" y="120">（1）求抛物线 C 的方程及其焦点 F 的坐标；</text>
+<text x="28" y="152">（2）过焦点 F 的直线交 C 于 A、B，若 |AF| = 2|BF|，</text>
+<text x="28" y="184">求弦 |AB| 的长。</text>
+</g>
+<g stroke="#334155" stroke-width="1.4" fill="none">
+<line x1="370" y1="230" x2="620" y2="230"/>
+<line x1="480" y1="220" x2="480" y2="385"/>
+<path d="M 480 232 Q 480 330 560 368 M 480 232 Q 480 330 400 368" stroke-width="2"/>
+<line x1="380" y1="238" x2="412" y2="238" stroke-dasharray="4 3" stroke="#0891b2"/>
+</g>
+<circle cx="480" cy="232" r="3.5" fill="#dc2626"/>
+<g font-family="'Times New Roman',serif" font-size="14" fill="#475569">
+<text x="486" y="226">F</text><text x="386" y="232">l</text>
+<text x="604" y="246">x</text><text x="488" y="238">y</text>
+</g>
+</svg>

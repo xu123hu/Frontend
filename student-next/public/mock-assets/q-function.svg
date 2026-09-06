@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
+<rect width="640" height="400" fill="#ffffff"/>
+<rect x="1" y="1" width="638" height="398" fill="none" stroke="#e2e8f0"/>
+<g font-family="'Times New Roman','SimSun',serif" font-size="17" fill="#0f172a">
+<text x="28" y="46" font-weight="bold" font-size="18">20．（本题 12 分）函数的图象与零点</text>
+<text x="28" y="88">已知函数 f(x) = x³ − 3x + 1 的图象如右所示。</text>
+<text x="28" y="120">（1）判断 f(x) 的单调区间；</text>
+<text x="28" y="152">（2）求 f(x) 在 [−2, 2] 上的极值点。</text>
+</g>
+<g stroke="#334155" stroke-width="1.4" fill="none">
+<line x1="380" y1="240" x2="620" y2="240"/>
+<line x1="500" y1="220" x2="500" y2="385"/>
+<path d="M 385 260 C 430 260 450 150 500 160 C 550 170 560 350 615 340" stroke="#4f46e5" stroke-width="2.2"/>
+</g>
+<circle cx="447" cy="196" r="4" fill="#dc2626"/>
+<circle cx="553" cy="255" r="4" fill="#dc2626"/>
+<g font-family="'Times New Roman',serif" font-size="14" fill="#475569">
+<text x="604" y="256">x</text><text x="508" y="236">y</text><text x="428" y="188">P₁</text><text x="560" y="250">P₂</text>
+</g>
+</svg>

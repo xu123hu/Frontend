@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="400" viewBox="0 0 560 400">
+<rect width="560" height="400" fill="#fffdf8"/>
+<rect x="6" y="6" width="548" height="388" fill="none" stroke="#e7e5e4"/>
+<g font-family="'KaiTi','楷体','STKaiti',cursive" font-size="19" fill="#1c1917">
+<text x="30" y="52">错题：正弦定理解三角形</text>
+<text x="30" y="100">a=2，b=√6，B=2A，求角 A。</text>
+<text x="30" y="160">我的答案：A = 45°（sinA = 1/2 舍掉了增根检验）</text>
+<text x="30" y="224">错因：由正弦定理 sinA = a·sinB/b 得 sinA = 1/2，</text>
+<text x="30" y="256">但 A = 30° 时 B = 60°，需检验 a＜b ⇒ A＜B ✓</text>
+<text x="30" y="316" fill="#16a34a">正确答案：A = 30°</text>
+</g>
+<circle cx="240" cy="224" r="44" fill="none" stroke="#dc2626" stroke-width="3" opacity="0.55"/>
+</svg>

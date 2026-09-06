@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="380" viewBox="0 0 640 380">
+<rect width="640" height="380" fill="#ffffff"/>
+<rect x="1" y="1" width="638" height="378" fill="none" stroke="#e2e8f0"/>
+<g font-family="'Times New Roman','SimSun',serif" font-size="17" fill="#0f172a">
+<text x="28" y="46" font-weight="bold" font-size="18">21．（本题 12 分）导数的几何意义</text>
+<text x="28" y="88">已知曲线 C：y = x³ − 3x。</text>
+<text x="28" y="120">（1）求曲线 C 在点 (1, −2) 处的切线方程；</text>
+<text x="28" y="152">（2）直线 l 经过原点且与曲线 C 相切，这样的直线共有几条？</text>
+<text x="28" y="184">请说明理由。</text>
+</g>
+<g stroke="#334155" stroke-width="1.4" fill="none">
+<line x1="380" y1="240" x2="620" y2="240"/>
+<line x1="500" y1="230" x2="500" y2="365"/>
+<path d="M 385 300 C 440 300 470 255 500 240 C 540 220 580 250 615 300" stroke="#4f46e5" stroke-width="2.2"/>
+<line x1="420" y1="282" x2="590" y2="196" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="6 3"/>
+</g>
+<circle cx="537" cy="235" r="4" fill="#dc2626"/>
+<g font-family="'Times New Roman',serif" font-size="14" fill="#475569">
+<text x="530" y="228">P(1, −2)</text><text x="604" y="256">x</text>
+</g>
+</svg>

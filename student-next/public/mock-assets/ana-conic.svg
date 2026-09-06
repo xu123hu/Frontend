@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+<rect width="640" height="360" fill="#f8fafc"/>
+<rect x="1" y="1" width="638" height="358" fill="none" stroke="#c7d2fe"/>
+<g font-family="'Times New Roman','SimSun',serif" font-size="17" fill="#0f172a">
+<text x="28" y="44" font-weight="bold" fill="#4f46e5">【解析】第（1）问</text>
+<text x="28" y="86">由焦点坐标得 c² = 3，故 a² = b² + 3。</text>
+<text x="28" y="122">由第一定义：|PF₁| + |PF₂| = 2a。</text>
+<text x="28" y="158">|PF₁| = √((2+√3)² + 1²) = √(8+4√3) = √6+√2，</text>
+<text x="28" y="194">|PF₂| = √((2−√3)² + 1²) = √(8−4√3) = √6−√2，</text>
+<text x="28" y="230">所以 2a = 2√6，a² = 6，b² = 6 − 3 = 3。</text>
+<text x="28" y="286" fill="#dc2626" font-weight="bold">∴ 椭圆 C 的标准方程为 x²/6 + y²/3 = 1。</text>
+<text x="28" y="330" fill="#64748b" font-size="14">小结：定义法（|PF₁|+|PF₂|=2a）比设方程联立更快。</text>
+</g>
+</svg>

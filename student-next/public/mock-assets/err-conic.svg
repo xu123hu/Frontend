@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="400" viewBox="0 0 560 400">
+<rect width="560" height="400" fill="#fffdf8"/>
+<rect x="6" y="6" width="548" height="388" fill="none" stroke="#e7e5e4"/>
+<g font-family="'KaiTi','楷体','STKaiti',cursive" font-size="19" fill="#1c1917">
+<text x="30" y="52">错题：椭圆离心率</text>
+<text x="30" y="100">已知椭圆 x²/4 + y²/m = 1 的离心率为 1/2，</text>
+<text x="30" y="136">则 m = ____。</text>
+<text x="30" y="188">我的答案：m = 3　　（√(4−m)/2 = 1/2）</text>
+<text x="30" y="236">错因：没讨论焦点在 y 轴的情况！</text>
+<text x="30" y="284">当 m＞4 时 c² = m−4，√(m−4)/2 = 1/2 → m = 5 ✓</text>
+<text x="30" y="344" fill="#16a34a">正确答案：m = 3 或 m = 5</text>
+</g>
+<circle cx="268" cy="184" r="42" fill="none" stroke="#dc2626" stroke-width="3" opacity="0.55"/>
+</svg>
