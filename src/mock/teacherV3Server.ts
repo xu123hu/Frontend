@@ -12,6 +12,7 @@ import {
   V3_RESOURCES, V3_TASKS, V3_TEN_BOARDS, V3_TODAY, V3_QUIZ_KP_TREE, V3_FOLDERS, V3_TEXTBOOK_CHAPTERS, buildRebuiltTextbook,
 } from './teacherV3Data'
 // 相对路径导入（非 @/ 别名）：本文件被 vite.config.js 的加载链引入，别名在 config 打包阶段不可解析
+import { handleTeacherV3ClassroomApi } from './teacherV3ClassroomServer'
 import { FIGURE_PRESETS } from '../components/mathx/presets'
 import type { V3Deck, V3FigureLibraryItem, V3LessonPlan, V3Slide, V3Task, V3LessonTemplate } from '@/types/teacherV3'
 
@@ -286,6 +287,8 @@ function renderRichSafe(text: string): string {
 export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
   const url = String(req.url || '')
   if (!url.startsWith('/teacher-v3/')) return false
+  /* classroom 域（IFC-002，M2-A）：自带双端门禁（join 无 JWT、学生端点用课堂 token），须在教师门禁之前接管 */
+  if (url.startsWith('/teacher-v3/classroom')) return handleTeacherV3ClassroomApi(req, res)
   const method = String(req.method || 'GET').toUpperCase()
   if (!isTeacher(req)) { fail(res, 403, 40301, 'role_denied'); return true }
   const path = url.split('?')[0]

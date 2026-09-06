@@ -548,6 +548,8 @@ export interface V3ClassroomSession {
   class_id: string
   class_name?: string
   join_code: string
+  /** 本节课题（开课时传入；回显用） */
+  topic?: string
   status: V3ClassroomSessionStatus
   started_at?: string
   ended_at?: string

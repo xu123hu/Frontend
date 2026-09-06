@@ -317,9 +317,9 @@ export const v3Api = {
   /* ==================== classroom 课堂互动域（teacher-v3.1，IFC-002；事实源 02-ARCHITECTURE §12） ==================== */
   classroom: {
     /* 开课（返回 join_code=6 位）；POST /classroom/join 供学生 H5 用（无 JWT）见 join */
-    createSession: (body: { class_id: string }) =>
+    createSession: (body: { class_id: string; class_name?: string; topic?: string }) =>
       teacherPost<V3ClassroomSession>('/teacher-v3/classroom/sessions', body),
-    /** 学生加入（无 JWT，换课堂作用域 token；调端点时以 opts.headers 覆盖 Authorization） */
+    /** 学生加入（无 JWT，换课堂作用域 token；学生端点用 token 参数注入 Authorization） */
     join: (body: { join_code: string; student_name: string }) =>
       teacherPost<V3ClassroomJoinResult>('/teacher-v3/classroom/join', body),
     /** 结课 → 归档 → 生成 classroom_summary */
@@ -332,9 +332,13 @@ export const v3Api = {
       teacherPost<V3ClassroomActivity>(`/teacher-v3/classroom/sessions/${id}/activities/${activityId}/lock`),
     revealActivity: (id: string, activityId: string) =>
       teacherPost<V3ClassroomActivity>(`/teacher-v3/classroom/sessions/${id}/activities/${activityId}/reveal`),
-    /** 学生作答提交（课堂 token；幂等靠 UNIQUE(activity_id, participant_id, attempt_no)，重复提交返回首次结果） */
-    submitResponse: (id: string, body: { activity_id: string; answer: unknown; image_key?: string; attempt_no?: number }, idempotencyKey?: string) =>
-      teacherPost<{ ok: true; activity: V3ClassroomActivity; duplicate?: boolean }>(`/teacher-v3/classroom/sessions/${id}/responses`, body, idempotencyKey),
+    /** 学生作答提交（课堂 token；幂等 UNIQUE(activity_id, participant_id, attempt_no)，重复提交返回首次结果） */
+    submitResponse: (id: string, body: { activity_id: string; answer: unknown; image_key?: string; attempt_no?: number }, opts: { idempotencyKey?: string; token?: string } = {}) =>
+      teacherRequest<{ ok: true; duplicate?: boolean; activity: V3ClassroomActivity }>('POST', `/teacher-v3/classroom/sessions/${id}/responses`, {
+        body,
+        idempotencyKey: opts.idempotencyKey,
+        headers: opts.token ? { Authorization: `Bearer ${opts.token}` } : undefined,
+      }),
     /** 触发 AI 变式（AiGeneration 状态机：generating → verifying → awaiting_teacher） */
     variation: (id: string, activityId: string) =>
       teacherPost<V3ClassroomActivity>(`/teacher-v3/classroom/sessions/${id}/activities/${activityId}/variation`),

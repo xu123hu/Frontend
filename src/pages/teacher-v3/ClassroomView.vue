@@ -4,7 +4,7 @@
     <div v-if="!session" class="tv3-card" style="max-width: 640px; margin: 40px auto; text-align: center; padding: 40px">
       <div style="font-size: 44px; margin-bottom: 10px">🎓</div>
       <div style="font-size: 18px; font-weight: 800; margin-bottom: 6px">课堂互动</div>
-      <div style="font-size: 13px; color: var(--tv3-ink3); margin-bottom: 20px">确定性状态机 · 讲台模式 · 教师选择的分支卡（概念演示）</div>
+      <div style="font-size: 13px; color: var(--tv3-ink3); margin-bottom: 20px">服务端权威状态机 · 学生 H5 输课堂码实时加入 · 教师选择的分支卡</div>
       <div style="display: flex; gap: 10px; justify-content: center; align-items: center">
         <select v-model="pickClass" class="tv3-input" style="width: 150px">
           <option v-for="c in classes" :key="c.class_id" :value="c.class_id">{{ c.name }}</option>
@@ -21,8 +21,8 @@
           <span class="tv3-tag" :class="sessionStatus === 'waiting' ? 'tv3-tag--warn' : sessionStatus === 'ended' ? '' : 'tv3-tag--ok'" data-testid="tv3-status-tag">
             {{ sessionStatus === 'waiting' ? '◦ 等待学生' : sessionStatus === 'collecting' ? '● 答题中' : sessionStatus === 'stopped' ? '▪ 已停止' : sessionStatus === 'revealed' ? '◈ 讲评中' : '▪ 已结束' }}
           </span>
-          <span class="tv3-tag" style="font-size: 10px" title="状态、作答与加入均为确定性演示数据，非真实学生端（真实学生端在 M2-A 接入）">模拟学生端 · 概念演示</span>
-          <input v-model="session.topic" class="tv3-input" style="max-width: 260px; font-weight: 700" title="本节课题（可改）" />
+          <span class="tv3-tag" style="font-size: 10px" data-testid="tv3-join-code" title="学生打开 H5（/classroom-h5），输入课堂码和姓名即可加入，无需账号">课堂码 {{ session.join_code }} · 学生 H5 输码加入</span>
+          <input v-model="sessionTopic" class="tv3-input" style="max-width: 260px; font-weight: 700" title="本节课题（可改）" />
           <span class="tv3-card__sub" data-testid="tv3-elapsed">⏱ {{ fmtClock(elapsedSec) }}</span>
           <span class="tv3-card__sub" data-testid="tv3-joined">{{ joinedCount }}/{{ total }} 人已加入</span>
           <div class="tv3-card__spacer" />
@@ -123,7 +123,7 @@
               </template>
               <!-- 点名结果 -->
               <div v-if="picked" class="tv3-live__picked" data-testid="tv3-picked">
-                🎯 本轮点名：<b>{{ picked }}</b> <span style="color: var(--tv3-ink3); font-size: 11.5px">（剩余 {{ remaining }} 人未点到，全员点完后自动重置）</span>
+                🎯 本轮点名：<b>{{ picked }}</b> <span style="color: var(--tv3-ink3); font-size: 11.5px">（公平随机来自服务端，已点 {{ pickedCount }} 次）</span>
               </div>
             </template>
           </div>
@@ -163,7 +163,7 @@
         <button class="tv3-btn tv3-btn--sm" style="background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.3)" data-testid="tv3-podium-exit" @click="podiumOpen = false">退出讲台 (Esc)</button>
       </div>
       <div style="position: absolute; top: 18px; left: 26px">
-        <span style="color: #9fb4d8; font-size: 14px">{{ session.topic }}</span>
+        <span style="color: #9fb4d8; font-size: 14px">{{ sessionTopic }}</span>
         <div style="color: #ffd77a; font-size: 20px; font-weight: 800; margin-top: 4px">{{ sessionStatus === 'collecting' ? '● 答题中' : sessionStatus === 'stopped' ? '▪ 已停止' : sessionStatus === 'revealed' ? '◈ 讲评中' : '◦ 等待学生' }}</div>
       </div>
       <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; padding: 0 6vw">
@@ -190,7 +190,7 @@
 
     <!-- 课堂小结（已结束） -->
     <div v-if="summaryShown && summary" class="tv3-card" style="max-width: 640px; margin: 24px auto" data-testid="tv3-session-summary">
-      <div class="tv3-card__head"><span class="tv3-card__title">课堂小结</span><span class="tv3-card__sub">来自本节课堂的确定性数据</span></div>
+      <div class="tv3-card__head"><span class="tv3-card__title">课堂小结</span><span class="tv3-card__sub">来自服务端结课聚合（真实作答数据）</span></div>
       <div class="tv3-card__body" style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.8">
         <div>· 发题 <b>{{ summary.questions }}</b> 题 · 平均正确率 <b>{{ summary.avgCorrectRate }}%</b></div>
         <div>· 最高频错因：<b>{{ summary.topWrong }}</b></div>
@@ -207,22 +207,20 @@
 
 <script setup lang="ts">
 /**
- * ClassroomView —— 课堂互动（B5：确定性状态机 + 讲台模式 + 教师选择的分支卡）
- * 状态机：等待学生 → 答题中 → 已停止 → 讲评中 → 已结束（迁移表见 classroomLogic）
- * 全部作答/加入为确定性演示数据并显著标注；分支卡只排序建议，教师点选才执行。
+ * ClassroomView —— 课堂互动（M2-A：真实 classroom 契约，02-ARCHITECTURE §12 / IFC-002）
+ * 服务端权威（G7）：教师端只是 projection——加入/作答/统计/状态全部来自
+ * GET snapshot 与教师 SSE（applyTeacherEvent reducer），本地零自持权威状态。
+ * 布局与交互保持原型验收版 1:1；讲台模式/限时倒计时为纯呈现层。
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { v3Api, type V3QuizQuestion } from '@/api/teacherV3'
 import { renderLatex } from '@/components/mathx/latex'
 import GeoFigure from '@/components/mathx/GeoFigure.vue'
 import { useToastStore } from '@/stores/toast'
-import type { V3ClassInfo, V3Slide } from '@/types/teacherV3'
+import type { V3ClassInfo, V3ClassroomActivity, V3Slide } from '@/types/teacherV3'
 import { updateTv3Context, useTv3Context } from '@/stores/teacherContext'
-import {
-  canTransition, joinSequence, suggestBranch, buildSummary, fmtClock,
-  QUESTION_TIME_DEFAULT, QUESTION_TIME_EXTEND, QUESTION_TIME_MAX,
-  type BranchCard, type ClassStatus, type SessionSummary,
-} from './classroomLogic'
+import { applyTeacherEvent, teacherStateFromSnapshot, type TeacherClassroomState } from './classroomReducer'
+import { fmtClock, QUESTION_TIME_DEFAULT, QUESTION_TIME_EXTEND, QUESTION_TIME_MAX, type BranchCard, type ClassStatus } from './classroomLogic'
 
 /* toast 惰性获取：setup 顶层实例化会要求测试环境安装 Pinia */
 let toast: ReturnType<typeof useToastStore> | null = null
@@ -231,35 +229,56 @@ const classes = ref<V3ClassInfo[]>([])
 const quizPool = ref<V3QuizQuestion[]>([])
 const pickClass = ref('c2-03')
 const topicDraft = ref('椭圆及其标准方程 · 习题课')
-const session = ref<{ class_name: string; topic: string; started: string } | null>(null)
-const sessionStatus = ref<ClassStatus>('idle')
-const activeQ = ref<V3QuizQuestion | null>(null)
-const dist = ref([0, 0, 0, 0])
-const answered = ref(0)
+const sessionTopic = ref('')
+
+/* 服务端权威状态（reducer 投影） */
+const state = ref<TeacherClassroomState | null>(null)
+const session = computed(() => state.value?.session ?? null)
+const sessionStatus = computed<ClassStatus>(() => {
+  const s = state.value
+  if (!s) return 'idle'
+  if (s.session.status !== 'open') return 'ended'
+  const act = currentActivity.value
+  if (!act) return 'waiting'
+  return act.status === 'collecting' ? 'collecting' : act.status === 'locked' ? 'stopped' : act.status === 'revealed' ? 'revealed' : 'waiting'
+})
+/** 当前焦点活动：进行中的（collecting/locked）优先，否则最近一个 */
+const currentActivity = computed<V3ClassroomActivity | null>(() => {
+  const acts = state.value?.session.activities || []
+  const live = acts.find((a) => a.status === 'collecting' || a.status === 'locked')
+  const latest = [...acts].sort((a, b) => b.ord - a.ord)[0]
+  return live || (latest?.status === 'revealed' ? latest : null) || null
+})
+const activeQ = computed<V3QuizQuestion | null>(() => {
+  const qid = currentActivity.value?.question_id
+  return qid ? quizPool.value.find((q) => q.id === qid) || null : null
+})
+const dist = computed<number[]>(() => {
+  const d = (currentActivity.value?.stats?.distribution || {}) as Record<string, number>
+  return [d.A || 0, d.B || 0, d.C || 0, d.D || 0]
+})
+const answered = computed(() => currentActivity.value?.stats?.answered ?? 0)
 const picked = ref('')
-const remaining = ref(0)
+const pickedCount = ref(0)
 const demoId = ref('conic/ellipse')
 const demoParams = ref<Record<string, number>>({})
 const podiumOpen = ref(false)
 
-/* presence（确定性加入序列） */
-const joinedNames = ref<string[]>([])
-let joinTimer: number | undefined
+/* presence：学生名单来自服务端（H5 输码加入） */
+const joinedNames = computed(() => (session.value?.participants || []).map((p) => p.student_name))
 
-/* 限时与续时 */
+/* 限时与续时（纯呈现：到 0 提示教师，权威状态在服务端） */
 const qTimeLeft = ref(QUESTION_TIME_DEFAULT)
 const extendedTimes = ref(0)
 let qTimer: number | undefined
 let clockTimer: number | undefined
 const elapsedSec = ref(0)
-
-/* 记录与小结 */
-const askedRates = ref<number[]>([])
-const wrongTags = ref<string[]>([])
-const branchesUsed = ref<string[]>([])
 const sessionStartedAt = ref(0)
+
+/* 记录：分支为教师本人的操作史（本地 UI 记录），作答统计全部来自服务端 */
+const branchesUsed = ref<string[]>([])
 const summaryShown = ref(false)
-const summary = ref<SessionSummary | null>(null)
+const summary = ref<{ questions: number; avgCorrectRate: number; topWrong: string; branchesUsed: string[]; durationMin: number } | null>(null)
 
 const demos = [
   { id: 'conic/ellipse', name: '椭圆定义', desc: '两定点距离之和为定值 2a：拖动参数观察 a 与 b 的关系，焦点联动，退化为线段的临界时刻是教学关键点。' },
@@ -272,14 +291,25 @@ const joinedCount = computed(() => joinedNames.value.length)
 const activeOptions = computed(() => activeQ.value?.options || ['A', 'B', 'C', 'D'])
 const topIdx = computed(() => dist.value.indexOf(Math.max(...dist.value)))
 const correctRate = computed(() => {
+  const cr = currentActivity.value?.stats?.correct_rate
+  if (typeof cr === 'number') return cr
   if (!activeQ.value) return 0
   const ai = activeQ.value.answer.charCodeAt(0) - 65
   return answered.value ? Math.round((dist.value[ai] / answered.value) * 100) : 0
 })
 const demoDesc = computed(() => demos.find((d) => d.id === demoId.value)?.desc || '')
 const diffLabel = (d: string) => ({ easy: '容易', medium: '中等', hard: '较难' } as Record<string, string>)[d] || d
-const branchCards = computed(() => suggestBranch(correctRate.value))
-const ROSTER = ['王雨桐', '陈子豪', '刘一鸣', '林小满', '赵启铭', '孙浩然', '周可欣', '吴宇轩', '郑好', '冯天佑', '何雨欣', '李嘉明']
+const branchCards = computed(() => suggestBranchLocal(correctRate.value))
+/** 分支建议（呈现层）：按正确率排序，教师点选才执行（不做自动切换） */
+function suggestBranchLocal(rate: number): BranchCard[] {
+  const cards: BranchCard[] = [
+    { kind: 'boost', label: '理解良好 · 进入提升', trigger: '正确率 ≥ 75%', minutes: 5, action: '发一道较难的提升题（变式迁移），快节奏对答案', sendDifficulty: 'hard' },
+    { kind: 'partial', label: '部分卡住 · 对比例题', trigger: '正确率 45%–75%', minutes: 4, action: '投出标准答案逐步对照，重点讲分岔步骤，然后原地再练一题', sendDifficulty: 'medium' },
+    { kind: 'reteach', label: '大面积未理解 · 回前置', trigger: '正确率 < 45%', minutes: 6, action: '回到定义页重新演示（动态图形），发一道基础题确认回炉效果', sendDifficulty: 'easy', demoId: 'conic/ellipse' },
+  ]
+  const order: BranchCard['kind'][] = rate >= 75 ? ['boost', 'partial', 'reteach'] : rate >= 45 ? ['partial', 'reteach', 'boost'] : ['reteach', 'partial', 'boost']
+  return [...cards].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
+}
 
 onMounted(async () => {
   const [c, q] = await Promise.all([
@@ -288,11 +318,10 @@ onMounted(async () => {
   ])
   classes.value = c
   quizPool.value = q.filter((x) => x.q_type === 'choice').slice(0, 6)
-  remaining.value = total.value
 })
-onBeforeUnmount(() => { clearTimers() })
+onBeforeUnmount(() => { clearTimers(); streamAbort?.(); streamAbort = null })
 function clearTimers() {
-  for (const t of [joinTimer, qTimer, clockTimer]) if (t) window.clearInterval(t)
+  for (const t of [qTimer, clockTimer]) if (t) window.clearInterval(t)
 }
 
 /* ---------- B6 上下文写入 + 管家快捷动作 ---------- */
@@ -302,7 +331,7 @@ watch([session, sessionStatus, joinedCount], () => {
   updateTv3Context({
     route: '/teacher-v3/classroom',
     class_name: session.value?.class_name,
-    topic: session.value?.topic,
+    topic: sessionTopic.value,
     extra: (session.value ? joinedCount.value + '/' + total.value + ' 人' : '') + (session.value ? ' · ' + sessionStatus.value : ''),
   })
 })
@@ -312,102 +341,115 @@ function onButlerQuick(ev: Event) {
 }
 onMounted(() => window.addEventListener('tv3-butler-quick', onButlerQuick as EventListener))
 
-/* ---------- 状态机：所有迁移走 canTransition 校验 ---------- */
-function transition(to: ClassStatus) {
-  if (!canTransition(sessionStatus.value, to)) return false
-  sessionStatus.value = to
-  return true
+/* ---------- 教师流（常驻 SSE：断线自动重连 + snapshot 重置，§12.4） ---------- */
+let streamAbort: (() => void) | null = null
+function subscribe(sessionId: string) {
+  const { abort, finished } = v3Api.classroom.stream(
+    sessionId,
+    (event, data) => {
+      if (state.value) state.value = applyTeacherEvent(state.value, { event, data })
+    },
+    undefined,
+    { onRecover: () => toastOf().info('连接已恢复，正在补齐进度…') },
+  )
+  streamAbort = abort
+  finished.catch(() => { if (state.value) toastOf().error('课堂连接中断：正在尝试恢复，多次失败请刷新页面') })
 }
 
-function openSession() {
+async function openSession() {
   const cls = classes.value.find((c) => c.class_id === pickClass.value)
-  session.value = {
-    class_name: cls?.name || '高二(3)班',
-    topic: topicDraft.value || '椭圆及其标准方程 · 习题课',
-    started: new Date().toTimeString().slice(0, 5),
+  try {
+    const r = await v3Api.classroom.createSession({
+      class_id: pickClass.value,
+      class_name: cls?.name,
+      topic: topicDraft.value || '椭圆及其标准方程 · 习题课',
+    })
+    const s = r.data
+    state.value = teacherStateFromSnapshot({ session: s, questions: [], seq: 0, summary: null })
+    sessionTopic.value = s.topic || topicDraft.value || '椭圆及其标准方程 · 习题课'
+    sessionStartedAt.value = Date.now()
+    branchesUsed.value = []
+    summaryShown.value = false
+    summary.value = null
+    subscribe(s.session_id)
+    clockTimer = window.setInterval(() => { elapsedSec.value = Math.floor((Date.now() - sessionStartedAt.value) / 1000) }, 1000)
+    toastOf().success(`已开课 · 课堂码 ${s.join_code}（学生 H5 输码加入）`)
+  } catch {
+    toastOf().error('开课失败：请确认网络与登录状态后重试')
   }
-  sessionStatus.value = 'idle'
-  transition('waiting')
-  sessionStartedAt.value = Date.now()
-  joinedNames.value = []
-  askedRates.value = []
-  wrongTags.value = []
-  branchesUsed.value = []
-  summaryShown.value = false
-  clockTimer = window.setInterval(() => { elapsedSec.value = Math.floor((Date.now() - sessionStartedAt.value) / 1000) }, 1000)
-  /* 确定性加入序列（演示标注见头部徽标） */
-  const seq = joinSequence(total.value, ROSTER)
-  let i = 0
-  joinTimer = window.setInterval(() => {
-    if (i >= seq.length) { window.clearInterval(joinTimer); return }
-    joinedNames.value.push(seq[i].name)
-    i += 1
-  }, 260)
 }
 
-function endSession() {
-  if ((sessionStatus.value === 'collecting') && !window.confirm('正在收答中，确定直接下课？（未公布的作答将不保留）')) return
-  transition('ended')
+async function endSession() {
+  const s = state.value
+  if (!s) return
+  if (sessionStatus.value === 'collecting' && !window.confirm('正在收答中，确定直接下课？（未公布的作答将不保留）')) return
+  try {
+    await v3Api.classroom.endSession(s.session.session_id)
+    // 小结从权威快照取（避免 SSE 事件竞态）
+    const snap = await v3Api.classroom.snapshot(s.session.session_id)
+    const st = (snap.data.summary?.stats || {}) as Record<string, any>
+    summary.value = {
+      questions: Number(st.questions || 0),
+      avgCorrectRate: st.avg_correct_rate == null ? 0 : Number(st.avg_correct_rate),
+      topWrong: String(st.top_wrong || '—'),
+      branchesUsed: [...branchesUsed.value],
+      durationMin: Number(st.duration_min || 1),
+    }
+    summaryShown.value = summary.value.questions > 0 || true
+  } catch {
+    toastOf().error('结课失败：请重试')
+    return
+  }
+  streamAbort?.(); streamAbort = null
   clearTimers()
-  summary.value = buildSummary({
-    askedCount: askedRates.value.length,
-    rates: askedRates.value,
-    wrongTags: wrongTags.value,
-    branchesUsed: branchesUsed.value as any,
-    elapsedMs: Date.now() - sessionStartedAt.value,
-  })
-  summaryShown.value = true
-  session.value = null
-  activeQ.value = null
+  state.value = null
   podiumOpen.value = false
 }
 
-/* ---------- 发题（waiting/stopped/revealed → collecting） ---------- */
-function sendQuestion(q: V3QuizQuestion) {
-  if (!transition('collecting')) return
-  activeQ.value = q
-  dist.value = [0, 0, 0, 0]
-  answered.value = 0
+/* ---------- 发题 / 停止 / 公布：全部走服务端状态机，结果经 SSE 回投影 ---------- */
+watch(() => currentActivity.value?.activity_id, () => {
   qTimeLeft.value = QUESTION_TIME_DEFAULT
   extendedTimes.value = 0
-  if (qTimer) window.clearInterval(qTimer)
-  const answerIdx = q.answer.charCodeAt(0) - 65
-  const nOptions = q.options?.length || 4
-  const cap = Math.round(total.value * 0.9)
-  const seq = seededSeq(q.id + ':' + q.stem_latex.slice(0, 12), cap, answerIdx, nOptions)
-  let cursor = 0
-  qTimer = window.setInterval(() => {
-    if (sessionStatus.value !== 'collecting') { window.clearInterval(qTimer); return }
-    const target = seq[cursor]
-    if (target === undefined) { window.clearInterval(qTimer); return }
-    dist.value[target] += 1
-    answered.value += 1
-    cursor += 1
-  }, 650)
-  /* 限时倒计时：到 0 自动停止（教师可续时），不再依赖人工停 */
-  qTimer = window.setInterval(() => {
-    if (sessionStatus.value !== 'collecting') { window.clearInterval(qTimer); return }
-    qTimeLeft.value -= 1
-    if (qTimeLeft.value <= 0) {
-      stopQuestion()
-      toastOf().info('限时已到：已自动停止收答（可公布答案或续时重发）')
-    }
-  }, 1000)
-  toastOf().success(`已发题：${diffLabel(q.difficulty)} · 限时 ${fmtClock(qTimeLeft.value)}`)
+})
+
+async function sendQuestion(q: V3QuizQuestion) {
+  const s = state.value
+  if (!s || sessionStatus.value === 'ended') return
+  if (sessionStatus.value === 'collecting' && !window.confirm('正在收答中，发新题将替换当前题目焦点')) return
+  try {
+    await v3Api.classroom.pushActivity(s.session.session_id, { kind: 'question', question_id: q.id, config: { duration: QUESTION_TIME_DEFAULT } })
+    if (qTimer) window.clearInterval(qTimer)
+    qTimeLeft.value = QUESTION_TIME_DEFAULT
+    extendedTimes.value = 0
+    qTimer = window.setInterval(() => {
+      if (sessionStatus.value !== 'collecting') { window.clearInterval(qTimer); return }
+      qTimeLeft.value -= 1
+      if (qTimeLeft.value <= 0) {
+        window.clearInterval(qTimer)
+        toastOf().info('限时已到：可停止作答或续时（权威状态在服务端）')
+      }
+    }, 1000)
+    toastOf().success(`已发题：${diffLabel(q.difficulty)} · 限时 ${fmtClock(QUESTION_TIME_DEFAULT)}`)
+  } catch {
+    toastOf().error('发题失败：请重试')
+  }
 }
 
-function stopQuestion() {
-  if (qTimer) window.clearInterval(qTimer)
-  if (!transition('stopped')) return
-  const ai = activeQ.value ? activeQ.value.answer.charCodeAt(0) - 65 : 0
-  askedRates.value.push(answered.value ? Math.round((dist.value[ai] / Math.max(1, answered.value)) * 100) : 0)
-  const topWrong = String.fromCharCode(65 + topIdx.value)
-  if (topWrong !== activeQ.value?.answer) wrongTags.value.push(`易错项 ${topWrong}`)
+async function stopQuestion() {
+  const s = state.value
+  const act = currentActivity.value
+  if (!s || !act || act.status !== 'collecting') return
+  try { await v3Api.classroom.lockActivity(s.session.session_id, act.activity_id) } catch { toastOf().error('停止失败：请重试') }
 }
 
-function revealQuestion() {
-  if (!transition('revealed')) return
-  toastOf().success(`已公布答案：正确率 ${correctRate.value}%（下方分支卡由你决定走向）`)
+async function revealQuestion() {
+  const s = state.value
+  const act = currentActivity.value
+  if (!s || !act) return
+  try {
+    await v3Api.classroom.revealActivity(s.session.session_id, act.activity_id)
+    toastOf().success(`已公布答案：正确率 ${correctRate.value}%（下方分支卡由你决定走向）`)
+  } catch { toastOf().error('公布失败：请重试') }
 }
 
 function extendTime() {
@@ -434,25 +476,16 @@ function runBranch(card: BranchCard) {
   }
 }
 
-/* ---------- 确定性作答序列（B0） ---------- */
-function seededSeq(seedStr: string, len: number, answerIdx: number, nOptions: number): number[] {
-  let s = 0
-  for (const ch of seedStr) s = (s * 31 + ch.charCodeAt(0)) >>> 0
-  const out: number[] = []
-  for (let i = 0; i < len; i++) {
-    s = (s * 1103515245 + 12345) >>> 0
-    const r = (s >>> 8) % 100
-    if (r < 55) out.push(answerIdx)
-    else out.push((answerIdx + 1 + (r % Math.max(1, nOptions - 1))) % nOptions)
+async function pickStudent() {
+  const s = state.value
+  if (!s) return
+  try {
+    const r = await v3Api.classroom.callRandom(s.session.session_id)
+    picked.value = r.data.participant.student_name
+    pickedCount.value += 1
+  } catch {
+    toastOf().error('点名失败：还没有学生加入或请重试')
   }
-  return out
-}
-
-function pickStudent() {
-  const names = ROSTER.slice(0, 10)
-  if (remaining.value <= 0) remaining.value = total.value
-  picked.value = names[Math.floor(Math.random() * names.length)]
-  remaining.value -= 1
 }
 
 /** 存入当前课件：把当前演示图形作为「课堂演示页」真实写入最近编辑的课件（B0） */
@@ -476,7 +509,7 @@ async function pushToSlides() {
     await v3Api.decks.addSlide(target.id, { slide })
     toastOf().success(`已把「课堂演示 · ${demoName}」存入课件《${target.title}》（未确认元素，可编辑）`)
   } catch {
-    toastOf().error('存入失败（mock 服务未启动？）')
+    toastOf().error('存入失败（服务未启动？）')
   }
 }
 

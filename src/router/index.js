@@ -53,6 +53,8 @@ const routes = [
   },
   /* 40301 role_denied 统一提示页（A0 M1-2）：不带 teacherV3/teacher meta，避免破坏路由契约测试 */
   { path: '/teacher-v3/denied', name: 'tv3-denied', component: () => import('@/pages/teacher-v3/AccessDeniedPage.vue'), meta: { title: '无教师权限' } },
+  /* 学生课堂 H5（M2-A · 课堂域唯一新增页，02-ARCHITECTURE §12）：无账号 join_code 进入 */
+  { path: '/classroom-h5', name: 'classroom-h5', component: () => import('@/pages/classroom/StudentH5.vue'), meta: { public: true, title: '课堂互动 · 学生端' } },
 
   /* ===== 管理后台（唯一 admin 布局） ===== */
   { path: '/admin/overview', name: 'admin-overview', component: () => import('@/pages/admin/AdminOverviewView.vue'), meta: { admin: true, requiresRole: 'admin', title: '总览' } },
