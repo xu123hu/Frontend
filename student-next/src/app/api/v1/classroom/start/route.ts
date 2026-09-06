@@ -29,8 +29,8 @@ export async function POST(req: Request) {
     send("progress", { stage: "绘制抛物线", pct: 50 });
     await sleep(1400);
     send("delta", { text: "看画布：动点 P 满足 |PF| = d(P, l)，这就是它的几何本质，不需要死记方程。\n\n" });
-    send("message", { type: "canvas_op", op: { op: "label", label: "F", at: [0.72, 0.62], color: "#dc2626" } });
-    send("message", { type: "canvas_op", op: { op: "label", label: "l", at: [0.2, 0.2], color: "#0891b2" } });
+    send("message", { type: "canvas_op", op: { op: "label", label: "F", at: [0.545, 0.44], color: "#dc2626" } });
+    send("message", { type: "canvas_op", op: { op: "label", label: "l", at: [0.315, 0.44], color: "#0891b2" } });
     send("progress", { stage: "标注焦点与准线", pct: 80 });
     await sleep(900);
     send("delta", { text: "现在试一试：当 p = 2 时，焦点 F 的坐标是什么？在下方输入你的答案，我即时反馈。\n\n" });
