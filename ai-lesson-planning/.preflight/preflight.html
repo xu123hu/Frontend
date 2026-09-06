@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preflight</title>
+    <style id="theme-vars">
+/* ============================================================
+   AI 备课工作台 - 设计令牌 / Design Tokens
+   ============================================================ */
+
+:root {
+  /* ---- Primary Brand ---- */
+  --ailp-primary-50: #eef2ff;
+  --ailp-primary-100: #e0e7ff;
+  --ailp-primary-200: #c7d2fe;
+  --ailp-primary-300: #a5b4fc;
+  --ailp-primary-400: #818cf8;
+  --ailp-primary-500: #6366f1;
+  --ailp-primary-600: #4f46e5;
+  --ailp-primary-700: #4338ca;
+  --ailp-primary-800: #3730a3;
+  --ailp-primary-900: #312e81;
+
+  /* ---- Accent (teal / AI glow) ---- */
+  --ailp-accent-50: #ecfeff;
+  --ailp-accent-100: #cffafe;
+  --ailp-accent-200: #a5f3fc;
+  --ailp-accent-300: #67e8f9;
+  --ailp-accent-400: #22d3ee;
+  --ailp-accent-500: #06b6d4;
+  --ailp-accent-600: #0891b2;
+
+  /* ---- Neutrals ---- */
+  --ailp-gray-50: #f8fafc;
+  --ailp-gray-100: #f1f5f9;
+  --ailp-gray-200: #e2e8f0;
+  --ailp-gray-300: #cbd5e1;
+  --ailp-gray-400: #94a3b8;
+  --ailp-gray-500: #64748b;
+  --ailp-gray-600: #475569;
+  --ailp-gray-700: #334155;
+  --ailp-gray-800: #1e293b;
+  --ailp-gray-900: #0f172a;
+  --ailp-gray-950: #020617;
+
+  /* ---- Success / Warning / Error ---- */
+  --ailp-success-500: #10b981;
+  --ailp-success-600: #059669;
+  --ailp-warning-500: #f59e0b;
+  --ailp-warning-600: #d97706;
+  --ailp-error-500: #ef4444;
+  --ailp-error-600: #dc2626;
+
+  /* ---- Semantic aliases ---- */
+  --ailp-background: #f8fafc;
+  --ailp-foreground: #0f172a;
+  --ailp-card: #ffffff;
+  --ailp-card-foreground: #0f172a;
+  --ailp-popover: #ffffff;
+  --ailp-popover-foreground: #0f172a;
+  --ailp-primary: #4f46e5;
+  --ailp-primary-foreground: #ffffff;
+  --ailp-secondary: #f1f5f9;
+  --ailp-secondary-foreground: #0f172a;
+  --ailp-muted: #f1f5f9;
+  --ailp-muted-foreground: #64748b;
+  --ailp-accent: #06b6d4;
+  --ailp-accent-foreground: #ffffff;
+  --ailp-destructive: #ef4444;
+  --ailp-destructive-foreground: #ffffff;
+  --ailp-border: #e2e8f0;
+  --ailp-input: #e2e8f0;
+  --ailp-ring: #6366f1;
+
+  /* ---- Radius scale ---- */
+  --ailp-radius-sm: 6px;
+  --ailp-radius-md: 10px;
+  --ailp-radius-lg: 14px;
+  --ailp-radius-xl: 20px;
+  --ailp-radius-2xl: 28px;
+  --ailp-radius-full: 9999px;
+
+  /* ---- Shadow scale ---- */
+  --ailp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ailp-shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-xl: 0 20px 40px -10px rgba(15, 23, 42, 0.15);
+  --ailp-shadow-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+
+  /* ---- Typography ---- */
+  --ailp-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --ailp-font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
+    "Liberation Mono", Menlo, monospace;
+  --ailp-font-math: "Cambria Math", "Latin Modern Math", "STIX Two Math",
+    Georgia, serif;
+}
+
+/* ---- Dark mode (editor focus mode) ---- */
+.dark {
+  --ailp-background: #0f172a;
+  --ailp-foreground: #f8fafc;
+  --ailp-card: #1e293b;
+  --ailp-card-foreground: #f8fafc;
+  --ailp-popover: #1e293b;
+  --ailp-popover-foreground: #f8fafc;
+  --ailp-primary: #818cf8;
+  --ailp-primary-foreground: #0f172a;
+  --ailp-secondary: #334155;
+  --ailp-secondary-foreground: #f8fafc;
+  --ailp-muted: #334155;
+  --ailp-muted-foreground: #94a3b8;
+  --ailp-border: #334155;
+  --ailp-input: #334155;
+  --ailp-ring: #6366f1;
+}
+
+/* ---- Base reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--ailp-font-sans);
+  background: var(--ailp-background);
+  color: var(--ailp-foreground);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ailp-gray-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ailp-gray-400);
+}
+
+/* ---- Math formula display ---- */
+.math-display {
+  font-family: var(--ailp-font-math);
+  font-size: 1.1em;
+  line-height: 1.8;
+}
+
+.math-inline {
+  font-family: var(--ailp-font-math);
+  font-style: italic;
+}
+
+/* ---- Utility: AI glow effect ---- */
+.ai-glow {
+  position: relative;
+}
+.ai-glow::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.3),
+    rgba(6, 182, 212, 0.3)
+  );
+  filter: blur(12px);
+  opacity: 0.6;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ---- Gradient text ---- */
+.gradient-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- AI message bubble gradient ---- */
+.ai-bubble-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(6, 182, 212, 0.06) 100%
+  );
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--ailp-background);
+    --color-foreground: var(--ailp-foreground);
+    --color-card: var(--ailp-card);
+    --color-card-foreground: var(--ailp-card-foreground);
+    --color-popover: var(--ailp-popover);
+    --color-popover-foreground: var(--ailp-popover-foreground);
+    --color-primary: var(--ailp-primary);
+    --color-primary-foreground: var(--ailp-primary-foreground);
+    --color-secondary: var(--ailp-secondary);
+    --color-secondary-foreground: var(--ailp-secondary-foreground);
+    --color-muted: var(--ailp-muted);
+    --color-muted-foreground: var(--ailp-muted-foreground);
+    --color-accent: var(--ailp-accent);
+    --color-accent-foreground: var(--ailp-accent-foreground);
+    --color-destructive: var(--ailp-destructive);
+    --color-destructive-foreground: var(--ailp-destructive-foreground);
+    --color-border: var(--ailp-border);
+    --color-input: var(--ailp-input);
+    --color-ring: var(--ailp-ring);
+    --radius-sm: var(--ailp-radius-sm);
+    --radius-md: var(--ailp-radius-md);
+    --radius-lg: var(--ailp-radius-lg);
+    --radius-xl: var(--ailp-radius-xl);
+  }
+  @layer base {
+    body { background: var(--ailp-background); color: var(--ailp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--ailp-background); }
+      .text-background { color: var(--ailp-background); }
+      .border-background { border-color: var(--ailp-background); }
+      .ring-background { --tw-ring-color: var(--ailp-background); }
+      .bg-foreground { background-color: var(--ailp-foreground); }
+      .text-foreground { color: var(--ailp-foreground); }
+      .border-foreground { border-color: var(--ailp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--ailp-foreground); }
+      .bg-card { background-color: var(--ailp-card); }
+      .text-card { color: var(--ailp-card); }
+      .border-card { border-color: var(--ailp-card); }
+      .ring-card { --tw-ring-color: var(--ailp-card); }
+      .bg-card-foreground { background-color: var(--ailp-card-foreground); }
+      .text-card-foreground { color: var(--ailp-card-foreground); }
+      .border-card-foreground { border-color: var(--ailp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--ailp-card-foreground); }
+      .bg-popover { background-color: var(--ailp-popover); }
+      .text-popover { color: var(--ailp-popover); }
+      .border-popover { border-color: var(--ailp-popover); }
+      .ring-popover { --tw-ring-color: var(--ailp-popover); }
+      .bg-popover-foreground { background-color: var(--ailp-popover-foreground); }
+      .text-popover-foreground { color: var(--ailp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--ailp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--ailp-popover-foreground); }
+      .bg-primary { background-color: var(--ailp-primary); }
+      .text-primary { color: var(--ailp-primary); }
+      .border-primary { border-color: var(--ailp-primary); }
+      .ring-primary { --tw-ring-color: var(--ailp-primary); }
+      .bg-primary-foreground { background-color: var(--ailp-primary-foreground); }
+      .text-primary-foreground { color: var(--ailp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--ailp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--ailp-primary-foreground); }
+      .bg-secondary { background-color: var(--ailp-secondary); }
+      .text-secondary { color: var(--ailp-secondary); }
+      .border-secondary { border-color: var(--ailp-secondary); }
+      .ring-secondary { --tw-ring-color: var(--ailp-secondary); }
+      .bg-secondary-foreground { background-color: var(--ailp-secondary-foreground); }
+      .text-secondary-foreground { color: var(--ailp-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--ailp-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--ailp-secondary-foreground); }
+      .bg-muted { background-color: var(--ailp-muted); }
+      .text-muted { color: var(--ailp-muted); }
+      .border-muted { border-color: var(--ailp-muted); }
+      .ring-muted { --tw-ring-color: var(--ailp-muted); }
+      .bg-muted-foreground { background-color: var(--ailp-muted-foreground); }
+      .text-muted-foreground { color: var(--ailp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--ailp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--ailp-muted-foreground); }
+      .bg-accent { background-color: var(--ailp-accent); }
+      .text-accent { color: var(--ailp-accent); }
+      .border-accent { border-color: var(--ailp-accent); }
+      .ring-accent { --tw-ring-color: var(--ailp-accent); }
+      .bg-accent-foreground { background-color: var(--ailp-accent-foreground); }
+      .text-accent-foreground { color: var(--ailp-accent-foreground); }
+      .border-accent-foreground { border-color: var(--ailp-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--ailp-accent-foreground); }
+      .bg-destructive { background-color: var(--ailp-destructive); }
+      .text-destructive { color: var(--ailp-destructive); }
+      .border-destructive { border-color: var(--ailp-destructive); }
+      .ring-destructive { --tw-ring-color: var(--ailp-destructive); }
+      .bg-destructive-foreground { background-color: var(--ailp-destructive-foreground); }
+      .text-destructive-foreground { color: var(--ailp-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--ailp-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--ailp-destructive-foreground); }
+      .bg-border { background-color: var(--ailp-border); }
+      .text-border { color: var(--ailp-border); }
+      .border-border { border-color: var(--ailp-border); }
+      .ring-border { --tw-ring-color: var(--ailp-border); }
+      .bg-input { background-color: var(--ailp-input); }
+      .text-input { color: var(--ailp-input); }
+      .border-input { border-color: var(--ailp-input); }
+      .ring-input { --tw-ring-color: var(--ailp-input); }
+      .bg-ring { background-color: var(--ailp-ring); }
+      .text-ring { color: var(--ailp-ring); }
+      .border-ring { border-color: var(--ailp-ring); }
+      .ring-ring { --tw-ring-color: var(--ailp-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

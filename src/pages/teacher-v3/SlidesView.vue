@@ -1,157 +1,6 @@
 <template>
-  <!-- ================= 列表视图 ================= -->
-  <div v-if="view === 'list'" data-testid="tv3-slides-list">
-    <div class="tv3-hero" style="margin-bottom: 18px">
-      <div style="display: flex; gap: 26px; align-items: center">
-        <div style="flex: 1">
-          <div class="tv3-hero__title">课件工坊</div>
-          <div class="tv3-hero__sub">三个入口生成课件 · 生成前先选模板 · 所有数学元素结构化可编辑</div>
-        </div>
-        <div style="display: flex; gap: 10px">
-          <button class="tv3-btn tv3-btn--gold" data-testid="tv3-entry-photo" @click="openNew('photo')">📷 拍照出课件</button>
-          <button class="tv3-btn tv3-btn--ghost-ai" data-testid="tv3-entry-topic" @click="openNew('topic')">✦ 主题生成</button>
-          <button class="tv3-btn" data-testid="tv3-entry-plan" @click="openNew('plan')">↗ 教案直通</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="tv3-card">
-      <div class="tv3-card__head">
-        <span class="tv3-card__title">我的课件</span>
-        <span class="tv3-card__sub">{{ decks.length }} 份</span>
-        <div class="tv3-card__spacer" />
-        <span class="tv3-tag tv3-tag--gold">原图锚定</span>
-        <span class="tv3-tag tv3-tag--primary">结构化元素</span>
-      </div>
-      <div class="tv3-card__body" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px">
-        <div v-for="d in decks" :key="d.id" class="tv3-qcard tv3-card" style="cursor: pointer; padding: 14px" @click="openDeck(d.id)">
-          <div style="display: flex; align-items: center; gap: 8px">
-            <span class="tv3-tag" :class="d.source === 'photo' ? 'tv3-tag--gold' : d.source === 'lesson-push' ? 'tv3-tag--ok' : 'tv3-tag--primary'">{{ sourceLabel(d.source) }}</span>
-            <span style="font-size: 10.5px; color: var(--tv3-ink3)">{{ d.updated_at }}</span>
-          </div>
-          <div style="font-size: 14.5px; font-weight: 700; margin: 8px 0 4px">{{ d.title }}</div>
-          <div style="font-size: 12px; color: var(--tv3-ink3)">{{ d.class_name }} · {{ d.slide_count }} 页 · 模板 {{ templateName(d.template_id) }}</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= 新建：主题 / 拍照 / 教案直通 ================= -->
-  <div v-else-if="view === 'new'" class="tv3-card" style="max-width: 1060px; margin: 0 auto" data-testid="tv3-slides-new">
-    <div class="tv3-card__head">
-      <button class="tv3-btn tv3-btn--sm" @click="view = 'list'">← 返回</button>
-      <span class="tv3-card__title">{{ newMode === 'photo' ? '拍照出课件' : newMode === 'topic' ? '主题生成课件' : '教案直通课件' }}</span>
-      <div class="tv3-card__spacer" />
-      <span class="tv3-tag tv3-tag--gold">红线：AI 只出草稿，教师审定后生效</span>
-    </div>
-
-    <div class="tv3-card__body">
-      <!-- 第 1 步：来源信息 -->
-      <div v-if="step === 1">
-        <template v-if="newMode === 'photo'">
-          <div class="tv3-form-label">① 上传原题照片（学生作业 / 教辅 / 黑板）</div>
-          <div
-            class="tv3-photo-drop" :class="{ 'is-over': photoDragOver }"
-            data-testid="tv3-photo-drop"
-            @dragover.prevent="photoDragOver = true" @dragleave="photoDragOver = false" @drop.prevent="onPhotoDrop"
-            @click="fileInput?.click()"
-          >
-            <template v-if="photos.length">
-              <img v-for="(p, i) in photos" :key="i" :src="p" class="tv3-photo-thumb" alt="原题照片">
-              <div class="tv3-photo-add">＋</div>
-            </template>
-            <template v-else>
-              <div style="font-size: 34px">📷</div>
-              <div style="font-size: 13.5px; font-weight: 600; margin-top: 6px">点击或拖入照片</div>
-              <div style="font-size: 12px; color: var(--tv3-ink3); margin-top: 3px">原图将永久锚定在课件中，供核验对照</div>
-            </template>
-          </div>
-          <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="onFileChange">
-
-          <div class="tv3-form-label" style="margin-top: 16px">② 识别范围</div>
-          <div class="tv3-newgrid">
-            <VisualChoiceCard v-for="c in scopeCards" :key="c.name" kind="photo" :swatch="c.swatch" :selected="form.scope === c.value" :name="c.name" :fit="c.fit" :note="c.note" @select="form.scope = c.value" />
-          </div>
-
-          <div class="tv3-form-label" style="margin-top: 16px">③ 生成模式</div>
-          <div class="tv3-newgrid">
-            <VisualChoiceCard v-for="c in modeCards" :key="c.name" kind="deck" :swatch="c.swatch" :selected="form.mode === c.value" :name="c.name" :fit="c.fit" :note="c.note" @select="form.mode = c.value" />
-          </div>
-
-          <div class="tv3-form-label" style="margin-top: 16px">④ 字号档（长解答自动分页，不缩小内容）</div>
-          <div class="tv3-newgrid" style="grid-template-columns: repeat(3, 1fr)">
-            <VisualChoiceCard v-for="c in fontCards" :key="c.name" kind="font" :swatch="c.swatch" :font-px="c.px" :selected="form.font_tier === c.value" :name="c.name" :note="c.note" @select="form.font_tier = c.value" />
-          </div>
-          <label style="display: inline-flex; gap: 7px; align-items: center; margin-top: 14px; font-size: 13px; cursor: pointer">
-            <input type="checkbox" v-model="form.margin_notes" style="accent-color: var(--tv3-gold)"> 边注模式（原图旁生成可编辑边注）
-          </label>
-        </template>
-
-        <template v-else-if="newMode === 'topic'">
-          <div class="tv3-form-label">① 课题与班级</div>
-          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px">
-            <input v-model="form.topic" class="tv3-input" placeholder="例如：椭圆及其标准方程（第1课时）" data-testid="tv3-topic-input">
-            <select v-model="form.class_id" class="tv3-input">
-              <option v-for="c in classes" :key="c.class_id" :value="c.class_id">{{ c.name }}</option>
-            </select>
-          </div>
-        </template>
-
-        <template v-else>
-          <div class="tv3-form-label">① 选择已确认的教案（沿用环节结构）</div>
-          <div v-for="p in plans" :key="p.id" class="tv3-row" :class="{ 'is-selected': form.plan_id === p.id }" style="cursor: pointer" @click="form.plan_id = p.id">
-            <span class="tv3-tag" :class="p.confirmed ? 'tv3-tag--ok' : 'tv3-tag--warn'">{{ p.confirmed ? '已确认' : '草稿' }}</span>
-            <div style="flex: 1">
-              <div style="font-size: 13.5px; font-weight: 600">{{ p.topic }}</div>
-              <div style="font-size: 11.5px; color: var(--tv3-ink3)">{{ p.lesson_type }} · {{ p.section_count }} 个环节</div>
-            </div>
-          </div>
-        </template>
-
-        <div style="display: flex; justify-content: flex-end; margin-top: 18px">
-          <button class="tv3-btn tv3-btn--primary" :disabled="!canNext" data-testid="tv3-new-next" @click="step = 2">下一步：选择模板 →</button>
-        </div>
-      </div>
-
-      <!-- 第 2 步：模板选择（自渲染样张） -->
-      <div v-else-if="step === 2">
-        <div class="tv3-form-label">选择课件模板 <span style="color: var(--tv3-ink4); font-weight: 400">· {{ templates.length }} 套主题可换肤 · 生成后仍可换</span></div>
-        <div class="tv3-newgrid" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr))">
-          <VisualChoiceCard
-            v-for="t in templates" :key="t.id"
-            kind="deck" :swatch="t.swatch" :selected="form.template_id === t.id"
-            :badge="t.style === 'academic' ? '荐' : ''"
-            :name="t.name" :pages="[1, 2, 3, 4, 5]" :fit="t.recommended_for" :note="`覆盖 ${t.page_kinds.length} 类版式`"
-            :testid="`tv3-tpl-${t.id}`"
-            @select="form.template_id = t.id"
-          />
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-top: 18px">
-          <button class="tv3-btn" @click="step = 1">← 上一步</button>
-          <button class="tv3-btn tv3-btn--gold" :disabled="!form.template_id" data-testid="tv3-new-generate" @click="startGenerate">
-            {{ newMode === 'photo' ? '开始识别并生成' : '开始生成' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 第 3 步：SSE 生成进度（识别块实时可见可改） -->
-      <div v-else-if="step === 3" data-testid="tv3-generating">
-        <div class="tv3-progress" style="margin-bottom: 14px"><div class="tv3-progress__bar" :style="{ width: genProgress + '%' }" /></div>
-        <div style="font-size: 13px; color: var(--tv3-ink2); margin-bottom: 12px" data-testid="tv3-gen-stage">{{ genStage }}</div>
-        <div v-if="genBlocks.length" class="tv3-recog">
-          <div v-for="(b, i) in genBlocks" :key="i" class="tv3-recog__block" data-testid="tv3-recog-block">
-            <span class="tv3-tag" :class="b.type === 'figure' ? 'tv3-tag--gold' : 'tv3-tag--primary'">
-              {{ b.type === 'stem' ? '题干' : b.type === 'figure' ? '图形' : '解答步骤' }}
-            </span>
-            <div v-if="b.latex" class="tv3-recog__latex" v-html="renderLatex(b.latex)" />
-            <div v-else-if="b.text" class="tv3-recog__text">{{ b.text }}</div>
-            <div v-else class="tv3-recog__text" style="color: var(--tv3-ink3)">[图形区域 · 建议重建为结构化图形]</div>
-            <span class="tv3-recog__conf">置信度 {{ (b.confidence * 100).toFixed(0) }}%</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- ================= 课件工坊·备小研风格（WorkshopFlow：首页/照片/教案映射/大纲确认/模板/生成） ================= -->
+  <WorkshopFlow v-if="view !== 'editor'" :ws="ws" />
 
   <!-- ================= 五区编辑器 ================= -->
   <div v-else-if="view === 'editor' && deck" class="tv3-editor" data-testid="tv3-editor">
@@ -162,12 +11,17 @@
       <span class="tv3-tag" :class="deck.source === 'photo' ? 'tv3-tag--gold' : 'tv3-tag--primary'">{{ sourceLabel(deck.source) }}</span>
       <span class="tv3-tag">{{ templateName(deck.template_id) }}</span>
       <span v-if="deck.photo_context" class="tv3-tag tv3-tag--gold" title="原图已锚定">⚓ 原图 ×{{ deck.photo_context.photos }}</span>
+      <span v-if="deck.brief_context?.course_type" class="tv3-tag" data-testid="tv3-deck-coursetype">{{ deck.brief_context.course_type }}</span>
+      <span v-if="deck.brief_context?.chapter" class="tv3-tag" :title="deck.brief_context.chapter">📖 {{ chapterShort(deck.brief_context.chapter) }}</span>
       <div class="tv3-card__spacer" />
+      <button class="tv3-btn tv3-btn--sm tv3-btn--gold" data-testid="tv3-open-drawboard" @click="openDrawBoard()">📐 绘图</button>
       <button class="tv3-btn tv3-btn--sm tv3-btn--ghost-ai" data-testid="tv3-ai-element" @click="runAiElement">✦ AI 优化本页</button>
       <button class="tv3-btn tv3-btn--sm tv3-btn--gold" data-testid="tv3-photo-insert" @click="photoOpen = true">📷 拍照插入</button>
       <button class="tv3-btn tv3-btn--sm" @click="saveDeck" data-testid="tv3-save">保存</button>
       <button class="tv3-btn tv3-btn--sm" @click="addSlide">＋ 页</button>
       <button class="tv3-btn tv3-btn--sm tv3-btn--primary" data-testid="tv3-present" @click="presenting = true">▶ 预演</button>
+      <button class="tv3-btn tv3-btn--sm" data-testid="tv3-add-bank-q" @click="openBankPick">＋ 题库题目</button>
+      <button class="tv3-btn tv3-btn--sm" data-testid="tv3-deck-check-open" @click="openDeckCheck">🩺 体检</button>
       <button class="tv3-btn tv3-btn--sm" @click="exportDeck">导出</button>
     </div>
 
@@ -309,16 +163,17 @@
       </aside>
     </div>
 
-    <!-- 区⑤ 元素坞：公式键盘 + 绘图工作台入口（几何图形统一走绘图工作台） -->
-    <div class="tv3-editor__dock">
-      <div class="tv3-editor__docktabs">
-        <span style="font-size: 12.5px; font-weight: 700; color: var(--tv3-ink)">⌨ 公式键盘</span>
-        <button class="tv3-btn tv3-btn--sm tv3-btn--gold" data-testid="tv3-open-drawboard" @click="openDrawBoard()">📐 绘图工作台</button>
-        <span style="font-size: 11px; color: var(--tv3-ink3)">键盘点按插入公式，可拖到公式上包裹结构（如 √ 拖到 3 上） · 几何/函数/立体图形在绘图工作台画好插入</span>
+    <!-- 区⑤ 元素坞已按「工具球收纳」设计移除（课件编辑器·工具球收纳.html）：
+         绘图工作台 = 顶栏「📐 绘图」+ 右下角数学绘图悬浮球；公式键盘 = 选中公式时左下角自动唤出的浮层 -->
+
+    <!-- 公式键盘浮层：选中公式元素自动唤出（可手动关闭；同一元素不再重复弹） -->
+    <div v-if="kbdOpen && selectedEl?.type === 'formula'" class="ws-kbdfloat" data-testid="tv3-kbd-float">
+      <div class="ws-kbdfloat__head">
+        <b>⌨ 公式键盘</b>
+        <span>点击插入当前公式 · 编辑公式时自动唤出</span>
+        <button title="收起（选中其他公式会再次弹出）" data-testid="tv3-kbd-float-close" @click="closeKbd">×</button>
       </div>
-      <div style="padding: 0 10px 6px">
-        <MathKeyboard @insert="onKbdInsert" />
-      </div>
+      <MathKeyboard @insert="onKbdInsert" />
     </div>
 
     <!-- 预演覆盖层 -->
@@ -343,6 +198,68 @@
     <!-- 拍照插入（P2）：扫描增强 + 图片素材/公式识别/手写原样三选一 -->
     <PhotoInsertPanel v-model:open="photoOpen" @insert="onPhotoInsert" />
   </div>
+
+  <!-- B3 可讲性体检抽屉（确定性检查，无总分、不冒充 AI 评分） -->
+  <div v-if="checkOpen" class="tv3-push" @click.self="checkOpen = false">
+    <div class="tv3-card tv3-push__panel" style="max-width: 680px; max-height: 84vh; overflow-y: auto" data-testid="tv3-deck-check">
+      <div class="tv3-card__head">
+        <span class="tv3-card__title">可讲性体检</span>
+        <span class="tv3-tag" style="font-size: 10px">确定性检查 · 不打总分</span>
+        <div class="tv3-card__spacer" />
+        <button class="tv3-btn tv3-btn--sm" data-testid="tv3-deck-check-rerun" @click="runDeckCheck">↻ 重跑</button>
+        <button class="tv3-btn tv3-btn--sm" @click="checkOpen = false">×</button>
+      </div>
+      <div class="tv3-card__body" style="display: flex; flex-direction: column; gap: 8px">
+        <div style="font-size: 11.5px; color: var(--tv3-ink3); line-height: 1.6">
+          回答一个问题：<b>这份课件明天能直接照着讲吗？</b>覆盖字号可读性 / 溢出 / 例题完整 / 推导密度 / 版式节奏 / 理解检查点。
+          讲解角色标注与 AI 语义检查属后端能力，原型不做假装。
+        </div>
+        <div v-if="!visibleIssues.length" class="tv3-empty" style="padding: 20px 0" data-testid="tv3-check-empty">
+          未发现确定性问题（字号 / 溢出 / 例题完整 / 推导密度 / 版式节奏 / 检查点）。
+        </div>
+        <div v-for="iss in visibleIssues" :key="iss.id" class="tv3-prep__diffitem" :data-testid="`tv3-check-${iss.id}`">
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap">
+            <span class="tv3-tag" :class="iss.severity === 'error' ? 'tv3-tag--danger' : iss.severity === 'warn' ? 'tv3-tag--warn' : ''" style="font-size: 10px">
+              {{ iss.severity === 'error' ? '错误' : iss.severity === 'warn' ? '建议' : '提示' }}
+            </span>
+            <span class="tv3-tag" style="font-size: 10px">第 {{ iss.slideIndex + 1 }} 页 · {{ iss.slideTitle }}</span>
+            <b style="font-size: 12.5px; flex: 1; min-width: 160px">{{ iss.rule }}</b>
+            <button class="tv3-btn tv3-btn--sm" :data-testid="`tv3-check-locate-${iss.id}`" @click="locateIssue(iss)">定位</button>
+          </div>
+          <div style="font-size: 11.5px; color: var(--tv3-ink2); line-height: 1.6">{{ iss.why }}</div>
+          <div style="display: flex; gap: 6px; justify-content: flex-end">
+            <button v-if="iss.fix && iss.fix.kind !== 'none'" class="tv3-btn tv3-btn--sm tv3-btn--gold" :data-testid="`tv3-check-fix-${iss.id}`" @click="fixIssue(iss)">
+              {{ iss.fix.kind === 'bump-font' ? '修复：放大字号' : '修复：拆成两页' }}
+            </button>
+            <button class="tv3-btn tv3-btn--sm" @click="ignoredIssues.add(iss.id); ignoredIssues = new Set(ignoredIssues)">忽略</button>
+          </div>
+        </div>
+        <div v-if="ignoredIssues.size" style="font-size: 11px; color: var(--tv3-ink4)">已忽略 {{ ignoredIssues.size }} 条（重跑体检会重新检查）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B3 题库复用弹层 -->
+  <div v-if="bankPickOpen" class="tv3-push" @click.self="bankPickOpen = false">
+    <div class="tv3-card tv3-push__panel" style="max-width: 680px; max-height: 82vh; overflow-y: auto" data-testid="tv3-bank-pick">
+      <div class="tv3-card__head">
+        <span class="tv3-card__title">从题库插入当前页</span>
+        <div class="tv3-card__spacer" />
+        <button class="tv3-btn tv3-btn--sm" @click="bankPickOpen = false">×</button>
+      </div>
+      <div class="tv3-card__body" style="display: flex; flex-direction: column; gap: 6px">
+        <div style="font-size: 11.5px; color: var(--tv3-ink3)">题干落为可编辑文本元素，参考答案以小字随行（teacher_confirmed=false，审定后生效）。</div>
+        <div v-for="q in bankQuestions" :key="q.id" class="tv3-row" style="cursor: pointer; align-items: flex-start" :data-testid="`tv3-bankq-${q.id}`" @click="insertBankQuestion(q)">
+          <span class="tv3-tag" :class="q.difficulty === 'hard' ? 'tv3-tag--danger' : q.difficulty === 'medium' ? 'tv3-tag--warn' : 'tv3-tag--ok'" style="font-size: 10px; flex-shrink: 0; margin-top: 2px">{{ q.difficulty === 'hard' ? '较难' : q.difficulty === 'medium' ? '中等' : '容易' }}</span>
+          <div style="flex: 1; min-width: 0">
+            <div style="font-size: 12.5px; line-height: 1.6" v-html="renderLatex(q.stem_latex)" />
+            <div style="font-size: 10.5px; color: var(--tv3-ink4); margin-top: 2px">{{ q.kp_name }} · {{ q.source }}</div>
+          </div>
+          <span class="tv3-btn tv3-btn--sm tv3-btn--gold" style="flex-shrink: 0">插入本页</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -352,20 +269,24 @@
  * 五区：顶栏 · 大纲 · 画布 · 属性面板 · 元素坞（公式键盘+绘图工作台入口）
  * 红线落实：AI 草稿待确认（teacher_confirmed）、原图锚定不可删、分页不缩内容（fill_rate 可视）
  */
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { v3Api, type V3DeckSummary, type V3PlanSummary } from '@/api/teacherV3'
+import { v3Api, type V3TextbookChapters, type V3DeckSummary, type V3PlanSummary, type V3QuizQuestion } from '@/api/teacherV3'
 import { FIGURE_PRESETS, type FigurePresetDef } from '@/components/mathx/presets'
 import { cleanPlaceholder, renderLatex } from '@/components/mathx/latex'
 import { useToastStore } from '@/stores/toast'
 import SlideCanvasV3 from '@/components/teacherV3/SlideCanvasV3.vue'
 import MathField from '@/components/mathx/MathField.vue'
 import MathKeyboard from '@/components/mathx/MathKeyboard.vue'
-import VisualChoiceCard from '@/components/mathx/VisualChoiceCard.vue'
+import WorkshopFlow from '@/components/teacherV3/workshop/WorkshopFlow.vue'
 import DrawBoard, { type DrawReopen } from '@/components/mathx/draw/DrawBoard.vue'
 import PhotoInsertPanel from '@/components/mathx/PhotoInsertPanel.vue'
+import { checkDeck, applyFix, type CheckIssue } from '@/pages/teacher-v3/deckCheck'
+import { updateTv3Context } from '@/stores/teacherContext'
+import { setReceipt, registerUndo } from '@/stores/companion'
+import type { CompanionCandidate } from '@/pages/teacher-v3/companionData'
 import type { V3DrawInsert } from '@/components/mathx/draw/drawCore'
-import type { V3ClassInfo, V3Deck, V3Element, V3FigureRebuildCandidate, V3Slide } from '@/types/teacherV3'
+import type { V3BriefPayload, V3ClassInfo, V3Deck, V3Element, V3FigureRebuildCandidate, V3Slide, V3TodayData, V3LessonPlan } from '@/types/teacherV3'
 
 type View = 'list' | 'new' | 'editor'
 
@@ -385,6 +306,115 @@ const selectedId = ref('')
 const presenting = ref(false)
 const presentIdx = ref(0)
 const mathFieldHot = ref(false)
+
+/* ---------- C1 AI 备课台（BriefComposer）接入与今日授课 ---------- */
+const todaySchedule = ref<V3TodayData['schedule']>([])
+/* Brief 台提交记录的接地上下文：大纲请求 / 生成请求 / 大纲门与教案直通的诚实标注共用。
+   C1.1：requirements 不再丢弃——教师的自由文本要求参与大纲编译（词表规则，诚实标注）。 */
+const briefCtx = ref<{ course_type: string; chapter: string; docs: string[]; requirements: string }>({ course_type: '新授课', chapter: '', docs: [], requirements: '' })
+const chapterShort = (p: string) => p.split('▸').pop()?.trim() || p
+
+/** 课题抽取：《》书名号优先，其次首个短句；整段要求不会被当成课题 */
+function extractTopic(text: string): string {
+  const book = text.match(/[《「“"]([^》」”"]+)[》」”"]/)
+  if (book) return book[1]
+  const first = text.split(/[，。；,;.\n]/)[0].trim()
+  if (first.length >= 4 && first.length <= 30) return first
+  return first.slice(0, 30) || '未命名课题'
+}
+
+/* ---------- 备小研工坊（WorkshopFlow 展示层的动作与状态；IFC-WS-a，PROTOTYPE-ONLY） ---------- */
+const heroText = ref('')
+const chapters = ref<V3TextbookChapters>({ textbooks: [] })
+const recogCards = ref<{ photo_id: string; confidence: number; warn?: boolean; text: string; kps: string[] }[]>([])
+const recogLoading = ref(false)
+const recogNote = ref('')
+const applyScope = ref<'all' | 'cover'>('all')
+const tplFilter = ref('全部')
+const planDetail = ref<V3LessonPlan | null>(null)
+const planMap = ref<{ name: string; minutes: number; pages: number }[]>([])
+
+/** 首页 hero 提交：课题抽取 + 原话进 requirements，直达大纲确认台（需求→大纲→模板→生成） */
+function submitHero() {
+  const text = heroText.value.trim()
+  if (!text) { toast.info('先描述这节课怎么上，或点模式芯片换入口（拍照 / 教案直通）'); return }
+  briefCtx.value = { course_type: briefCtx.value.course_type, chapter: briefCtx.value.chapter, docs: [...briefCtx.value.docs], requirements: text }
+  form.value.topic = extractTopic(text)
+  openNew('topic')
+  void prepareOutline()
+}
+function onDocFiles(ev: Event) {
+  const files = (ev.target as HTMLInputElement).files
+  if (!files) return
+  for (const f of [...files]) briefCtx.value.docs.push(f.name)
+  ;(ev.target as HTMLInputElement).value = ''
+}
+function openHome() { view.value = 'list' }
+function removePhoto(i: number) { photos.value.splice(i, 1); recogCards.value.splice(i, 1) }
+/** 识别确认步：fixture 演示识别（诚实标注），生成时后端按原图重新识别 */
+async function runRecogPreview() {
+  recogLoading.value = true
+  try {
+    const r = await v3Api.recognition.preview({ photos: photos.value })
+    const d = r.data as { items: typeof recogCards.value; note: string }
+    recogCards.value = d.items
+    recogNote.value = d.note
+  } catch { recogCards.value = []; recogNote.value = '识别预览失败（mock 未启动？用 VITE_USE_MOCK=1 npm run dev）' } finally { recogLoading.value = false }
+}
+function nextPhoto() { if (photos.value.length) step.value = 2 }
+/** 教案直通：选定教案 → 拉环节结构 → 页数映射行 */
+async function selectPlan(id: string) {
+  form.value.plan_id = id
+  try {
+    const r = await v3Api.plans.get(id)
+    planDetail.value = r.data
+    planMap.value = (r.data.sections || []).map((sec) => ({ name: sec.name, minutes: sec.minutes, pages: 1 }))
+  } catch { planMap.value = [] }
+}
+function nextPlan() {
+  if (!planDetail.value || !planMap.value.length) return
+  briefCtx.value.course_type = planDetail.value.lesson_type || '新授课'
+  gateOutline.value = planMap.value.flatMap((r) =>
+    Array.from({ length: r.pages }, (_, j) => ({
+      title: r.pages > 1 ? `${r.name}（${j + 1}）` : r.name,
+      kind: /定义|概念/.test(r.name) ? 'definition' : /推导|探究/.test(r.name) ? 'derivation' : /例题/.test(r.name) ? 'example' : /变式|练习/.test(r.name) ? 'variation' : /小结|回顾/.test(r.name) ? 'summary' : 'blank',
+      minutes: Math.max(2, Math.round(r.minutes / r.pages)),
+    })),
+  )
+  gateMatched.value = false
+  gateNote.value = '教案直通：以已确认教案的环节结构为骨架（原型结构直通，不解析教案正文）'
+  gateReqs.value = []
+  step.value = 4
+}
+function addOutlinePage() { gateOutline.value.push({ title: '新页', kind: 'blank', minutes: 6 }) }
+function delOutlinePage(i: number) { gateOutline.value.splice(i, 1) }
+function moveOutlinePage(i: number, d: number) {
+  const j = i + d
+  if (j < 0 || j >= gateOutline.value.length) return
+  const [x] = gateOutline.value.splice(i, 1)
+  gateOutline.value.splice(j, 0, x)
+}
+function quickAdjust(t: string) { gateAdjust.value = t; regenWithAdjust() }
+function prevTemplate() { step.value = newMode.value === 'topic' || newMode.value === 'plan' ? 4 : 1 }
+
+/** 今日授课「去备」：预填首页输入台（课题+班级），不隐藏跳转 */
+function prefillLesson(s: { class_name: string; topic: string }) {
+  const cid = classes.value.find((c) => c.name === s.class_name)?.class_id || 'c2-05'
+  heroText.value = s.topic
+  form.value.class_id = cid
+  view.value = 'list'
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  toast.info(`已把「${s.topic}」预填进输入台：补选章节后点发送开始`)
+}
+
+/** 从已有课件改编：定位到我的课件列表（母本 Diff 建议属下一批次，先诚实引导） */
+function adaptFromDeck() {
+  toast.info('从下方「我的课件」选择母本打开编辑器改编：结构化元素保留、模板可换')
+}
+
+/* 大纲门环节语义标签（课型→环节结构由 server 下发 kind，这里只做展示映射） */
+const GATE_KIND_LABEL: Record<string, string> = { cover: '封面', review: '复习', definition: '概念', derivation: '推导', example: '例题', variation: '练习', summary: '小结', blank: '板书' }
+const kindLabel = (k: string) => GATE_KIND_LABEL[k] || k
 
 /* 大纲/属性面板宽度可拖拽（localStorage 持久化） */
 const outlineW = ref(Number(localStorage.getItem('tv3-outline-w')) || 168)
@@ -489,33 +519,69 @@ function fillBarStyle(s: V3Slide) {
   return { width: `${Math.round(r * 100)}%`, background: r > 0.92 ? 'var(--tv3-rose)' : r > 0.6 ? 'var(--tv3-teal)' : 'var(--tv3-amber)' }
 }
 
+/* ---------- B6 上下文写入（管家跟随当前课件/页/选中元素） ---------- */
+function elSummary(e: V3Element): string {
+  if (e.type === 'formula') return '公式 ' + e.latex.slice(0, 18)
+  if (e.type === 'text') return '文本「' + e.html.replace(/<[^>]+>/g, '').slice(0, 12) + '…」'
+  if (e.type === 'geometry') return '几何 ' + (e.preset_id || '')
+  return e.type
+}
+watch([deck, slideIdx, selectedId, view], () => {
+  updateTv3Context({
+    route: '/teacher-v3/slides',
+    deck_id: deck.value?.id,
+    deck_title: deck.value?.title,
+    slide_index: slideIdx.value,
+    slide_count: deck.value?.slides.length,
+    selection: selectedEl.value ? { type: selectedEl.value.type, summary: elSummary(selectedEl.value) } : undefined,
+  })
+})
+
+/* B6 管家快捷动作（本页能真实执行的） */
+function onButlerQuick(ev: Event) {
+  const action = (ev as CustomEvent).detail?.action
+  if (action === 'run-check') openDeckCheck()
+  else if (action === 'open-bank') openBankPick()
+  else if (action === 'ai-element') runAiElement()
+}
+
 /* ---------- 数据加载 ---------- */
 onMounted(async () => {
   window.addEventListener('tv3-butler-insert', onButlerInsert as EventListener)
-  const [d, c, p, t] = await Promise.all([
+  window.addEventListener('tv3-butler-quick', onButlerQuick as EventListener)
+  const [d, c, p, t, td] = await Promise.all([
     v3Api.decks.list().then((r) => r.data.items).catch(() => []),
     v3Api.catalog.classes().then((r) => r.data.items).catch(() => []),
     v3Api.plans.list().then((r) => r.data.items).catch(() => []),
     v3Api.catalog.deckTemplates().then((r) => r.data.items).catch(() => []),
+    v3Api.catalog.today().then((r) => r.data).catch(() => null),
   ])
   decks.value = d
   classes.value = c
   plans.value = p
   templates.value = (t && t.length ? t : DECK_TEMPLATE_FALLBACK) as typeof templates.value
+  todaySchedule.value = td?.schedule || []
+  void v3Api.catalog.textbookChapters().then((r) => { chapters.value = r.data }).catch(() => { /* mock 未启动：章节 pill 留空 */ })
 
   /* 管家 navigate 落点（剧本A）：
    *  deck=<id>          → 直接打开该课件编辑器
-   *  mode=topic&topic=… → 打开主题生成并预填（模板/大纲仍由教师确认） */
+   *  mode=topic&topic=… → 落在 AI 备课台预填（C1：大纲确认仍在，不直开向导）
+   *  mode=photo/plan    → 打开对应向导 */
   const q = route.query
   if (typeof q.deck === 'string' && q.deck) {
     void openDeck(q.deck)
-  } else if (q.mode === 'topic' || q.mode === 'photo' || q.mode === 'plan') {
+  } else if (q.mode === 'photo' || q.mode === 'plan') {
     openNew(q.mode)
-    if (typeof q.topic === 'string' && q.topic) form.value.topic = q.topic
     if (typeof q.class_id === 'string' && q.class_id) form.value.class_id = q.class_id
     if (typeof q.template_id === 'string' && q.template_id) form.value.template_id = q.template_id
+  } else if (q.mode === 'topic') {
+    heroText.value = typeof q.topic === 'string' ? q.topic : ''
+    if (typeof q.class_id === 'string' && q.class_id) form.value.class_id = q.class_id
+    if (typeof q.template_id === 'string' && q.template_id) form.value.template_id = q.template_id
+    toast.info('管家已把课题预填进输入台：补选章节/材料后点发送开始')
   }
 })
+onBeforeUnmount(() => window.removeEventListener('tv3-butler-quick', onButlerQuick as EventListener))
 
 async function openDeck(id: string) {
   try {
@@ -525,6 +591,105 @@ async function openDeck(id: string) {
     selectedId.value = ''
     view.value = 'editor'
   } catch { /* mock 不可用 */ }
+}
+
+/* ---------- B3 大纲 Gate（C1.1：要求回应单 + 调整指令重出） ---------- */
+const outlineLoading = ref(false)
+const gateMatched = ref(false)
+const gateNote = ref('')
+const gateOutline = ref<{ title: string; kind: string; minutes?: number }[]>([])
+const gateReqs = ref<{ id: number; text: string; status: string; pages: number[]; note?: string }[]>([])
+const gateAdjust = ref('')
+async function prepareOutline(adjust?: string) {
+  step.value = 4
+  outlineLoading.value = true
+  try {
+    /* C1.1：教师的原始要求 + 追加调整指令一起送编译（词表规则，server 诚实回台账） */
+    const requirements = [briefCtx.value.requirements, adjust]
+      .map((s) => (s || '').trim())
+      .filter(Boolean)
+    /* C1：携带章节/课型——章节决定内容源路由，课型决定大纲环节结构 */
+    const r = await v3Api.generation.deckOutline({
+      topic: form.value.topic,
+      class_id: form.value.class_id,
+      chapter: briefCtx.value.chapter || undefined,
+      course_type: briefCtx.value.course_type,
+      requirements: requirements.length ? requirements : undefined,
+    })
+    gateOutline.value = (r.data as { outline: { title: string; kind: string }[] }).outline
+    gateMatched.value = !!(r.data as { matched?: boolean }).matched
+    gateNote.value = (r.data as { note?: string }).note || ''
+    gateReqs.value = (r.data as { reqs?: { id: number; text: string; status: string; pages: number[]; note?: string }[] }).reqs || []
+  } catch {
+    gateOutline.value = [
+      { title: '情境引入', kind: 'cover' }, { title: '概念定义', kind: 'definition' },
+      { title: '例题精讲', kind: 'example' }, { title: '变式训练', kind: 'variation' }, { title: '课堂小结', kind: 'summary' },
+    ]
+    gateMatched.value = false
+    gateNote.value = '大纲草稿生成失败（mock 未启动？），已回退默认结构'
+    gateReqs.value = []
+  } finally { outlineLoading.value = false }
+}
+function regenWithAdjust() {
+  const t = gateAdjust.value.trim()
+  if (!t) { toast.info('先输入调整要求，再重出大纲（例如：去掉复习回顾，加一道当堂检测）'); return }
+  void prepareOutline(t)
+}
+function confirmOutline() {
+  if (gateOutline.value.length < 2) return
+  /* 备小研链路：需求 → 大纲确认 → 选择模板 → 生成 */
+  step.value = 2
+}
+
+/* ---------- B3 可讲性体检（确定性检查，无总分） ---------- */
+const checkOpen = ref(false)
+const checkIssues = ref<CheckIssue[]>([])
+const ignoredIssues = ref(new Set<string>())
+const visibleIssues = computed(() => checkIssues.value.filter((i) => !ignoredIssues.value.has(i.id)))
+function openDeckCheck() {
+  if (!deck.value) return
+  runDeckCheck()
+  checkOpen.value = true
+}
+function runDeckCheck() {
+  if (!deck.value) return
+  ignoredIssues.value = new Set()
+  checkIssues.value = checkDeck(deck.value)
+}
+function locateIssue(iss: CheckIssue) {
+  if (!deck.value) return
+  view.value = 'editor'
+  slideIdx.value = iss.slideIndex
+  selectedId.value = iss.elementId || ''
+}
+function fixIssue(iss: CheckIssue) {
+  if (!deck.value) return
+  const r = applyFix(deck.value, iss)
+  if (r === 'applied') {
+    toast.success(iss.fix?.kind === 'split-slide' ? `已拆成两页：第 ${iss.slideIndex + 2} 页为推导续页（可继续编辑）` : '已放大该元素字号（元素仍可继续调整）')
+  } else {
+    toast.error('该修复暂不支持')
+  }
+  runDeckCheck()
+}
+
+/* ---------- B3 题库复用：题目落到当前页（题干 + 参考答案小字） ---------- */
+const bankPickOpen = ref(false)
+const bankQuestions = ref<V3QuizQuestion[]>([])
+async function openBankPick() {
+  if (!deck.value) { toast.info('请先打开一个课件，再插入题库题目'); return }
+  bankPickOpen.value = true
+  try { const r = await v3Api.catalog.quizQuestions(); bankQuestions.value = r.data.items } catch { bankQuestions.value = [] }
+}
+function insertBankQuestion(q: V3QuizQuestion) {
+  if (!deck.value) return
+  const sid = Date.now()
+  currentSlide.value.elements.push(
+    { id: `ebq-${sid}-s`, type: 'text', left: 70, top: 120, width: 940, height: 130, z: 5, html: renderLatex(q.stem_latex), font_size: 20, teacher_confirmed: false } as V3Element,
+    { id: `ebq-${sid}-a`, type: 'text', left: 70, top: 300, width: 940, height: 44, z: 5, html: `<b>参考答案：</b>${renderLatex(q.answer || '待补')}`, font_size: 15, color: '#0e9488', teacher_confirmed: false } as V3Element,
+  )
+  bankPickOpen.value = false
+  toast.success(`已把「${q.kp_name}」题目插入当前页（题干可编辑，答案为参考小字）`)
 }
 
 /* ---------- 新建流程 ---------- */
@@ -565,7 +730,7 @@ async function startGenerate() {
     else if (event === 'photo') { genStage.value = `接收原图 ${data.index + 1}：${data.note}`; genProgress.value = Math.min(24, genProgress.value + 8) }
     else if (event === 'block') { genBlocks.value.push(data); genProgress.value = Math.min(82, genProgress.value + 7); genStage.value = `识别块 ${genBlocks.value.length}：${data.type === 'figure' ? '图形区域' : '公式/文本'}` }
     else if (event === 'outline') { genStage.value = `生成大纲：${data.items?.join(' / ') || ''}`; genProgress.value = 38 }
-    else if (event === 'slide') { genStage.value = `草稿页 ${data.index + 1}（未确认）`; genProgress.value = Math.min(86, 40 + data.index * 9) }
+    else if (event === 'slide') { genStage.value = data.note || `草稿页 ${data.index + 1}（未确认）`; genProgress.value = Math.min(86, 40 + data.index * Math.max(4, Math.floor(46 / Math.max(1, gateOutline.value.length)))) }
     else if (event === 'paginate') { genStage.value = `分页引擎：${data.note}`; genProgress.value = 90 }
     else if (event === 'done') {
       genProgress.value = 100
@@ -579,19 +744,54 @@ async function startGenerate() {
         { photos: photos.value, question_label: `${form.value.class_id === 'c2-05' ? '高二(5)班' : '高二(3)班'}例题（拍照）`, config: { scope: form.value.scope, mode: form.value.mode, template_id: form.value.template_id, font_tier: form.value.font_tier, margin_notes: form.value.margin_notes } },
         onEvent,
       )
-    } else if (newMode.value === 'plan') {
-      genStage.value = '以教案环节结构生成课件骨架…'
-      const r = await v3Api.plans.pushToDeck(form.value.plan_id, { template_id: form.value.template_id })
-      genProgress.value = 100
-      genStage.value = '教案已直通为课件，正在打开…'
-      window.setTimeout(() => openDeck(r.data.deck_id), 400)
     } else {
-      sseCtrl = v3Api.generation.deck({ topic: form.value.topic, class_id: form.value.class_id, template_id: form.value.template_id }, onEvent)
+      /* B3 大纲 Gate：教师确认的大纲决定页数与每页标题。
+         教案直通（plan）也走同一链路：以教案课题/课型为入参，outline 来自映射后的环节结构。
+         IFC-PRODUCT-01a / IFC-C1-a：outline/chapter/course_type/material_name 类型层 as any 过渡。 */
+      const genTopic = newMode.value === 'plan' ? (planDetail.value?.topic || form.value.topic) : form.value.topic
+      const genType = newMode.value === 'plan' ? (planDetail.value?.lesson_type || briefCtx.value.course_type) : briefCtx.value.course_type
+      sseCtrl = v3Api.generation.deck({
+        topic: genTopic, class_id: form.value.class_id, template_id: form.value.template_id,
+        outline: gateOutline.value.map((o) => ({ title: o.title, kind: o.kind })),
+        chapter: briefCtx.value.chapter || undefined,
+        course_type: genType,
+        material_name: briefCtx.value.docs[0] || undefined,
+      } as any, onEvent)
     }
   } catch {
     genStage.value = '生成失败（mock 服务未启动？用 VITE_USE_MOCK=1 npm run dev）'
   }
 }
+
+/* ---------- 备小研工坊控制器：注入 WorkshopFlow 的响应式状态 + 动作（IFC-WS-a） ---------- */
+const wsScreen = computed(() => {
+  if (view.value === 'list') return 'home'
+  if (step.value === 3) return 'generating'
+  if (step.value === 4) return 'outline'
+  if (step.value === 2) return 'template'
+  return newMode.value
+})
+const tplFiltered = computed(() => {
+  const f = tplFilter.value
+  if (f === '全部') return templates.value
+  const m: Record<string, string> = { 学术风: 'academic', 手写板书: 'chalkboard', 简约: 'minimal', 公开课: 'classic' }
+  return templates.value.filter((t) => t.style === m[f])
+})
+const currentTemplate = computed(() => templates.value.find((t) => t.id === form.value.template_id))
+const previewTopic = computed(() => (newMode.value === 'plan' ? planDetail.value?.topic || '' : form.value.topic) || '未命名课题')
+const className = computed(() => classes.value.find((c) => c.class_id === form.value.class_id)?.name || '')
+
+const ws = reactive({
+  get screen() { return wsScreen.value },
+  view, newMode, step, form, briefCtx, heroText, photos, recogCards, recogLoading, recogNote,
+  plans, planDetail, planMap, decks, todaySchedule, classes, chapters, templates,
+  gateOutline, gateReqs, gateAdjust, gateMatched, gateNote, outlineLoading,
+  genStage, genProgress, genBlocks, applyScope, tplFilter, currentTemplate, previewTopic, className, tplFiltered,
+  kindLabel, chapterShort, sourceLabel, templateName, renderLatex, scopeCards, modeCards, fontCards,
+  openHome, openNew, submitHero, onDocFiles, adaptFromDeck, prefillLesson, openDeck,
+  removePhoto, nextPhoto, selectPlan, nextPlan, prepareOutline, regenWithAdjust, quickAdjust,
+  addOutlinePage, delOutlinePage, moveOutlinePage, confirmOutline, prevTemplate, startGenerate,
+})
 
 /* ---------- 编辑器操作 ---------- */
 function addSlide() {
@@ -647,6 +847,89 @@ function onButlerInsert(ev: Event) {
   addFormulaElement(cleanPlaceholder(d.latex), 460, 300)
   toast.success('已插入当前页（未确认态，可在属性面板继续编辑）')
 }
+
+/* ---------- C2 伴随工具层：插入总线接手（figure→画布元素 / question→题干+参考答案 / 片段·视频·外链→引用卡） ---------- */
+let lastLocateFn: (() => void) | null = null
+function companionRespond(reqId: string, ok: boolean, message: string, locationLabel: string, undoFn: () => void) {
+  setReceipt({ ok, message, locationLabel, undoLabel: '撤销' })
+  registerUndo('撤销', undoFn)
+  window.dispatchEvent(new CustomEvent('tv3-companion-inserted', { detail: { reqId, handled: true } }))
+}
+function onCompanionInsert(ev: Event) {
+  const d = (ev as CustomEvent).detail as { reqId: string; kind: string; draw?: V3DrawInsert; candidate?: CompanionCandidate } | undefined
+  if (!d || d.reqId === companionSeqDone) return
+  if (view.value !== 'editor' || !deck.value) {
+    window.dispatchEvent(new CustomEvent('tv3-companion-inserted', { detail: { reqId: d.reqId, handled: false } }))
+    return
+  }
+  const before = currentSlide.value.elements.map((e) => e.id)
+  const slideAt = slideIdx.value
+  const locate = () => { view.value = 'editor'; slideIdx.value = slideAt; selectedId.value = '' }
+  const undoAdded = () => {
+    for (const id of currentSlide.value.elements.filter((e) => !before.includes(e.id)).map((e) => e.id)) deleteElementById(id)
+  }
+  /* figure：复用既有 onDrawInsert 落布（image/formula/functionPlot/geometry 同语义） */
+  if (d.kind === 'figure' && d.draw) {
+    onDrawInsert(d.draw)
+    const added = currentSlide.value.elements.filter((e) => !before.includes(e.id))
+    if (!added.length) {
+      window.dispatchEvent(new CustomEvent('tv3-companion-inserted', { detail: { reqId: d.reqId, handled: false } }))
+      return
+    }
+    lastLocateFn = locate
+    companionRespond(d.reqId, true, `已插入图形（${d.draw.type === 'image' ? '结构化图形' : d.draw.type === 'formula' ? '公式' : d.draw.type === 'geometry' ? '几何构造' : '函数图像'}，未确认态）`, `第 ${slideAt + 1} 页`, undoAdded)
+    return
+  }
+  /* question：题干 + 参考答案小字（来源可溯） */
+  if (d.kind === 'question' && d.candidate?.preview?.latex) {
+    const q = d.candidate
+    const stem = q.preview!.latex
+    const sid = Date.now()
+    currentSlide.value.elements.push(
+      { id: `ecq-${sid}-s`, type: 'text', left: 70, top: 120, width: 940, height: 130, z: 5, html: renderLatex(stem), font_size: 20, teacher_confirmed: false } as V3Element,
+      { id: `ecq-${sid}-a`, type: 'text', left: 70, top: 300, width: 940, height: 44, z: 5, html: `<b>参考答案：</b>见原题解析（${q.source}）`, font_size: 15, color: '#0e9488', teacher_confirmed: false } as V3Element,
+    )
+    lastLocateFn = locate
+    companionRespond(d.reqId, true, `已插入「${q.title}」题干与参考答案（未确认态）`, `第 ${slideAt + 1} 页`, undoAdded)
+    return
+  }
+  /* figure（伴随资源候选）：落为图形素材卡（内联 SVG 可视 + 来源 + 重开指引） */
+  const figCand = d.kind === 'figure' ? d.candidate : undefined
+  const figShot = figCand?.figure
+  if (figCand && figShot) {
+    const c = figCand
+    const sid = Date.now()
+    currentSlide.value.elements.push({
+      id: `ecf-${sid}`, type: 'text', left: 300, top: 150, width: 560, height: 300, z: 5,
+      html: `${figShot.thumb}<br><span style="color:#8a6d1d;font-size:13px">图形素材 · 来源：${c.source} · 「在数学绘图中继续编辑」可改构造</span>`,
+      font_size: 15, teacher_confirmed: false,
+    } as V3Element)
+    lastLocateFn = locate
+    companionRespond(d.reqId, true, `已把图形「${c.title}」插入当前页（图形素材卡，未确认态）`, `第 ${slideAt + 1} 页`, undoAdded)
+    return
+  }
+  /* 片段 / 视频 / 外链：落为当前页引用卡文本元素 */
+  if (d.candidate) {
+    const c = d.candidate
+    let html = ''
+    if (c.kind === 'video' && c.video) {
+      html = `<b>▶ 外部视频引用</b> ${c.title}<br>来源：${c.source} · ${c.video.start}–${c.video.end}（官方站外播放器）<br>播放前问：${c.video.pre}<br>播放后问：${c.video.post}<br><span style="color:#8a6d1d;font-size:13px">外部引用 · 不下载不转存 · 课堂播放依赖网络，建议备好 Plan B</span>`
+    } else if (c.kind === 'link') {
+      html = `<b>引用来源</b> ${c.title}<br>来源：${c.source}<br><span style="color:#8a6d1d;font-size:13px">${c.note || ''}</span>`
+    } else {
+      html = `<b>取用片段</b> ${c.title}<br>来源：${c.source}<br>${c.preview?.latex ? renderLatex(c.preview.latex) : ''}`
+    }
+    const sid = Date.now()
+    currentSlide.value.elements.push({ id: `ecm-${sid}`, type: 'text', left: 70, top: 380, width: 860, height: 150, z: 5, html, font_size: 17, teacher_confirmed: false } as V3Element)
+    lastLocateFn = locate
+    companionRespond(d.reqId, true, `已把「${c.title}」落为当前页引用卡（未确认态）`, `第 ${slideAt + 1} 页`, undoAdded)
+    return
+  }
+  window.dispatchEvent(new CustomEvent('tv3-companion-inserted', { detail: { reqId: d.reqId, handled: false } }))
+}
+let companionSeqDone = ''
+function onCompanionLocate() { lastLocateFn?.() }
+
 function addGeometry(p: FigurePresetDef) {
   if (!deck.value) return
   const el: V3Element = { id: `e${Date.now()}`, type: 'geometry', left: 720, top: 160, width: 460, height: 400, z: 3, preset_id: p.id, params: defaultParams(p), teacher_confirmed: false }
@@ -663,6 +946,25 @@ function onKbdInsert(k: { latex: string }) {
     addFormulaElement(cleanPlaceholder(k.latex), 480, 320)
     nextTick(() => propsMathField.value?.insert(k.latex))
   }
+}
+
+/* ---------- 公式键盘浮层（工具球收纳改版）：编辑公式时自动唤出，手动关闭后同一元素不重复弹 ---------- */
+const kbdOpen = ref(false)
+const kbdClosedFor = ref('')
+watch(() => {
+  const el = selectedEl.value
+  return el?.type === 'formula' ? el.id : ''
+}, (formulaId) => {
+  if (formulaId) {
+    if (kbdClosedFor.value !== formulaId) kbdOpen.value = true
+  } else {
+    kbdOpen.value = false
+    kbdClosedFor.value = ''
+  }
+})
+function closeKbd() {
+  kbdOpen.value = false
+  kbdClosedFor.value = (selectedEl.value as { id?: string })?.id || ''
 }
 function confirmElement() {
   if (selectedEl.value) selectedEl.value.teacher_confirmed = !selectedEl.value.teacher_confirmed
@@ -686,7 +988,11 @@ async function saveDeck() {
 }
 async function exportDeck() {
   if (!deck.value) return
-  try { await v3Api.decks.export(deck.value.id, 'pptx') } catch { /* mock */ }
+  try {
+    await v3Api.decks.export(deck.value.id, 'pptx')
+    /* B3 导出真实性：文件生成（PPTX 渲染）属 M2-B 后端生死门，任务留在排队态并如实标注，不伪装完成 */
+    toast.info('已进入「生成与导出进度」：文件生成服务未接入（后端 M2-B），当前任务仅演示进度流，不产出文件。')
+  } catch { /* mock */ }
 }
 
 /* ---------- 原图重建（P1 升级链路） ---------- */
@@ -739,7 +1045,8 @@ function openDrawBoard() {
 }
 function reopenDraw(el: Extract<V3Element, { type: 'image' }>) {
   if (!el.draw_recipe?.records?.length) return
-  drawReopen.value = { mode: 'free', records: el.draw_recipe.records, elementId: el.id }
+  const isGeom = el.draw_recipe.records[0]?.kind === 'geomdoc'
+  drawReopen.value = { mode: isGeom ? 'geom' : 'free', records: el.draw_recipe.records, elementId: el.id }
   drawOpen.value = true
 }
 function onDrawInsert(p: V3DrawInsert, elementId?: string) {
@@ -766,6 +1073,11 @@ function onDrawInsert(p: V3DrawInsert, elementId?: string) {
     selectedId.value = el.id
   } else if (p.type === 'formula') {
     addFormulaElement(p.latex, 470, 300)
+  } else if (p.type === 'geometry') {
+    /* B7 构图导演产物：结构化几何预设（GeoFigure 渲染，参数可继续调） */
+    const el: V3Element = { id: `e${Date.now()}`, type: 'geometry', left: 300, top: 90, width: 680, height: 540, z: 3, preset_id: p.preset_id, params: p.params, teacher_confirmed: false }
+    currentSlide.value.elements.push(el)
+    selectedId.value = el.id
   } else {
     const w = 470
     const h = Math.min(620, Math.round(w * p.aspect))
@@ -810,15 +1122,60 @@ function onKeydown(ev: KeyboardEvent) {
   }
   if (ev.key === 'Escape') selectedId.value = ''
 }
-onMounted(() => window.addEventListener('keydown', onKeydown))
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+  window.addEventListener('tv3-companion-insert', onCompanionInsert as EventListener)
+  window.addEventListener('tv3-companion-locate', onCompanionLocate as EventListener)
+})
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('tv3-companion-insert', onCompanionInsert as EventListener)
+  window.removeEventListener('tv3-companion-locate', onCompanionLocate as EventListener)
   window.removeEventListener('tv3-butler-insert', onButlerInsert as EventListener)
   sseCtrl?.abort()
 })
 </script>
 
 <style scoped>
+/* ===== C1 快捷入口三卡 ===== */
+.tv3-quickrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+.tv3-quick {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left;
+  background: #fff; border: 1px solid var(--tv3-line); border-radius: 12px; padding: 12px 14px; cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.tv3-quick:hover { border-color: var(--tv3-gold); box-shadow: 0 4px 14px rgba(201, 151, 53, 0.12); }
+.tv3-quick__icon { font-size: 18px; }
+.tv3-quick__name { font-size: 13.5px; font-weight: 700; color: var(--tv3-ink); }
+.tv3-quick__note { font-size: 11.5px; color: var(--tv3-ink3); }
+
+/* ===== C1 大纲门环节语义标签 ===== */
+.tv3-gate__kind {
+  flex-shrink: 0; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--tv3-line); color: var(--tv3-ink3); background: #fff; min-width: 34px; text-align: center;
+}
+.tv3-gate__kind[data-kind='cover'] { color: #0a3568; border-color: #0a3568; }
+.tv3-gate__kind[data-kind='definition'] { color: #0f4787; border-color: #9dc3ea; background: #eef4fb; }
+.tv3-gate__kind[data-kind='derivation'] { color: #6d28d9; border-color: #d8c9f5; background: #f6f2fd; }
+.tv3-gate__kind[data-kind='example'] { color: #b45309; border-color: #ecd3a1; background: #fdf6e8; }
+.tv3-gate__kind[data-kind='variation'] { color: #0e9488; border-color: #9fd8d2; background: #eefaf8; }
+.tv3-gate__kind[data-kind='summary'] { color: #0a3568; border-color: #c9d7f2; background: #f2f6fc; }
+.tv3-gate__kind[data-kind='review'] { color: #b1382c; border-color: #eec7c2; background: #fdf1ef; }
+
+/* ===== C1.1 大纲门要求回应单 + 调整指令 ===== */
+.tv3-gate__reqs {
+  border: 1px solid #c9d7f2; border-radius: 10px; background: #f6f9ff;
+  padding: 8px 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;
+}
+.tv3-gate__reqshead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; font-weight: 700; color: var(--tv3-ink); }
+.tv3-gate__req { display: flex; align-items: center; gap: 8px; }
+.tv3-gate__adjust { display: flex; gap: 8px; margin-top: 12px; }
+
+/* ===== C1 教案直通材料横幅 ===== */
+.tv3-brief__docnote {
+  font-size: 12px; color: #8a6d1d; background: var(--tv3-gold-soft, #fdf8ec); border: 1px solid #ecd3a1;
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; line-height: 1.6;
+}
 .tv3-newgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .tv3-photo-drop {
   border: 2px dashed var(--tv3-line); border-radius: var(--tv3-radius-lg);
@@ -883,4 +1240,18 @@ onBeforeUnmount(() => {
   background: transparent; transition: background 0.15s ease;
 }
 .tv3-resizer:hover::after { background: var(--tv3-gold); }
+/* ---------- 公式键盘浮层（工具球收纳改版，套备小研卡片样式） ---------- */
+.ws-kbdfloat {
+  position: fixed; left: 18px; bottom: 18px; z-index: 60; width: 360px;
+  background: #fff; border: 1px solid var(--tv3-line); border-radius: 16px;
+  box-shadow: 0 16px 40px -8px rgba(15, 23, 42, 0.18); padding: 10px 12px 6px;
+}
+.ws-kbdfloat__head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ws-kbdfloat__head b { font-size: 13px; color: var(--tv3-ink); }
+.ws-kbdfloat__head span { flex: 1; font-size: 11px; color: var(--tv3-ink3); }
+.ws-kbdfloat__head button {
+  width: 24px; height: 24px; border-radius: 7px; border: none; background: none;
+  color: var(--tv3-ink3); cursor: pointer; font-size: 14px;
+}
+.ws-kbdfloat__head button:hover { background: var(--tv3-line2); color: var(--tv3-ink); }
 </style>

@@ -40,11 +40,11 @@
       </div>
       <div v-if="resultLatex !== null" class="mx-kbd__result" data-testid="mx-kbd-result">
         <span class="mx-kbd__result-chip" draggable="true" data-testid="mx-kbd-result-chip"
-          :title="`${(confidence * 100).toFixed(0)}% 置信度 · 也可拖入公式框`"
+          title="识别演示（固定样例，未接入真实识别服务） · 也可拖入公式框"
           @dragstart="onResultDrag"
           v-html="renderLatex(resultLatex)"
         />
-        <span class="mx-kbd__result-conf">{{ (confidence * 100).toFixed(0) }}%</span>
+        <span class="mx-kbd__result-conf" title="原型为固定样例演示，未接入真实识别服务">识别演示</span>
         <span class="mx-kbd__result-tip">识别结果可改（点框编辑）：</span>
         <MathField v-model="resultLatex" :font-size="17" testid="mx-kbd-result-field" />
         <button class="tv3-btn tv3-btn--sm tv3-btn--gold" type="button" data-testid="mx-kbd-insert" @click="insertResult">插入</button>

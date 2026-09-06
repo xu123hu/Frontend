@@ -40,8 +40,9 @@ const routes = [
     component: () => import('@/layouts/TeacherV3Layout.vue'),
     children: [
       { path: 'today', name: 'tv3-today', component: () => import('@/pages/teacher-v3/TodayView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.today', title: '今日工作台' } },
-      { path: 'prep', name: 'tv3-prep', component: () => import('@/pages/teacher-v3/PrepView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.prep', title: '备课中心' } },
-      { path: 'slides', name: 'tv3-slides', component: () => import('@/pages/teacher-v3/SlidesView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.slides', title: '课件工坊' } },
+      { path: 'prep', name: 'tv3-prep', component: () => import('@/pages/teacher-v3/prep/PrepCenterView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.prep', title: '备课中心' } },
+      { path: 'prep-templates', name: 'tv3-prep-templates', component: () => import('@/pages/teacher-v3/prep/PrepTemplatesView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.prep.templates', title: '教案模板库' } },
+            { path: 'slides', name: 'tv3-slides', component: () => import('@/pages/teacher-v3/SlidesView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.slides', title: '课件工坊' } },
       { path: 'bank', name: 'tv3-bank', component: () => import('@/pages/teacher-v3/BankView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.bank', title: '题库' } },
       { path: 'quiz', name: 'tv3-quiz', component: () => import('@/pages/teacher-v3/QuizView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.quiz', title: '组卷中心' } },
       { path: 'assign', name: 'tv3-assign', component: () => import('@/pages/teacher-v3/AssignView.vue'), meta: { teacher: true, teacherV3: true, requiresRole: 'teacher', scene: 'teacher.v3.assign', title: '作业与批改' } },

@@ -18,8 +18,32 @@ export interface V3Deck {
   template_id: string
   source: 'topic' | 'photo' | 'lesson-push' | 'review-notes'
   photo_context?: V3PhotoIngestContext
+  /** C1 AI 备课台：生成时的接地上下文（课型/章节/材料名），编辑器顶栏回显（IFC-C1-a，PROTOTYPE-ONLY） */
+  brief_context?: V3DeckBriefContext
   slides: V3Slide[]
   updated_at: string
+}
+
+/** C1：AI 备课台 → 课件工坊的接入载荷（前端 view model，随 IFC-C1-a 评审） */
+export interface V3BriefPayload {
+  text: string
+  /** 教材章节完整路径（如「选择性必修一 ▸ 圆锥曲线 ▸ 双曲线 ▸ 双曲线及其标准方程」），未选为 null */
+  chapter: string | null
+  /** 课型：决定大纲环节结构（新授课/习题课/讲评课/复习课/公开课） */
+  course_type: string
+  class_id: string
+  template_id: string
+  /** 附带文档的文件名（原型不解析，仅记录；解析属后端 M2） */
+  docs: string[]
+  /** 附带照片（dataURL，进拍照出课件链路） */
+  photos: string[]
+}
+
+/** C1：deck 上的接地上下文回显 */
+export interface V3DeckBriefContext {
+  course_type: string
+  chapter: string
+  material: string
 }
 
 export interface V3Slide {
@@ -76,6 +100,8 @@ export type V3DrawRecord =
   | (V3DrawRecordBase & { kind: 'point'; pos: [number, number] })
   | (V3DrawRecordBase & { kind: 'text'; pos: [number, number]; text: string })
   | (V3DrawRecordBase & { kind: 'preset'; preset_id: string; params: Record<string, number>; toggles?: Record<string, boolean> })
+  /** 立体几何构造文档（geom 模块 GeomDoc 快照；doc 结构见 components/mathx/geom/model.ts） */
+  | (V3DrawRecordBase & { kind: 'geomdoc'; doc: unknown })
 
 /** 图形库条目（教师个人 + 教研组共享，SPEC §5.7 配方共享的扩展） */
 export interface V3FigureLibraryItem {
@@ -243,6 +269,12 @@ export interface V3PlanOutline {
   sections: V3OutlineSection[]
   total_minutes: number
   notes?: string[]               // 生成依据说明（教材版本 / 章节 / 学情锚点 / 例题来源）
+  /** P 大纲确认页富模块（确定性 mock 编排，教师可改；IFC-P-a） */
+  objectives?: string[]
+  keypoints?: { major: string[]; hard: string[] }
+  blackboard?: { main: string[]; side: string[] }
+  homework?: { tier: 'basic' | 'raise' | 'expand'; label: string; items: string[]; minutes: string }[]
+  difficulty?: string
 }
 
 /** 板块上"挂"的例题：结构化数学题（P3），题干 LaTeX 可编辑、可复用、可进试卷 */
@@ -411,10 +443,11 @@ export interface V3ButlerMessage {
   pending?: boolean                   // 流式接收中
 }
 
-/** 卡片四类：公式/图形可拖拽进画布，action/link 为动作确认卡 */
+/** 卡片五类：公式/图形可拖拽进画布，action/link 为动作确认卡，tool 为打开伴随工具卡（C2，IFC-C2-a） */
 export type V3ButlerCard =
   | { type: 'formula'; id: string; latex: string; confidence: number; alternatives?: string[]; source: 'voice' | 'photo' | 'chat' }
   | { type: 'figure'; id: string; preset_id: string; params: Record<string, number>; label: string }
+  | { type: 'tool'; id: string; tool: 'resource' | 'draw'; title: string; summary?: string }
   | { type: 'action'; id: string; title: string; summary: string; params?: Record<string, unknown>; status: 'pending' | 'executed' | 'cancelled'; confirm_required: true }
   | { type: 'link'; id: string; title: string; route: string; query?: Record<string, string>; note?: string }
 

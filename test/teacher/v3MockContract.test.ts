@@ -386,6 +386,6 @@ describe('V3 mock · SSE 深链路', () => {
     expect(slides).toHaveLength(3)
     expect(slides[0].data.q_no).toBe(1)
     expect(slides[0].data.clusters.length).toBeGreaterThan(0)
-    expect(evs[evs.length - 1].data.deck_id).toBe('deck-review-1')
+    expect(String(evs[evs.length - 1].data.deck_id)).toContain('deck-review-') // B4：讲评课件为真实 Artifact（id 动态）
   }, 15000)
 })

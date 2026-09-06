@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>备课编辑器 - 椭圆及其标准方程</title>
+    <style id="theme-vars">
+/* ============================================================
+   AI 备课工作台 - 设计令牌 / Design Tokens
+   ============================================================ */
+
+:root {
+  /* ---- Primary Brand ---- */
+  --ailp-primary-50: #eef2ff;
+  --ailp-primary-100: #e0e7ff;
+  --ailp-primary-200: #c7d2fe;
+  --ailp-primary-300: #a5b4fc;
+  --ailp-primary-400: #818cf8;
+  --ailp-primary-500: #6366f1;
+  --ailp-primary-600: #4f46e5;
+  --ailp-primary-700: #4338ca;
+  --ailp-primary-800: #3730a3;
+  --ailp-primary-900: #312e81;
+
+  /* ---- Accent (teal / AI glow) ---- */
+  --ailp-accent-50: #ecfeff;
+  --ailp-accent-100: #cffafe;
+  --ailp-accent-200: #a5f3fc;
+  --ailp-accent-300: #67e8f9;
+  --ailp-accent-400: #22d3ee;
+  --ailp-accent-500: #06b6d4;
+  --ailp-accent-600: #0891b2;
+
+  /* ---- Neutrals ---- */
+  --ailp-gray-50: #f8fafc;
+  --ailp-gray-100: #f1f5f9;
+  --ailp-gray-200: #e2e8f0;
+  --ailp-gray-300: #cbd5e1;
+  --ailp-gray-400: #94a3b8;
+  --ailp-gray-500: #64748b;
+  --ailp-gray-600: #475569;
+  --ailp-gray-700: #334155;
+  --ailp-gray-800: #1e293b;
+  --ailp-gray-900: #0f172a;
+  --ailp-gray-950: #020617;
+
+  /* ---- Success / Warning / Error ---- */
+  --ailp-success-500: #10b981;
+  --ailp-success-600: #059669;
+  --ailp-warning-500: #f59e0b;
+  --ailp-warning-600: #d97706;
+  --ailp-error-500: #ef4444;
+  --ailp-error-600: #dc2626;
+
+  /* ---- Semantic aliases ---- */
+  --ailp-background: #f8fafc;
+  --ailp-foreground: #0f172a;
+  --ailp-card: #ffffff;
+  --ailp-card-foreground: #0f172a;
+  --ailp-popover: #ffffff;
+  --ailp-popover-foreground: #0f172a;
+  --ailp-primary: #4f46e5;
+  --ailp-primary-foreground: #ffffff;
+  --ailp-secondary: #f1f5f9;
+  --ailp-secondary-foreground: #0f172a;
+  --ailp-muted: #f1f5f9;
+  --ailp-muted-foreground: #64748b;
+  --ailp-accent: #06b6d4;
+  --ailp-accent-foreground: #ffffff;
+  --ailp-destructive: #ef4444;
+  --ailp-destructive-foreground: #ffffff;
+  --ailp-border: #e2e8f0;
+  --ailp-input: #e2e8f0;
+  --ailp-ring: #6366f1;
+
+  /* ---- Radius scale ---- */
+  --ailp-radius-sm: 6px;
+  --ailp-radius-md: 10px;
+  --ailp-radius-lg: 14px;
+  --ailp-radius-xl: 20px;
+  --ailp-radius-2xl: 28px;
+  --ailp-radius-full: 9999px;
+
+  /* ---- Shadow scale ---- */
+  --ailp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ailp-shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-xl: 0 20px 40px -10px rgba(15, 23, 42, 0.15);
+  --ailp-shadow-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+
+  /* ---- Typography ---- */
+  --ailp-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --ailp-font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
+    "Liberation Mono", Menlo, monospace;
+  --ailp-font-math: "Cambria Math", "Latin Modern Math", "STIX Two Math",
+    Georgia, serif;
+}
+
+/* ---- Dark mode (editor focus mode) ---- */
+.dark {
+  --ailp-background: #0f172a;
+  --ailp-foreground: #f8fafc;
+  --ailp-card: #1e293b;
+  --ailp-card-foreground: #f8fafc;
+  --ailp-popover: #1e293b;
+  --ailp-popover-foreground: #f8fafc;
+  --ailp-primary: #818cf8;
+  --ailp-primary-foreground: #0f172a;
+  --ailp-secondary: #334155;
+  --ailp-secondary-foreground: #f8fafc;
+  --ailp-muted: #334155;
+  --ailp-muted-foreground: #94a3b8;
+  --ailp-border: #334155;
+  --ailp-input: #334155;
+  --ailp-ring: #6366f1;
+}
+
+/* ---- Base reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--ailp-font-sans);
+  background: var(--ailp-background);
+  color: var(--ailp-foreground);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ailp-gray-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ailp-gray-400);
+}
+
+/* ---- Math formula display ---- */
+.math-display {
+  font-family: var(--ailp-font-math);
+  font-size: 1.1em;
+  line-height: 1.8;
+}
+
+.math-inline {
+  font-family: var(--ailp-font-math);
+  font-style: italic;
+}
+
+/* ---- Utility: AI glow effect ---- */
+.ai-glow {
+  position: relative;
+}
+.ai-glow::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.3),
+    rgba(6, 182, 212, 0.3)
+  );
+  filter: blur(12px);
+  opacity: 0.6;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ---- Gradient text ---- */
+.gradient-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- AI message bubble gradient ---- */
+.ai-bubble-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(6, 182, 212, 0.06) 100%
+  );
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--ailp-background);
+    --color-foreground: var(--ailp-foreground);
+    --color-card: var(--ailp-card);
+    --color-card-foreground: var(--ailp-card-foreground);
+    --color-popover: var(--ailp-popover);
+    --color-popover-foreground: var(--ailp-popover-foreground);
+    --color-primary: var(--ailp-primary);
+    --color-primary-foreground: var(--ailp-primary-foreground);
+    --color-secondary: var(--ailp-secondary);
+    --color-secondary-foreground: var(--ailp-secondary-foreground);
+    --color-muted: var(--ailp-muted);
+    --color-muted-foreground: var(--ailp-muted-foreground);
+    --color-accent: var(--ailp-accent);
+    --color-accent-foreground: var(--ailp-accent-foreground);
+    --color-destructive: var(--ailp-destructive);
+    --color-destructive-foreground: var(--ailp-destructive-foreground);
+    --color-border: var(--ailp-border);
+    --color-input: var(--ailp-input);
+    --color-ring: var(--ailp-ring);
+    --radius-sm: var(--ailp-radius-sm);
+    --radius-md: var(--ailp-radius-md);
+    --radius-lg: var(--ailp-radius-lg);
+    --radius-xl: var(--ailp-radius-xl);
+  }
+  @layer base {
+    body { background: var(--ailp-background); color: var(--ailp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--ailp-background); }
+      .text-background { color: var(--ailp-background); }
+      .border-background { border-color: var(--ailp-background); }
+      .ring-background { --tw-ring-color: var(--ailp-background); }
+      .bg-foreground { background-color: var(--ailp-foreground); }
+      .text-foreground { color: var(--ailp-foreground); }
+      .border-foreground { border-color: var(--ailp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--ailp-foreground); }
+      .bg-card { background-color: var(--ailp-card); }
+      .text-card { color: var(--ailp-card); }
+      .border-card { border-color: var(--ailp-card); }
+      .ring-card { --tw-ring-color: var(--ailp-card); }
+      .bg-card-foreground { background-color: var(--ailp-card-foreground); }
+      .text-card-foreground { color: var(--ailp-card-foreground); }
+      .border-card-foreground { border-color: var(--ailp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--ailp-card-foreground); }
+      .bg-popover { background-color: var(--ailp-popover); }
+      .text-popover { color: var(--ailp-popover); }
+      .border-popover { border-color: var(--ailp-popover); }
+      .ring-popover { --tw-ring-color: var(--ailp-popover); }
+      .bg-popover-foreground { background-color: var(--ailp-popover-foreground); }
+      .text-popover-foreground { color: var(--ailp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--ailp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--ailp-popover-foreground); }
+      .bg-primary { background-color: var(--ailp-primary); }
+      .text-primary { color: var(--ailp-primary); }
+      .border-primary { border-color: var(--ailp-primary); }
+      .ring-primary { --tw-ring-color: var(--ailp-primary); }
+      .bg-primary-foreground { background-color: var(--ailp-primary-foreground); }
+      .text-primary-foreground { color: var(--ailp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--ailp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--ailp-primary-foreground); }
+      .bg-secondary { background-color: var(--ailp-secondary); }
+      .text-secondary { color: var(--ailp-secondary); }
+      .border-secondary { border-color: var(--ailp-secondary); }
+      .ring-secondary { --tw-ring-color: var(--ailp-secondary); }
+      .bg-secondary-foreground { background-color: var(--ailp-secondary-foreground); }
+      .text-secondary-foreground { color: var(--ailp-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--ailp-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--ailp-secondary-foreground); }
+      .bg-muted { background-color: var(--ailp-muted); }
+      .text-muted { color: var(--ailp-muted); }
+      .border-muted { border-color: var(--ailp-muted); }
+      .ring-muted { --tw-ring-color: var(--ailp-muted); }
+      .bg-muted-foreground { background-color: var(--ailp-muted-foreground); }
+      .text-muted-foreground { color: var(--ailp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--ailp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--ailp-muted-foreground); }
+      .bg-accent { background-color: var(--ailp-accent); }
+      .text-accent { color: var(--ailp-accent); }
+      .border-accent { border-color: var(--ailp-accent); }
+      .ring-accent { --tw-ring-color: var(--ailp-accent); }
+      .bg-accent-foreground { background-color: var(--ailp-accent-foreground); }
+      .text-accent-foreground { color: var(--ailp-accent-foreground); }
+      .border-accent-foreground { border-color: var(--ailp-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--ailp-accent-foreground); }
+      .bg-destructive { background-color: var(--ailp-destructive); }
+      .text-destructive { color: var(--ailp-destructive); }
+      .border-destructive { border-color: var(--ailp-destructive); }
+      .ring-destructive { --tw-ring-color: var(--ailp-destructive); }
+      .bg-destructive-foreground { background-color: var(--ailp-destructive-foreground); }
+      .text-destructive-foreground { color: var(--ailp-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--ailp-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--ailp-destructive-foreground); }
+      .bg-border { background-color: var(--ailp-border); }
+      .text-border { color: var(--ailp-border); }
+      .border-border { border-color: var(--ailp-border); }
+      .ring-border { --tw-ring-color: var(--ailp-border); }
+      .bg-input { background-color: var(--ailp-input); }
+      .text-input { color: var(--ailp-input); }
+      .border-input { border-color: var(--ailp-input); }
+      .ring-input { --tw-ring-color: var(--ailp-input); }
+      .bg-ring { background-color: var(--ailp-ring); }
+      .text-ring { color: var(--ailp-ring); }
+      .border-ring { border-color: var(--ailp-ring); }
+      .ring-ring { --tw-ring-color: var(--ailp-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="h-screen overflow-hidden font-sans antialiased bg-background text-foreground">
+    <!-- 顶部工具栏 -->
+    <header class="h-14 border-b border-border bg-card flex items-center px-4 gap-4 shrink-0">
+      <button class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground transition-colors">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      </button>
+      <div class="flex items-center gap-3 flex-1 min-w-0">
+        <h1 class="text-[15px] font-semibold truncate">椭圆及其标准方程（第1课时）</h1>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-600 border border-primary-100" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600); border-color: var(--ailp-primary-100);">
+            高二(5)班
+          </span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-accent-50 text-accent-600 border border-accent-100" style="background: var(--ailp-accent-50); color: var(--ailp-accent-600); border-color: var(--ailp-accent-100);">
+            新授课
+          </span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border">
+            人教A版
+          </span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="text-xs text-muted-foreground flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-success-500" style="background: var(--ailp-success-500);"></span>
+          已自动保存 · 2分钟前
+        </span>
+        <button class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground transition-colors" title="导出">
+          <i data-lucide="download" class="w-4 h-4"></i>
+        </button>
+        <button class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground transition-colors" title="更多操作">
+          <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- 主体工作区 -->
+    <div class="flex h-[calc(100vh-56px)]">
+      <!-- 左侧极窄章节导航 -->
+      <aside class="w-12 border-r border-border bg-card/50 flex flex-col items-center py-6 gap-3 shrink-0">
+        <a href="#section-objectives" class="section-dot w-2 h-2 rounded-full bg-primary ring-2 ring-primary/20" title="教学目标"></a>
+        <a href="#section-keypoints" class="section-dot w-2 h-2 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/60 transition-colors" title="教学重点与难点"></a>
+        <a href="#section-process" class="section-dot w-2 h-2 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/60 transition-colors" title="教学过程"></a>
+        <a href="#section-blackboard" class="section-dot w-2 h-2 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/60 transition-colors" title="板书设计"></a>
+        <a href="#section-homework" class="section-dot w-2 h-2 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/60 transition-colors" title="作业布置"></a>
+      </aside>
+
+      <!-- 中间主编辑区 -->
+      <main class="flex-1 overflow-y-auto bg-background px-8 py-8">
+        <div class="max-w-3xl mx-auto">
+          <!-- 编辑卡片 -->
+          <article class="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+            <div class="p-8 space-y-8">
+
+              <!-- 区块1：教学目标 -->
+              <section id="section-objectives" class="editor-block scroll-mt-4">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center gap-2">
+                    <span class="w-1 h-5 rounded-full bg-gradient-to-b from-primary to-accent" style="background: linear-gradient(180deg, var(--ailp-primary), var(--ailp-accent));"></span>
+                    <h2 class="text-lg font-semibold">教学目标</h2>
+                  </div>
+                  <button class="ai-optimize-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-primary bg-primary-50 hover:bg-primary-100 border border-primary-100 transition-colors" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600); border-color: var(--ailp-primary-100);">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                    AI 优化
+                  </button>
+                </div>
+                <div class="space-y-3 pl-3">
+                  <div class="flex gap-3">
+                    <div class="w-5 h-5 mt-0.5 shrink-0 rounded border-2 border-primary/40 flex items-center justify-center" style="border-color: var(--ailp-primary-400);">
+                      <i data-lucide="check" class="w-3 h-3 text-primary" style="color: var(--ailp-primary);"></i>
+                    </div>
+                    <p class="text-sm leading-relaxed text-foreground/90">理解椭圆的定义，掌握椭圆标准方程的两种形式（焦点在 x 轴和 y 轴上），能根据条件确定椭圆的标准方程。</p>
+                  </div>
+                  <div class="flex gap-3">
+                    <div class="w-5 h-5 mt-0.5 shrink-0 rounded border-2 border-primary/40 flex items-center justify-center" style="border-color: var(--ailp-primary-400);">
+                      <i data-lucide="check" class="w-3 h-3 text-primary" style="color: var(--ailp-primary);"></i>
+                    </div>
+                    <p class="text-sm leading-relaxed text-foreground/90">经历椭圆标准方程的推导过程，体会数形结合、坐标法的思想，培养逻辑推理与数学运算素养。</p>
+                  </div>
+                  <div class="flex gap-3">
+                    <div class="w-5 h-5 mt-0.5 shrink-0 rounded border-2 border-muted-foreground/20 flex items-center justify-center" style="border-color: var(--ailp-gray-300);"></div>
+                    <p class="text-sm leading-relaxed text-foreground/90">能根据给定条件求椭圆的标准方程，解决简单的几何应用问题，提升分析问题和解决问题的能力。</p>
+                  </div>
+                </div>
+              </section>
+
+              <div class="h-px bg-border -mx-2"></div>
+
+              <!-- 区块2：教学重点与难点 -->
+              <section id="section-keypoints" class="editor-block scroll-mt-4">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center gap-2">
+                    <span class="w-1 h-5 rounded-full bg-gradient-to-b from-primary to-accent" style="background: linear-gradient(180deg, var(--ailp-primary), var(--ailp-accent));"></span>
+                    <h2 class="text-lg font-semibold">教学重点与难点</h2>
+                  </div>
+                  <button class="ai-optimize-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-primary bg-primary-50 hover:bg-primary-100 border border-primary-100 transition-colors" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600); border-color: var(--ailp-primary-100);">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                    AI 优化
+                  </button>
+                </div>
+                <div class="grid grid-cols-2 gap-4 pl-3">
+                  <div class="p-4 rounded-lg border border-border bg-muted/30">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white" style="background: var(--ailp-primary);">重</span>
+                      <span class="text-sm font-semibold">教学重点</span>
+                    </div>
+                    <p class="text-sm text-foreground/80 leading-relaxed">椭圆的定义与标准方程的建立；理解标准方程中 <span class="math-inline">a</span>、<span class="math-inline">b</span>、<span class="math-inline">c</span> 的含义及其关系。</p>
+                  </div>
+                  <div class="p-4 rounded-lg border border-border bg-muted/30">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white" style="background: var(--ailp-accent);">难</span>
+                      <span class="text-sm font-semibold">教学难点</span>
+                    </div>
+                    <p class="text-sm text-foreground/80 leading-relaxed">椭圆标准方程推导过程中坐标系的选择与化简；<span class="math-inline">a</span>、<span class="math-inline">b</span>、<span class="math-inline">c</span> 三者关系的理解与灵活运用。</p>
+                  </div>
+                </div>
+              </section>
+
+              <div class="h-px bg-border -mx-2"></div>
+
+              <!-- 区块3：教学过程（核心） -->
+              <section id="section-process" class="editor-block scroll-mt-4">
+                <div class="flex items-center justify-between mb-5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-1 h-5 rounded-full bg-gradient-to-b from-primary to-accent" style="background: linear-gradient(180deg, var(--ailp-primary), var(--ailp-accent));"></span>
+                    <h2 class="text-lg font-semibold">教学过程</h2>
+                    <span class="text-xs text-muted-foreground ml-1">总时长 45 分钟</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-primary bg-primary-50 hover:bg-primary-100 border border-primary-100 transition-colors" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600); border-color: var(--ailp-primary-100);">
+                      <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                      AI 优化
+                    </button>
+                    <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-foreground border border-border hover:bg-muted transition-colors">
+                      <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                      添加环节
+                    </button>
+                  </div>
+                </div>
+
+                <div class="space-y-5 pl-3">
+                  <!-- 环节1：情境引入 -->
+                  <div class="teaching-step border-l-2 border-primary/30 pl-4 -ml-0.5">
+                    <div class="flex items-center gap-2 mb-2">
+                      <h3 class="text-base font-semibold">情境引入</h3>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">5 分钟</span>
+                    </div>
+                    <div class="space-y-3">
+                      <p class="text-sm leading-relaxed text-foreground/90">展示太阳系行星运行轨道图片，引导学生观察行星运行轨迹的形状。</p>
+                      <div class="p-4 rounded-lg border border-dashed border-border bg-muted/20 flex items-center gap-3">
+                        <div class="w-16 h-10 rounded bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center shrink-0">
+                          <svg width="48" height="24" viewBox="0 0 48 24" fill="none">
+                            <ellipse cx="24" cy="12" rx="20" ry="8" stroke="var(--ailp-primary-400)" stroke-width="1.5" fill="none"/>
+                            <circle cx="24" cy="12" r="2" fill="var(--ailp-accent-500)"/>
+                          </svg>
+                        </div>
+                        <div class="flex-1">
+                          <p class="text-xs text-muted-foreground mb-0.5">教学资源 · 行星轨道示意图</p>
+                          <p class="text-sm font-medium">椭圆轨道动态演示图</p>
+                        </div>
+                        <button class="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground shrink-0">
+                          <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                        </button>
+                      </div>
+                      <p class="text-sm leading-relaxed text-foreground/90"><strong class="text-foreground">提问：</strong>行星运行的轨道是什么形状？我们在生活中还见过哪些椭圆形的物体？椭圆具有怎样的几何特征？</p>
+                    </div>
+                  </div>
+
+                  <!-- 环节2：概念形成 -->
+                  <div class="teaching-step border-l-2 border-primary/30 pl-4 -ml-0.5">
+                    <div class="flex items-center gap-2 mb-2">
+                      <h3 class="text-base font-semibold">概念形成</h3>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">10 分钟</span>
+                    </div>
+                    <div class="space-y-3">
+                      <p class="text-sm leading-relaxed text-foreground/90"><strong>【实验探究】</strong>取一条细绳，把它的两端固定在画板上的 <span class="math-inline">F₁</span>、<span class="math-inline">F₂</span> 两点，用铅笔尖把绳子拉紧，使笔尖在图板上慢慢移动，画出一个椭圆。</p>
+
+                      <!-- 椭圆图形 -->
+                      <div class="p-4 rounded-lg bg-muted/30 border border-border">
+                        <div class="flex items-center justify-between mb-2">
+                          <span class="text-xs font-medium text-foreground/70">椭圆示意图</span>
+                          <button class="text-xs text-primary hover:underline" style="color: var(--ailp-primary);">展开详情</button>
+                        </div>
+                        <div class="flex justify-center py-3">
+                          <svg width="280" height="160" viewBox="0 0 280 160" class="math-display">
+                            <!-- 坐标轴 -->
+                            <line x1="20" y1="80" x2="260" y2="80" stroke="var(--ailp-gray-300)" stroke-width="1"/>
+                            <line x1="140" y1="20" x2="140" y2="140" stroke="var(--ailp-gray-300)" stroke-width="1"/>
+                            <polygon points="260,80 254,77 254,83" fill="var(--ailp-gray-400)"/>
+                            <polygon points="140,20 137,26 143,26" fill="var(--ailp-gray-400)"/>
+                            <!-- 椭圆 -->
+                            <ellipse cx="140" cy="80" rx="100" ry="50" stroke="var(--ailp-primary-600)" stroke-width="2" fill="var(--ailp-primary-50)" fill-opacity="0.3"/>
+                            <!-- 焦点 -->
+                            <circle cx="90" cy="80" r="3.5" fill="var(--ailp-accent-500)"/>
+                            <circle cx="190" cy="80" r="3.5" fill="var(--ailp-accent-500)"/>
+                            <text x="83" y="95" fill="var(--ailp-accent-600)" font-size="12" font-style="italic">F₁</text>
+                            <text x="193" y="95" fill="var(--ailp-accent-600)" font-size="12" font-style="italic">F₂</text>
+                            <!-- 动点 -->
+                            <circle cx="170" cy="55" r="3" fill="var(--ailp-primary-700)"/>
+                            <text x="176" y="50" fill="var(--ailp-primary-700)" font-size="11" font-style="italic">M(x,y)</text>
+                            <!-- 连线 -->
+                            <line x1="90" y1="80" x2="170" y2="55" stroke="var(--ailp-primary-500)" stroke-width="1" stroke-dasharray="4,3"/>
+                            <line x1="190" y1="80" x2="170" y2="55" stroke="var(--ailp-primary-500)" stroke-width="1" stroke-dasharray="4,3"/>
+                            <!-- a 标注 -->
+                            <text x="133" y="135" fill="var(--ailp-gray-600)" font-size="12" font-style="italic">a</text>
+                            <text x="160" y="75" fill="var(--ailp-gray-600)" font-size="12" font-style="italic">b</text>
+                            <text x="112" y="72" fill="var(--ailp-accent-600)" font-size="11" font-style="italic">c</text>
+                            <!-- 原点 -->
+                            <text x="143" y="95" fill="var(--ailp-gray-500)" font-size="11">O</text>
+                          </svg>
+                        </div>
+                      </div>
+
+                      <p class="text-sm leading-relaxed text-foreground/90"><strong>椭圆的定义：</strong>平面内与两个定点 <span class="math-inline">F₁</span>、<span class="math-inline">F₂</span> 的距离之和等于常数（大于 <span class="math-inline">|F₁F₂|</span>）的点的轨迹叫做椭圆。这两个定点叫做椭圆的焦点，两焦点的距离叫做焦距。</p>
+
+                      <div class="p-3 rounded-lg bg-primary-50/50 border border-primary-100" style="background: var(--ailp-primary-50); border-color: var(--ailp-primary-100);">
+                        <p class="text-xs font-medium text-primary mb-1" style="color: var(--ailp-primary-600);">数学表达式</p>
+                        <p class="math-display text-base" style="font-family: var(--ailp-font-math);">
+                          |MF₁| + |MF₂| = 2a &nbsp;&nbsp;(2a &gt; |F₁F₂| = 2c)
+                        </p>
+                      </div>
+
+                      <p class="text-sm leading-relaxed text-foreground/90"><strong>标准方程推导：</strong>以两焦点 <span class="math-inline">F₁</span>、<span class="math-inline">F₂</span> 所在直线为 x 轴，线段 <span class="math-inline">F₁F₂</span> 的垂直平分线为 y 轴，建立平面直角坐标系。设 <span class="math-inline">M(x, y)</span> 是椭圆上任意一点，椭圆的焦距为 <span class="math-inline">2c (c &gt; 0)</span>，则 <span class="math-inline">F₁(-c, 0)</span>，<span class="math-inline">F₂(c, 0)</span>。</p>
+
+                      <div class="p-3 rounded-lg bg-muted/50 border border-border space-y-1.5">
+                        <p class="text-xs font-medium text-muted-foreground mb-1">推导过程</p>
+                        <p class="math-display text-sm" style="font-family: var(--ailp-font-math);">
+                          √(x+c)²+y² + √(x−c)²+y² = 2a
+                        </p>
+                        <p class="math-display text-sm" style="font-family: var(--ailp-font-math);">
+                          ⇒ √(x+c)²+y² = 2a − √(x−c)²+y²
+                        </p>
+                        <p class="text-xs text-muted-foreground">两边平方后化简，令 <span class="math-inline">b² = a² − c² &nbsp;(b &gt; 0)</span>，得：</p>
+                        <p class="math-display text-base text-center pt-1" style="font-family: var(--ailp-font-math);">
+                          x²/a² + y²/b² = 1 &nbsp;&nbsp;(a &gt; b &gt; 0)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 环节3：例题精讲 -->
+                  <div class="teaching-step border-l-2 border-primary/30 pl-4 -ml-0.5">
+                    <div class="flex items-center gap-2 mb-2">
+                      <h3 class="text-base font-semibold">例题精讲</h3>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">12 分钟</span>
+                    </div>
+                    <div class="space-y-4">
+                      <!-- 例题1 -->
+                      <div class="example-block rounded-lg border border-border overflow-hidden">
+                        <div class="flex items-center gap-2 px-3 py-2 bg-muted/40 border-b border-border">
+                          <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold text-white" style="background: var(--ailp-primary);">例1</span>
+                          <span class="text-sm font-medium">求椭圆的标准方程</span>
+                        </div>
+                        <div class="p-4 space-y-3">
+                          <p class="text-sm leading-relaxed"><strong>题目：</strong>已知椭圆的两个焦点坐标分别是 <span class="math-inline">(-2, 0)</span>、<span class="math-inline">(2, 0)</span>，并且经过点 <span class="math-inline">(5/2, -3/2)</span>，求它的标准方程。</p>
+                          <div class="pt-2 border-t border-dashed border-border">
+                            <p class="text-xs font-medium text-primary mb-2" style="color: var(--ailp-primary-600);">【解答过程】</p>
+                            <div class="space-y-1.5 text-sm">
+                              <p><span class="text-muted-foreground">步骤1：</span>确定焦点在 x 轴上，设标准方程为</p>
+                              <p class="math-display pl-4" style="font-family: var(--ailp-font-math);">x²/a² + y²/b² = 1 &nbsp;&nbsp;(a &gt; b &gt; 0)</p>
+                              <p><span class="text-muted-foreground">步骤2：</span>由焦点坐标知 <span class="math-inline">c = 2</span>，故 <span class="math-inline">a² − b² = 4</span></p>
+                              <p><span class="text-muted-foreground">步骤3：</span>将点 <span class="math-inline">(5/2, -3/2)</span> 代入方程求解</p>
+                              <p class="math-display pl-4" style="font-family: var(--ailp-font-math);">25/4a² + 9/4b² = 1</p>
+                              <p><span class="text-muted-foreground">步骤4：</span>联立方程组，解得 <span class="math-inline">a² = 10</span>，<span class="math-inline">b² = 6</span></p>
+                              <p class="pt-1"><span class="text-muted-foreground">结论：</span>所求椭圆的标准方程为</p>
+                              <p class="math-display pl-4 text-base" style="font-family: var(--ailp-font-math);">x²/10 + y²/6 = 1</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- 例题2 -->
+                      <div class="example-block rounded-lg border border-border overflow-hidden">
+                        <div class="flex items-center gap-2 px-3 py-2 bg-muted/40 border-b border-border">
+                          <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold text-white" style="background: var(--ailp-accent);">例2</span>
+                          <span class="text-sm font-medium">椭圆定义的应用</span>
+                        </div>
+                        <div class="p-4 space-y-3">
+                          <p class="text-sm leading-relaxed"><strong>题目：</strong>已知椭圆 <span class="math-inline">x²/25 + y²/9 = 1</span> 上一点 <span class="math-inline">P</span> 到一个焦点的距离为 <span class="math-inline">6</span>，求点 <span class="math-inline">P</span> 到另一个焦点的距离。</p>
+                          <div class="pt-2 border-t border-dashed border-border">
+                            <p class="text-xs font-medium text-primary mb-2" style="color: var(--ailp-primary-600);">【解答过程】</p>
+                            <div class="space-y-1.5 text-sm">
+                              <p><span class="text-muted-foreground">分析：</span>由椭圆方程知 <span class="math-inline">a² = 25</span>，故 <span class="math-inline">a = 5</span>，<span class="math-inline">2a = 10</span></p>
+                              <p><span class="text-muted-foreground">根据定义：</span><span class="math-inline">|PF₁| + |PF₂| = 2a = 10</span></p>
+                              <p><span class="text-muted-foreground">设：</span><span class="math-inline">|PF₁| = 6</span>，则 <span class="math-inline">|PF₂| = 10 − 6 = 4</span></p>
+                              <p class="pt-1"><strong>答案：</strong>点 P 到另一个焦点的距离为 <span class="math-inline">4</span></p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 环节4：课堂练习 -->
+                  <div class="teaching-step border-l-2 border-primary/30 pl-4 -ml-0.5">
+                    <div class="flex items-center gap-2 mb-2">
+                      <h3 class="text-base font-semibold">课堂练习</h3>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">8 分钟</span>
+                    </div>
+                    <div class="space-y-2.5">
+                      <div class="flex gap-2.5 p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                        <span class="w-5 h-5 shrink-0 rounded-full bg-muted text-xs font-medium flex items-center justify-center text-muted-foreground">1</span>
+                        <p class="text-sm text-foreground/90">求适合下列条件的椭圆的标准方程：<span class="math-inline">a = 4</span>，<span class="math-inline">b = 1</span>，焦点在 x 轴上。</p>
+                      </div>
+                      <div class="flex gap-2.5 p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                        <span class="w-5 h-5 shrink-0 rounded-full bg-muted text-xs font-medium flex items-center justify-center text-muted-foreground">2</span>
+                        <p class="text-sm text-foreground/90">椭圆 <span class="math-inline">x²/16 + y²/9 = 1</span> 的焦距是多少？焦点坐标是什么？</p>
+                      </div>
+                      <div class="flex gap-2.5 p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                        <span class="w-5 h-5 shrink-0 rounded-full bg-muted text-xs font-medium flex items-center justify-center text-muted-foreground">3</span>
+                        <p class="text-sm text-foreground/90">如果椭圆 <span class="math-inline">x²/100 + y²/36 = 1</span> 上一点 P 到焦点 <span class="math-inline">F₁</span> 的距离等于 <span class="math-inline">8</span>，求点 P 到另一个焦点 <span class="math-inline">F₂</span> 的距离。</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 环节5：课堂小结 -->
+                  <div class="teaching-step border-l-2 border-primary/30 pl-4 -ml-0.5">
+                    <div class="flex items-center gap-2 mb-2">
+                      <h3 class="text-base font-semibold">课堂小结</h3>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">5 分钟</span>
+                    </div>
+                    <div class="space-y-3">
+                      <div class="p-3 rounded-lg bg-gradient-to-r from-primary-50/50 to-accent-50/50 border border-primary-100" style="background: linear-gradient(to right, var(--ailp-primary-50), var(--ailp-accent-50)); border-color: var(--ailp-primary-100);">
+                        <p class="text-sm font-medium mb-1">知识梳理</p>
+                        <ul class="text-sm text-foreground/80 space-y-1 list-disc list-inside">
+                          <li>椭圆的定义：<span class="math-inline">|MF₁| + |MF₂| = 2a &nbsp;(2a &gt; 2c)</span></li>
+                          <li>椭圆的标准方程（两种形式）</li>
+                          <li><span class="math-inline">a、b、c</span> 的关系：<span class="math-inline">a² = b² + c²</span></li>
+                        </ul>
+                      </div>
+                      <p class="text-sm text-foreground/90"><strong>方法总结：</strong>坐标法、待定系数法、数形结合思想。求椭圆标准方程的关键是确定 <span class="math-inline">a</span> 和 <span class="math-inline">b</span> 的值，并注意焦点的位置。</p>
+                    </div>
+                  </div>
+
+                  <!-- 环节6：作业布置 -->
+                  <div class="teaching-step border-l-2 border-primary/30 pl-4 -ml-0.5">
+                    <div class="flex items-center gap-2 mb-2">
+                      <h3 class="text-base font-semibold">作业布置</h3>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">5 分钟</span>
+                    </div>
+                    <p class="text-sm text-foreground/80 italic">（详见下方"作业布置"区块）</p>
+                  </div>
+                </div>
+              </section>
+
+              <div class="h-px bg-border -mx-2"></div>
+
+              <!-- 区块4：板书设计 -->
+              <section id="section-blackboard" class="editor-block scroll-mt-4">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center gap-2">
+                    <span class="w-1 h-5 rounded-full bg-gradient-to-b from-primary to-accent" style="background: linear-gradient(180deg, var(--ailp-primary), var(--ailp-accent));"></span>
+                    <h2 class="text-lg font-semibold">板书设计</h2>
+                  </div>
+                  <button class="ai-optimize-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-primary bg-primary-50 hover:bg-primary-100 border border-primary-100 transition-colors" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600); border-color: var(--ailp-primary-100);">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                    AI 优化
+                  </button>
+                </div>
+                <div class="grid grid-cols-5 gap-3 pl-3">
+                  <!-- 主板书 -->
+                  <div class="col-span-3 p-4 rounded-lg border border-border bg-card min-h-[200px]">
+                    <p class="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">主板书</p>
+                    <div class="space-y-2">
+                      <p class="text-sm font-bold text-center border-b border-border pb-1">椭圆及其标准方程</p>
+                      <div class="space-y-1.5 pt-1">
+                        <p class="text-xs font-semibold text-foreground/80">1. 椭圆的定义</p>
+                        <p class="math-display text-xs pl-3" style="font-family: var(--ailp-font-math);">|MF₁|+|MF₂|=2a (2a&gt;2c)</p>
+                      </div>
+                      <div class="space-y-1.5 pt-1">
+                        <p class="text-xs font-semibold text-foreground/80">2. 标准方程</p>
+                        <p class="math-display text-xs pl-3" style="font-family: var(--ailp-font-math);">x²/a²+y²/b²=1 (焦点在x轴)</p>
+                        <p class="math-display text-xs pl-3" style="font-family: var(--ailp-font-math);">y²/a²+x²/b²=1 (焦点在y轴)</p>
+                      </div>
+                      <div class="space-y-1.5 pt-1">
+                        <p class="text-xs font-semibold text-foreground/80">3. a、b、c 的关系</p>
+                        <p class="math-display text-xs pl-3" style="font-family: var(--ailp-font-math);">a² = b² + c²</p>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- 副板书 -->
+                  <div class="col-span-2 p-4 rounded-lg border border-dashed border-border bg-muted/20 min-h-[200px]">
+                    <p class="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">副板书</p>
+                    <div class="space-y-2">
+                      <p class="text-xs font-medium text-foreground/70">推导过程：</p>
+                      <p class="math-display text-xs" style="font-family: var(--ailp-font-math);">→ 建系</p>
+                      <p class="math-display text-xs" style="font-family: var(--ailp-font-math);">→ 设点</p>
+                      <p class="math-display text-xs" style="font-family: var(--ailp-font-math);">→ 列式</p>
+                      <p class="math-display text-xs" style="font-family: var(--ailp-font-math);">→ 化简</p>
+                      <div class="pt-2 border-t border-dashed border-border mt-2">
+                        <p class="text-xs font-medium text-foreground/70">例题演算区</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <div class="h-px bg-border -mx-2"></div>
+
+              <!-- 区块5：作业布置 -->
+              <section id="section-homework" class="editor-block scroll-mt-4">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center gap-2">
+                    <span class="w-1 h-5 rounded-full bg-gradient-to-b from-primary to-accent" style="background: linear-gradient(180deg, var(--ailp-primary), var(--ailp-accent));"></span>
+                    <h2 class="text-lg font-semibold">作业布置</h2>
+                  </div>
+                  <button class="ai-optimize-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-primary bg-primary-50 hover:bg-primary-100 border border-primary-100 transition-colors" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600); border-color: var(--ailp-primary-100);">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                    AI 优化
+                  </button>
+                </div>
+                <div class="space-y-3 pl-3">
+                  <!-- 基础题 -->
+                  <div class="p-3.5 rounded-lg border border-border">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white" style="background: var(--ailp-success-500);">基</span>
+                      <span class="text-sm font-semibold">基础题（必做）</span>
+                      <span class="text-xs text-muted-foreground ml-auto">教材 P49 习题 2.2 · 第1-4题</span>
+                    </div>
+                    <ul class="text-sm text-foreground/80 space-y-1 list-disc list-inside pl-1">
+                      <li>写出满足条件的椭圆标准方程（已知 a、b 和焦点位置）</li>
+                      <li>求椭圆的焦点坐标和焦距</li>
+                      <li>根据椭圆上一点到焦点距离，求到另一焦点的距离</li>
+                    </ul>
+                  </div>
+                  <!-- 提升题 -->
+                  <div class="p-3.5 rounded-lg border border-border">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white" style="background: var(--ailp-warning-500);">提</span>
+                      <span class="text-sm font-semibold">提升题（选做）</span>
+                      <span class="text-xs text-muted-foreground ml-auto">教材 P49 习题 2.2 · 第5-7题</span>
+                    </div>
+                    <ul class="text-sm text-foreground/80 space-y-1 list-disc list-inside pl-1">
+                      <li>已知椭圆经过两点，求椭圆的标准方程（待定系数法）</li>
+                      <li>椭圆定义与三角形周长、面积的综合应用</li>
+                    </ul>
+                  </div>
+                  <!-- 拓展题 -->
+                  <div class="p-3.5 rounded-lg border border-border">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white" style="background: var(--ailp-primary);">拓</span>
+                      <span class="text-sm font-semibold">拓展题（挑战）</span>
+                      <span class="text-xs text-muted-foreground ml-auto">思考与探究</span>
+                    </div>
+                    <ul class="text-sm text-foreground/80 space-y-1 list-disc list-inside pl-1">
+                      <li>平面内与两个定点距离之比为常数的点的轨迹是什么？</li>
+                      <li>查阅资料，了解椭圆在天文学、工程学中的应用</li>
+                    </ul>
+                  </div>
+                </div>
+              </section>
+
+            </div>
+          </article>
+
+          <!-- 底部留白 -->
+          <div class="h-16"></div>
+        </div>
+      </main>
+
+      <!-- 右侧 AI 助手面板 -->
+      <aside class="w-[380px] border-l border-border bg-card flex flex-col shrink-0">
+        <!-- 标签栏 -->
+        <div class="flex items-center border-b border-border px-2 shrink-0">
+          <button class="flex-1 py-3 text-sm font-medium text-primary border-b-2 border-primary relative" style="border-color: var(--ailp-primary); color: var(--ailp-primary);">
+            AI助手
+          </button>
+          <button class="flex-1 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            学情
+          </button>
+          <button class="flex-1 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            建议
+          </button>
+        </div>
+
+        <!-- AI助手内容区 -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+          <!-- AI 头像区 -->
+          <div class="flex items-center gap-3 p-3 rounded-xl ai-bubble-gradient">
+            <div class="relative shrink-0">
+              <div class="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-lg" style="background: linear-gradient(135deg, var(--ailp-primary), var(--ailp-accent));">
+                <i data-lucide="bot" class="w-5 h-5"></i>
+              </div>
+              <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success-500 border-2 border-white" style="background: var(--ailp-success-500);"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold">备小研</p>
+              <p class="text-xs text-muted-foreground">AI 备课助手 · 在线</p>
+            </div>
+            <button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+              <i data-lucide="more-vertical" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- 对话消息区 -->
+          <div class="space-y-4">
+            <!-- AI 消息 -->
+            <div class="flex gap-2.5">
+              <div class="w-7 h-7 shrink-0 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--ailp-primary), var(--ailp-accent));">
+                <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+              </div>
+              <div class="flex-1 max-w-[260px]">
+                <div class="p-3 rounded-2xl rounded-tl-sm ai-bubble-gradient">
+                  <p class="text-sm leading-relaxed">李老师，我已经根据椭圆的教学内容生成了教案初稿。需要我调整哪个部分吗？</p>
+                </div>
+                <p class="text-[11px] text-muted-foreground mt-1 ml-1">刚刚</p>
+              </div>
+            </div>
+
+            <!-- 快捷操作按钮 -->
+            <div class="pl-9.5 grid grid-cols-2 gap-2" style="padding-left: 38px;">
+              <button class="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium border border-border hover:border-primary/40 hover:bg-primary-50/50 text-foreground/80 hover:text-primary transition-colors" style="color: var(--ailp-primary-600);">
+                <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 shrink-0"></i>
+                调整难度
+              </button>
+              <button class="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium border border-border hover:border-primary/40 hover:bg-primary-50/50 text-foreground/80 hover:text-primary transition-colors" style="color: var(--ailp-primary-600);">
+                <i data-lucide="book-open" class="w-3.5 h-3.5 shrink-0"></i>
+                补充例题
+              </button>
+              <button class="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium border border-border hover:border-primary/40 hover:bg-primary-50/50 text-foreground/80 hover:text-primary transition-colors" style="color: var(--ailp-primary-600);">
+                <i data-lucide="users" class="w-3.5 h-3.5 shrink-0"></i>
+                增加互动
+              </button>
+              <button class="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium border border-border hover:border-primary/40 hover:bg-primary-50/50 text-foreground/80 hover:text-primary transition-colors" style="color: var(--ailp-primary-600);">
+                <i data-lucide="presentation" class="w-3.5 h-3.5 shrink-0"></i>
+                生成课件
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部输入框 -->
+        <div class="p-3 border-t border-border shrink-0">
+          <div class="flex items-end gap-2 p-2 rounded-xl border border-border bg-muted/30 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+            <button class="w-7 h-7 shrink-0 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground transition-colors">
+              <i data-lucide="paperclip" class="w-4 h-4"></i>
+            </button>
+            <textarea
+              rows="1"
+              placeholder="输入你的需求..."
+              class="flex-1 bg-transparent text-sm resize-none outline-none placeholder:text-muted-foreground py-1 max-h-24"
+            ></textarea>
+            <button class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-white hover:opacity-90 transition-opacity" style="background: linear-gradient(135deg, var(--ailp-primary), var(--ailp-accent));">
+              <i data-lucide="send" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- 右下角悬浮球菜单 -->
+    <div class="fixed bottom-6 right-6 z-50">
+      <!-- 子功能按钮（展开状态） -->
+      <div class="flex flex-col items-center gap-3 mb-3">
+        <!-- 资源推荐 -->
+        <div class="group relative flex items-center justify-end gap-2">
+          <span class="tooltip-text text-xs text-foreground bg-card border border-border rounded-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md whitespace-nowrap pointer-events-none">
+            资源推荐
+          </span>
+          <button class="w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground hover:border-primary/40 hover:text-primary transition-all" style="color: var(--ailp-primary);">
+            <i data-lucide="library" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <!-- 绘图工具 -->
+        <div class="group relative flex items-center justify-end gap-2">
+          <span class="tooltip-text text-xs text-foreground bg-card border border-border rounded-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md whitespace-nowrap pointer-events-none">
+            绘图工具
+          </span>
+          <button class="w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground hover:border-primary/40 hover:text-primary transition-all" style="color: var(--ailp-primary);">
+            <i data-lucide="pen-tool" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <!-- 公式编辑 -->
+        <div class="group relative flex items-center justify-end gap-2">
+          <span class="tooltip-text text-xs text-foreground bg-card border border-border rounded-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md whitespace-nowrap pointer-events-none">
+            公式编辑
+          </span>
+          <button class="w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground hover:border-primary/40 hover:text-primary transition-all" style="color: var(--ailp-primary);">
+            <i data-lucide="sigma" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <!-- 拍照上传 -->
+        <div class="group relative flex items-center justify-end gap-2">
+          <span class="tooltip-text text-xs text-foreground bg-card border border-border rounded-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md whitespace-nowrap pointer-events-none">
+            拍照上传
+          </span>
+          <button class="w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground hover:border-primary/40 hover:text-primary transition-all" style="color: var(--ailp-primary);">
+            <i data-lucide="camera" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 主悬浮球 -->
+      <div class="relative">
+        <button class="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent shadow-xl flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-transform ai-glow" style="background: linear-gradient(135deg, var(--ailp-primary-600), var(--ailp-accent-500));">
+          <i data-lucide="sparkles" class="w-6 h-6"></i>
+        </button>
+      </div>
+    </div>
+    <script>lucide.createIcons();</script>
+  </body>
+</html>

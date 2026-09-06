@@ -1,151 +1,466 @@
 <template>
-  <div data-testid="tv3-resources">
-    <div class="tv3-hero" style="margin-bottom: 18px">
-      <div style="display: flex; gap: 24px; align-items: center">
-        <div style="flex: 1">
-          <div class="tv3-hero__title">资源中心</div>
-          <div class="tv3-hero__sub">课件 / 教案 / 构造配方 / 拍照题库 · 备课组共享</div>
+  <div class="tv3-resources-v2" data-testid="tv3-resources">
+    <!-- 左侧分类导航 -->
+    <aside class="rv2-sidebar">
+      <div class="rv2-sidebar__head">
+        <div class="rv2-logo">
+          <span class="rv2-logo__icon">📚</span>
+          <span class="rv2-logo__text">资源中心</span>
         </div>
-        <button class="tv3-btn tv3-btn--gold" data-testid="tv3-res-photo" @click="$router.push('/teacher-v3/slides')">📷 拍照入库</button>
+        <button class="rv2-new-folder" title="新建文件夹">＋</button>
       </div>
-    </div>
 
-    <div style="display: flex; flex-direction: column; gap: 14px">
-      <!-- 构造配方库（核心特色：参数化构造步骤复用） -->
-      <div class="tv3-card">
-        <div class="tv3-card__head">
-          <span class="tv3-card__title">⚙ 构造配方库</span>
-          <span class="tv3-card__sub">把「怎么搭出来的」沉淀给备课组 · 一键插入课件</span>
-          <div class="tv3-card__spacer" />
-          <span class="tv3-tag tv3-tag--gold">教学团队复用</span>
+      <!-- 一级导航 -->
+      <nav class="rv2-nav">
+        <button
+          v-for="nav in navItems" :key="nav.key"
+          class="rv2-nav__item" :class="{ 'is-active': activeNav === nav.key }"
+          @click="activeNav = nav.key"
+        >
+          <span class="rv2-nav__icon">{{ nav.icon }}</span>
+          <span class="rv2-nav__label">{{ nav.label }}</span>
+          <span class="rv2-nav__count">{{ nav.count }}</span>
+        </button>
+      </nav>
+
+      <!-- 分隔线 -->
+      <div class="rv2-divider"></div>
+
+      <!-- 我的文件夹 -->
+      <div class="rv2-section">
+        <div class="rv2-section__head">
+          <span class="rv2-section__title">我的文件夹</span>
+          <button class="rv2-section__more" title="管理">⋯</button>
         </div>
-        <div class="tv3-card__body" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px">
-          <div v-for="r in recipes" :key="r.id" class="tv3-recipe" :data-testid="`tv3-recipe-${r.id}`">
-            <div class="tv3-recipe__thumb" v-html="recipeSvg(r)" />
-            <div class="tv3-recipe__body">
-              <div style="display: flex; align-items: center; gap: 6px">
-                <span style="font-size: 13px; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.name }}</span>
-                <span class="tv3-tag" :class="r.school_shared ? 'tv3-tag--ok' : ''" style="font-size: 10px">{{ r.school_shared ? '校共享' : '私有' }}</span>
-              </div>
-              <div style="font-size: 11px; color: var(--tv3-ink3); margin-top: 2px">{{ r.author }} · 被用 {{ r.usage_count }} 次</div>
-              <div style="font-size: 11.5px; color: var(--tv3-ink2); line-height: 1.6; margin-top: 4px">{{ r.note }}</div>
-              <div style="display: flex; gap: 6px; margin-top: 8px">
-                <button class="tv3-btn tv3-btn--sm tv3-btn--gold" :data-testid="`tv3-recipe-use-${r.id}`" @click="useRecipe(r)">插入课件</button>
-                <span class="tv3-tag tv3-tag--primary" style="font-size: 10px; align-self: center">{{ r.params.length }} 个可调参数</span>
-              </div>
-            </div>
+        <div class="rv2-folders">
+          <button
+            v-for="f in folders" :key="f.id"
+            class="rv2-folder" :class="{ 'is-active': activeFolder === f.id }"
+            @click="activeFolder = f.id"
+          >
+            <span class="rv2-folder__icon">📁</span>
+            <span class="rv2-folder__name">{{ f.name }}</span>
+            <span class="rv2-folder__count">{{ f.count }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rv2-divider"></div>
+
+      <!-- 标签筛选 -->
+      <div class="rv2-section">
+        <div class="rv2-section__head">
+          <span class="rv2-section__title">资源类型</span>
+        </div>
+        <div class="rv2-tags">
+          <button
+            v-for="t in typeTags" :key="t.id"
+            class="rv2-tag" :class="{ 'is-active': typeFilter === t.id }"
+            :data-type="t.id"
+            @click="typeFilter = typeFilter === t.id ? '' : t.id"
+          >
+            <span class="rv2-tag__dot"></span>
+            {{ t.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="rv2-divider"></div>
+
+      <!-- 学科标签 -->
+      <div class="rv2-section">
+        <div class="rv2-section__head">
+          <span class="rv2-section__title">学科</span>
+        </div>
+        <div class="rv2-tags rv2-tags--compact">
+          <button
+            v-for="s in subjectTags" :key="s"
+            class="rv2-tag rv2-tag--sm" :class="{ 'is-active': subjectFilter === s }"
+            @click="subjectFilter = subjectFilter === s ? '' : s"
+          >
+            {{ s }}
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="rv2-main">
+      <!-- 顶部工具栏 -->
+      <header class="rv2-toolbar">
+        <div class="rv2-toolbar__left">
+          <h1 class="rv2-toolbar__title">{{ currentNavTitle }}</h1>
+          <span class="rv2-toolbar__count">{{ filteredResources.length }} 项资源</span>
+        </div>
+
+        <div class="rv2-toolbar__right">
+          <!-- 搜索框 -->
+          <div class="rv2-search">
+            <span class="rv2-search__icon">🔍</span>
+            <input v-model="searchQuery" class="rv2-search__input" placeholder="搜索资源名称、标签、知识点…" />
+            <button v-if="searchQuery" class="rv2-search__clear" @click="searchQuery = ''">×</button>
           </div>
-        </div>
-      </div>
 
-      <!-- 资源列表（V3.2：类型分组 + 章节/课题 + 搜索） -->
-      <div class="tv3-card">
-        <div class="tv3-card__head">
-          <span class="tv3-card__title">全部资源</span>
-          <span class="tv3-card__sub">{{ baseFiltered.length }} 项</span>
-          <div class="tv3-card__spacer" />
-          <input v-model="search" class="tv3-input" style="width: 160px" placeholder="搜名称 / 章节 / 学科" data-testid="tv3-res-search">
-          <select v-model="chapterFilter" class="tv3-input" style="width: 150px" data-testid="tv3-res-chapter">
-            <option value="">全部章节 / 课题</option>
-            <option v-for="c in chapterOptions" :key="c" :value="c">{{ c }}</option>
+          <!-- 筛选器 -->
+          <select v-model="gradeFilter" class="rv2-select" data-testid="rv2-grade-filter">
+            <option value="">全部年级</option>
+            <option v-for="g in grades" :key="g" :value="g">{{ g }}</option>
           </select>
-          <div class="tv3-seg">
-            <button class="tv3-seg__btn" :class="{ 'is-active': kindFilter === '' }" data-testid="tv3-res-kind-all" @click="kindFilter = ''">全部 {{ items.length }}</button>
-            <button v-for="k in kinds" :key="k.id" class="tv3-seg__btn" :class="{ 'is-active': kindFilter === k.id }" :data-testid="`tv3-res-kind-${k.id}`" @click="kindFilter = k.id">{{ k.label }} {{ kindCount(k.id) }}</button>
+
+          <select v-model="sortBy" class="rv2-select">
+            <option value="updated">最近更新</option>
+            <option value="name">按名称</option>
+            <option value="size">按大小</option>
+          </select>
+
+          <!-- 视图切换 -->
+          <div class="rv2-view-toggle">
+            <button class="rv2-view-btn" :class="{ 'is-active': viewMode === 'grid' }" @click="viewMode = 'grid'" title="网格视图">▦</button>
+            <button class="rv2-view-btn" :class="{ 'is-active': viewMode === 'list' }" @click="viewMode = 'list'" title="列表视图">☰</button>
+          </div>
+
+          <!-- AI 解析状态按钮 -->
+          <button class="rv2-btn rv2-btn--ghost rv2-btn--icon" @click="showAiPanel = true" title="AI 解析中心">
+            <span class="rv2-btn__icon">🤖</span>
+            <span v-if="processingCount > 0" class="rv2-btn__badge">{{ processingCount }}</span>
+          </button>
+
+          <!-- 上传按钮 -->
+          <button class="rv2-btn rv2-btn--primary" @click="showUpload = true">
+            <span class="rv2-btn__icon">＋</span>
+            上传资源
+          </button>
+        </div>
+      </header>
+
+      <!-- 快捷操作区 -->
+      <div class="rv2-quick-actions">
+        <button class="rv2-quick-card" @click="showUpload = true">
+          <div class="rv2-quick-card__icon">📤</div>
+          <div class="rv2-quick-card__title">上传文件</div>
+          <div class="rv2-quick-card__desc">PPT / PDF / 视频 / 图片</div>
+        </button>
+
+        <button class="rv2-quick-card rv2-quick-card--scan" @click="showScan = true">
+          <div class="rv2-quick-card__icon">📷</div>
+          <div class="rv2-quick-card__title">拍照扫描</div>
+          <div class="rv2-quick-card__desc">试卷 · 去手写 · 智能增强</div>
+        </button>
+
+        <button class="rv2-quick-card rv2-quick-card--folder">
+          <div class="rv2-quick-card__icon">📁</div>
+          <div class="rv2-quick-card__title">新建文件夹</div>
+          <div class="rv2-quick-card__desc">分类管理你的资源</div>
+        </button>
+
+        <button class="rv2-quick-card rv2-quick-card--ai" @click="showAiPanel = true">
+          <div class="rv2-quick-card__icon">🤖</div>
+          <div class="rv2-quick-card__title">AI 解析中心</div>
+          <div class="rv2-quick-card__desc">{{ processingCount }} 个正在解析</div>
+        </button>
+      </div>
+
+      <!-- 构造配方库（保留原有特色） -->
+      <section v-if="activeNav === 'mine'" class="rv2-section-card">
+        <div class="rv2-section-card__head">
+          <div>
+            <span class="rv2-section-card__title">⚙ 构造配方库</span>
+            <span class="rv2-section-card__sub">参数化构造步骤复用 · 一键插入课件</span>
+          </div>
+          <span class="rv2-badge rv2-badge--gold">教学团队复用</span>
+        </div>
+        <div class="rv2-recipes">
+          <div v-for="r in recipes" :key="r.id" class="rv2-recipe" :data-testid="`tv3-recipe-${r.id}`">
+            <div class="rv2-recipe__thumb" v-html="recipeSvg(r)" />
+            <div class="rv2-recipe__body">
+              <div class="rv2-recipe__name">
+                <span>{{ r.name }}</span>
+                <span class="rv2-tag rv2-tag--sm" :class="r.school_shared ? 'rv2-tag--ok' : ''">
+                  {{ r.school_shared ? '校共享' : '私有' }}
+                </span>
+              </div>
+              <div class="rv2-recipe__meta">{{ r.author }} · 被用 {{ r.usage_count }} 次</div>
+              <div class="rv2-recipe__note">{{ r.note }}</div>
+              <div class="rv2-recipe__actions">
+                <button class="rv2-btn rv2-btn--sm rv2-btn--gold" @click="useRecipe(r)">插入课件</button>
+                <span class="rv2-recipe__params">{{ r.params.length }} 个可调参数</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="tv3-card__body" style="display: flex; flex-direction: column; gap: 12px">
-          <template v-if="!kindFilter">
-            <div v-for="g in groupedItems" :key="g.kind">
-              <div class="tv3-form-label" style="margin-bottom: 6px" :data-testid="`tv3-res-group-${g.kind}`">
-                <span class="tv3-tag tv3-tag--gold" style="font-size: 10.5px">{{ g.label }}</span> {{ g.list.length }} 项
-              </div>
-              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px">
-                <div v-for="it in g.list" :key="it.id" class="tv3-res">
-                  <span class="tv3-res__icon" :data-kind="it.kind">{{ kindIcon(it.kind) }}</span>
-                  <div style="flex: 1; min-width: 0">
-                    <div style="font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ it.name }}</div>
-                    <div style="font-size: 11.5px; color: var(--tv3-ink3); margin-top: 2px">{{ it.subject }}<template v-if="it.chapter"> · {{ it.chapter }}</template> · {{ it.owner }} · {{ it.updated_at }}</div>
+      </section>
+
+      <!-- 资源列表 -->
+      <section class="rv2-resources">
+        <!-- 分类分组标题 -->
+        <template v-if="!typeFilter">
+          <div v-for="group in groupedResources" :key="group.type" class="rv2-res-group">
+            <div class="rv2-res-group__head">
+              <span class="rv2-res-group__label" :data-type="group.type">{{ group.label }}</span>
+              <span class="rv2-res-group__count">{{ group.list.length }} 项</span>
+            </div>
+            <div v-if="viewMode === 'grid'" class="rv2-grid">
+              <div v-for="item in group.list" :key="item.id" class="rv2-res-card" @click="openItem(item)">
+                <div class="rv2-res-card__thumb" :data-type="item.type">
+                  <span class="rv2-res-card__icon">{{ typeIcon(item.type) }}</span>
+                  <span v-if="item.status === 'processing'" class="rv2-res-card__status">
+                    <span class="rv2-spinner"></span> 解析中
+                  </span>
+                </div>
+                <div class="rv2-res-card__body">
+                  <div class="rv2-res-card__title">{{ item.name }}</div>
+                  <div class="rv2-res-card__meta">
+                    <span>{{ item.subject }}</span>
+                    <span v-if="item.chapter"> · {{ item.chapter }}</span>
                   </div>
-                  <span v-if="it.shared" class="tv3-tag tv3-tag--ok" style="font-size: 10px">共享</span>
-                  <button class="tv3-btn tv3-btn--sm" @click="openItem(it)">打开</button>
+                  <div class="rv2-res-card__footer">
+                    <span class="rv2-res-card__owner">{{ item.owner }}</span>
+                    <span class="rv2-res-card__date">{{ item.updated_at }}</span>
+                  </div>
+                  <div v-if="item.tags?.length" class="rv2-res-card__tags">
+                    <span v-for="(t, i) in item.tags.slice(0, 3)" :key="i" class="rv2-mini-tag">{{ t }}</span>
+                    <span v-if="item.tags.length > 3" class="rv2-mini-tag rv2-mini-tag--more">+{{ item.tags.length - 3 }}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </template>
-          <template v-else>
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px">
-              <div v-for="it in filteredItems" :key="it.id" class="tv3-res">
-                <span class="tv3-res__icon" :data-kind="it.kind">{{ kindIcon(it.kind) }}</span>
-                <div style="flex: 1; min-width: 0">
-                  <div style="font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ it.name }}</div>
-                  <div style="font-size: 11.5px; color: var(--tv3-ink3); margin-top: 2px">{{ it.subject }}<template v-if="it.chapter"> · {{ it.chapter }}</template> · {{ it.owner }} · {{ it.updated_at }}</div>
+            <div v-else class="rv2-list">
+              <div v-for="item in group.list" :key="item.id" class="rv2-list-item" @click="openItem(item)">
+                <span class="rv2-list-item__icon" :data-type="item.type">{{ typeIcon(item.type) }}</span>
+                <div class="rv2-list-item__main">
+                  <div class="rv2-list-item__name">{{ item.name }}</div>
+                  <div class="rv2-list-item__meta">
+                    {{ item.subject }}<template v-if="item.chapter"> · {{ item.chapter }}</template> · {{ item.owner }}
+                  </div>
                 </div>
-                <span v-if="it.shared" class="tv3-tag tv3-tag--ok" style="font-size: 10px">共享</span>
-                <button class="tv3-btn tv3-btn--sm" @click="openItem(it)">打开</button>
+                <div class="rv2-list-item__tags">
+                  <span v-for="(t, i) in item.tags?.slice(0, 2)" :key="i" class="rv2-mini-tag">{{ t }}</span>
+                </div>
+                <span class="rv2-list-item__size">{{ formatSize(item.size_bytes) }}</span>
+                <span class="rv2-list-item__date">{{ item.updated_at }}</span>
+                <button v-if="item.shared" class="rv2-list-item__shared" title="已共享">🔗</button>
               </div>
             </div>
-          </template>
-          <div v-if="!baseFiltered.length" style="text-align: center; color: var(--tv3-ink4); padding: 30px 0; font-size: 13px">当前筛选下暂无资源，换个章节或关键词试试。</div>
+          </div>
+        </template>
+
+        <!-- 单一类型平铺 -->
+        <template v-else>
+          <div v-if="viewMode === 'grid'" class="rv2-grid">
+            <div v-for="item in filteredResources" :key="item.id" class="rv2-res-card" @click="openItem(item)">
+              <div class="rv2-res-card__thumb" :data-type="item.type">
+                <span class="rv2-res-card__icon">{{ typeIcon(item.type) }}</span>
+                <span v-if="item.status === 'processing'" class="rv2-res-card__status">
+                  <span class="rv2-spinner"></span> 解析中
+                </span>
+              </div>
+              <div class="rv2-res-card__body">
+                <div class="rv2-res-card__title">{{ item.name }}</div>
+                <div class="rv2-res-card__meta">
+                  <span>{{ item.subject }}</span>
+                  <span v-if="item.chapter"> · {{ item.chapter }}</span>
+                </div>
+                <div class="rv2-res-card__footer">
+                  <span class="rv2-res-card__owner">{{ item.owner }}</span>
+                  <span class="rv2-res-card__date">{{ item.updated_at }}</span>
+                </div>
+                <div v-if="item.tags?.length" class="rv2-res-card__tags">
+                  <span v-for="(t, i) in item.tags.slice(0, 3)" :key="i" class="rv2-mini-tag">{{ t }}</span>
+                  <span v-if="item.tags.length > 3" class="rv2-mini-tag rv2-mini-tag--more">+{{ item.tags.length - 3 }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="rv2-list">
+            <div v-for="item in filteredResources" :key="item.id" class="rv2-list-item" @click="openItem(item)">
+              <span class="rv2-list-item__icon" :data-type="item.type">{{ typeIcon(item.type) }}</span>
+              <div class="rv2-list-item__main">
+                <div class="rv2-list-item__name">{{ item.name }}</div>
+                <div class="rv2-list-item__meta">
+                  {{ item.subject }}<template v-if="item.chapter"> · {{ item.chapter }}</template> · {{ item.owner }}
+                </div>
+              </div>
+              <div class="rv2-list-item__tags">
+                <span v-for="(t, i) in item.tags?.slice(0, 2)" :key="i" class="rv2-mini-tag">{{ t }}</span>
+              </div>
+              <span class="rv2-list-item__size">{{ formatSize(item.size_bytes) }}</span>
+              <span class="rv2-list-item__date">{{ item.updated_at }}</span>
+              <button v-if="item.shared" class="rv2-list-item__shared" title="已共享">🔗</button>
+            </div>
+          </div>
+        </template>
+
+        <!-- 空状态 -->
+        <div v-if="!filteredResources.length" class="rv2-empty">
+          <div class="rv2-empty__icon">📭</div>
+          <div class="rv2-empty__title">暂无资源</div>
+          <div class="rv2-empty__desc">换个筛选条件试试，或上传新的资源</div>
+          <button class="rv2-btn rv2-btn--primary" @click="showUpload = true">上传资源</button>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
+
+    <!-- 上传面板 -->
+    <ResourceUploadPanel
+      :visible="showUpload"
+      @close="showUpload = false"
+      @open-scan="showScan = true; showUpload = false"
+      @view-processing="showAiPanel = true; showUpload = false"
+    />
+
+    <!-- 拍照扫描向导 -->
+    <PhotoScanWizard
+      :visible="showScan"
+      @close="showScan = false"
+      @complete="onScanComplete"
+    />
+
+    <!-- AI 解析面板 -->
+    <AiProcessingPanel
+      :visible="showAiPanel"
+      @close="showAiPanel = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 /**
- * ResourcesView —— 资源中心
- * 构造配方库（SVG 缩略 + 参数说明 + 一键插入课件）· 资源四类（课件/教案/配方/拍照题库）
+ * ResourcesView V2 —— 资源中心全新改版
+ * 设计参考：希沃资源中心 + 学科网 + 百度网盘
+ *
+ * 核心变化：
+ * 1. 左侧分类导航（一级导航 + 文件夹 + 类型标签 + 学科标签）
+ * 2. 顶部工具栏（搜索 + 多维筛选 + 视图切换 + 上传入口）
+ * 3. 快捷操作卡片（上传/拍照扫描/新建文件夹/AI解析中心）
+ * 4. 资源网格/列表双视图
+ * 5. 集成上传面板、拍照扫描、AI 解析状态
+ * 6. 保留构造配方库特色功能
  */
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { v3Api, type V3ResourceItem } from '@/api/teacherV3'
+import { v3Api } from '@/api/teacherV3'
 import { FIGURE_PRESETS } from '@/components/mathx/presets'
 import type { V3Recipe } from '@/types/teacherV3'
+import ResourceUploadPanel from '@/components/teacherV3/ResourceUploadPanel.vue'
+import PhotoScanWizard from '@/components/teacherV3/PhotoScanWizard.vue'
+import AiProcessingPanel from '@/components/teacherV3/AiProcessingPanel.vue'
 
 const router = useRouter()
-const items = ref<V3ResourceItem[]>([])
+
+// ===== 状态 =====
+const showUpload = ref(false)
+const showScan = ref(false)
+const showAiPanel = ref(false)
+const viewMode = ref<'grid' | 'list'>('grid')
+const activeNav = ref('mine')
+const activeFolder = ref('')
+const typeFilter = ref('')
+const subjectFilter = ref('')
+const gradeFilter = ref('')
+const searchQuery = ref('')
+const sortBy = ref('updated')
+
+// ===== 数据 =====
 const recipes = ref<V3Recipe[]>([])
-const kindFilter = ref('')
-/* V3.2：分类增强 —— 类型分组 + 章节/课题筛选 + 关键词搜索 */
-const chapterFilter = ref('')
-const search = ref('')
+const resources = ref<Array<{
+  id: string
+  name: string
+  type: 'deck' | 'plan' | 'paper' | 'photo-bank' | 'video' | 'audio' | 'figure-recipe'
+  subject: string
+  chapter?: string
+  owner: string
+  updated_at: string
+  shared: boolean
+  size_bytes: number
+  status: 'ready' | 'processing' | 'failed'
+  tags?: string[]
+}>>([])
 
-const kinds = [
-  { id: 'deck', label: '课件' }, { id: 'plan', label: '教案' },
-  { id: 'figure-recipe', label: '配方' }, { id: 'photo-bank', label: '拍照题库' },
+// ===== 导航配置 =====
+const navItems = [
+  { key: 'mine', icon: '📁', label: '我的资源', count: 0 },
+  { key: 'school', icon: '🏫', label: '校本资源', count: 0 },
+  { key: 'public', icon: '🌐', label: '公共资源', count: 0 },
+  { key: 'starred', icon: '⭐', label: '收藏夹', count: 0 },
+  { key: 'recent', icon: '⏱️', label: '最近使用', count: 0 },
+  { key: 'trash', icon: '🗑️', label: '回收站', count: 0 },
 ]
-const kindCount = (id: string) => items.value.filter((i) => i.kind === id).length
-const chapterOptions = computed(() => [...new Set(items.value.map((i) => i.chapter || '').filter(Boolean))].sort())
-const baseFiltered = computed(() => items.value.filter((i) => {
-  if (kindFilter.value && i.kind !== kindFilter.value) return false
-  if (chapterFilter.value && (i.chapter || '') !== chapterFilter.value) return false
-  const kw = search.value.trim()
-  if (kw && !(i.name.includes(kw) || (i.chapter || '').includes(kw) || i.subject.includes(kw))) return false
-  return true
-}))
-/* 未选类型时按类型分组展示（分类一目了然）；选了类型就是平铺列表 */
-const groupedItems = computed(() => {
-  const map = new Map<string, V3ResourceItem[]>()
-  for (const it of baseFiltered.value) {
-    if (!map.has(it.kind)) map.set(it.kind, [])
-    map.get(it.kind)!.push(it)
+
+const folders = [
+  { id: 'f1', name: '高一数学', count: 24 },
+  { id: 'f2', name: '高二数学', count: 18 },
+  { id: 'f3', name: '高三复习', count: 32 },
+  { id: 'f4', name: '竞赛专题', count: 8 },
+]
+
+const typeTags = [
+  { id: 'deck', label: '课件' },
+  { id: 'plan', label: '教案' },
+  { id: 'paper', label: '试卷' },
+  { id: 'photo-bank', label: '拍照题库' },
+  { id: 'video', label: '视频' },
+  { id: 'audio', label: '音频' },
+  { id: 'figure-recipe', label: '构造配方' },
+]
+
+const subjectTags = ['数学', '语文', '英语', '物理', '化学', '生物', '历史', '地理', '政治']
+
+const grades = ['高一', '高二', '高三', '七年级', '八年级', '九年级']
+
+// ===== 计算属性 =====
+const currentNavTitle = computed(() => navItems.find((n) => n.key === activeNav.value)?.label || '我的资源')
+
+const filteredResources = computed(() => {
+  let list = resources.value
+  if (typeFilter.value) list = list.filter((r) => r.type === typeFilter.value)
+  if (subjectFilter.value) list = list.filter((r) => r.subject === subjectFilter.value)
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase()
+    list = list.filter((r) =>
+      r.name.toLowerCase().includes(q) ||
+      r.subject.toLowerCase().includes(q) ||
+      r.tags?.some((t) => t.toLowerCase().includes(q))
+    )
   }
-  return [...map.entries()].map(([kind, list]) => ({ kind, label: kinds.find((k) => k.id === kind)?.label || kind, list }))
+  // 排序
+  if (sortBy.value === 'name') list = [...list].sort((a, b) => a.name.localeCompare(b.name))
+  else if (sortBy.value === 'size') list = [...list].sort((a, b) => b.size_bytes - a.size_bytes)
+  return list
 })
-const filteredItems = computed(() => (kindFilter.value ? baseFiltered.value : groupedItems.value.flatMap((g) => g.list)))
 
-const kindIcon = (k: string) => ({ deck: '▤', plan: '✎', 'figure-recipe': '⚙', 'photo-bank': '📷' } as Record<string, string>)[k] || '•'
-
-onMounted(async () => {
-  const [r1, r2] = await Promise.all([
-    v3Api.catalog.resources().then((r) => r.data.items).catch(() => []),
-    v3Api.catalog.recipes().then((r) => r.data.items).catch(() => []),
-  ])
-  items.value = r1
-  recipes.value = r2
+const groupedResources = computed(() => {
+  const map = new Map<string, typeof resources.value>()
+  for (const r of filteredResources.value) {
+    if (!map.has(r.type)) map.set(r.type, [])
+    map.get(r.type)!.push(r)
+  }
+  const typeOrder = ['deck', 'plan', 'paper', 'photo-bank', 'video', 'audio', 'figure-recipe']
+  return typeOrder
+    .filter((t) => map.has(t))
+    .map((t) => ({
+      type: t,
+      label: typeTags.find((tag) => tag.id === t)?.label || t,
+      list: map.get(t)!,
+    }))
 })
+
+const processingCount = computed(() => resources.value.filter((r) => r.status === 'processing').length)
+
+// ===== 方法 =====
+function typeIcon(t: string): string {
+  const map: Record<string, string> = {
+    deck: '📽️', plan: '📝', paper: '📄', 'photo-bank': '📷',
+    video: '🎬', audio: '🎵', 'figure-recipe': '⚙️',
+  }
+  return map[t] || '📎'
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB'
+  return (bytes / 1024 / 1024 / 1024).toFixed(1) + ' GB'
+}
 
 function recipeSvg(r: V3Recipe): string {
   const presetId = r.category === 'conic' ? 'conic/ellipse-coordinate' : r.category === 'function' ? 'function/sine' : 'solid/cube-section'
@@ -161,29 +476,1043 @@ function recipeSvg(r: V3Recipe): string {
 function useRecipe(_r: V3Recipe) {
   void router.push('/teacher-v3/slides')
 }
-function openItem(it: V3ResourceItem) {
-  if (it.kind === 'deck' || it.kind === 'photo-bank') void router.push('/teacher-v3/slides')
-  else if (it.kind === 'plan') void router.push('/teacher-v3/prep')
+
+function openItem(it: typeof resources.value[0]) {
+  if (it.type === 'deck' || it.type === 'photo-bank') void router.push('/teacher-v3/slides')
+  else if (it.type === 'plan') void router.push('/teacher-v3/prep')
   else void router.push('/teacher-v3/slides')
 }
+
+function onScanComplete(data: { name: string; pages: number }) {
+  showScan.value = false
+  // 模拟添加到资源列表
+  resources.value.unshift({
+    id: 'scan-' + Date.now(),
+    name: data.name,
+    type: 'photo-bank',
+    subject: '数学',
+    chapter: '扫描入库',
+    owner: '我',
+    updated_at: '刚刚',
+    shared: false,
+    size_bytes: data.pages * 800 * 1024,
+    status: 'processing',
+    tags: ['拍照入库', `${data.pages}页`, '待解析'],
+  })
+}
+
+// ===== 初始化 Mock 数据 =====
+onMounted(async () => {
+  // 构造配方
+  try {
+    const r = await v3Api.catalog.recipes().then((r) => r.data.items).catch(() => [])
+    recipes.value = r
+  } catch { /* ignore */ }
+
+  // 资源 mock 数据
+  resources.value = [
+    {
+      id: 'r1', name: '《函数与导数》复习课件.pptx', type: 'deck',
+      subject: '数学', chapter: '高三一轮复习', owner: '张老师',
+      updated_at: '2小时前', shared: true, size_bytes: 45 * 1024 * 1024,
+      status: 'ready', tags: ['高三', '一轮复习', '函数', '导数'],
+    },
+    {
+      id: 'r2', name: '一元二次方程教案.docx', type: 'plan',
+      subject: '数学', chapter: '九年级上册', owner: '李老师',
+      updated_at: '昨天', shared: true, size_bytes: 2.3 * 1024 * 1024,
+      status: 'ready', tags: ['九年级', '一元二次方程', '优质课'],
+    },
+    {
+      id: 'r3', name: '期中数学试卷.pdf', type: 'paper',
+      subject: '数学', chapter: '高二期中', owner: '我',
+      updated_at: '3天前', shared: false, size_bytes: 8.5 * 1024 * 1024,
+      status: 'ready', tags: ['高二', '期中', '试卷'],
+    },
+    {
+      id: 'r4', name: '三角函数图像专题课件.pptx', type: 'deck',
+      subject: '数学', chapter: '高一必修四', owner: '王老师',
+      updated_at: '1周前', shared: true, size_bytes: 28 * 1024 * 1024,
+      status: 'ready', tags: ['高一', '三角函数', '图像'],
+    },
+    {
+      id: 'r5', name: '立体几何证明题集锦.pdf', type: 'paper',
+      subject: '数学', chapter: '高二必修二', owner: '我',
+      updated_at: '5天前', shared: false, size_bytes: 12 * 1024 * 1024,
+      status: 'processing', tags: ['高二', '立体几何', 'AI解析中'],
+    },
+    {
+      id: 'r6', name: '函数单调性微课.mp4', type: 'video',
+      subject: '数学', chapter: '高一必修一', owner: '赵老师',
+      updated_at: '2周前', shared: true, size_bytes: 156 * 1024 * 1024,
+      status: 'ready', tags: ['高一', '函数', '微课视频'],
+    },
+    {
+      id: 'r7', name: '2023高考数学真题.pdf', type: 'paper',
+      subject: '数学', chapter: '高考真题', owner: '我',
+      updated_at: '1个月前', shared: false, size_bytes: 5.2 * 1024 * 1024,
+      status: 'ready', tags: ['高考', '真题', '2023'],
+    },
+    {
+      id: 'r8', name: '英语听力专项训练.mp3', type: 'audio',
+      subject: '英语', chapter: '高三', owner: '陈老师',
+      updated_at: '3天前', shared: true, size_bytes: 45 * 1024 * 1024,
+      status: 'ready', tags: ['高三', '英语', '听力'],
+    },
+    {
+      id: 'r9', name: '物理实验演示课件.pptx', type: 'deck',
+      subject: '物理', chapter: '高二选修3-1', owner: '刘老师',
+      updated_at: '1周前', shared: true, size_bytes: 62 * 1024 * 1024,
+      status: 'ready', tags: ['高二', '物理', '实验'],
+    },
+    {
+      id: 'r10', name: '古诗文鉴赏教案.pdf', type: 'plan',
+      subject: '语文', chapter: '高二必修五', owner: '周老师',
+      updated_at: '4天前', shared: true, size_bytes: 3.8 * 1024 * 1024,
+      status: 'ready', tags: ['高二', '语文', '古诗文'],
+    },
+  ]
+
+  // 更新导航计数
+  navItems[0].count = resources.value.length
+  navItems[2].count = 128
+  navItems[3].count = 12
+  navItems[4].count = 8
+})
 </script>
 
 <style scoped>
-.tv3-recipe { display: flex; gap: 10px; border: 1px solid var(--tv3-line); border-radius: 12px; padding: 10px; background: #fff; transition: all 0.14s ease; }
-.tv3-recipe:hover { border-color: var(--tv3-gold-border); box-shadow: var(--tv3-shadow-gold); }
-.tv3-recipe__thumb {
-  width: 110px; height: 74px; border-radius: 8px; flex-shrink: 0;
-  background: #fbfcfe; border: 1px solid var(--tv3-line2); overflow: hidden;
+/* ==========================================================================
+   整体布局
+   ========================================================================== */
+.tv3-resources-v2 {
+  display: flex;
+  height: 100%;
+  background: var(--tv3-bg, #f5f7fa);
+  overflow: hidden;
 }
-.tv3-recipe__thumb :deep(svg) { width: 100%; height: 100%; }
-.tv3-recipe__body { flex: 1; min-width: 0; }
-.tv3-res { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--tv3-line); border-radius: 12px; background: #fff; }
-.tv3-res__icon {
-  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-  display: grid; place-items: center; font-size: 17px;
+
+/* ==========================================================================
+   左侧边栏
+   ========================================================================== */
+.rv2-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: #fff;
+  border-right: 1px solid var(--tv3-line2, #e5e9f0);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
-.tv3-res__icon[data-kind='deck'] { background: var(--tv3-primary-soft); color: var(--tv3-primary); }
-.tv3-res__icon[data-kind='plan'] { background: var(--tv3-ai-soft); color: var(--tv3-ai); }
-.tv3-res__icon[data-kind='figure-recipe'] { background: var(--tv3-gold-soft); color: var(--tv3-gold-deep); }
-.tv3-res__icon[data-kind='photo-bank'] { background: var(--tv3-amber-soft); color: var(--tv3-amber); }
+
+.rv2-sidebar__head {
+  display: flex;
+  align-items: center;
+  padding: 16px 14px;
+  gap: 8px;
+}
+
+.rv2-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.rv2-logo__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--tv3-gold, #d4a54a), var(--tv3-gold-deep, #b8862e));
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.rv2-logo__text {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tv3-ink, #1a2332);
+}
+
+.rv2-new-folder {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--tv3-line, #e5e9f0);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--tv3-ink3, #8899aa);
+  display: grid;
+  place-items: center;
+  transition: all .15s ease;
+}
+.rv2-new-folder:hover {
+  border-color: var(--tv3-gold, #d4a54a);
+  color: var(--tv3-gold, #d4a54a);
+  background: var(--tv3-gold-soft, #fdf6e8);
+}
+
+/* 一级导航 */
+.rv2-nav {
+  padding: 4px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rv2-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: all .15s ease;
+}
+.rv2-nav__item:hover {
+  background: var(--tv3-bg2, #f0f4f8);
+}
+.rv2-nav__item.is-active {
+  background: linear-gradient(135deg, var(--tv3-gold-soft, #fdf6e8), #fff);
+  border: 1px solid var(--tv3-gold-border, #e8d5a8);
+  font-weight: 600;
+}
+.rv2-nav__item.is-active .rv2-nav__label {
+  color: var(--tv3-gold-deep, #b8862e);
+}
+
+.rv2-nav__icon { font-size: 16px; flex-shrink: 0; }
+.rv2-nav__label {
+  flex: 1;
+  font-size: 13px;
+  color: var(--tv3-ink2, #4a5568);
+  min-width: 0;
+}
+.rv2-nav__count {
+  font-size: 11px;
+  color: var(--tv3-ink3, #8899aa);
+  background: var(--tv3-bg2, #f0f4f8);
+  padding: 1px 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.rv2-nav__item.is-active .rv2-nav__count {
+  background: var(--tv3-gold, #d4a54a);
+  color: #fff;
+}
+
+/* 分隔线 */
+.rv2-divider {
+  height: 1px;
+  background: var(--tv3-line, #e5e9f0);
+  margin: 10px 14px;
+}
+
+/* 区块 */
+.rv2-section {
+  padding: 0 10px 12px;
+}
+
+.rv2-section__head {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px 8px;
+}
+
+.rv2-section__title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tv3-ink3, #8899aa);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+
+.rv2-section__more {
+  border: none;
+  background: none;
+  font-size: 14px;
+  color: var(--tv3-ink3, #8899aa);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.rv2-section__more:hover { background: var(--tv3-bg2, #f0f4f8); }
+
+/* 文件夹列表 */
+.rv2-folders {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rv2-folder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all .15s ease;
+}
+.rv2-folder:hover { background: var(--tv3-bg2, #f0f4f8); }
+.rv2-folder.is-active {
+  background: var(--tv3-primary-soft, #e8f0fb);
+  color: var(--tv3-navy, #0f4787);
+}
+
+.rv2-folder__icon { font-size: 14px; flex-shrink: 0; }
+.rv2-folder__name {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--tv3-ink2, #4a5568);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rv2-folder.is-active .rv2-folder__name { color: var(--tv3-navy, #0f4787); font-weight: 600; }
+.rv2-folder__count {
+  font-size: 10.5px;
+  color: var(--tv3-ink3, #8899aa);
+  flex-shrink: 0;
+}
+
+/* 标签组 */
+.rv2-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 4px;
+}
+.rv2-tags--compact { gap: 4px; }
+
+.rv2-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--tv3-line, #e5e9f0);
+  background: #fff;
+  border-radius: 999px;
+  font-size: 11.5px;
+  cursor: pointer;
+  color: var(--tv3-ink2, #4a5568);
+  transition: all .15s ease;
+}
+.rv2-tag--sm { padding: 3px 8px; font-size: 11px; }
+.rv2-tag:hover {
+  border-color: var(--tv3-primary-border, #9dc3ea);
+  background: var(--tv3-primary-soft, #e8f0fb);
+}
+.rv2-tag.is-active {
+  border-color: var(--tv3-gold, #d4a54a);
+  background: linear-gradient(135deg, var(--tv3-gold-soft, #fdf6e8), #fff);
+  color: var(--tv3-gold-deep, #b8862e);
+  font-weight: 600;
+}
+
+.rv2-tag__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tv3-ink3, #8899aa);
+}
+.rv2-tag.is-active .rv2-tag__dot { background: var(--tv3-gold, #d4a54a); }
+
+/* ==========================================================================
+   主内容区
+   ========================================================================== */
+.rv2-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 顶部工具栏 */
+.rv2-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  background: #fff;
+  border-bottom: 1px solid var(--tv3-line2, #e5e9f0);
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.rv2-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.rv2-toolbar__title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--tv3-ink, #1a2332);
+  margin: 0;
+}
+
+.rv2-toolbar__count {
+  font-size: 12px;
+  color: var(--tv3-ink3, #8899aa);
+  background: var(--tv3-bg2, #f0f4f8);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.rv2-toolbar__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 搜索框 */
+.rv2-search {
+  position: relative;
+  width: 260px;
+}
+
+.rv2-search__icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: var(--tv3-ink3, #8899aa);
+  pointer-events: none;
+}
+
+.rv2-search__input {
+  width: 100%;
+  height: 34px;
+  padding: 0 30px 0 32px;
+  border: 1px solid var(--tv3-line, #e5e9f0);
+  border-radius: 8px;
+  font-size: 12.5px;
+  background: var(--tv3-bg2, #f0f4f8);
+  outline: none;
+  transition: all .15s ease;
+}
+.rv2-search__input:focus {
+  border-color: var(--tv3-navy, #0f4787);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(15, 71, 135, 0.08);
+}
+
+.rv2-search__clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: var(--tv3-ink3, #8899aa);
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  opacity: 0.6;
+}
+.rv2-search__clear:hover { opacity: 1; }
+
+/* 下拉选择 */
+.rv2-select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--tv3-line, #e5e9f0);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--tv3-ink2, #4a5568);
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  transition: all .15s ease;
+}
+.rv2-select:hover { border-color: var(--tv3-primary-border, #9dc3ea); }
+.rv2-select:focus {
+  border-color: var(--tv3-navy, #0f4787);
+  box-shadow: 0 0 0 3px rgba(15, 71, 135, 0.08);
+}
+
+/* 视图切换 */
+.rv2-view-toggle {
+  display: flex;
+  border: 1px solid var(--tv3-line, #e5e9f0);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rv2-view-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--tv3-ink3, #8899aa);
+  display: grid;
+  place-items: center;
+  transition: all .15s ease;
+}
+.rv2-view-btn:hover { background: var(--tv3-bg2, #f0f4f8); color: var(--tv3-ink2, #4a5568); }
+.rv2-view-btn.is-active {
+  background: var(--tv3-primary-soft, #e8f0fb);
+  color: var(--tv3-navy, #0f4787);
+}
+
+/* 按钮 */
+.rv2-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--tv3-line, #e5e9f0);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  background: #fff;
+  color: var(--tv3-ink2, #4a5568);
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+.rv2-btn:hover {
+  border-color: var(--tv3-primary-border, #9dc3ea);
+  background: var(--tv3-primary-soft, #e8f0fb);
+  color: var(--tv3-navy, #0f4787);
+}
+.rv2-btn--primary {
+  background: linear-gradient(135deg, var(--tv3-gold, #d4a54a), var(--tv3-gold-deep, #b8862e));
+  border-color: var(--tv3-gold, #d4a54a);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(212, 165, 74, 0.3);
+}
+.rv2-btn--primary:hover {
+  background: linear-gradient(135deg, var(--tv3-gold-deep, #b8862e), var(--tv3-gold, #d4a54a));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(212, 165, 74, 0.4);
+  transform: translateY(-1px);
+}
+.rv2-btn--ghost { background: transparent; }
+.rv2-btn--sm { height: 28px; padding: 0 10px; font-size: 11.5px; }
+.rv2-btn--gold {
+  background: linear-gradient(135deg, var(--tv3-gold-soft, #fdf6e8), #fff);
+  border-color: var(--tv3-gold-border, #e8d5a8);
+  color: var(--tv3-gold-deep, #b8862e);
+}
+.rv2-btn--icon {
+  position: relative;
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+}
+.rv2-btn__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--tv3-rose, #e05a5a);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+}
+
+/* 快捷操作区 */
+.rv2-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 16px 20px 8px;
+}
+
+.rv2-quick-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--tv3-line, #e5e9f0);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: all .2s ease;
+  text-align: left;
+}
+.rv2-quick-card:hover {
+  border-color: var(--tv3-primary-border, #9dc3ea);
+  box-shadow: 0 4px 16px rgba(15, 71, 135, 0.1);
+  transform: translateY(-2px);
+}
+
+.rv2-quick-card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--tv3-primary-soft, #e8f0fb);
+  color: var(--tv3-navy, #0f4787);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.rv2-quick-card--scan .rv2-quick-card__icon {
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  color: #0369a1;
+}
+.rv2-quick-card--folder .rv2-quick-card__icon {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #b45309;
+}
+.rv2-quick-card--ai .rv2-quick-card__icon {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #6d28d9;
+}
+
+.rv2-quick-card__title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--tv3-ink, #1a2332);
+}
+
+.rv2-quick-card__desc {
+  font-size: 11.5px;
+  color: var(--tv3-ink3, #8899aa);
+}
+
+/* 区块卡片 */
+.rv2-section-card {
+  margin: 12px 20px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid var(--tv3-line2, #e5e9f0);
+  border-radius: 12px;
+}
+
+.rv2-section-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.rv2-section-card__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tv3-ink, #1a2332);
+}
+
+.rv2-section-card__sub {
+  font-size: 12px;
+  color: var(--tv3-ink3, #8899aa);
+  margin-left: 8px;
+}
+
+.rv2-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.rv2-badge--gold {
+  background: var(--tv3-gold-soft, #fdf6e8);
+  color: var(--tv3-gold-deep, #b8862e);
+  border: 1px solid var(--tv3-gold-border, #e8d5a8);
+}
+
+/* 配方卡片 */
+.rv2-recipes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+}
+
+.rv2-recipe {
+  display: flex;
+  gap: 10px;
+  border: 1px solid var(--tv3-line, #e5e9f0);
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+  transition: all .15s ease;
+}
+.rv2-recipe:hover {
+  border-color: var(--tv3-gold-border, #e8d5a8);
+  box-shadow: 0 2px 10px rgba(212, 165, 74, 0.15);
+}
+
+.rv2-recipe__thumb {
+  width: 100px;
+  height: 68px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: #fbfcfe;
+  border: 1px solid var(--tv3-line2, #e5e9f0);
+  overflow: hidden;
+}
+.rv2-recipe__thumb :deep(svg) { width: 100%; height: 100%; }
+
+.rv2-recipe__body { flex: 1; min-width: 0; }
+
+.rv2-recipe__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tv3-ink, #1a2332);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rv2-recipe__meta {
+  font-size: 11px;
+  color: var(--tv3-ink3, #8899aa);
+  margin-top: 2px;
+}
+
+.rv2-recipe__note {
+  font-size: 11.5px;
+  color: var(--tv3-ink2, #4a5568);
+  line-height: 1.5;
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rv2-recipe__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.rv2-recipe__params {
+  font-size: 10.5px;
+  color: var(--tv3-ink3, #8899aa);
+}
+
+.rv2-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid var(--tv3-line, #e5e9f0);
+  color: var(--tv3-ink3, #8899aa);
+  flex-shrink: 0;
+}
+.rv2-tag--sm { padding: 1px 6px; font-size: 9.5px; }
+.rv2-tag--ok {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+/* ==========================================================================
+   资源列表区
+   ========================================================================== */
+.rv2-resources {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px 20px;
+}
+
+.rv2-res-group { margin-bottom: 20px; }
+
+.rv2-res-group__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-top: 4px;
+}
+
+.rv2-res-group__label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--tv3-ink2, #4a5568);
+  padding: 3px 10px;
+  background: var(--tv3-bg2, #f0f4f8);
+  border-radius: 999px;
+}
+.rv2-res-group__label[data-type='deck'] { background: #e8f0fb; color: #0f4787; }
+.rv2-res-group__label[data-type='plan'] { background: #e6f5f3; color: #0e9488; }
+.rv2-res-group__label[data-type='paper'] { background: #fdf3e3; color: #b45309; }
+.rv2-res-group__label[data-type='photo-bank'] { background: #f3e8ff; color: #6d28d9; }
+.rv2-res-group__label[data-type='video'] { background: #fdf1ef; color: #b1382c; }
+.rv2-res-group__label[data-type='audio'] { background: #ecfdf5; color: #047857; }
+
+.rv2-res-group__count {
+  font-size: 11px;
+  color: var(--tv3-ink3, #8899aa);
+}
+
+/* 网格视图 */
+.rv2-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.rv2-res-card {
+  background: #fff;
+  border: 1px solid var(--tv3-line, #e5e9f0);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.rv2-res-card:hover {
+  border-color: var(--tv3-primary-border, #9dc3ea);
+  box-shadow: 0 4px 16px rgba(15, 71, 135, 0.12);
+  transform: translateY(-2px);
+}
+
+.rv2-res-card__thumb {
+  height: 120px;
+  background: linear-gradient(135deg, #f0f4f8, #e2e8f0);
+  display: grid;
+  place-items: center;
+  position: relative;
+  font-size: 42px;
+}
+.rv2-res-card__thumb[data-type='deck'] { background: linear-gradient(135deg, #e8f0fb, #c9def4); color: #0f4787; }
+.rv2-res-card__thumb[data-type='plan'] { background: linear-gradient(135deg, #e6f5f3, #b9e0dc); color: #0e9488; }
+.rv2-res-card__thumb[data-type='paper'] { background: linear-gradient(135deg, #fdf3e3, #f3ddb4); color: #b45309; }
+.rv2-res-card__thumb[data-type='photo-bank'] { background: linear-gradient(135deg, #f3e8ff, #d8c9f5); color: #6d28d9; }
+.rv2-res-card__thumb[data-type='video'] { background: linear-gradient(135deg, #fdf1ef, #eec7c2); color: #b1382c; }
+.rv2-res-card__thumb[data-type='audio'] { background: linear-gradient(135deg, #ecfdf5, #a7f3d0); color: #047857; }
+.rv2-res-card__thumb[data-type='figure-recipe'] { background: linear-gradient(135deg, #fdf6e8, #e8d5a8); color: #b8862e; }
+
+.rv2-res-card__icon {
+  font-size: 38px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.rv2-res-card__status {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 8px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--tv3-gold-deep, #b8862e);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(4px);
+}
+
+.rv2-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--tv3-gold, #d4a54a);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: rv2-spin 0.8s linear infinite;
+}
+@keyframes rv2-spin { to { transform: rotate(360deg); } }
+
+.rv2-res-card__body {
+  padding: 10px 12px 12px;
+}
+
+.rv2-res-card__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tv3-ink, #1a2332);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rv2-res-card__meta {
+  font-size: 11px;
+  color: var(--tv3-ink3, #8899aa);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rv2-res-card__footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--tv3-ink3, #8899aa);
+}
+
+.rv2-res-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.rv2-mini-tag {
+  padding: 1px 6px;
+  background: var(--tv3-bg2, #f0f4f8);
+  color: var(--tv3-ink2, #4a5568);
+  font-size: 10px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.rv2-mini-tag--more {
+  background: transparent;
+  color: var(--tv3-ink3, #8899aa);
+}
+
+/* 列表视图 */
+.rv2-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rv2-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid var(--tv3-line, #e5e9f0);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.rv2-list-item:hover {
+  border-color: var(--tv3-primary-border, #9dc3ea);
+  background: var(--tv3-primary-soft, #e8f0fb);
+}
+
+.rv2-list-item__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  background: var(--tv3-bg2, #f0f4f8);
+}
+.rv2-list-item__icon[data-type='deck'] { background: #e8f0fb; color: #0f4787; }
+.rv2-list-item__icon[data-type='plan'] { background: #e6f5f3; color: #0e9488; }
+.rv2-list-item__icon[data-type='paper'] { background: #fdf3e3; color: #b45309; }
+.rv2-list-item__icon[data-type='photo-bank'] { background: #f3e8ff; color: #6d28d9; }
+.rv2-list-item__icon[data-type='video'] { background: #fdf1ef; color: #b1382c; }
+.rv2-list-item__icon[data-type='audio'] { background: #ecfdf5; color: #047857; }
+
+.rv2-list-item__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.rv2-list-item__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tv3-ink, #1a2332);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rv2-list-item__meta {
+  font-size: 11.5px;
+  color: var(--tv3-ink3, #8899aa);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rv2-list-item__tags {
+  display: flex;
+  gap: 4px;
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.rv2-list-item__size {
+  font-size: 11.5px;
+  color: var(--tv3-ink3, #8899aa);
+  font-family: var(--tv3-font-num, monospace);
+  width: 70px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.rv2-list-item__date {
+  font-size: 11.5px;
+  color: var(--tv3-ink3, #8899aa);
+  width: 70px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.rv2-list-item__shared {
+  border: none;
+  background: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+/* 空状态 */
+.rv2-empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.rv2-empty__icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.rv2-empty__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tv3-ink2, #4a5568);
+  margin-bottom: 6px;
+}
+
+.rv2-empty__desc {
+  font-size: 12.5px;
+  color: var(--tv3-ink3, #8899aa);
+  margin-bottom: 16px;
+}
 </style>

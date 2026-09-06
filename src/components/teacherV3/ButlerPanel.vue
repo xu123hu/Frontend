@@ -17,11 +17,14 @@
         <span>正在跟随：{{ ctxLabel }}</span>
         <span class="tv3-butler__ctx-arrow" :class="{ open: ctxOpen }">▾</span>
       </button>
-      <div v-if="ctxOpen" class="tv3-butler__ctx-detail">
+      <div v-if="ctxOpen" class="tv3-butler__ctx-detail" data-testid="tv3-butler-ctx-detail">
         <div>页面：{{ ctxLabel }}</div>
-        <div v-if="context.deck_id">课件：{{ context.deck_id }}</div>
-        <div v-if="context.selection">选中：{{ context.selection.summary }}</div>
-        <div class="tv3-butler__ctx-note">以上信息随每条消息自动发送给管家，用于结合当前页面作答</div>
+        <div>班级：{{ context.class_id || '尚未选择' }}</div>
+        <div>课题/工件：{{ ctxTopic || '尚未打开' }}</div>
+        <div>课件：{{ ctxSlideLabel || '尚未打开（打开后可插入/优化）' }}</div>
+        <div>选中对象：{{ context.selection ? context.selection.summary : '未选中（点选画布元素/文字后跟随）' }}</div>
+        <div v-if="ctxExtra">当前状态：{{ ctxExtra }}</div>
+        <div class="tv3-butler__ctx-note">以上信息随每条消息自动发送给管家；未采集项如实标注，不用演示值冒充</div>
       </div>
 
       <!-- 对话流 -->
@@ -29,8 +32,8 @@
         <div v-if="!messages.length" class="tv3-butler__empty">
           <div class="tv3-butler__empty-title">您好，李老师</div>
           <div>可以直接吩咐我做：</div>
-          <div class="tv3-butler__chips">
-            <button v-for="q in quickAsks" :key="q" class="tv3-butler__chip" type="button" @click="ask(q)">{{ q }}</button>
+          <div class="tv3-butler__chips" data-testid="tv3-butler-chips">
+            <button v-for="q in quickAsks" :key="q.label" class="tv3-butler__chip" type="button" :data-testid="`tv3-butler-chip-${q.action || 'ask'}`" @click="onQuick(q)">{{ q.label }}</button>
           </div>
         </div>
 
@@ -53,11 +56,21 @@
               >
                 <div class="tv3-butler__formula" v-html="renderLatex(c.latex, true)" />
                 <div class="tv3-butler__card-meta">
-                  <span class="tv3-butler__conf" :class="{ low: c.confidence < 0.8 }">置信 {{ Math.round(c.confidence * 100) }}%</span>
+                  <!-- B0 诚实化：mock 解析不显示伪造的精确置信度；插入按钮仅在存在课件上下文时可用 -->
+                  <span class="tv3-butler__conf" title="原型为确定性解析演示，未接入真实识别服务">解析候选（演示）</span>
                   <span v-if="c.source === 'voice'" class="tv3-butler__src">🎤 语音</span>
                   <span v-else-if="c.source === 'photo'" class="tv3-butler__src">📷 识别</span>
                   <span class="tv3-butler__spacer" />
-                  <button class="tv3-butler__mini" type="button" title="插入当前课件页" @click="insertFormula(c)">插入本页</button>
+                  <!-- B6 §10.3：插入前预览目标（课件+页码），确认才执行，结果有回执 -->
+                  <template v-if="context.deck_id">
+                    <template v-if="insertConfirm === c.id">
+                      <span class="tv3-butler__conf" style="color: #b45309">到 {{ context.deck_title || '当前课件' }} 第 {{ (context.slide_index ?? 0) + 1 }} 页</span>
+                      <button class="tv3-butler__mini tv3-butler__mini--go" type="button" :data-testid="`tv3-butler-insert-confirm-${c.id}`" @click="confirmInsert(c)">✓ 确认</button>
+                      <button class="tv3-butler__mini" type="button" @click="insertConfirm = ''">取消</button>
+                    </template>
+                    <button v-else class="tv3-butler__mini" type="button" title="插入当前课件页（先预览目标）" @click="insertConfirm = c.id">插入本页</button>
+                  </template>
+                  <button v-else class="tv3-butler__mini" type="button" disabled title="尚未打开课件：请先在课件工坊打开一份课件，或把卡片直接拖入画布">未打开课件</button>
                 </div>
                 <div v-if="c.alternatives?.length" class="tv3-butler__alts">备选：{{ c.alternatives.join('　') }}</div>
               </div>
@@ -87,6 +100,17 @@
               >
                 <div class="tv3-butler__card-title">→ {{ c.title }}</div>
                 <div class="tv3-butler__card-body" v-if="c.note">{{ c.note }}</div>
+              </button>
+
+              <!-- C2 工具卡：AI 调用伴随资源台 / 数学绘图 -->
+              <button
+                v-for="c in toolCards(m)" :key="c.id"
+                class="tv3-butler__card tv3-butler__card--link" type="button"
+                :data-testid="`tv3-butler-card-tool-${c.tool}`"
+                @click="openToolCard(c)"
+              >
+                <div class="tv3-butler__card-title">{{ c.tool === 'resource' ? '📚' : '📐' }} {{ c.title }}</div>
+                <div class="tv3-butler__card-body" v-if="c.summary">{{ c.summary }}</div>
               </button>
 
               <!-- 搜索引用 -->
@@ -169,6 +193,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { v3Api } from '@/api/teacherV3'
 import { renderLatex, renderRich } from '@/components/mathx/latex'
 import { useToastStore } from '@/stores/toast'
+import { useTv3Context, contextBelongsTo, logDecision, decisionLog } from '@/stores/teacherContext'
 import type { V3ButlerAction, V3ButlerCard, V3ButlerContext, V3ButlerMessage } from '@/types/teacherV3'
 
 type Msg = V3ButlerMessage & { thinking?: string; toolLines?: string[]; images?: string[] }
@@ -200,20 +225,90 @@ const ROUTE_TITLES: Record<string, string> = {
   '/teacher-v3/bank': '题库', '/teacher-v3/quiz': '组卷中心', '/teacher-v3/assign': '作业与批改',
   '/teacher-v3/classroom': '课堂互动', '/teacher-v3/insights': '学情洞察', '/teacher-v3/resources': '资源中心',
 }
-const context = computed<V3ButlerContext>(() => ({
-  route: route.path,
-  route_title: ROUTE_TITLES[route.path] || '教师工作台',
-  deck_id: typeof route.query.deck === 'string' ? route.query.deck : undefined,
-  slide_index: 0,
-}))
+/* B6：上下文 = 路由 + 各视图实时写入的工件上下文（teacherContext）。
+   route 不匹配时工件字段视为未采集（显示尚未打开/未选择，不用演示值冒充）。 */
+const ctxStore = useTv3Context()
+/* 本地扩展视图类型：shared V3ButlerContext 不扩字段（IFC-PRODUCT-02 登记中）；发送时按需截断 */
+interface ButlerCtxView extends V3ButlerContext { deck_title?: string; slide_count?: number; class_id?: string }
+const context = computed<ButlerCtxView>(() => {
+  const trusted = contextBelongsTo(route.path)
+  const deckId = typeof route.query.deck === 'string' ? route.query.deck : (trusted ? ctxStore.deck_id : undefined)
+  return {
+    route: route.path,
+    route_title: ROUTE_TITLES[route.path] || '教师工作台',
+    deck_id: deckId,
+    deck_title: trusted ? ctxStore.deck_title : undefined,
+    slide_index: trusted ? ctxStore.slide_index : undefined,
+    slide_count: trusted ? ctxStore.slide_count : undefined,
+    selection: trusted && ctxStore.selection ? { ...ctxStore.selection, type: ctxStore.selection.type as any } : undefined,
+    class_id: trusted && ctxStore.class_name ? ctxStore.class_name : undefined,
+  }
+})
+const ctxTopic = computed(() => (contextBelongsTo(route.path) ? ctxStore.topic : undefined))
+const ctxExtra = computed(() => (contextBelongsTo(route.path) ? ctxStore.extra : undefined))
+const ctxSlideLabel = computed(() => {
+  if (!context.value.deck_id) return undefined
+  const idx = context.value.slide_index
+  const n = context.value.slide_count
+  return (context.value.deck_title || context.value.deck_id) + (idx !== undefined ? ' · 第 ' + (idx + 1) + (n ? '/' + n : '') + ' 页' : '')
+})
 const ctxLabel = computed(() => context.value.route_title || context.value.route)
 
-const quickAsks = ['帮我做一个《椭圆及其标准方程》的课件', '椭圆的定义是什么？（联网查最新教学资料）', '根号下x平方加y平方', '上传题目照片，说“存入题库”']
+/* B6 §10.4：快捷动作随页面变化，且每条都做真实的事（事件派发给页面 / 带上下文跳转），不是换位置的聊天框 */
+interface QuickAsk { label: string; action?: string; ask?: string }
+const QUICK_BY_ROUTE: Record<string, QuickAsk[]> = {
+  '/teacher-v3/prep': [
+    { label: '✎ 打开数学输入台', action: 'open-dock' },
+    { label: '◎ 目标覆盖检查', action: 'trace-check' },
+    { label: '✦ AI 起草新教案', action: 'new-plan' },
+  ],
+  '/teacher-v3/slides': [
+    { label: '🩺 可讲性体检', action: 'run-check' },
+    { label: '＋ 从题库插入题目', action: 'open-bank' },
+    { label: '✦ AI 优化本页', action: 'ai-element' },
+  ],
+  '/teacher-v3/quiz': [
+    { label: '📋 发布前清单', action: 'publish-check' },
+    { label: '📷 扫描入库', action: 'scan-open' },
+  ],
+  '/teacher-v3/assign': [
+    { label: '✦ 生成讲评课件', action: 'gen-review' },
+  ],
+  '/teacher-v3/bank': [{ label: '→ 带筛选去组卷', action: 'goto-quiz' }],
+  '/teacher-v3/classroom': [{ label: '🖥 打开讲台模式', action: 'podium' }],
+  '/teacher-v3/insights': [{ label: '✎ 把薄弱点纳入下一课备课', action: 'goto-prep' }],
+  '/teacher-v3/resources': [{ label: '⚙ 打开构造配方库', action: 'goto-slides' }],
+  '/teacher-v3/today': [
+    { label: '→ 备课中心', action: 'goto-prep' },
+    { label: '→ 课件工坊', action: 'goto-slides' },
+  ],
+}
+const quickAsks = computed<QuickAsk[]>(() => QUICK_BY_ROUTE[route.path] || [
+  { label: '帮我做一个《椭圆及其标准方程》的课件', ask: '帮我做一个《椭圆及其标准方程》的课件' },
+  { label: '根号下x平方加y平方', ask: '根号下x平方加y平方' },
+])
+function onQuick(q: QuickAsk) {
+  if (q.ask) { ask(q.ask); return }
+  if (!q.action) return
+  if (q.action.startsWith('goto-')) {
+    const map: Record<string, string> = { 'goto-quiz': '/teacher-v3/quiz', 'goto-prep': '/teacher-v3/prep', 'goto-slides': '/teacher-v3/slides' }
+    void router.push(map[q.action] || route.path)
+    return
+  }
+  window.dispatchEvent(new CustomEvent('tv3-butler-quick', { detail: { action: q.action } }))
+  logDecision('execute', '快捷动作 ' + q.action)
+}
 
 /* ---------- 卡片过滤 ---------- */
 const formulaCards = (m: Msg) => (m.cards || []).filter((c): c is Extract<V3ButlerCard, { type: 'formula' }> => c.type === 'formula')
 const actionCards = (m: Msg) => (m.cards || []).filter((c): c is Extract<V3ButlerCard, { type: 'action' }> => c.type === 'action')
 const linkCards = (m: Msg) => (m.cards || []).filter((c): c is Extract<V3ButlerCard, { type: 'link' }> => c.type === 'link')
+const toolCards = (m: Msg) => (m.cards || []).filter((c): c is Extract<V3ButlerCard, { type: 'tool' }> => c.type === 'tool')
+function openToolCard(c: Extract<V3ButlerCard, { type: 'tool' }>) {
+  /* C2：AI 调用工具——让伴随资源台/数学绘图带上下文打开，而不是在聊天里输出一堆题目 */
+  window.dispatchEvent(new CustomEvent('tv3-open-companion', { detail: { tool: c.tool } }))
+  toast.info(c.tool === 'resource' ? '伴随资源台已打开：候选按当前上下文给出，插入需你确认' : '数学绘图已打开：完成后插入当前工作位置')
+}
 
 /* ---------- 对话发送（SSE） ---------- */
 function ask(q: string) { input.value = q; void send() }
@@ -231,7 +326,7 @@ async function send() {
   scrollToBottom()
   try {
     sseCtrl = v3Api.butler.chat(
-      { message: text, context: context.value, images: sentImages.length ? sentImages : undefined, web_search: webSearch.value, kb_search: kbSearch.value },
+      { message: text, context: context.value as V3ButlerContext, images: sentImages.length ? sentImages : undefined, web_search: webSearch.value, kb_search: kbSearch.value },
       (event, data) => handleEvent(butlerMsg, event, data),
     )
     await sseCtrl.finished
@@ -322,6 +417,13 @@ function onFormulaDrag(ev: DragEvent, c: Extract<V3ButlerCard, { type: 'formula'
   )
 }
 /** 插入当前课件页：画布在工作台内嵌层级，用全局事件送达（SlidesView 监听后落布并提示结果） */
+/* B6：插入确认状态 + 决策记录（仅本机 localStorage，不入库） */
+const insertConfirm = ref('')
+function confirmInsert(c: Extract<V3ButlerCard, { type: 'formula' }>) {
+  insertFormula(c)
+  insertConfirm.value = ''
+  logDecision('execute', '管家公式卡插入当前课件页')
+}
 function insertFormula(c: Extract<V3ButlerCard, { type: 'formula' }>) {
   window.dispatchEvent(new CustomEvent('tv3-butler-insert', {
     detail: { type: 'formula', latex: c.latex, width: 460, height: 56, font_size: 24, teacher_confirmed: false },

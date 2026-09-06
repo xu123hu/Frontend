@@ -288,9 +288,11 @@
  * 入库双通道：拍照原样入库（图片题，不转文字避免出错）+ 自编结构化录入（$..$ 公式）。
  * 专题夹是「引用」不是「移动」：题目挂树上，夹子存引用（可跨知识点收集，删夹不影响题目）。
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { v3Api, type V3QuizQuestion, type V3KpTreeNode, type V3QuestionFolder } from '@/api/teacherV3'
 import { renderLatex } from '@/components/mathx/latex'
+import { updateTv3Context } from '@/stores/teacherContext'
+import { setReceipt, registerUndo } from '@/stores/companion'
 
 interface TreeItem { id: string; name: string; depth: number; leaf: boolean; codes: string[] | null }
 
@@ -399,11 +401,54 @@ async function loadFolders() {
 
 onMounted(async () => {
   await Promise.all([loadQuestions(), loadFolders()])
+  updateTv3Context({ route: '/teacher-v3/bank', topic: '题库', extra: '题库列表 · 绘图可插入为题图' })
   try {
     const tr = await v3Api.catalog.quizKpTree()
     tree.value = tr.data.tree
     if (kpLeafOptions.value.length) { scanKpCode.value = kpLeafOptions.value[0].code; createForm.value.kp_code = kpLeafOptions.value[0].code }
   } catch { /* mock */ }
+})
+
+/* ---------- C2 伴随工具层：绘图台插入 → 题图原样入库（与拍照入库同一通道，可撤销） ---------- */
+let companionSeqDone = ''
+let lastInsertedId = ''
+async function onCompanionInsert(ev: Event) {
+  const d = (ev as CustomEvent).detail as { reqId: string; kind: string; draw?: { type: string; src?: string } } | undefined
+  if (!d || d.reqId === companionSeqDone) return
+  if (d.kind === 'figure' && d.draw?.type === 'image' && d.draw.src) {
+    try {
+      const r = await v3Api.catalog.quizScanImport({ src: d.draw.src, as_image: true, kp_code: 'DRAW-01', kp_name: '绘图插入' })
+      const q = r.data as V3QuizQuestion
+      questions.value.unshift(q)
+      companionSeqDone = d.reqId
+      lastInsertedId = q.id
+      setReceipt({ ok: true, message: `已把绘图落为题图入库（${q.kp_name} · 图片题，原样保留不强转文字）`, locationLabel: '题库列表顶部', undoLabel: '撤销' })
+      registerUndo('撤销', async () => {
+        questions.value = questions.value.filter((x) => x.id !== q.id)
+        try { await v3Api.catalog.quizRemove(q.id) } catch { /* mock */ }
+      })
+      window.dispatchEvent(new CustomEvent('tv3-companion-inserted', { detail: { reqId: d.reqId, handled: true } }))
+    } catch {
+      window.dispatchEvent(new CustomEvent('tv3-companion-inserted', { detail: { reqId: d.reqId, handled: false } }))
+    }
+    return
+  }
+  window.dispatchEvent(new CustomEvent('tv3-companion-inserted', { detail: { reqId: d.reqId, handled: false } }))
+}
+function onCompanionLocateBank() {
+  if (!lastInsertedId) return
+  Promise.resolve().then(() => {
+    const rows = document.querySelectorAll('.tv3-qrow')
+    rows[0]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  })
+}
+onMounted(() => {
+  window.addEventListener('tv3-companion-insert', onCompanionInsert as EventListener)
+  window.addEventListener('tv3-companion-locate', onCompanionLocateBank as EventListener)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('tv3-companion-insert', onCompanionInsert as EventListener)
+  window.removeEventListener('tv3-companion-locate', onCompanionLocateBank as EventListener)
 })
 
 function collectCodes(nodes: V3KpTreeNode[]): string[] {

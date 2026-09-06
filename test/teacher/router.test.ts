@@ -5,11 +5,12 @@ describe('teacher v3 router contract', () => {
   const v3Paths = [
     '/teacher-v3/today', '/teacher-v3/prep', '/teacher-v3/slides', '/teacher-v3/bank', '/teacher-v3/quiz',
     '/teacher-v3/assign', '/teacher-v3/classroom', '/teacher-v3/insights', '/teacher-v3/resources',
+    '/teacher-v3/prep-templates',
   ]
 
-  it('defines exactly the 9 teacher-v3 workspaces nested under TeacherV3Layout', () => {
+  it('defines exactly the 10 teacher-v3 workspaces nested under TeacherV3Layout', () => {
     const v3Routes = router.getRoutes().filter((r) => r.meta?.teacherV3)
-    expect(v3Routes.length).toBe(9)
+    expect(v3Routes.length).toBe(10)
     const found = new Set(v3Routes.map((r) => r.path))
     for (const p of v3Paths) expect(found.has(p), `missing ${p}`).toBe(true)
     for (const r of v3Routes) {

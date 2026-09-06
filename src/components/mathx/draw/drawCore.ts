@@ -12,6 +12,7 @@ export type V3DrawInsert =
   | { type: 'functionPlot'; expr: string; params: Record<string, { value: number; min: number; max: number; step: number }>; domain: [number, number] }
   | { type: 'formula'; latex: string }
   | { type: 'image'; src: string; records: V3DrawRecord[]; aspect: number }
+  | { type: 'geometry'; preset_id: string; params: Record<string, number>; label: string }
 
 function dist(a: Pt, b: Pt): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1])

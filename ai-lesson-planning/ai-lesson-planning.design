@@ -1,0 +1,358 @@
+{
+  "data": [
+    {
+      "id": "page-home",
+      "title": "AI 对话首页",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1757160000000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 991,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-b6437b4a",
+          "measuredAt": 1788692189072
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/home.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-ai-home-agent",
+      "title": "AI 智能体主首页",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788722400000,
+      "canvasData": {
+        "x": -1416,
+        "y": 1692.5,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1602,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-552fa4ae",
+          "measuredAt": 1788698793154
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/ai-home-agent.html",
+        "interactions": [],
+        "supersedesPageId": "page-home"
+      }
+    },
+    {
+      "id": "page-workshop-home",
+      "title": "课件工坊首页·AI 输入重构",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788726000000,
+      "canvasData": {
+        "x": 0,
+        "y": 1704,
+        "group": 1,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1290,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-8cd74ce1",
+          "measuredAt": 1788702796663
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/workshop-home.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-workshop-outline",
+      "title": "大纲确认与编辑",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788726000000,
+      "canvasData": {
+        "x": 480,
+        "y": 1704,
+        "group": 1,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1207,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-f167f5a6",
+          "measuredAt": 1788702796663
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/workshop-outline.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-workshop-template",
+      "title": "模板选择·统一画廊",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788726000000,
+      "canvasData": {
+        "x": 984,
+        "y": 1704,
+        "group": 1,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-c31842b5",
+          "measuredAt": 1788702796663
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/workshop-template.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-workshop-photo",
+      "title": "拍照出课件·识别确认",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788726000000,
+      "canvasData": {
+        "x": 1488,
+        "y": 1704,
+        "group": 1,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 977,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-8d4012e7",
+          "measuredAt": 1788702796663
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/workshop-photo.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-workshop-from-plan",
+      "title": "教案直通·结构映射",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788726000000,
+      "canvasData": {
+        "x": 1992,
+        "y": 1692.5,
+        "group": 1,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 979,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-e715d4f6",
+          "measuredAt": 1788702796663
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/workshop-from-plan.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-workshop-generating",
+      "title": "逐页生成进度",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788726000000,
+      "canvasData": {
+        "x": 2496,
+        "y": 1692.5,
+        "group": 1,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-dfbb0edd",
+          "measuredAt": 1788702796663
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/workshop-generating.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-workshop-editor",
+      "title": "课件编辑器·工具球收纳",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788726000000,
+      "canvasData": {
+        "x": 3000,
+        "y": 1692.5,
+        "group": 1,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-604e5c5e",
+          "measuredAt": 1788702796663
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/workshop-editor.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-textbook-select",
+      "title": "从教材开始",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1757160000000,
+      "canvasData": {
+        "x": 480,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-5259337d",
+          "measuredAt": 1788692189072
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/textbook-select.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-upload-materials",
+      "title": "上传资料备课",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1757160000000,
+      "canvasData": {
+        "x": 960,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-3806c9e1",
+          "measuredAt": 1788692189072
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/upload-materials.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-template-library",
+      "title": "教案模板库",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1757160000000,
+      "canvasData": {
+        "x": 1428,
+        "y": -24,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-f3b36b0f",
+          "measuredAt": 1788693746655
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/template-library.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-ai-generating",
+      "title": "AI生成与大纲确认",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1757160000000,
+      "canvasData": {
+        "x": 1920,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 3433,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-ba81237a",
+          "measuredAt": 1788692214118
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/ai-generating.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-editor",
+      "title": "备课编辑器",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1757160000000,
+      "canvasData": {
+        "x": 2400,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-746fe759",
+          "measuredAt": 1788692214118
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/editor.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-editor-resources",
+      "title": "资源推荐展开态",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1757160000000,
+      "canvasData": {
+        "x": 2880,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-403c1d9a",
+          "measuredAt": 1788699551179
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/editor-resources.html",
+        "interactions": [],
+        "stateGroupId": "editor-states",
+        "stateRole": "derived",
+        "derivedFromHtmlSrc": "pages/editor.html"
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "desktop",
+    "projectName": "AI 备课工作台"
+  }
+}

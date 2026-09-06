@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拍照出课件 - 备小研</title>
+    <style id="theme-vars">
+/* ============================================================
+   AI 备课工作台 - 设计令牌 / Design Tokens
+   ============================================================ */
+
+:root {
+  /* ---- Primary Brand ---- */
+  --ailp-primary-50: #eef2ff;
+  --ailp-primary-100: #e0e7ff;
+  --ailp-primary-200: #c7d2fe;
+  --ailp-primary-300: #a5b4fc;
+  --ailp-primary-400: #818cf8;
+  --ailp-primary-500: #6366f1;
+  --ailp-primary-600: #4f46e5;
+  --ailp-primary-700: #4338ca;
+  --ailp-primary-800: #3730a3;
+  --ailp-primary-900: #312e81;
+
+  /* ---- Accent (teal / AI glow) ---- */
+  --ailp-accent-50: #ecfeff;
+  --ailp-accent-100: #cffafe;
+  --ailp-accent-200: #a5f3fc;
+  --ailp-accent-300: #67e8f9;
+  --ailp-accent-400: #22d3ee;
+  --ailp-accent-500: #06b6d4;
+  --ailp-accent-600: #0891b2;
+
+  /* ---- Neutrals ---- */
+  --ailp-gray-50: #f8fafc;
+  --ailp-gray-100: #f1f5f9;
+  --ailp-gray-200: #e2e8f0;
+  --ailp-gray-300: #cbd5e1;
+  --ailp-gray-400: #94a3b8;
+  --ailp-gray-500: #64748b;
+  --ailp-gray-600: #475569;
+  --ailp-gray-700: #334155;
+  --ailp-gray-800: #1e293b;
+  --ailp-gray-900: #0f172a;
+  --ailp-gray-950: #020617;
+
+  /* ---- Success / Warning / Error ---- */
+  --ailp-success-500: #10b981;
+  --ailp-success-600: #059669;
+  --ailp-warning-500: #f59e0b;
+  --ailp-warning-600: #d97706;
+  --ailp-error-500: #ef4444;
+  --ailp-error-600: #dc2626;
+
+  /* ---- Semantic aliases ---- */
+  --ailp-background: #f8fafc;
+  --ailp-foreground: #0f172a;
+  --ailp-card: #ffffff;
+  --ailp-card-foreground: #0f172a;
+  --ailp-popover: #ffffff;
+  --ailp-popover-foreground: #0f172a;
+  --ailp-primary: #4f46e5;
+  --ailp-primary-foreground: #ffffff;
+  --ailp-secondary: #f1f5f9;
+  --ailp-secondary-foreground: #0f172a;
+  --ailp-muted: #f1f5f9;
+  --ailp-muted-foreground: #64748b;
+  --ailp-accent: #06b6d4;
+  --ailp-accent-foreground: #ffffff;
+  --ailp-destructive: #ef4444;
+  --ailp-destructive-foreground: #ffffff;
+  --ailp-border: #e2e8f0;
+  --ailp-input: #e2e8f0;
+  --ailp-ring: #6366f1;
+
+  /* ---- Radius scale ---- */
+  --ailp-radius-sm: 6px;
+  --ailp-radius-md: 10px;
+  --ailp-radius-lg: 14px;
+  --ailp-radius-xl: 20px;
+  --ailp-radius-2xl: 28px;
+  --ailp-radius-full: 9999px;
+
+  /* ---- Shadow scale ---- */
+  --ailp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ailp-shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-xl: 0 20px 40px -10px rgba(15, 23, 42, 0.15);
+  --ailp-shadow-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+
+  /* ---- Typography ---- */
+  --ailp-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --ailp-font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
+    "Liberation Mono", Menlo, monospace;
+  --ailp-font-math: "Cambria Math", "Latin Modern Math", "STIX Two Math",
+    Georgia, serif;
+}
+
+/* ---- Dark mode (editor focus mode) ---- */
+.dark {
+  --ailp-background: #0f172a;
+  --ailp-foreground: #f8fafc;
+  --ailp-card: #1e293b;
+  --ailp-card-foreground: #f8fafc;
+  --ailp-popover: #1e293b;
+  --ailp-popover-foreground: #f8fafc;
+  --ailp-primary: #818cf8;
+  --ailp-primary-foreground: #0f172a;
+  --ailp-secondary: #334155;
+  --ailp-secondary-foreground: #f8fafc;
+  --ailp-muted: #334155;
+  --ailp-muted-foreground: #94a3b8;
+  --ailp-border: #334155;
+  --ailp-input: #334155;
+  --ailp-ring: #6366f1;
+}
+
+/* ---- Base reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--ailp-font-sans);
+  background: var(--ailp-background);
+  color: var(--ailp-foreground);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ailp-gray-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ailp-gray-400);
+}
+
+/* ---- Math formula display ---- */
+.math-display {
+  font-family: var(--ailp-font-math);
+  font-size: 1.1em;
+  line-height: 1.8;
+}
+
+.math-inline {
+  font-family: var(--ailp-font-math);
+  font-style: italic;
+}
+
+/* ---- Utility: AI glow effect ---- */
+.ai-glow {
+  position: relative;
+}
+.ai-glow::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.3),
+    rgba(6, 182, 212, 0.3)
+  );
+  filter: blur(12px);
+  opacity: 0.6;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ---- Gradient text ---- */
+.gradient-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- AI message bubble gradient ---- */
+.ai-bubble-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(6, 182, 212, 0.06) 100%
+  );
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--ailp-background);
+    --color-foreground: var(--ailp-foreground);
+    --color-card: var(--ailp-card);
+    --color-card-foreground: var(--ailp-card-foreground);
+    --color-popover: var(--ailp-popover);
+    --color-popover-foreground: var(--ailp-popover-foreground);
+    --color-primary: var(--ailp-primary);
+    --color-primary-foreground: var(--ailp-primary-foreground);
+    --color-secondary: var(--ailp-secondary);
+    --color-secondary-foreground: var(--ailp-secondary-foreground);
+    --color-muted: var(--ailp-muted);
+    --color-muted-foreground: var(--ailp-muted-foreground);
+    --color-accent: var(--ailp-accent);
+    --color-accent-foreground: var(--ailp-accent-foreground);
+    --color-destructive: var(--ailp-destructive);
+    --color-destructive-foreground: var(--ailp-destructive-foreground);
+    --color-border: var(--ailp-border);
+    --color-input: var(--ailp-input);
+    --color-ring: var(--ailp-ring);
+    --radius-sm: var(--ailp-radius-sm);
+    --radius-md: var(--ailp-radius-md);
+    --radius-lg: var(--ailp-radius-lg);
+    --radius-xl: var(--ailp-radius-xl);
+  }
+  @layer base {
+    body { background: var(--ailp-background); color: var(--ailp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--ailp-background); }
+      .text-background { color: var(--ailp-background); }
+      .border-background { border-color: var(--ailp-background); }
+      .ring-background { --tw-ring-color: var(--ailp-background); }
+      .bg-foreground { background-color: var(--ailp-foreground); }
+      .text-foreground { color: var(--ailp-foreground); }
+      .border-foreground { border-color: var(--ailp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--ailp-foreground); }
+      .bg-card { background-color: var(--ailp-card); }
+      .text-card { color: var(--ailp-card); }
+      .border-card { border-color: var(--ailp-card); }
+      .ring-card { --tw-ring-color: var(--ailp-card); }
+      .bg-card-foreground { background-color: var(--ailp-card-foreground); }
+      .text-card-foreground { color: var(--ailp-card-foreground); }
+      .border-card-foreground { border-color: var(--ailp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--ailp-card-foreground); }
+      .bg-popover { background-color: var(--ailp-popover); }
+      .text-popover { color: var(--ailp-popover); }
+      .border-popover { border-color: var(--ailp-popover); }
+      .ring-popover { --tw-ring-color: var(--ailp-popover); }
+      .bg-popover-foreground { background-color: var(--ailp-popover-foreground); }
+      .text-popover-foreground { color: var(--ailp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--ailp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--ailp-popover-foreground); }
+      .bg-primary { background-color: var(--ailp-primary); }
+      .text-primary { color: var(--ailp-primary); }
+      .border-primary { border-color: var(--ailp-primary); }
+      .ring-primary { --tw-ring-color: var(--ailp-primary); }
+      .bg-primary-foreground { background-color: var(--ailp-primary-foreground); }
+      .text-primary-foreground { color: var(--ailp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--ailp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--ailp-primary-foreground); }
+      .bg-secondary { background-color: var(--ailp-secondary); }
+      .text-secondary { color: var(--ailp-secondary); }
+      .border-secondary { border-color: var(--ailp-secondary); }
+      .ring-secondary { --tw-ring-color: var(--ailp-secondary); }
+      .bg-secondary-foreground { background-color: var(--ailp-secondary-foreground); }
+      .text-secondary-foreground { color: var(--ailp-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--ailp-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--ailp-secondary-foreground); }
+      .bg-muted { background-color: var(--ailp-muted); }
+      .text-muted { color: var(--ailp-muted); }
+      .border-muted { border-color: var(--ailp-muted); }
+      .ring-muted { --tw-ring-color: var(--ailp-muted); }
+      .bg-muted-foreground { background-color: var(--ailp-muted-foreground); }
+      .text-muted-foreground { color: var(--ailp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--ailp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--ailp-muted-foreground); }
+      .bg-accent { background-color: var(--ailp-accent); }
+      .text-accent { color: var(--ailp-accent); }
+      .border-accent { border-color: var(--ailp-accent); }
+      .ring-accent { --tw-ring-color: var(--ailp-accent); }
+      .bg-accent-foreground { background-color: var(--ailp-accent-foreground); }
+      .text-accent-foreground { color: var(--ailp-accent-foreground); }
+      .border-accent-foreground { border-color: var(--ailp-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--ailp-accent-foreground); }
+      .bg-destructive { background-color: var(--ailp-destructive); }
+      .text-destructive { color: var(--ailp-destructive); }
+      .border-destructive { border-color: var(--ailp-destructive); }
+      .ring-destructive { --tw-ring-color: var(--ailp-destructive); }
+      .bg-destructive-foreground { background-color: var(--ailp-destructive-foreground); }
+      .text-destructive-foreground { color: var(--ailp-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--ailp-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--ailp-destructive-foreground); }
+      .bg-border { background-color: var(--ailp-border); }
+      .text-border { color: var(--ailp-border); }
+      .border-border { border-color: var(--ailp-border); }
+      .ring-border { --tw-ring-color: var(--ailp-border); }
+      .bg-input { background-color: var(--ailp-input); }
+      .text-input { color: var(--ailp-input); }
+      .border-input { border-color: var(--ailp-input); }
+      .ring-input { --tw-ring-color: var(--ailp-input); }
+      .bg-ring { background-color: var(--ailp-ring); }
+      .text-ring { color: var(--ailp-ring); }
+      .border-ring { border-color: var(--ailp-ring); }
+      .ring-ring { --tw-ring-color: var(--ailp-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <style id="critical-layout">
+      /* Critical layout: first-screen geometry stays stable without runtime utilities */
+      .ailp-shell { position: relative; min-height: 100vh; overflow-x: clip; background: var(--ailp-background); }
+      .ailp-topbar { position: sticky; top: 0; z-index: 30; border-bottom: 1px solid var(--ailp-border); background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+      .ailp-topbar-inner { max-width: 64rem; margin: 0 auto; padding: 0 1.5rem; height: 3.5rem; display: flex; align-items: center; gap: 1rem; }
+      .ailp-main { position: relative; z-index: 10; max-width: 64rem; margin: 0 auto; padding: 1.5rem 1.5rem 7rem; display: flex; flex-direction: column; gap: 2rem; }
+      .ailp-step-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+      .ailp-step-dot { width: 1.25rem; height: 1.25rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; color: var(--ailp-primary-foreground); background: var(--ailp-primary); flex-shrink: 0; }
+      .ailp-chip-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+      .ailp-photo-chip { position: relative; width: 7rem; height: 5rem; border-radius: var(--ailp-radius-xl); border: 1px solid var(--ailp-border); background: var(--ailp-card); overflow: hidden; }
+      .ailp-photo-chip-top { height: 3rem; background: var(--ailp-muted); padding: 0.5rem 0.5rem 0; }
+      .ailp-photo-chip-top > div { height: 0.25rem; border-radius: 9999px; background: var(--ailp-gray-300); }
+      .ailp-photo-chip-foot { padding: 0.25rem 0.5rem; display: flex; flex-direction: column; justify-content: center; gap: 0.125rem; background: var(--ailp-card); }
+      .ailp-recog-card { border-radius: var(--ailp-radius-xl); border: 1px solid var(--ailp-border); background: rgba(255, 255, 255, 0.8); overflow: hidden; }
+      .ailp-recog-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-bottom: 1px solid var(--ailp-border); background: color-mix(in srgb, var(--ailp-muted) 40%, transparent); }
+      .ailp-recog-body { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+      @media (min-width: 768px) { .ailp-recog-body { flex-direction: row; } }
+      .ailp-recog-thumb { width: 6rem; height: 8rem; border-radius: var(--ailp-radius-md); flex-shrink: 0; background: var(--ailp-muted); padding: 0.625rem; }
+      .ailp-recog-thumb > div { height: 0.25rem; border-radius: 9999px; background: var(--ailp-gray-300); }
+      .ailp-settings-stack { display: flex; flex-direction: column; gap: 1rem; }
+      .ailp-segmented { display: flex; width: 100%; border-radius: 0.5rem; border: 1px solid var(--ailp-border); overflow: hidden; }
+      .ailp-segmented > button { flex: 1 1 0%; padding: 0.5rem 0; font-size: 0.875rem; text-align: center; background: var(--ailp-card); color: var(--ailp-muted-foreground); }
+      .ailp-segmented > button.is-active { background: var(--ailp-primary); color: var(--ailp-primary-foreground); font-weight: 500; }
+      .ailp-bottombar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; border-top: 1px solid var(--ailp-border); background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+      .ailp-bottombar-inner { max-width: 64rem; margin: 0 auto; padding: 0 1.5rem; height: 4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+      .ailp-orb-dock { position: fixed; right: 2rem; bottom: 6rem; z-index: 50; }
+    </style>
+    <style>
+      /* AI Glow animations (copied from home.html) */
+      @keyframes ai-glow-pulse {
+        0%, 100% { opacity: 0.5; transform: scale(1); }
+        50% { opacity: 0.8; transform: scale(1.05); }
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-6px); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+      }
+      @keyframes fade-in-up {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-float { animation: float 4s ease-in-out infinite; }
+      .animate-glow-pulse { animation: ai-glow-pulse 3s ease-in-out infinite; }
+      .animate-fade-in-up { animation: fade-in-up 0.8s ease-out both; }
+      .delay-100 { animation-delay: 0.1s; }
+      .delay-200 { animation-delay: 0.2s; }
+      .delay-300 { animation-delay: 0.3s; }
+      .delay-400 { animation-delay: 0.4s; }
+      .delay-500 { animation-delay: 0.5s; }
+
+      /* Input glow border effect */
+      .input-glow-wrapper {
+        position: relative;
+        border-radius: var(--ailp-radius-2xl);
+        padding: 2px;
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.4), rgba(6, 182, 212, 0.4), rgba(79, 70, 229, 0.4));
+        background-size: 200% 200%;
+        animation: shimmer 4s linear infinite;
+      }
+      .input-glow-wrapper::before {
+        content: "";
+        position: absolute;
+        inset: -6px;
+        border-radius: calc(var(--ailp-radius-2xl) + 6px);
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(6, 182, 212, 0.15));
+        filter: blur(16px);
+        z-index: -1;
+        animation: ai-glow-pulse 3s ease-in-out infinite;
+      }
+
+      /* Floating AI button */
+      .floating-ai-btn {
+        position: relative;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%);
+        box-shadow: 0 8px 32px rgba(79, 70, 229, 0.4), 0 0 60px rgba(6, 182, 212, 0.2);
+      }
+      .floating-ai-btn::before {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(6, 182, 212, 0.5));
+        filter: blur(12px);
+        z-index: -1;
+        animation: ai-glow-pulse 2.5s ease-in-out infinite;
+      }
+
+      /* Tooltip */
+      .tooltip-bubble {
+        position: absolute;
+        right: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-right: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      .tooltip-bubble::after {
+        content: "";
+        position: absolute;
+        left: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 6px solid transparent;
+        border-left-color: #1e293b;
+      }
+      .floating-ai-btn:hover .tooltip-bubble {
+        opacity: 1;
+      }
+
+      /* Card hover effects */
+      .quick-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .quick-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.15), 0 10px 20px -5px rgba(6, 182, 212, 0.1);
+      }
+
+      /* Background decorative blobs */
+      .bg-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.4;
+        pointer-events: none;
+      }
+
+      /* Reduced motion downgrade */
+      @media (prefers-reduced-motion: reduce) {
+        .animate-float, .animate-glow-pulse, .animate-fade-in-up {
+          animation-duration: 0.01ms;
+          animation-iteration-count: 1;
+        }
+      }
+    </style>
+    <div class="ailp-shell relative min-h-screen overflow-x-clip bg-[var(--ailp-background)]">
+      <!-- Decorative background blobs (from home.html) -->
+      <div class="bg-blob w-[500px] h-[500px] bg-[#c7d2fe] top-[-150px] left-[-100px]"></div>
+      <div class="bg-blob w-[400px] h-[400px] bg-[#a5f3fc] top-[200px] right-[-100px] opacity-30"></div>
+
+      <!-- Top app bar -->
+      <header class="ailp-topbar sticky top-0 z-30 border-b border-[var(--ailp-border)] bg-white/80 backdrop-blur">
+        <div class="ailp-topbar-inner max-w-5xl mx-auto px-6 h-14 flex items-center gap-4">
+          <button type="button" class="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--ailp-foreground)] hover:bg-[var(--ailp-muted)] transition-colors" aria-label="返回上一页">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+          <h1 class="text-[15px] font-semibold text-[var(--ailp-foreground)]">拍照出课件</h1>
+          <span class="text-sm text-[var(--ailp-muted-foreground)] hidden sm:inline">把题目照片变成例题讲解页</span>
+          <span class="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium" style="background: rgba(245,158,11,0.1); color: var(--ailp-warning-600);">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+            识别结果需校对后使用
+          </span>
+        </div>
+      </header>
+
+      <main class="ailp-main relative z-10 max-w-5xl mx-auto px-6 pt-6 pb-28">
+        <!-- Step 1: 已上传照片 -->
+        <section class="animate-fade-in-up delay-100">
+          <div class="ailp-step-head flex items-center gap-2 mb-3">
+            <span class="ailp-step-dot w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white" style="background: var(--ailp-primary);">1</span>
+            <h2 class="text-[15px] font-semibold text-[var(--ailp-foreground)]">题目照片</h2>
+            <span class="text-xs text-[var(--ailp-muted-foreground)]">学生作业 / 教辅 / 黑板</span>
+          </div>
+          <div class="ailp-chip-row flex items-center gap-3 flex-wrap">
+            <div class="ailp-photo-chip w-28 h-20 rounded-xl border border-[var(--ailp-border)] overflow-hidden relative bg-white">
+              <div class="ailp-photo-chip-top h-12" style="background: var(--ailp-muted);">
+                <div style="width: 72%; margin-bottom: 0.375rem;"></div>
+                <div style="width: 88%; margin-bottom: 0.375rem;"></div>
+                <div style="width: 58%;"></div>
+              </div>
+              <div class="ailp-photo-chip-foot px-2 py-1">
+                <span class="text-[10px] leading-none text-[var(--ailp-muted-foreground)] truncate">photo_01.jpg</span>
+                <span class="text-[10px] leading-none font-medium flex items-center gap-0.5" style="color: var(--ailp-success-600);">
+                  <i data-lucide="circle-check" class="w-2.5 h-2.5"></i>识别完成
+                </span>
+              </div>
+              <button type="button" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/40 transition-colors" aria-label="删除 photo_01.jpg">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </div>
+            <div class="ailp-photo-chip w-28 h-20 rounded-xl border border-[var(--ailp-border)] overflow-hidden relative bg-white">
+              <div class="ailp-photo-chip-top h-12" style="background: var(--ailp-muted);">
+                <div style="width: 80%; margin-bottom: 0.375rem;"></div>
+                <div style="width: 64%; margin-bottom: 0.375rem;"></div>
+                <div style="width: 90%;"></div>
+              </div>
+              <div class="ailp-photo-chip-foot px-2 py-1">
+                <span class="text-[10px] leading-none text-[var(--ailp-muted-foreground)] truncate">photo_02.jpg</span>
+                <span class="text-[10px] leading-none font-medium flex items-center gap-0.5" style="color: var(--ailp-success-600);">
+                  <i data-lucide="circle-check" class="w-2.5 h-2.5"></i>识别完成
+                </span>
+              </div>
+              <button type="button" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/40 transition-colors" aria-label="删除 photo_02.jpg">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </div>
+            <div class="ailp-photo-chip w-28 h-20 rounded-xl border border-[var(--ailp-border)] overflow-hidden relative bg-white">
+              <div class="ailp-photo-chip-top h-12 animate-pulse" style="background: var(--ailp-muted);">
+                <div style="width: 76%; margin-bottom: 0.375rem;"></div>
+                <div style="width: 84%; margin-bottom: 0.375rem;"></div>
+                <div style="width: 52%;"></div>
+              </div>
+              <div class="ailp-photo-chip-foot px-2 py-1">
+                <span class="text-[10px] leading-none text-[var(--ailp-muted-foreground)] truncate">photo_03.jpg</span>
+                <span class="text-[10px] leading-none font-medium flex items-center gap-0.5" style="color: var(--ailp-warning-600);">
+                  <i data-lucide="loader-2" class="w-2.5 h-2.5 animate-spin"></i>识别中
+                </span>
+              </div>
+              <button type="button" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/40 transition-colors" aria-label="删除 photo_03.jpg">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </div>
+            <button type="button" class="w-28 h-20 rounded-xl border border-dashed border-[var(--ailp-gray-300)] flex flex-col items-center justify-center gap-1 text-[var(--ailp-muted-foreground)] hover:border-[var(--ailp-primary)]/50 hover:text-[var(--ailp-primary)] transition-colors cursor-pointer">
+              <i data-lucide="image-plus" class="w-4 h-4"></i>
+              <span class="text-xs">继续添加</span>
+            </button>
+          </div>
+        </section>
+        <!-- Step 2: 识别确认 -->
+        <section class="animate-fade-in-up delay-200">
+          <div class="ailp-step-head flex items-center gap-2 mb-3">
+            <span class="ailp-step-dot w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white" style="background: var(--ailp-primary);">2</span>
+            <h2 class="text-[15px] font-semibold text-[var(--ailp-foreground)]">识别结果确认</h2>
+            <span class="text-xs text-[var(--ailp-muted-foreground)]">点击文字可修改，红色低置信度项需重点校对</span>
+          </div>
+          <div class="space-y-4">
+            <article class="ailp-recog-card rounded-2xl border border-[var(--ailp-border)] bg-white/80 backdrop-blur-sm overflow-hidden transition-shadow hover:shadow-md">
+              <div class="ailp-recog-head flex items-center gap-2 px-4 py-2 border-b border-[var(--ailp-border)] bg-[var(--ailp-muted)]/40">
+                <span class="text-xs text-[var(--ailp-muted-foreground)] flex items-center gap-1">
+                  <i data-lucide="image" class="w-3 h-3"></i>photo_01.jpg
+                </span>
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background: rgba(16,185,129,0.1); color: var(--ailp-success-600);">置信度 96%</span>
+                <button type="button" class="ml-auto inline-flex items-center gap-1 text-xs font-medium text-[var(--ailp-primary)] hover:underline">
+                  <i data-lucide="pencil" class="w-3 h-3"></i>修正
+                </button>
+              </div>
+              <div class="ailp-recog-body p-4 flex flex-col md:flex-row gap-4">
+                <div class="ailp-recog-thumb w-24 h-32 rounded-lg shrink-0" style="background: var(--ailp-muted);">
+                  <div style="width: 88%; margin-bottom: 0.5rem;"></div>
+                  <div style="width: 76%; margin-bottom: 0.5rem;"></div>
+                  <div style="width: 92%; margin-bottom: 0.5rem;"></div>
+                  <div style="width: 64%;"></div>
+                  <div style="width: 38%; margin-top: 0.75rem; background: var(--ailp-gray-400);"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-medium text-[var(--ailp-muted-foreground)] mb-1">题干（可编辑）</p>
+                  <p class="text-sm leading-relaxed text-[var(--ailp-foreground)]">已知双曲线 x²/9 − y²/16 = 1 的左、右焦点分别为 F₁、F₂，过 F₁ 的直线交双曲线的左支于 A、B 两点，求 △ABF₂ 的周长。</p>
+                  <div class="mt-2 flex items-center gap-1.5 flex-wrap">
+                    <span class="text-xs text-[var(--ailp-muted-foreground)]">知识点:</span>
+                    <span class="px-2 py-0.5 rounded-md text-xs" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600);">双曲线定义</span>
+                    <span class="px-2 py-0.5 rounded-md text-xs" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600);">焦点弦</span>
+                    <button type="button" class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-xs border border-dashed border-[var(--ailp-gray-300)] text-[var(--ailp-muted-foreground)] hover:border-[var(--ailp-primary)]/50 hover:text-[var(--ailp-primary)] transition-colors">
+                      <i data-lucide="plus" class="w-3 h-3"></i>添加
+                    </button>
+                  </div>
+                  <div class="mt-2 flex gap-2">
+                    <p class="flex-1 rounded-lg px-3 py-2 text-xs leading-relaxed bg-[var(--ailp-muted)]/60 text-[var(--ailp-muted-foreground)]">解答已识别：由定义 |AF₁|−|AF₂|=2a=6 …（逐页展开）</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article class="ailp-recog-card rounded-2xl border bg-white/80 backdrop-blur-sm overflow-hidden transition-shadow hover:shadow-md" style="border-color: rgba(245,158,11,0.4);">
+              <div class="ailp-recog-head flex items-center gap-2 px-4 py-2 border-b border-[var(--ailp-border)] bg-[var(--ailp-muted)]/40">
+                <span class="text-xs text-[var(--ailp-muted-foreground)] flex items-center gap-1">
+                  <i data-lucide="image" class="w-3 h-3"></i>photo_02.jpg
+                </span>
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background: rgba(245,158,11,0.1); color: var(--ailp-warning-600);">置信度 78% · 建议校对</span>
+                <button type="button" class="ml-auto inline-flex items-center gap-1 text-xs font-medium text-[var(--ailp-primary)] hover:underline">
+                  <i data-lucide="pencil" class="w-3 h-3"></i>修正
+                </button>
+              </div>
+              <div class="ailp-recog-body p-4 flex flex-col md:flex-row gap-4">
+                <div class="ailp-recog-thumb w-24 h-32 rounded-lg shrink-0" style="background: var(--ailp-muted);">
+                  <div style="width: 84%; margin-bottom: 0.5rem;"></div>
+                  <div style="width: 90%; margin-bottom: 0.5rem;"></div>
+                  <div style="width: 58%; margin-bottom: 0.5rem;"></div>
+                  <div style="width: 72%;"></div>
+                  <div style="width: 34%; margin-top: 0.75rem; background: var(--ailp-gray-400);"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-medium text-[var(--ailp-muted-foreground)] mb-1">题干（可编辑）</p>
+                  <p class="text-sm leading-relaxed text-[var(--ailp-foreground)]">设双曲线与椭圆 x²/25 + y²/9 = 1 有相同的焦点，且经过点 <span class="underline decoration-dashed underline-offset-2" style="color: var(--ailp-error-600);">(3, 2)</span>，求双曲线的标准方程。</p>
+                  <div class="mt-2 flex items-center gap-1.5 flex-wrap">
+                    <span class="text-xs text-[var(--ailp-muted-foreground)]">知识点:</span>
+                    <span class="px-2 py-0.5 rounded-md text-xs" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600);">双曲线标准方程</span>
+                    <span class="px-2 py-0.5 rounded-md text-xs" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600);">待确认</span>
+                    <button type="button" class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-xs border border-dashed border-[var(--ailp-gray-300)] text-[var(--ailp-muted-foreground)] hover:border-[var(--ailp-primary)]/50 hover:text-[var(--ailp-primary)] transition-colors">
+                      <i data-lucide="plus" class="w-3 h-3"></i>添加
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+        <!-- Step 3: 生成设置 -->
+        <section class="animate-fade-in-up delay-300">
+          <div class="ailp-step-head flex items-center gap-2 mb-3">
+            <span class="ailp-step-dot w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white" style="background: var(--ailp-primary);">3</span>
+            <h2 class="text-[15px] font-semibold text-[var(--ailp-foreground)]">生成方式</h2>
+            <span class="text-xs text-[var(--ailp-muted-foreground)]">两项设置即可，字号与边注在下一步模板页统一调整</span>
+          </div>
+          <div class="ailp-settings-stack">
+            <div class="rounded-2xl border border-[var(--ailp-border)] bg-white/80 backdrop-blur-sm p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-[var(--ailp-foreground)]">识别范围</span>
+                <span class="text-xs text-[var(--ailp-muted-foreground)]">适用：例题精讲</span>
+              </div>
+              <div class="ailp-segmented flex rounded-lg border border-[var(--ailp-border)] overflow-hidden w-full" role="group" aria-label="识别范围">
+                <button type="button" class="flex-1 py-2 text-sm text-center bg-white text-[var(--ailp-muted-foreground)] hover:bg-[var(--ailp-muted)] transition-colors">仅题干</button>
+                <button type="button" class="is-active flex-1 py-2 text-sm text-center text-white font-medium" style="background: var(--ailp-primary);">题干+解答</button>
+                <button type="button" class="flex-1 py-2 text-sm text-center bg-white text-[var(--ailp-muted-foreground)] hover:bg-[var(--ailp-muted)] transition-colors">题干+关键步骤</button>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-[var(--ailp-border)] bg-white/80 backdrop-blur-sm p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-[var(--ailp-foreground)]">生成模式</span>
+                <span class="text-xs text-[var(--ailp-muted-foreground)]">适用：自学 / 复习</span>
+              </div>
+              <div class="ailp-segmented flex rounded-lg border border-[var(--ailp-border)] overflow-hidden w-full" role="group" aria-label="生成模式">
+                <button type="button" class="flex-1 py-2 text-sm text-center bg-white text-[var(--ailp-muted-foreground)] hover:bg-[var(--ailp-muted)] transition-colors">板书留白</button>
+                <button type="button" class="is-active flex-1 py-2 text-sm text-center text-white font-medium" style="background: var(--ailp-primary);">完整解答</button>
+                <button type="button" class="flex-1 py-2 text-sm text-center bg-white text-[var(--ailp-muted-foreground)] hover:bg-[var(--ailp-muted)] transition-colors">要点提炼</button>
+              </div>
+            </div>
+            <p class="flex items-center gap-1.5 text-xs text-[var(--ailp-muted-foreground)]">
+              <i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>原设置已简化：字号档与边注模式已并入「选择模板」页，支持全局调整
+            </p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Sticky bottom action bar (main reserves pb-28 for it) -->
+    <div class="ailp-bottombar fixed bottom-0 inset-x-0 z-40 border-t border-[var(--ailp-border)] bg-white/90 backdrop-blur">
+      <div class="ailp-bottombar-inner max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+        <span class="text-xs text-[var(--ailp-muted-foreground)]">已选 2 题 · 将生成 3-4 页讲解内容</span>
+        <div class="flex items-center gap-2">
+          <button type="button" class="px-4 py-2 rounded-lg border border-[var(--ailp-border)] bg-white text-sm font-medium text-[var(--ailp-foreground)] hover:bg-[var(--ailp-muted)] transition-colors">上一步</button>
+          <button type="button" class="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90" style="background: linear-gradient(135deg,#4f46e5,#6366f1);">
+            下一步：选择模板
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating AI Assistant Button (from home.html, raised above bottom bar) -->
+    <div class="ailp-orb-dock fixed bottom-24 right-8 z-50">
+      <button type="button" class="floating-ai-btn w-14 h-14 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform animate-float" aria-label="AI 助手">
+        <i data-lucide="bot" class="w-6 h-6"></i>
+        <!-- Tooltip -->
+        <div class="tooltip-bubble">
+          <span class="px-3 py-1.5 bg-[#1e293b] text-white text-xs rounded-lg shadow-lg">AI 助手</span>
+        </div>
+      </button>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

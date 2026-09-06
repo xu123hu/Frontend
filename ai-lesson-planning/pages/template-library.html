@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教案模板库</title>
+    <style id="theme-vars">
+/* ============================================================
+   AI 备课工作台 - 设计令牌 / Design Tokens
+   ============================================================ */
+
+:root {
+  /* ---- Primary Brand ---- */
+  --ailp-primary-50: #eef2ff;
+  --ailp-primary-100: #e0e7ff;
+  --ailp-primary-200: #c7d2fe;
+  --ailp-primary-300: #a5b4fc;
+  --ailp-primary-400: #818cf8;
+  --ailp-primary-500: #6366f1;
+  --ailp-primary-600: #4f46e5;
+  --ailp-primary-700: #4338ca;
+  --ailp-primary-800: #3730a3;
+  --ailp-primary-900: #312e81;
+
+  /* ---- Accent (teal / AI glow) ---- */
+  --ailp-accent-50: #ecfeff;
+  --ailp-accent-100: #cffafe;
+  --ailp-accent-200: #a5f3fc;
+  --ailp-accent-300: #67e8f9;
+  --ailp-accent-400: #22d3ee;
+  --ailp-accent-500: #06b6d4;
+  --ailp-accent-600: #0891b2;
+
+  /* ---- Neutrals ---- */
+  --ailp-gray-50: #f8fafc;
+  --ailp-gray-100: #f1f5f9;
+  --ailp-gray-200: #e2e8f0;
+  --ailp-gray-300: #cbd5e1;
+  --ailp-gray-400: #94a3b8;
+  --ailp-gray-500: #64748b;
+  --ailp-gray-600: #475569;
+  --ailp-gray-700: #334155;
+  --ailp-gray-800: #1e293b;
+  --ailp-gray-900: #0f172a;
+  --ailp-gray-950: #020617;
+
+  /* ---- Success / Warning / Error ---- */
+  --ailp-success-500: #10b981;
+  --ailp-success-600: #059669;
+  --ailp-warning-500: #f59e0b;
+  --ailp-warning-600: #d97706;
+  --ailp-error-500: #ef4444;
+  --ailp-error-600: #dc2626;
+
+  /* ---- Semantic aliases ---- */
+  --ailp-background: #f8fafc;
+  --ailp-foreground: #0f172a;
+  --ailp-card: #ffffff;
+  --ailp-card-foreground: #0f172a;
+  --ailp-popover: #ffffff;
+  --ailp-popover-foreground: #0f172a;
+  --ailp-primary: #4f46e5;
+  --ailp-primary-foreground: #ffffff;
+  --ailp-secondary: #f1f5f9;
+  --ailp-secondary-foreground: #0f172a;
+  --ailp-muted: #f1f5f9;
+  --ailp-muted-foreground: #64748b;
+  --ailp-accent: #06b6d4;
+  --ailp-accent-foreground: #ffffff;
+  --ailp-destructive: #ef4444;
+  --ailp-destructive-foreground: #ffffff;
+  --ailp-border: #e2e8f0;
+  --ailp-input: #e2e8f0;
+  --ailp-ring: #6366f1;
+
+  /* ---- Radius scale ---- */
+  --ailp-radius-sm: 6px;
+  --ailp-radius-md: 10px;
+  --ailp-radius-lg: 14px;
+  --ailp-radius-xl: 20px;
+  --ailp-radius-2xl: 28px;
+  --ailp-radius-full: 9999px;
+
+  /* ---- Shadow scale ---- */
+  --ailp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ailp-shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-xl: 0 20px 40px -10px rgba(15, 23, 42, 0.15);
+  --ailp-shadow-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+
+  /* ---- Typography ---- */
+  --ailp-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --ailp-font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
+    "Liberation Mono", Menlo, monospace;
+  --ailp-font-math: "Cambria Math", "Latin Modern Math", "STIX Two Math",
+    Georgia, serif;
+}
+
+/* ---- Dark mode (editor focus mode) ---- */
+.dark {
+  --ailp-background: #0f172a;
+  --ailp-foreground: #f8fafc;
+  --ailp-card: #1e293b;
+  --ailp-card-foreground: #f8fafc;
+  --ailp-popover: #1e293b;
+  --ailp-popover-foreground: #f8fafc;
+  --ailp-primary: #818cf8;
+  --ailp-primary-foreground: #0f172a;
+  --ailp-secondary: #334155;
+  --ailp-secondary-foreground: #f8fafc;
+  --ailp-muted: #334155;
+  --ailp-muted-foreground: #94a3b8;
+  --ailp-border: #334155;
+  --ailp-input: #334155;
+  --ailp-ring: #6366f1;
+}
+
+/* ---- Base reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--ailp-font-sans);
+  background: var(--ailp-background);
+  color: var(--ailp-foreground);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ailp-gray-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ailp-gray-400);
+}
+
+/* ---- Math formula display ---- */
+.math-display {
+  font-family: var(--ailp-font-math);
+  font-size: 1.1em;
+  line-height: 1.8;
+}
+
+.math-inline {
+  font-family: var(--ailp-font-math);
+  font-style: italic;
+}
+
+/* ---- Utility: AI glow effect ---- */
+.ai-glow {
+  position: relative;
+}
+.ai-glow::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.3),
+    rgba(6, 182, 212, 0.3)
+  );
+  filter: blur(12px);
+  opacity: 0.6;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ---- Gradient text ---- */
+.gradient-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- AI message bubble gradient ---- */
+.ai-bubble-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(6, 182, 212, 0.06) 100%
+  );
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--ailp-background);
+    --color-foreground: var(--ailp-foreground);
+    --color-card: var(--ailp-card);
+    --color-card-foreground: var(--ailp-card-foreground);
+    --color-popover: var(--ailp-popover);
+    --color-popover-foreground: var(--ailp-popover-foreground);
+    --color-primary: var(--ailp-primary);
+    --color-primary-foreground: var(--ailp-primary-foreground);
+    --color-secondary: var(--ailp-secondary);
+    --color-secondary-foreground: var(--ailp-secondary-foreground);
+    --color-muted: var(--ailp-muted);
+    --color-muted-foreground: var(--ailp-muted-foreground);
+    --color-accent: var(--ailp-accent);
+    --color-accent-foreground: var(--ailp-accent-foreground);
+    --color-destructive: var(--ailp-destructive);
+    --color-destructive-foreground: var(--ailp-destructive-foreground);
+    --color-border: var(--ailp-border);
+    --color-input: var(--ailp-input);
+    --color-ring: var(--ailp-ring);
+    --radius-sm: var(--ailp-radius-sm);
+    --radius-md: var(--ailp-radius-md);
+    --radius-lg: var(--ailp-radius-lg);
+    --radius-xl: var(--ailp-radius-xl);
+  }
+  @layer base {
+    body { background: var(--ailp-background); color: var(--ailp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--ailp-background); }
+      .text-background { color: var(--ailp-background); }
+      .border-background { border-color: var(--ailp-background); }
+      .ring-background { --tw-ring-color: var(--ailp-background); }
+      .bg-foreground { background-color: var(--ailp-foreground); }
+      .text-foreground { color: var(--ailp-foreground); }
+      .border-foreground { border-color: var(--ailp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--ailp-foreground); }
+      .bg-card { background-color: var(--ailp-card); }
+      .text-card { color: var(--ailp-card); }
+      .border-card { border-color: var(--ailp-card); }
+      .ring-card { --tw-ring-color: var(--ailp-card); }
+      .bg-card-foreground { background-color: var(--ailp-card-foreground); }
+      .text-card-foreground { color: var(--ailp-card-foreground); }
+      .border-card-foreground { border-color: var(--ailp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--ailp-card-foreground); }
+      .bg-popover { background-color: var(--ailp-popover); }
+      .text-popover { color: var(--ailp-popover); }
+      .border-popover { border-color: var(--ailp-popover); }
+      .ring-popover { --tw-ring-color: var(--ailp-popover); }
+      .bg-popover-foreground { background-color: var(--ailp-popover-foreground); }
+      .text-popover-foreground { color: var(--ailp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--ailp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--ailp-popover-foreground); }
+      .bg-primary { background-color: var(--ailp-primary); }
+      .text-primary { color: var(--ailp-primary); }
+      .border-primary { border-color: var(--ailp-primary); }
+      .ring-primary { --tw-ring-color: var(--ailp-primary); }
+      .bg-primary-foreground { background-color: var(--ailp-primary-foreground); }
+      .text-primary-foreground { color: var(--ailp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--ailp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--ailp-primary-foreground); }
+      .bg-secondary { background-color: var(--ailp-secondary); }
+      .text-secondary { color: var(--ailp-secondary); }
+      .border-secondary { border-color: var(--ailp-secondary); }
+      .ring-secondary { --tw-ring-color: var(--ailp-secondary); }
+      .bg-secondary-foreground { background-color: var(--ailp-secondary-foreground); }
+      .text-secondary-foreground { color: var(--ailp-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--ailp-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--ailp-secondary-foreground); }
+      .bg-muted { background-color: var(--ailp-muted); }
+      .text-muted { color: var(--ailp-muted); }
+      .border-muted { border-color: var(--ailp-muted); }
+      .ring-muted { --tw-ring-color: var(--ailp-muted); }
+      .bg-muted-foreground { background-color: var(--ailp-muted-foreground); }
+      .text-muted-foreground { color: var(--ailp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--ailp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--ailp-muted-foreground); }
+      .bg-accent { background-color: var(--ailp-accent); }
+      .text-accent { color: var(--ailp-accent); }
+      .border-accent { border-color: var(--ailp-accent); }
+      .ring-accent { --tw-ring-color: var(--ailp-accent); }
+      .bg-accent-foreground { background-color: var(--ailp-accent-foreground); }
+      .text-accent-foreground { color: var(--ailp-accent-foreground); }
+      .border-accent-foreground { border-color: var(--ailp-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--ailp-accent-foreground); }
+      .bg-destructive { background-color: var(--ailp-destructive); }
+      .text-destructive { color: var(--ailp-destructive); }
+      .border-destructive { border-color: var(--ailp-destructive); }
+      .ring-destructive { --tw-ring-color: var(--ailp-destructive); }
+      .bg-destructive-foreground { background-color: var(--ailp-destructive-foreground); }
+      .text-destructive-foreground { color: var(--ailp-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--ailp-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--ailp-destructive-foreground); }
+      .bg-border { background-color: var(--ailp-border); }
+      .text-border { color: var(--ailp-border); }
+      .border-border { border-color: var(--ailp-border); }
+      .ring-border { --tw-ring-color: var(--ailp-border); }
+      .bg-input { background-color: var(--ailp-input); }
+      .text-input { color: var(--ailp-input); }
+      .border-input { border-color: var(--ailp-input); }
+      .ring-input { --tw-ring-color: var(--ailp-input); }
+      .bg-ring { background-color: var(--ailp-ring); }
+      .text-ring { color: var(--ailp-ring); }
+      .border-ring { border-color: var(--ailp-ring); }
+      .ring-ring { --tw-ring-color: var(--ailp-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="h-screen overflow-hidden font-sans antialiased bg-background">
+    <div class="flex h-screen overflow-hidden">
+        <!-- 主内容区（独立滚动） -->
+        <div class="flex-1 min-w-0 flex flex-col overflow-hidden">
+            <!-- 顶部导航 -->
+            <header class="shrink-0 z-30 bg-card border-b border-border">
+                <div class="max-w-[1200px] mx-auto px-8 h-16 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button class="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <h1 class="text-lg font-semibold text-foreground">教案模板库</h1>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="relative w-64">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"></i>
+                            <input type="text" placeholder="搜索模板名称" class="w-full h-9 pl-9 pr-4 rounded-lg border border-border bg-muted/50 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary focus:bg-card transition-all" />
+                        </div>
+                        <button class="px-4 h-9 rounded-lg bg-gradient-to-r from-primary-600 to-accent-500 text-white text-sm font-medium hover:from-primary-700 hover:to-accent-600 transition-all shadow-sm flex items-center gap-2">
+                            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                            上传教案提炼模板
+                        </button>
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-500 to-accent-400 flex items-center justify-center text-white text-sm font-medium cursor-pointer shadow-sm">
+                            李
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 一级分类 Tab 栏 -->
+            <div class="shrink-0 z-20 bg-background border-b border-border">
+                <div class="max-w-[1200px] mx-auto px-8">
+                    <nav class="flex items-center gap-8 h-14">
+                        <button class="h-full text-sm text-muted-foreground hover:text-foreground transition-colors relative">
+                            全部模板
+                        </button>
+                        <button class="h-full text-sm font-medium text-primary relative tab-active flex items-center gap-2">
+                            我的模板
+                            <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-white text-[11px] font-semibold">4</span>
+                            <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"></span>
+                        </button>
+                        <button class="h-full text-sm text-muted-foreground hover:text-foreground transition-colors relative">
+                            优质课蓝本
+                        </button>
+                        <button class="h-full text-sm text-muted-foreground hover:text-foreground transition-colors relative">
+                            内置标准
+                        </button>
+                        <button class="h-full text-sm text-muted-foreground hover:text-foreground transition-colors relative flex items-center gap-1.5">
+                            资源库引用
+                            <span class="inline-flex items-center px-1.5 h-4 rounded bg-gradient-to-r from-primary-500 to-accent-500 text-white text-[10px] font-bold">NEW</span>
+                        </button>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- 筛选栏 -->
+            <div class="shrink-0 z-10 bg-background border-b border-border">
+                <div class="max-w-[1200px] mx-auto px-8 py-3 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <button class="px-3.5 h-7 rounded-full bg-primary text-white text-xs font-medium shadow-sm">全部</button>
+                        <button class="px-3.5 h-7 rounded-full bg-muted text-muted-foreground text-xs hover:bg-muted/80 hover:text-foreground transition-colors">新授课</button>
+                        <button class="px-3.5 h-7 rounded-full bg-muted text-muted-foreground text-xs hover:bg-muted/80 hover:text-foreground transition-colors">习题课</button>
+                        <button class="px-3.5 h-7 rounded-full bg-muted text-muted-foreground text-xs hover:bg-muted/80 hover:text-foreground transition-colors">复习课</button>
+                        <button class="px-3.5 h-7 rounded-full bg-muted text-muted-foreground text-xs hover:bg-muted/80 hover:text-foreground transition-colors">讲评课</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-muted-foreground">排序：</span>
+                        <button class="text-xs text-foreground font-medium flex items-center gap-1">
+                            最近使用
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 主内容（可滚动） -->
+            <main class="flex-1 overflow-y-auto py-6">
+                <div class="max-w-[1200px] mx-auto px-8">
+                <!-- 我的模板概览条 -->
+                <div class="flex items-center justify-between mb-6 p-4 rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/10">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-accent-400 flex items-center justify-center text-white shadow-md shadow-primary/20">
+                            <i data-lucide="folder-heart" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-foreground">你已提炼 <span class="text-primary font-semibold">4</span> 份个人模板 &middot; 累计使用 <span class="text-primary font-semibold">28</span> 次</p>
+                        </div>
+                    </div>
+                    <button class="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors">
+                        提炼新模板
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- 我的模板卡片网格（3列） -->
+                <div class="grid grid-cols-3 gap-5 mb-10">
+                    <!-- 模板卡片 1 - 椭圆新授课模板（选中状态） -->
+                    <div class="group rounded-xl border-2 border-primary/40 bg-card shadow-lg shadow-primary/10 overflow-hidden cursor-pointer transition-all hover:shadow-xl hover:shadow-primary/15 ring-2 ring-primary/20">
+                        <div class="relative h-52 bg-gradient-to-br from-slate-50 to-slate-100 p-4 overflow-hidden">
+                            <div class="absolute inset-4 bg-white/70 rounded-md shadow-md transform rotate-[2deg] origin-top-right"></div>
+                            <div class="absolute inset-3 bg-white rounded-md shadow-xl transform rotate-[-2deg] origin-bottom-left overflow-hidden">
+                                <div class="h-4 bg-gradient-to-r from-indigo-600 via-primary-500 to-purple-500 relative">
+                                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(255,255,255,0.2),transparent_50%)]"></div>
+                                </div>
+                                <div class="p-3">
+                                    <div class="text-[11px] font-bold text-slate-800 mb-1 leading-tight">椭圆及其标准方程<br/><span class="text-[10px] font-normal text-slate-500">-新授课模板</span></div>
+                                    <div class="w-6 h-0.5 bg-gradient-to-r from-primary-400 to-primary-200 rounded-full my-2"></div>
+                                    <div class="text-[9px] text-slate-400 mb-2">高中数学 &middot; 选择性必修一</div>
+                                    <div class="space-y-1.5">
+                                        <div class="h-1 bg-slate-200 rounded-full w-full"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-5/6"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-2/3"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-4/5 mt-1.5"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-full"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-3/4"></div>
+                                    </div>
+                                    <div class="absolute bottom-2 right-3 text-[9px] text-slate-400">共 8 页</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-sm font-semibold text-foreground mb-2">椭圆新授课模板</h3>
+                            <div class="flex items-center gap-1.5 mb-3 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">新授课</span>
+                                <span class="px-2 py-0.5 rounded-full bg-accent/10 text-accent text-[11px] font-medium">讲练结合</span>
+                                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium">我的模板</span>
+                            </div>
+                            <div class="flex items-center justify-between pt-3 border-t border-border">
+                                <span class="text-xs text-muted-foreground">使用 12 次 &middot; 3天前</span>
+                                <div class="flex items-center gap-1">
+                                    <button class="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </button>
+                                    <button class="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                                        <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 模板卡片 2 - 导数习题课模板 -->
+                    <div class="group rounded-xl border border-border bg-card overflow-hidden cursor-pointer transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+                        <div class="relative h-52 bg-gradient-to-br from-slate-50 to-slate-100 p-4 overflow-hidden">
+                            <div class="absolute inset-4 bg-white/70 rounded-md shadow-md transform rotate-[-1.5deg] origin-top-left"></div>
+                            <div class="absolute inset-3 bg-white rounded-md shadow-xl transform rotate-[1.5deg] origin-bottom-right overflow-hidden">
+                                <div class="h-4 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 relative">
+                                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_80%_50%,rgba(255,255,255,0.2),transparent_50%)]"></div>
+                                </div>
+                                <div class="p-3">
+                                    <div class="text-[11px] font-bold text-slate-800 mb-1 leading-tight">导数习题课<br/><span class="text-[10px] font-normal text-slate-500">-精讲精练模板</span></div>
+                                    <div class="w-6 h-0.5 bg-gradient-to-r from-orange-400 to-amber-300 rounded-full my-2"></div>
+                                    <div class="text-[9px] text-slate-400 mb-2">高中数学 &middot; 选择性必修二</div>
+                                    <div class="space-y-1.5">
+                                        <div class="h-1 bg-slate-200 rounded-full w-full"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-2/3"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-5/6"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-full mt-1.5"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-1/2"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-4/5"></div>
+                                    </div>
+                                    <div class="absolute bottom-2 right-3 text-[9px] text-slate-400">共 6 页</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-sm font-semibold text-foreground mb-2">导数习题课模板</h3>
+                            <div class="flex items-center gap-1.5 mb-3 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 text-[11px] font-medium">习题课</span>
+                                <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[11px] font-medium">精讲精练</span>
+                                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium">我的模板</span>
+                            </div>
+                            <div class="flex items-center justify-between pt-3 border-t border-border">
+                                <span class="text-xs text-muted-foreground">使用 8 次 &middot; 1周前</span>
+                                <div class="flex items-center gap-1">
+                                    <button class="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </button>
+                                    <button class="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                                        <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 模板卡片 3 - 函数单元复习模板 -->
+                    <div class="group rounded-xl border border-border bg-card overflow-hidden cursor-pointer transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+                        <div class="relative h-52 bg-gradient-to-br from-slate-50 to-slate-100 p-4 overflow-hidden">
+                            <div class="absolute inset-4 bg-white/70 rounded-md shadow-md transform rotate-[2deg] origin-top-right"></div>
+                            <div class="absolute inset-3 bg-white rounded-md shadow-xl transform rotate-[-1.5deg] origin-bottom-left overflow-hidden">
+                                <div class="h-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 relative">
+                                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.2),transparent_50%)]"></div>
+                                </div>
+                                <div class="p-3">
+                                    <div class="text-[11px] font-bold text-slate-800 mb-1 leading-tight">函数单元复习<br/><span class="text-[10px] font-normal text-slate-500">-知识体系模板</span></div>
+                                    <div class="w-6 h-0.5 bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full my-2"></div>
+                                    <div class="text-[9px] text-slate-400 mb-2">高中数学 &middot; 必修一</div>
+                                    <div class="space-y-1.5">
+                                        <div class="h-1 bg-slate-200 rounded-full w-5/6"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-full"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-2/3"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-4/5 mt-1.5"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-full"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-3/4"></div>
+                                    </div>
+                                    <div class="absolute bottom-2 right-3 text-[9px] text-slate-400">共 10 页</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-sm font-semibold text-foreground mb-2">函数单元复习模板</h3>
+                            <div class="flex items-center gap-1.5 mb-3 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[11px] font-medium">复习课</span>
+                                <span class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-600 text-[11px] font-medium">知识体系型</span>
+                                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium">我的模板</span>
+                            </div>
+                            <div class="flex items-center justify-between pt-3 border-t border-border">
+                                <span class="text-xs text-muted-foreground">使用 5 次 &middot; 2周前</span>
+                                <div class="flex items-center gap-1">
+                                    <button class="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </button>
+                                    <button class="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                                        <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 模板卡片 4 - 试卷讲评模板 -->
+                    <div class="group rounded-xl border border-border bg-card overflow-hidden cursor-pointer transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+                        <div class="relative h-52 bg-gradient-to-br from-slate-50 to-slate-100 p-4 overflow-hidden">
+                            <div class="absolute inset-4 bg-white/70 rounded-md shadow-md transform rotate-[-2deg] origin-top-left"></div>
+                            <div class="absolute inset-3 bg-white rounded-md shadow-xl transform rotate-[2deg] origin-bottom-right overflow-hidden">
+                                <div class="h-4 bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 relative">
+                                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(255,255,255,0.2),transparent_50%)]"></div>
+                                </div>
+                                <div class="p-3">
+                                    <div class="text-[11px] font-bold text-slate-800 mb-1 leading-tight">试卷讲评课<br/><span class="text-[10px] font-normal text-slate-500">-错因归类模板</span></div>
+                                    <div class="w-6 h-0.5 bg-gradient-to-r from-rose-400 to-pink-300 rounded-full my-2"></div>
+                                    <div class="text-[9px] text-slate-400 mb-2">高中数学 &middot; 通用</div>
+                                    <div class="space-y-1.5">
+                                        <div class="h-1 bg-slate-200 rounded-full w-full"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-3/4"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-5/6"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-2/3 mt-1.5"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-full"></div>
+                                        <div class="h-1 bg-slate-200 rounded-full w-3/5"></div>
+                                    </div>
+                                    <div class="absolute bottom-2 right-3 text-[9px] text-slate-400">共 7 页</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-sm font-semibold text-foreground mb-2">试卷讲评模板</h3>
+                            <div class="flex items-center gap-1.5 mb-3 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[11px] font-medium">讲评课</span>
+                                <span class="px-2 py-0.5 rounded-full bg-pink-100 text-pink-600 text-[11px] font-medium">错因归类型</span>
+                                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium">我的模板</span>
+                            </div>
+                            <div class="flex items-center justify-between pt-3 border-t border-border">
+                                <span class="text-xs text-muted-foreground">使用 3 次 &middot; 3周前</span>
+                                <div class="flex items-center gap-1">
+                                    <button class="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </button>
+                                    <button class="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                                        <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 资源库引用专区 -->
+                <div class="mb-6">
+                    <div class="p-5 rounded-xl bg-gradient-to-r from-slate-50 to-primary/5 border border-border hover:border-primary/20 transition-colors">
+                        <div class="flex items-center gap-5">
+                            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-primary-500 to-accent-400 flex items-center justify-center text-white shadow-lg shadow-primary/25 shrink-0">
+                                <i data-lucide="folder-open" class="w-7 h-7"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-base font-semibold text-foreground mb-1">从资源库历史教案中引用</h3>
+                                <p class="text-sm text-muted-foreground mb-1.5">你上传过 <span class="font-medium text-foreground">16</span> 份教案资料，可以直接引用为模板使用</p>
+                                <p class="text-xs text-muted-foreground flex items-center gap-4">
+                                    <span class="flex items-center gap-1"><i data-lucide="search" class="w-3 h-3"></i> 支持搜索筛选</span>
+                                    <span class="flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3 text-primary"></i> AI 自动提炼结构</span>
+                                    <span class="flex items-center gap-1"><i data-lucide="zap" class="w-3 h-3 text-amber-500"></i> 一键生成同款教案</span>
+                                </p>
+                            </div>
+                            <button class="px-4 h-10 rounded-lg border border-primary/20 bg-white text-primary text-sm font-medium hover:bg-primary/5 transition-colors flex items-center gap-1.5 shrink-0">
+                                查看全部
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 资源库引用列表（2列布局） -->
+                <div class="mb-10">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all cursor-pointer group">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
+                                    <i data-lucide="file-text" class="w-5 h-5 text-blue-500"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-foreground truncate mb-1">立体几何复习课-参考教案.docx</h4>
+                                    <div class="flex items-center gap-3 text-xs text-muted-foreground mb-3">
+                                        <span>2026-08-15</span>
+                                        <span>1.8MB</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button class="px-3 h-7 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors flex items-center gap-1">
+                                            <i data-lucide="copy-plus" class="w-3.5 h-3.5"></i>
+                                            引用为模板
+                                        </button>
+                                        <button class="px-3 h-7 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 transition-colors flex items-center gap-1">
+                                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                            预览
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all cursor-pointer group">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0 group-hover:bg-red-100 transition-colors">
+                                    <i data-lucide="file-text" class="w-5 h-5 text-red-500"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-foreground truncate mb-1">导数应用-单元教学设计.pdf</h4>
+                                    <div class="flex items-center gap-3 text-xs text-muted-foreground mb-3">
+                                        <span>2026-08-02</span>
+                                        <span>2.3MB</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button class="px-3 h-7 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors flex items-center gap-1">
+                                            <i data-lucide="copy-plus" class="w-3.5 h-3.5"></i>
+                                            引用为模板
+                                        </button>
+                                        <button class="px-3 h-7 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 transition-colors flex items-center gap-1">
+                                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                            预览
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all cursor-pointer group">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
+                                    <i data-lucide="file-text" class="w-5 h-5 text-blue-500"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-foreground truncate mb-1">三角函数图像与性质-公开课教案.docx</h4>
+                                    <div class="flex items-center gap-3 text-xs text-muted-foreground mb-3">
+                                        <span>2026-07-20</span>
+                                        <span>1.5MB</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button class="px-3 h-7 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors flex items-center gap-1">
+                                            <i data-lucide="copy-plus" class="w-3.5 h-3.5"></i>
+                                            引用为模板
+                                        </button>
+                                        <button class="px-3 h-7 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 transition-colors flex items-center gap-1">
+                                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                            预览
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all cursor-pointer group">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
+                                    <i data-lucide="file-text" class="w-5 h-5 text-blue-500"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-foreground truncate mb-1">数列求和方法总结-复习课.docx</h4>
+                                    <div class="flex items-center gap-3 text-xs text-muted-foreground mb-3">
+                                        <span>2026-07-08</span>
+                                        <span>980KB</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button class="px-3 h-7 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors flex items-center gap-1">
+                                            <i data-lucide="copy-plus" class="w-3.5 h-3.5"></i>
+                                            引用为模板
+                                        </button>
+                                        <button class="px-3 h-7 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 transition-colors flex items-center gap-1">
+                                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                            预览
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 优质课蓝本专区 -->
+                <div class="mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-base font-semibold text-foreground">优质课蓝本</h2>
+                            <span class="text-xs text-muted-foreground">共 12 份</span>
+                        </div>
+                        <button class="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors">
+                            查看全部
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="flex gap-4 overflow-x-auto pb-3 -mx-2 px-2 no-scrollbar">
+                        <!-- 优质课卡片 1 -->
+                        <div class="shrink-0 w-64 rounded-xl border border-border bg-card overflow-hidden cursor-pointer transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 group">
+                            <div class="relative h-40 bg-gradient-to-br from-slate-50 to-slate-100 p-3 overflow-hidden">
+                                <div class="absolute inset-2 bg-white/60 rounded-md shadow-md transform rotate-[1.5deg] origin-top-right"></div>
+                                <div class="absolute inset-2.5 bg-white rounded-md shadow-lg transform rotate-[-1deg] origin-bottom-left overflow-hidden">
+                                    <div class="h-2.5 bg-gradient-to-r from-indigo-600 via-primary-500 to-purple-500"></div>
+                                    <div class="p-2.5">
+                                        <div class="text-[10px] font-bold text-slate-800 mb-0.5 leading-tight">椭圆及其标准方程</div>
+                                        <div class="w-4 h-0.5 bg-gradient-to-r from-primary-400 to-primary-200 rounded-full my-1.5"></div>
+                                        <div class="text-[8px] text-slate-400 mb-1.5">高中数学 &middot; 人大附中</div>
+                                        <div class="space-y-1">
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-full"></div>
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-3/4"></div>
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-5/6"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold shadow-md">
+                                    全国一等奖
+                                </div>
+                            </div>
+                            <div class="p-3">
+                                <h4 class="text-sm font-medium text-foreground mb-1 truncate">椭圆及其标准方程</h4>
+                                <p class="text-xs text-muted-foreground">人大附中 &middot; 王老师</p>
+                            </div>
+                        </div>
+
+                        <!-- 优质课卡片 2 -->
+                        <div class="shrink-0 w-64 rounded-xl border border-border bg-card overflow-hidden cursor-pointer transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 group">
+                            <div class="relative h-40 bg-gradient-to-br from-slate-50 to-slate-100 p-3 overflow-hidden">
+                                <div class="absolute inset-2 bg-white/60 rounded-md shadow-md transform rotate-[-1deg] origin-top-left"></div>
+                                <div class="absolute inset-2.5 bg-white rounded-md shadow-lg transform rotate-[1deg] origin-bottom-right overflow-hidden">
+                                    <div class="h-2.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500"></div>
+                                    <div class="p-2.5">
+                                        <div class="text-[10px] font-bold text-slate-800 mb-0.5 leading-tight">导数的概念</div>
+                                        <div class="w-4 h-0.5 bg-gradient-to-r from-blue-400 to-cyan-300 rounded-full my-1.5"></div>
+                                        <div class="text-[8px] text-slate-400 mb-1.5">高中数学 &middot; 华师大二附中</div>
+                                        <div class="space-y-1">
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-full"></div>
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-2/3"></div>
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-full"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-[10px] font-bold shadow-md">
+                                    省优课
+                                </div>
+                            </div>
+                            <div class="p-3">
+                                <h4 class="text-sm font-medium text-foreground mb-1 truncate">导数的概念</h4>
+                                <p class="text-xs text-muted-foreground">华师大二附中 &middot; 张老师</p>
+                            </div>
+                        </div>
+
+                        <!-- 优质课卡片 3 -->
+                        <div class="shrink-0 w-64 rounded-xl border border-border bg-card overflow-hidden cursor-pointer transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 group">
+                            <div class="relative h-40 bg-gradient-to-br from-slate-50 to-slate-100 p-3 overflow-hidden">
+                                <div class="absolute inset-2 bg-white/60 rounded-md shadow-md transform rotate-[1deg] origin-top-right"></div>
+                                <div class="absolute inset-2.5 bg-white rounded-md shadow-lg transform rotate-[-0.5deg] origin-bottom-left overflow-hidden">
+                                    <div class="h-2.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500"></div>
+                                    <div class="p-2.5">
+                                        <div class="text-[10px] font-bold text-slate-800 mb-0.5 leading-tight">函数的单调性</div>
+                                        <div class="w-4 h-0.5 bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full my-1.5"></div>
+                                        <div class="text-[8px] text-slate-400 mb-1.5">高中数学 &middot; 北京四中</div>
+                                        <div class="space-y-1">
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-5/6"></div>
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-full"></div>
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-3/4"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] font-bold shadow-md">
+                                    部级优课
+                                </div>
+                            </div>
+                            <div class="p-3">
+                                <h4 class="text-sm font-medium text-foreground mb-1 truncate">函数的单调性</h4>
+                                <p class="text-xs text-muted-foreground">北京四中 &middot; 刘老师</p>
+                            </div>
+                        </div>
+
+                        <!-- 优质课卡片 4 -->
+                        <div class="shrink-0 w-64 rounded-xl border border-border bg-card overflow-hidden cursor-pointer transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 group">
+                            <div class="relative h-40 bg-gradient-to-br from-slate-50 to-slate-100 p-3 overflow-hidden">
+                                <div class="absolute inset-2 bg-white/60 rounded-md shadow-md transform rotate-[-1.5deg] origin-top-left"></div>
+                                <div class="absolute inset-2.5 bg-white rounded-md shadow-lg transform rotate-[1.5deg] origin-bottom-right overflow-hidden">
+                                    <div class="h-2.5 bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500"></div>
+                                    <div class="p-2.5">
+                                        <div class="text-[10px] font-bold text-slate-800 mb-0.5 leading-tight">空间向量应用</div>
+                                        <div class="w-4 h-0.5 bg-gradient-to-r from-violet-400 to-purple-300 rounded-full my-1.5"></div>
+                                        <div class="text-[8px] text-slate-400 mb-1.5">高中数学 &middot; 上海中学</div>
+                                        <div class="space-y-1">
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-full"></div>
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-4/5"></div>
+                                            <div class="h-0.5 bg-slate-200 rounded-full w-2/3"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] font-bold shadow-md">
+                                    市优课
+                                </div>
+                            </div>
+                            <div class="p-3">
+                                <h4 class="text-sm font-medium text-foreground mb-1 truncate">空间向量应用</h4>
+                                <p class="text-xs text-muted-foreground">上海中学 &middot; 陈老师</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 右侧预览抽屉 -->
+        <aside class="w-[42%] min-w-[560px] max-w-[680px] shrink-0 border-l border-border bg-card flex flex-col overflow-hidden">
+            <!-- 抽屉顶部操作栏 -->
+            <div class="flex items-center justify-between px-6 h-16 border-b border-border shrink-0">
+                <button class="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+                <h2 class="font-semibold text-foreground">模板预览</h2>
+                <div class="flex items-center gap-1">
+                    <button class="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors" title="全屏预览">
+                        <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                    </button>
+                    <button class="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                        <i data-lucide="more-horizontal" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 抽屉内容（可滚动） -->
+            <div class="flex-1 overflow-y-auto">
+                <div class="p-6 space-y-6">
+                    <!-- 模板封面大图 -->
+                    <div class="relative flex justify-center py-4">
+                        <div class="relative w-[280px] aspect-[210/297] bg-white rounded-lg shadow-2xl transform rotate-[-2deg] origin-bottom-left overflow-hidden">
+                            <div class="h-24 bg-gradient-to-br from-indigo-600 via-primary-500 to-purple-500 relative">
+                                <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(255,255,255,0.2),transparent_60%)]"></div>
+                                <div class="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white/10 to-transparent"></div>
+                                <div class="absolute top-3 right-4 w-16 h-16 rounded-full bg-white/10 blur-sm"></div>
+                                <div class="absolute bottom-2 left-6 w-10 h-10 rounded-full bg-white/10 blur-sm"></div>
+                            </div>
+                            <div class="px-6 py-5">
+                                <h3 class="text-lg font-bold text-slate-800 leading-tight mb-1">椭圆及其标准方程</h3>
+                                <p class="text-xs text-slate-500 mb-1">（第1课时）</p>
+                                <div class="w-8 h-0.5 bg-gradient-to-r from-primary-400 to-accent-400 rounded-full my-3"></div>
+                                <p class="text-xs text-slate-600 mb-1">高中数学 &middot; 选择性必修一</p>
+                                <p class="text-xs text-slate-500">新授课 &middot; 讲练结合</p>
+                            </div>
+                            <div class="absolute bottom-6 left-6 right-6">
+                                <div class="flex items-center justify-between text-[10px] text-slate-400">
+                                    <span>教师：李老师</span>
+                                    <span>班级：高二(5)班</span>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-0 left-0 right-0 h-2.5 bg-gradient-to-r from-indigo-500 via-primary-500 to-purple-500"></div>
+                        </div>
+                        <div class="absolute top-6 left-1/2 -translate-x-1/2 w-[280px] aspect-[210/297] bg-white/50 rounded-lg shadow-lg transform rotate-[2.5deg] origin-top-right -z-10"></div>
+                    </div>
+
+                    <!-- 模板基本信息 4宫格 -->
+                    <div class="grid grid-cols-4 gap-3">
+                        <div class="p-3 rounded-lg bg-muted/50 border border-border text-center">
+                            <div class="text-xs text-muted-foreground mb-1">课型</div>
+                            <div class="text-sm font-semibold text-foreground">新授课</div>
+                        </div>
+                        <div class="p-3 rounded-lg bg-muted/50 border border-border text-center">
+                            <div class="text-xs text-muted-foreground mb-1">教学法</div>
+                            <div class="text-sm font-semibold text-foreground">讲练结合</div>
+                        </div>
+                        <div class="p-3 rounded-lg bg-muted/50 border border-border text-center">
+                            <div class="text-xs text-muted-foreground mb-1">环节数</div>
+                            <div class="text-sm font-semibold text-foreground">8个环节</div>
+                        </div>
+                        <div class="p-3 rounded-lg bg-muted/50 border border-border text-center">
+                            <div class="text-xs text-muted-foreground mb-1">来源</div>
+                            <div class="text-sm font-semibold text-primary">我的模板</div>
+                        </div>
+                    </div>
+
+                    <!-- 目录 / 环节列表 -->
+                    <div>
+                        <h3 class="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                            <i data-lucide="list" class="w-4 h-4 text-primary"></i>
+                            目录 / 环节列表
+                        </h3>
+                        <div class="space-y-2">
+                            <!-- 一、教学目标 -->
+                            <div class="rounded-lg border border-border overflow-hidden">
+                                <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                                    <span class="text-sm font-medium text-foreground flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center">一</span>
+                                        教学目标
+                                    </span>
+                                    <i data-lucide="chevron-down" class="w-4 h-4 text-muted-foreground"></i>
+                                </button>
+                                <div class="px-4 pb-3 pl-11 space-y-1.5">
+                                    <div class="text-xs text-muted-foreground flex items-start gap-2">
+                                        <span class="text-primary mt-0.5">•</span>
+                                        <span>理解椭圆的定义，掌握椭圆的标准方程及其推导方法</span>
+                                    </div>
+                                    <div class="text-xs text-muted-foreground flex items-start gap-2">
+                                        <span class="text-primary mt-0.5">•</span>
+                                        <span>通过椭圆标准方程的推导，培养数学抽象和逻辑推理素养</span>
+                                    </div>
+                                    <div class="text-xs text-muted-foreground flex items-start gap-2">
+                                        <span class="text-primary mt-0.5">•</span>
+                                        <span>体会数形结合思想，激发学习数学的兴趣</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 二、教学重点与难点 -->
+                            <div class="rounded-lg border border-border overflow-hidden">
+                                <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                                    <span class="text-sm font-medium text-foreground flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center">二</span>
+                                        教学重点与难点
+                                    </span>
+                                    <i data-lucide="chevron-down" class="w-4 h-4 text-muted-foreground"></i>
+                                </button>
+                                <div class="px-4 pb-3 pl-11 space-y-1.5">
+                                    <div class="text-xs text-muted-foreground flex items-start gap-2">
+                                        <span class="font-medium text-foreground shrink-0">重点：</span>
+                                        <span>椭圆的定义和标准方程</span>
+                                    </div>
+                                    <div class="text-xs text-muted-foreground flex items-start gap-2">
+                                        <span class="font-medium text-foreground shrink-0">难点：</span>
+                                        <span>椭圆标准方程的推导与化简</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 三、教学过程（展开高亮） -->
+                            <div class="rounded-lg border border-primary/30 bg-primary/[0.02] overflow-hidden">
+                                <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-primary/5 transition-colors">
+                                    <span class="text-sm font-medium text-foreground flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded bg-primary text-white text-[11px] font-bold flex items-center justify-center">三</span>
+                                        教学过程
+                                        <span class="text-xs text-muted-foreground font-normal">&middot; 6个环节 &middot; 45分钟</span>
+                                    </span>
+                                    <i data-lucide="chevron-down" class="w-4 h-4 text-muted-foreground"></i>
+                                </button>
+                                <div class="px-4 pb-3 pl-11 space-y-2">
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="w-5 h-5 rounded-full bg-amber-400/20 text-amber-600 text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
+                                        <span class="text-foreground">情境引入</span>
+                                        <span class="ml-auto text-muted-foreground">5min</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="w-5 h-5 rounded-full bg-orange-400/20 text-orange-600 text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
+                                        <span class="text-foreground font-medium">概念形成</span>
+                                        <span class="ml-auto text-muted-foreground">10min</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">3</span>
+                                        <span class="text-foreground">例题精讲</span>
+                                        <span class="ml-auto text-muted-foreground">12min</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="w-5 h-5 rounded-full bg-blue-500/20 text-blue-600 text-[10px] font-bold flex items-center justify-center shrink-0">4</span>
+                                        <span class="text-foreground">课堂练习</span>
+                                        <span class="ml-auto text-muted-foreground">8min</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-600 text-[10px] font-bold flex items-center justify-center shrink-0">5</span>
+                                        <span class="text-foreground">课堂小结</span>
+                                        <span class="ml-auto text-muted-foreground">5min</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="w-5 h-5 rounded-full bg-slate-400/20 text-slate-600 text-[10px] font-bold flex items-center justify-center shrink-0">6</span>
+                                        <span class="text-foreground">作业布置</span>
+                                        <span class="ml-auto text-muted-foreground">5min</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 四、板书设计（折叠） -->
+                            <div class="rounded-lg border border-border overflow-hidden">
+                                <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                                    <span class="text-sm font-medium text-foreground flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded bg-muted text-muted-foreground text-[11px] font-bold flex items-center justify-center">四</span>
+                                        板书设计
+                                    </span>
+                                    <i data-lucide="chevron-right" class="w-4 h-4 text-muted-foreground"></i>
+                                </button>
+                            </div>
+
+                            <!-- 五、作业布置（折叠） -->
+                            <div class="rounded-lg border border-border overflow-hidden">
+                                <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                                    <span class="text-sm font-medium text-foreground flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded bg-muted text-muted-foreground text-[11px] font-bold flex items-center justify-center">五</span>
+                                        作业布置
+                                    </span>
+                                    <i data-lucide="chevron-right" class="w-4 h-4 text-muted-foreground"></i>
+                                </button>
+                            </div>
+
+                            <!-- 六、教学反思（折叠） -->
+                            <div class="rounded-lg border border-border overflow-hidden">
+                                <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                                    <span class="text-sm font-medium text-foreground flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded bg-muted text-muted-foreground text-[11px] font-bold flex items-center justify-center">六</span>
+                                        教学反思
+                                    </span>
+                                    <i data-lucide="chevron-right" class="w-4 h-4 text-muted-foreground"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 内容预览片段 -->
+                    <div class="p-4 rounded-xl bg-gradient-to-br from-primary/5 to-accent/5 border border-primary/10">
+                        <h4 class="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-4 h-4 text-primary"></i>
+                            教学过程预览 &middot; 概念形成环节
+                        </h4>
+                        <div class="text-xs text-slate-600 leading-relaxed mb-3 space-y-2">
+                            <p>【动手实验】教师演示：取一条定长的细绳，把它的两端都固定在图板的同一点处，套上铅笔，拉紧绳子，移动笔尖，这时笔尖（动点）画出的轨迹是一个圆。</p>
+                            <p>【探究思考】如果把细绳的两端拉开一段距离，分别固定在图板的两点处，套上铅笔，拉紧绳子，移动笔尖，画出的轨迹是什么曲线？在这一过程中，你能说出移动的笔尖（动点）满足的几何条件吗？</p>
+                        </div>
+                        <div class="py-3 px-4 bg-white/80 rounded-lg border border-border text-center mb-3">
+                            <span class="math-display text-slate-700">
+                                |MF&#8321;| + |MF&#8322;| = 2a &nbsp; (2a &gt; |F&#8321;F&#8322;|)
+                            </span>
+                        </div>
+                        <button class="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors">
+                            查看完整内容
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+
+                    <!-- 模板使用数据 -->
+                    <div class="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border">
+                        <div class="flex-1 text-center">
+                            <div class="text-lg font-bold text-foreground">12</div>
+                            <div class="text-[11px] text-muted-foreground">使用次数</div>
+                        </div>
+                        <div class="w-px h-8 bg-border"></div>
+                        <div class="flex-1 text-center">
+                            <div class="text-lg font-bold text-foreground">35<span class="text-sm">%</span></div>
+                            <div class="text-[11px] text-muted-foreground">平均修改率</div>
+                        </div>
+                        <div class="w-px h-8 bg-border"></div>
+                        <div class="flex-1 text-center">
+                            <div class="text-lg font-bold text-emerald-500">96<span class="text-sm">%</span></div>
+                            <div class="text-[11px] text-muted-foreground">好评率</div>
+                        </div>
+                    </div>
+
+                    <div class="h-4"></div>
+                </div>
+            </div>
+
+            <!-- 底部操作区（固定） -->
+            <div class="p-5 border-t border-border shrink-0 bg-card">
+                <div class="flex items-center gap-3">
+                    <button class="flex-1 h-11 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="edit-3" class="w-4 h-4"></i>
+                        编辑模板结构
+                    </button>
+                    <button class="flex-[1.5] h-11 rounded-xl bg-gradient-to-r from-primary-600 to-accent-500 text-white text-sm font-semibold hover:from-primary-700 hover:to-accent-600 transition-all shadow-lg shadow-primary/25 flex items-center justify-center gap-2">
+                        <i data-lucide="wand-2" class="w-4 h-4"></i>
+                        使用此模板备课
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- 右下角悬浮球 -->
+    <button class="fixed bottom-6 right-[calc(42%+24px)] z-50 w-12 h-12 rounded-full bg-gradient-to-br from-primary-600 to-accent-500 text-white shadow-lg shadow-primary/30 hover:scale-105 transition-transform flex items-center justify-center" title="AI 助手">
+        <i data-lucide="sparkles" class="w-5 h-5"></i>
+    </button>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

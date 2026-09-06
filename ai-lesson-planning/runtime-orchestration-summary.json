@@ -1,0 +1,769 @@
+{
+  "project": {
+    "resolvedLane": "existing_edit_add_comparison",
+    "selectedIntentWorkflowRead": true,
+    "contextReadScope": {
+      "mainAgent": {
+        "forbiddenReads": [
+          "other intent-workflows/**",
+          "Sub-Agent implementation files before dispatch"
+        ]
+      },
+      "pageSubAgent": {
+        "allowedReads": [
+          "current lane page runtime guide",
+          "current lane dispatch contract excerpt",
+          "current Page Packet",
+          "supplementaryReads[] only"
+        ],
+        "forbiddenReads": [
+          "SKILL.md full re-read",
+          "other intent-workflows/**",
+          "full runtime-orchestration-summary.json unless explicitly sliced"
+        ]
+      },
+      "readScopeLedgerWriter": "shared-runtime/deterministic-tooling/build-page-dispatch-manifest.mjs"
+    },
+    "contextRequirementsLoaded": [
+      {
+        "path": "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/page-rendering-quality-gate.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/design-artifact-validation.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/delivery-evidence-contract.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "visual-experience/visual-experience-guidelines.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "shared-runtime/design-artifact-formats/design-project-file-format.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      }
+    ],
+    "validationRunDiscipline": {
+      "maxFullValidationRuns": 2,
+      "softWarningsTriggerRepair": false,
+      "blockingRepairMode": "targeted-once",
+      "forbiddenRepairTriggers": [
+        "soft-warning-only",
+        "provenance-warning-only",
+        "style-warning-only"
+      ]
+    },
+    "lowValueCallWatchdog": {
+      "applies": true,
+      "noProgressSignals": [
+        "no_tool_call",
+        "no_artifact_diff",
+        "no_structured_decision"
+      ],
+      "noProgressNextAction": "enter_readiness_or_blocked_summary"
+    },
+    "cssPreflightEvidence": {
+      "applies": true,
+      "status": "passed",
+      "command": "node c:\\Users\\徐超\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs d:\\frontend\\ai-lesson-planning\\colors_and_type.css d:\\frontend\\ai-lesson-planning\\.preflight\\preflight.html --title=\"Preflight\" --lang=zh-CN --prefix=ailp",
+      "brandPrefix": "ailp",
+      "checks": {
+        "themeVars": "present",
+        "semanticTokenFallback": "present",
+        "themeInline": "present",
+        "tailwindCdn": "present",
+        "htmlClass": "present",
+        "semanticMappings": "resolved"
+      },
+      "retryCount": 0,
+      "blockingReason": null
+    },
+    "intentProfile": {
+      "caseFamily": "free_exploration",
+      "routingReason": "Original project creation was open-ended UI creation without Library; rounds are comparison-page mutations on that project (existing_edit_add_comparison)",
+      "complexity": "stateful-free-fast",
+      "deviceType": "desktop"
+    },
+    "sourceProjectLaneHeritage": {
+      "sourceLane": "free_exploration",
+      "constraints": "No Design Library, no restore evidence, no graphic-layout lock. Style continuity governed by project.styleContinuityAnchors and source page pages/home.html.",
+      "inheritedGuardrails": [
+        "brandPrefix: ailp",
+        "colors_and_type.css as token SSOT",
+        "head infrastructure contract (theme-vars + @theme inline + tailwind CDN + lucide)"
+      ]
+    },
+    "currentMutation": {
+      "mode": "add-comparison-pages",
+      "round": 2,
+      "sourceEvidence": "9 product screenshots of V3 课件工坊 (dark navy theme) + market research d:\\frontend\\docs\\teacher-v3\\RESEARCH_COURSEWARE_WORKSHOP.md",
+      "userRequest": "重设计课件工坊全部页面：①首页改为 AI 输入优先；②大纲确认页必须展示 AI 生成的大纲内容（可编辑），不是空白表单；③编辑器删除底部绘图工作台 dock（绘图收进右下角悬浮球）；④拍照出课件补识别确认环节、设置压缩、模板选择统一成画廊+预览页。样式沿用画布 AI 对话首页的浅色靛蓝+青色辉光体系。",
+      "pages": [
+        {
+          "nodeId": "page-workshop-home",
+          "htmlSrc": "pages/workshop-home.html",
+          "pageType": "task-driven"
+        },
+        {
+          "nodeId": "page-workshop-outline",
+          "htmlSrc": "pages/workshop-outline.html",
+          "pageType": "task-driven"
+        },
+        {
+          "nodeId": "page-workshop-template",
+          "htmlSrc": "pages/workshop-template.html",
+          "pageType": "task-driven"
+        },
+        {
+          "nodeId": "page-workshop-photo",
+          "htmlSrc": "pages/workshop-photo.html",
+          "pageType": "task-driven"
+        },
+        {
+          "nodeId": "page-workshop-from-plan",
+          "htmlSrc": "pages/workshop-from-plan.html",
+          "pageType": "task-driven"
+        },
+        {
+          "nodeId": "page-workshop-generating",
+          "htmlSrc": "pages/workshop-generating.html",
+          "pageType": "task-driven"
+        },
+        {
+          "nodeId": "page-workshop-editor",
+          "htmlSrc": "pages/workshop-editor.html",
+          "pageType": "task-driven"
+        }
+      ],
+      "derivationType": "comparison-pages",
+      "inPlaceEditAllowed": false
+    },
+    "styleContinuityAnchors": {
+      "colorSystem": "primary indigo scale --ailp-primary-600 #4f46e5 / #6366f1, accent cyan --ailp-accent-500 #06b6d4, violet #8b5cf6 and amber #f59e0b reserved for capability-card icon tints (source-page precedent), slate neutrals, bg #f8fafc, card white/80 backdrop-blur, border #e2e8f0, muted-foreground #64748b, success #10b981 / warning #f59e0b / error #ef4444 status tints",
+      "shapeSystem": "radius scale 6/10/14/20/28px; cards rounded-2xl, main input wrapper rounded-[28px] (radius-2xl), pills rounded-full, icon tiles rounded-xl",
+      "typographySystem": "system CJK sans stack (PingFang SC / Microsoft YaHei), base 14px, hero 5xl bold tracking-tight, card titles font-semibold, body text-sm leading-relaxed, math serif reserved for formulas",
+      "spacingSystem": "main max-w-4xl~6xl centered px-6 pt-12 pb-20; sections spaced mt-10/12; cards p-5; list rows p-5 with gap-4",
+      "componentLanguage": "glow input wrapper (shimmer gradient border + ai-glow-pulse halo), quick-card hover lift (-4px + colored shadow), gradient-text hero keyword, bg-blob blurred decorative circles, list rows with gradient icon tiles, status pill badges (tint bg + colored text), floating AI orb button with tooltip, FAB sub-menu (资源推荐/绘图工具/公式编辑/拍照上传) from pages/editor.html",
+      "surfaceAndDepth": "translucent white/80 cards with backdrop-blur over #f8fafc background with blurred color blobs; soft shadow scale; depth from layering not heavy shadows",
+      "imageryAndIconography": "lucide icons only (w-3.5~w-6); no bitmap imagery; small inline SVG allowed ONLY as slide-preview mock content (math figures inside canvas/slide mocks, mirroring pages/editor.html precedent)",
+      "interactionTone": "gentle animations: float, ai-glow-pulse, shimmer, fade-in-up entrance with stagger delays; hover translateY(-4px) on cards; no harsh transitions"
+    },
+    "pageCompletenessGate": {
+      "expectedPages": [
+        "home",
+        "ai-home-agent",
+        "workshop-home",
+        "workshop-outline",
+        "workshop-template",
+        "workshop-photo",
+        "workshop-from-plan",
+        "workshop-generating",
+        "workshop-editor",
+        "editor",
+        "editor-resources"
+      ],
+      "requiredStates": [],
+      "requiredInteractions": [],
+      "requiredNavigation": [],
+      "missingAllowed": []
+    },
+    "validationHistory": [
+      {
+        "reportPath": "validation-report.json",
+        "reportHash": "3f0b43a700a78dd6b8af3f9dc40d6b85a93dd90e369813903bc2b485bdfa107c",
+        "checkedAt": "2026-09-06T13:41:04.086Z",
+        "success": false,
+        "exitCode": 1,
+        "renderBlockingErrorCount": 1,
+        "repairPlanHints": [
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body"
+        ],
+        "errorSignatures": [
+          {
+            "errorClass": "artifact-readiness",
+            "normalized": "[design-file] Validation failed for .design file batch: ======================================== [FAIL] Validation failed ---------------------------------------- Found 8 issues: 1. [root.data] page count mismatch: expected 15 page node(s), got 8. Possible cause: Main Agent .design update missed or removed page nodes. Fix: check HTML files under pages/ and re-append missing page nodes to the data array 2. [pages/workshop-editor.html] HTML file exists but is not registered in canvas: pages/workshop-editor.html exists in pages/ but has no corresponding page node in the .design file's data array. Fix: add a page node for this file to the data array 3. [pages/workshop-from-plan.html] HTML file exists but is not registered in canvas: pages/workshop-from-plan.html exists in pages/ but has no corresponding page node in the .design file's data array. Fix: add a page node for this file to the data array 4. [pages/workshop-generating.html] HTML file exists but is not registered in canvas: pages/workshop-generating.html exists in pages/ but has no corresponding page node in the .design file's data array. Fix: add a page node for this file to the data array 5. [pages/workshop-home.html] HTML file exists but is not registered in canvas: pages/workshop-home.html exists in pages/ but has no corresponding page node in the .design file's data array. Fix: add a page node for this file to the data array 6. [pages/workshop-outline.html] HTML file exists but is not registered in canvas: pages/workshop-outline.html exists in pages/ but has no corresponding page node in the .design file's data array. Fix: add a page node for this file to the data array 7. [pages/workshop-photo.html] HTML file exists but is not registered in canvas: pages/workshop-photo.html exists in pages/ but has no corresponding page node in the .design file's data array. Fix: add a page node for this file to the data array 8. [pages/workshop-template.html] HTML file exists but is not registered in canvas: pages/workshop-template.html exists in pages/ but has no corresponding page node in the .design file's data array. Fix: add a page node for this file to the data array ========================================",
+            "signature": "8766bf44c09caab0931572e3a73a9feac2738527c113c8088a0eb3eddb1d9037"
+          }
+        ],
+        "terminalState": null
+      },
+      {
+        "reportPath": "validation-report.json",
+        "reportHash": "fb69da5ff805cd809e3727156de990f1dc4f4dcb6233f3c93efd44e428d95049",
+        "checkedAt": "2026-09-06T13:42:12.499Z",
+        "success": true,
+        "exitCode": 0,
+        "renderBlockingErrorCount": 0,
+        "repairPlanHints": [
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body"
+        ],
+        "errorSignatures": [],
+        "terminalState": null
+      }
+    ],
+    "validationRepairLedger": [
+      {
+        "failedReportPath": "validation-report.json",
+        "failedReportHash": "3f0b43a700a78dd6b8af3f9dc40d6b85a93dd90e369813903bc2b485bdfa107c",
+        "repairWorkflowReadPath": "intent-workflows/intent-project-mutation/main-agent-repair-workflow.md",
+        "repairStartedAt": "2026-09-06T13:41:30.519Z",
+        "repairEntryStatus": "revalidated-success",
+        "ownerTriage": [
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "ai-generating.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "ai-home-agent.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "home.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "textbook-select.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "upload-materials.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "workshop-editor.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "workshop-from-plan.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "workshop-generating.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "workshop-home.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "workshop-outline.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "workshop-photo.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "workshop-template.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          }
+        ],
+        "repairPlanHints": [
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "ai-generating.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "ai-home-agent.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "home.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "textbook-select.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "upload-materials.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "workshop-editor.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "workshop-from-plan.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "workshop-generating.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "workshop-home.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "workshop-outline.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "workshop-photo.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "workshop-template.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          }
+        ],
+        "repairActions": [],
+        "revalidationReportPath": "validation-report.json",
+        "revalidationReportHash": "fb69da5ff805cd809e3727156de990f1dc4f4dcb6233f3c93efd44e428d95049",
+        "revalidationSuccess": true,
+        "blockedReason": null,
+        "revalidationRecordedAt": "2026-09-06T13:42:12.567Z"
+      }
+    ],
+    "repairEntryEvidence": [
+      {
+        "failedReportPath": "validation-report.json",
+        "failedReportHash": "3f0b43a700a78dd6b8af3f9dc40d6b85a93dd90e369813903bc2b485bdfa107c",
+        "repairWorkflowReadPath": "intent-workflows/intent-project-mutation/main-agent-repair-workflow.md",
+        "repairStartedAt": "2026-09-06T13:41:30.519Z",
+        "ledgerIndex": 0,
+        "ownerTriageCount": 12,
+        "repairActionCount": 0,
+        "revalidationReportPath": "validation-report.json",
+        "revalidationReportHash": "fb69da5ff805cd809e3727156de990f1dc4f4dcb6233f3c93efd44e428d95049",
+        "revalidationSuccess": true
+      }
+    ]
+  },
+  "dispatchPreflightManifest": [
+    {
+      "nodeId": "page-workshop-home",
+      "packetType": "ExistingEditPagePacket",
+      "allowedWritePaths": [
+        "d:\\frontend\\ai-lesson-planning\\pages\\workshop-home.html"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "d:\\frontend\\ai-lesson-planning\\pages\\workshop-home.html"
+        ]
+      }
+    },
+    {
+      "nodeId": "page-workshop-outline",
+      "packetType": "ExistingEditPagePacket",
+      "allowedWritePaths": [
+        "d:\\frontend\\ai-lesson-planning\\pages\\workshop-outline.html"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "d:\\frontend\\ai-lesson-planning\\pages\\workshop-outline.html"
+        ]
+      }
+    },
+    {
+      "nodeId": "page-workshop-template",
+      "packetType": "ExistingEditPagePacket",
+      "allowedWritePaths": [
+        "d:\\frontend\\ai-lesson-planning\\pages\\workshop-template.html"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "d:\\frontend\\ai-lesson-planning\\pages\\workshop-template.html"
+        ]
+      }
+    },
+    {
+      "nodeId": "page-workshop-photo",
+      "packetType": "ExistingEditPagePacket",
+      "allowedWritePaths": [
+        "d:\\frontend\\ai-lesson-planning\\pages\\workshop-photo.html"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "d:\\frontend\\ai-lesson-planning\\pages\\workshop-photo.html"
+        ]
+      }
+    },
+    {
+      "nodeId": "page-workshop-from-plan",
+      "packetType": "ExistingEditPagePacket",
+      "allowedWritePaths": [
+        "d:\\frontend\\ai-lesson-planning\\pages\\workshop-from-plan.html"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "d:\\frontend\\ai-lesson-planning\\pages\\workshop-from-plan.html"
+        ]
+      }
+    },
+    {
+      "nodeId": "page-workshop-generating",
+      "packetType": "ExistingEditPagePacket",
+      "allowedWritePaths": [
+        "d:\\frontend\\ai-lesson-planning\\pages\\workshop-generating.html"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "d:\\frontend\\ai-lesson-planning\\pages\\workshop-generating.html"
+        ]
+      }
+    },
+    {
+      "nodeId": "page-workshop-editor",
+      "packetType": "ExistingEditPagePacket",
+      "allowedWritePaths": [
+        "d:\\frontend\\ai-lesson-planning\\pages\\workshop-editor.html"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "d:\\frontend\\ai-lesson-planning\\pages\\workshop-editor.html"
+        ]
+      }
+    }
+  ],
+  "expectedDispatches": [
+    {
+      "nodeId": "page-workshop-home",
+      "packetType": "ExistingEditPagePacket",
+      "status": "completed",
+      "changedFiles": [
+        "pages/workshop-home.html"
+      ],
+      "toolCallLedger": {
+        "todoWriteCalls": 0,
+        "previewCalls": 0,
+        "validationScriptCalls": 0,
+        "helperScriptWrites": 0
+      }
+    },
+    {
+      "nodeId": "page-workshop-outline",
+      "packetType": "ExistingEditPagePacket",
+      "status": "completed",
+      "changedFiles": [
+        "pages/workshop-outline.html"
+      ],
+      "toolCallLedger": {
+        "todoWriteCalls": 0,
+        "previewCalls": 0,
+        "validationScriptCalls": 0,
+        "helperScriptWrites": 0
+      }
+    },
+    {
+      "nodeId": "page-workshop-template",
+      "packetType": "ExistingEditPagePacket",
+      "status": "completed",
+      "changedFiles": [
+        "pages/workshop-template.html"
+      ],
+      "toolCallLedger": {
+        "todoWriteCalls": 0,
+        "previewCalls": 0,
+        "validationScriptCalls": 0,
+        "helperScriptWrites": 0
+      }
+    },
+    {
+      "nodeId": "page-workshop-photo",
+      "packetType": "ExistingEditPagePacket",
+      "status": "completed",
+      "changedFiles": [
+        "pages/workshop-photo.html"
+      ],
+      "toolCallLedger": {
+        "todoWriteCalls": 0,
+        "previewCalls": 0,
+        "validationScriptCalls": 0,
+        "helperScriptWrites": 0
+      }
+    },
+    {
+      "nodeId": "page-workshop-from-plan",
+      "packetType": "ExistingEditPagePacket",
+      "status": "completed",
+      "changedFiles": [
+        "pages/workshop-from-plan.html"
+      ],
+      "toolCallLedger": {
+        "todoWriteCalls": 0,
+        "previewCalls": 0,
+        "validationScriptCalls": 0,
+        "helperScriptWrites": 0
+      }
+    },
+    {
+      "nodeId": "page-workshop-generating",
+      "packetType": "ExistingEditPagePacket",
+      "status": "completed",
+      "changedFiles": [
+        "pages/workshop-generating.html"
+      ],
+      "toolCallLedger": {
+        "todoWriteCalls": 0,
+        "previewCalls": 0,
+        "validationScriptCalls": 0,
+        "helperScriptWrites": 0
+      }
+    },
+    {
+      "nodeId": "page-workshop-editor",
+      "packetType": "ExistingEditPagePacket",
+      "status": "completed",
+      "changedFiles": [
+        "pages/workshop-editor.html"
+      ],
+      "toolCallLedger": {
+        "todoWriteCalls": 0,
+        "previewCalls": 0,
+        "validationScriptCalls": 0,
+        "helperScriptWrites": 0
+      }
+    }
+  ],
+  "completionSummary": {}
+}

@@ -47,7 +47,8 @@
       <template v-if="resultLatex !== null">
         <div class="mxd-hand__rhead">
           <span class="tv3-tag tv3-tag--gold">识别结果</span>
-          <span class="mxd-hand__conf">置信度 {{ (confidence * 100).toFixed(0) }}%</span>
+          <!-- B0 诚实化：当前为固定样例池演示，不显示伪造的精确置信度 -->
+          <span class="mxd-hand__conf" title="原型为固定样例演示，未接入真实识别服务">识别演示（未接入真实识别服务）</span>
         </div>
         <div class="tv3-form-label">在编辑器中审查修改（红线：识别不定稿）</div>
         <MathField v-model="resultLatex" :font-size="26" testid="mxd-hand-result-field" />

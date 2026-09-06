@@ -4,6 +4,7 @@
       <!-- 顶栏 -->
       <div class="mxd-board__top">
         <span class="mxd-board__title">📐 绘图工作台</span>
+        <span v-if="contextLabel" class="mxd-board__ctx" data-testid="mxd-board-ctx">{{ contextLabel }}</span>
         <div class="tv3-seg">
           <button
             v-for="m in MODES" :key="m.id"
@@ -56,6 +57,8 @@
           <KeepAlive>
             <FxMode v-if="mode === 'fx'" ref="fxRef" :initial-expr="reopenExpr" @insert="onInsert" @changed="onFxChanged" />
             <FreeMode v-else-if="mode === 'free'" ref="freeRef" :initial-records="reopenRecords" @insert="onInsert" @changed="onFreeChanged" />
+            <GeomMode v-else-if="mode === 'geom'" ref="geomRef" @insert="onInsert" />
+            <GeometryDirector v-else-if="mode === 'director'" @insert="onInsert" />
             <HandMode v-else @insert="onInsert" />
           </KeepAlive>
         </div>
@@ -96,33 +99,40 @@ import { v3Api } from '@/api/teacherV3'
 import type { V3DrawRecord, V3FigureLibraryItem } from '@/types/teacherV3'
 import FxMode from './FxMode.vue'
 import FreeMode from './FreeMode.vue'
+import GeomMode from '../geom/GeomMode.vue'
+import GeometryDirector from '../director/GeometryDirector.vue'
 import HandMode from './HandMode.vue'
 import type { V3DrawInsert } from './drawCore'
 
 export interface DrawReopen {
-  mode: 'fx' | 'free'
+  mode: 'fx' | 'free' | 'geom'
   records?: V3DrawRecord[]
   expr?: string
   elementId: string
 }
 
-const props = withDefaults(defineProps<{ open: boolean; reopen?: DrawReopen | null }>(), { reopen: null })
+const props = withDefaults(defineProps<{ open: boolean; reopen?: DrawReopen | null; contextLabel?: string }>(), { reopen: null, contextLabel: '' })
 const emit = defineEmits<{
   (e: 'update:open', v: boolean): void
   (e: 'insert', payload: V3DrawInsert, elementId?: string): void
+  /** C2 全局化：手动关闭且画布有内容时上抛快照，由宿主暂存（画一半关掉不丢） */
+  (e: 'stash', desc: { kind: 'free' | 'fx'; thumb: string; records?: V3DrawRecord[]; expr?: string }): void
 }>()
 
-type Mode = 'fx' | 'free' | 'hand'
+type Mode = 'fx' | 'free' | 'geom' | 'hand' | 'director'
 const MODES: { id: Mode; label: string; note: string }[] = [
   { id: 'fx', label: '函数绘图', note: '输入表达式 → 可调参图像，插入后放映态参数可拖' },
   { id: 'free', label: '自由画布', note: '画笔 / 直线 / 圆 / 多边形 + 规整图形，配方结构化可重开' },
+  { id: 'geom', label: '立体几何', note: '平行六面体/棱锥骨架 + 棱上点/中点/交点/截面构造，依赖可拖动、虚实自动、标签入图' },
   { id: 'hand', label: '手写公式', note: '手写 → 识别为 LaTeX → 编辑器审查 → 插入' },
+  { id: 'director', label: '构图导演（实验）', note: '自然语言 → 可审查的构造步骤 + 确定性图形；首批支持六类任务' },
 ]
 
 const mode = ref<Mode>('fx')
 const libItems = ref<V3FigureLibraryItem[]>([])
 const fxRef = ref<InstanceType<typeof FxMode> | null>(null)
 const freeRef = ref<InstanceType<typeof FreeMode> | null>(null)
+const geomRef = ref<InstanceType<typeof GeomMode> | null>(null)
 const reopenRecords = ref<V3DrawRecord[]>([])
 const reopenExpr = ref('')
 
@@ -136,6 +146,14 @@ const saveToast = ref('')
 const modeNote = computed(() => MODES.find((m) => m.id === mode.value)?.note || '')
 
 function close() {
+  /* C2：主动关闭且画布有内容 → 上抛暂存快照（插入路径 onInsert 直接关，不走此处，不重复暂存） */
+  try {
+    if (mode.value === 'free' || mode.value === 'fx' || mode.value === 'geom') {
+      const desc = mode.value === 'free' ? freeRef.value?.describe() : mode.value === 'geom' ? geomRef.value?.describe() : fxRef.value?.describe()
+      const hasContent = desc && (desc.kind === 'fx' ? !!desc.expr : !!(desc.records && desc.records.length))
+      if (desc && hasContent) emit('stash', desc)
+    }
+  } catch { /* 暂存失败不阻塞关闭 */ }
   emit('update:open', false)
 }
 
@@ -156,7 +174,11 @@ function onFxChanged(_expr: string) { /* 预留：脏状态标记 */ }
 function onFreeChanged(_records: V3DrawRecord[]) { /* 预留：脏状态标记 */ }
 
 async function applyLib(it: V3FigureLibraryItem) {
-  if (it.kind === 'free' && it.records?.length) {
+  if (it.kind === 'free' && it.records?.length && it.records[0]?.kind === 'geomdoc') {
+    mode.value = 'geom'
+    await nextTick()
+    geomRef.value?.loadRecords(it.records)
+  } else if (it.kind === 'free' && it.records?.length) {
     mode.value = 'free'
     await nextTick()
     freeRef.value?.loadRecords(it.records)
@@ -168,7 +190,7 @@ async function applyLib(it: V3FigureLibraryItem) {
 }
 
 function startSave() {
-  const desc = mode.value === 'free' ? freeRef.value?.describe() : fxRef.value?.describe()
+  const desc = mode.value === 'free' ? freeRef.value?.describe() : mode.value === 'geom' ? geomRef.value?.describe() : fxRef.value?.describe()
   if (!desc) {
     saveToast.value = '当前画布为空，先画点内容再保存'
     window.setTimeout(() => { saveToast.value = '' }, 1800)
@@ -219,6 +241,7 @@ watch(() => props.open, async (v) => {
     reopenExpr.value = props.reopen.expr || ''
     await nextTick()
     if (props.reopen.mode === 'free' && reopenRecords.value.length) freeRef.value?.loadRecords(reopenRecords.value)
+    if (props.reopen.mode === 'geom' && reopenRecords.value.length) geomRef.value?.loadRecords(reopenRecords.value)
     if (props.reopen.mode === 'fx' && reopenExpr.value) fxRef.value?.loadExpr(reopenExpr.value)
   } else {
     reopenRecords.value = []
@@ -244,6 +267,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   background: #fff; border-radius: 14px 14px 0 0; border-bottom: 1px solid var(--tv3-line2);
 }
 .mxd-board__title { font-size: 15.5px; font-weight: 800; color: var(--tv3-ink); white-space: nowrap; }
+.mxd-board__ctx {
+  font-size: 11.5px; color: #8a6d1d; background: var(--tv3-gold-soft, #fdf8ec);
+  border: 1px solid #ecd3a1; border-radius: 999px; padding: 3px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%;
+}
 .mxd-board__note { font-size: 11.5px; color: var(--tv3-ink3); }
 .mxd-board__body { flex: 1; min-height: 0; display: flex; background: #fff; border-radius: 0 0 14px 14px; overflow: hidden; position: relative; }
 .mxd-board__lib {

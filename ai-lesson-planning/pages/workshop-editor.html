@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>课件编辑器 - 备小研</title>
+    <style id="theme-vars">
+/* ============================================================
+   AI 备课工作台 - 设计令牌 / Design Tokens
+   ============================================================ */
+
+:root {
+  /* ---- Primary Brand ---- */
+  --ailp-primary-50: #eef2ff;
+  --ailp-primary-100: #e0e7ff;
+  --ailp-primary-200: #c7d2fe;
+  --ailp-primary-300: #a5b4fc;
+  --ailp-primary-400: #818cf8;
+  --ailp-primary-500: #6366f1;
+  --ailp-primary-600: #4f46e5;
+  --ailp-primary-700: #4338ca;
+  --ailp-primary-800: #3730a3;
+  --ailp-primary-900: #312e81;
+
+  /* ---- Accent (teal / AI glow) ---- */
+  --ailp-accent-50: #ecfeff;
+  --ailp-accent-100: #cffafe;
+  --ailp-accent-200: #a5f3fc;
+  --ailp-accent-300: #67e8f9;
+  --ailp-accent-400: #22d3ee;
+  --ailp-accent-500: #06b6d4;
+  --ailp-accent-600: #0891b2;
+
+  /* ---- Neutrals ---- */
+  --ailp-gray-50: #f8fafc;
+  --ailp-gray-100: #f1f5f9;
+  --ailp-gray-200: #e2e8f0;
+  --ailp-gray-300: #cbd5e1;
+  --ailp-gray-400: #94a3b8;
+  --ailp-gray-500: #64748b;
+  --ailp-gray-600: #475569;
+  --ailp-gray-700: #334155;
+  --ailp-gray-800: #1e293b;
+  --ailp-gray-900: #0f172a;
+  --ailp-gray-950: #020617;
+
+  /* ---- Success / Warning / Error ---- */
+  --ailp-success-500: #10b981;
+  --ailp-success-600: #059669;
+  --ailp-warning-500: #f59e0b;
+  --ailp-warning-600: #d97706;
+  --ailp-error-500: #ef4444;
+  --ailp-error-600: #dc2626;
+
+  /* ---- Semantic aliases ---- */
+  --ailp-background: #f8fafc;
+  --ailp-foreground: #0f172a;
+  --ailp-card: #ffffff;
+  --ailp-card-foreground: #0f172a;
+  --ailp-popover: #ffffff;
+  --ailp-popover-foreground: #0f172a;
+  --ailp-primary: #4f46e5;
+  --ailp-primary-foreground: #ffffff;
+  --ailp-secondary: #f1f5f9;
+  --ailp-secondary-foreground: #0f172a;
+  --ailp-muted: #f1f5f9;
+  --ailp-muted-foreground: #64748b;
+  --ailp-accent: #06b6d4;
+  --ailp-accent-foreground: #ffffff;
+  --ailp-destructive: #ef4444;
+  --ailp-destructive-foreground: #ffffff;
+  --ailp-border: #e2e8f0;
+  --ailp-input: #e2e8f0;
+  --ailp-ring: #6366f1;
+
+  /* ---- Radius scale ---- */
+  --ailp-radius-sm: 6px;
+  --ailp-radius-md: 10px;
+  --ailp-radius-lg: 14px;
+  --ailp-radius-xl: 20px;
+  --ailp-radius-2xl: 28px;
+  --ailp-radius-full: 9999px;
+
+  /* ---- Shadow scale ---- */
+  --ailp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ailp-shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-xl: 0 20px 40px -10px rgba(15, 23, 42, 0.15);
+  --ailp-shadow-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+
+  /* ---- Typography ---- */
+  --ailp-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --ailp-font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
+    "Liberation Mono", Menlo, monospace;
+  --ailp-font-math: "Cambria Math", "Latin Modern Math", "STIX Two Math",
+    Georgia, serif;
+}
+
+/* ---- Dark mode (editor focus mode) ---- */
+.dark {
+  --ailp-background: #0f172a;
+  --ailp-foreground: #f8fafc;
+  --ailp-card: #1e293b;
+  --ailp-card-foreground: #f8fafc;
+  --ailp-popover: #1e293b;
+  --ailp-popover-foreground: #f8fafc;
+  --ailp-primary: #818cf8;
+  --ailp-primary-foreground: #0f172a;
+  --ailp-secondary: #334155;
+  --ailp-secondary-foreground: #f8fafc;
+  --ailp-muted: #334155;
+  --ailp-muted-foreground: #94a3b8;
+  --ailp-border: #334155;
+  --ailp-input: #334155;
+  --ailp-ring: #6366f1;
+}
+
+/* ---- Base reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--ailp-font-sans);
+  background: var(--ailp-background);
+  color: var(--ailp-foreground);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ailp-gray-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ailp-gray-400);
+}
+
+/* ---- Math formula display ---- */
+.math-display {
+  font-family: var(--ailp-font-math);
+  font-size: 1.1em;
+  line-height: 1.8;
+}
+
+.math-inline {
+  font-family: var(--ailp-font-math);
+  font-style: italic;
+}
+
+/* ---- Utility: AI glow effect ---- */
+.ai-glow {
+  position: relative;
+}
+.ai-glow::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.3),
+    rgba(6, 182, 212, 0.3)
+  );
+  filter: blur(12px);
+  opacity: 0.6;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ---- Gradient text ---- */
+.gradient-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- AI message bubble gradient ---- */
+.ai-bubble-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(6, 182, 212, 0.06) 100%
+  );
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--ailp-background);
+    --color-foreground: var(--ailp-foreground);
+    --color-card: var(--ailp-card);
+    --color-card-foreground: var(--ailp-card-foreground);
+    --color-popover: var(--ailp-popover);
+    --color-popover-foreground: var(--ailp-popover-foreground);
+    --color-primary: var(--ailp-primary);
+    --color-primary-foreground: var(--ailp-primary-foreground);
+    --color-secondary: var(--ailp-secondary);
+    --color-secondary-foreground: var(--ailp-secondary-foreground);
+    --color-muted: var(--ailp-muted);
+    --color-muted-foreground: var(--ailp-muted-foreground);
+    --color-accent: var(--ailp-accent);
+    --color-accent-foreground: var(--ailp-accent-foreground);
+    --color-destructive: var(--ailp-destructive);
+    --color-destructive-foreground: var(--ailp-destructive-foreground);
+    --color-border: var(--ailp-border);
+    --color-input: var(--ailp-input);
+    --color-ring: var(--ailp-ring);
+    --radius-sm: var(--ailp-radius-sm);
+    --radius-md: var(--ailp-radius-md);
+    --radius-lg: var(--ailp-radius-lg);
+    --radius-xl: var(--ailp-radius-xl);
+  }
+  @layer base {
+    body { background: var(--ailp-background); color: var(--ailp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--ailp-background); }
+      .text-background { color: var(--ailp-background); }
+      .border-background { border-color: var(--ailp-background); }
+      .ring-background { --tw-ring-color: var(--ailp-background); }
+      .bg-foreground { background-color: var(--ailp-foreground); }
+      .text-foreground { color: var(--ailp-foreground); }
+      .border-foreground { border-color: var(--ailp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--ailp-foreground); }
+      .bg-card { background-color: var(--ailp-card); }
+      .text-card { color: var(--ailp-card); }
+      .border-card { border-color: var(--ailp-card); }
+      .ring-card { --tw-ring-color: var(--ailp-card); }
+      .bg-card-foreground { background-color: var(--ailp-card-foreground); }
+      .text-card-foreground { color: var(--ailp-card-foreground); }
+      .border-card-foreground { border-color: var(--ailp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--ailp-card-foreground); }
+      .bg-popover { background-color: var(--ailp-popover); }
+      .text-popover { color: var(--ailp-popover); }
+      .border-popover { border-color: var(--ailp-popover); }
+      .ring-popover { --tw-ring-color: var(--ailp-popover); }
+      .bg-popover-foreground { background-color: var(--ailp-popover-foreground); }
+      .text-popover-foreground { color: var(--ailp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--ailp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--ailp-popover-foreground); }
+      .bg-primary { background-color: var(--ailp-primary); }
+      .text-primary { color: var(--ailp-primary); }
+      .border-primary { border-color: var(--ailp-primary); }
+      .ring-primary { --tw-ring-color: var(--ailp-primary); }
+      .bg-primary-foreground { background-color: var(--ailp-primary-foreground); }
+      .text-primary-foreground { color: var(--ailp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--ailp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--ailp-primary-foreground); }
+      .bg-secondary { background-color: var(--ailp-secondary); }
+      .text-secondary { color: var(--ailp-secondary); }
+      .border-secondary { border-color: var(--ailp-secondary); }
+      .ring-secondary { --tw-ring-color: var(--ailp-secondary); }
+      .bg-secondary-foreground { background-color: var(--ailp-secondary-foreground); }
+      .text-secondary-foreground { color: var(--ailp-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--ailp-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--ailp-secondary-foreground); }
+      .bg-muted { background-color: var(--ailp-muted); }
+      .text-muted { color: var(--ailp-muted); }
+      .border-muted { border-color: var(--ailp-muted); }
+      .ring-muted { --tw-ring-color: var(--ailp-muted); }
+      .bg-muted-foreground { background-color: var(--ailp-muted-foreground); }
+      .text-muted-foreground { color: var(--ailp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--ailp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--ailp-muted-foreground); }
+      .bg-accent { background-color: var(--ailp-accent); }
+      .text-accent { color: var(--ailp-accent); }
+      .border-accent { border-color: var(--ailp-accent); }
+      .ring-accent { --tw-ring-color: var(--ailp-accent); }
+      .bg-accent-foreground { background-color: var(--ailp-accent-foreground); }
+      .text-accent-foreground { color: var(--ailp-accent-foreground); }
+      .border-accent-foreground { border-color: var(--ailp-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--ailp-accent-foreground); }
+      .bg-destructive { background-color: var(--ailp-destructive); }
+      .text-destructive { color: var(--ailp-destructive); }
+      .border-destructive { border-color: var(--ailp-destructive); }
+      .ring-destructive { --tw-ring-color: var(--ailp-destructive); }
+      .bg-destructive-foreground { background-color: var(--ailp-destructive-foreground); }
+      .text-destructive-foreground { color: var(--ailp-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--ailp-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--ailp-destructive-foreground); }
+      .bg-border { background-color: var(--ailp-border); }
+      .text-border { color: var(--ailp-border); }
+      .border-border { border-color: var(--ailp-border); }
+      .ring-border { --tw-ring-color: var(--ailp-border); }
+      .bg-input { background-color: var(--ailp-input); }
+      .text-input { color: var(--ailp-input); }
+      .border-input { border-color: var(--ailp-input); }
+      .ring-input { --tw-ring-color: var(--ailp-input); }
+      .bg-ring { background-color: var(--ailp-ring); }
+      .text-ring { color: var(--ailp-ring); }
+      .border-ring { border-color: var(--ailp-ring); }
+      .ring-ring { --tw-ring-color: var(--ailp-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="h-screen overflow-hidden font-sans antialiased bg-[var(--ailp-background)]">
+    <style id="critical-layout">
+      html, body { height: 100%; }
+      body { height: 100vh; overflow: hidden; }
+      #wk-shell { display: flex; flex-direction: column; height: 100vh; min-height: 0; overflow: hidden; }
+      #wk-toolbar { display: flex; align-items: center; flex-shrink: 0; height: 56px; }
+      #wk-workarea { display: flex; flex-direction: row; height: calc(100vh - 56px); min-height: 0; }
+      #wk-thumbs { width: 10rem; flex-shrink: 0; overflow-y: auto; }
+      #wk-canvas { flex: 1 1 0%; min-width: 0; overflow: auto; }
+      #wk-props { width: 18rem; flex-shrink: 0; overflow-y: auto; }
+      #wk-del-btn:hover { background: rgba(239, 68, 68, 0.1); }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
+    </style>
+    <main id="wk-shell" class="flex flex-col h-full min-h-0">
+      <!-- 顶部工具栏 -->
+      <header id="wk-toolbar" class="h-14 shrink-0 border-b border-[var(--ailp-border)] bg-white/80 backdrop-blur flex items-center px-4 gap-4">
+        <button class="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--ailp-muted-foreground)] hover:bg-[var(--ailp-muted)] transition-colors" aria-label="返回课件库">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        </button>
+        <span class="text-sm font-semibold shrink-0">课件库</span>
+        <div class="h-5 w-px bg-[var(--ailp-border)] shrink-0"></div>
+        <div class="min-w-0">
+          <h1 class="text-[15px] font-semibold truncate leading-tight">双曲线及其标准方程（第1课时）</h1>
+          <div class="flex items-center gap-1.5">
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600);">高二(5)班</span>
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background: var(--ailp-muted); color: var(--ailp-muted-foreground);">学术蓝·严谨版</span>
+          </div>
+        </div>
+        <span class="text-xs text-[var(--ailp-muted-foreground)] flex items-center gap-1.5 ml-2 shrink-0">
+          <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background: var(--ailp-success-500);"></span>
+          已自动保存
+        </span>
+        <div class="flex items-center gap-2 ml-auto shrink-0">
+          <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:brightness-95" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600); border-color: var(--ailp-primary-100);">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            AI 优化本页
+          </button>
+          <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--ailp-border)] bg-white text-[var(--ailp-foreground)] hover:bg-[var(--ailp-muted)] transition-colors">
+            <i data-lucide="sigma" class="w-3.5 h-3.5"></i>
+            公式
+          </button>
+          <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--ailp-border)] bg-white text-[var(--ailp-foreground)] hover:bg-[var(--ailp-muted)] transition-colors">
+            <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+            拍照插入
+          </button>
+          <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--ailp-border)] bg-white text-[var(--ailp-foreground)] hover:bg-[var(--ailp-muted)] transition-colors">
+            <i data-lucide="library" class="w-3.5 h-3.5"></i>
+            题库题目
+          </button>
+          <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--ailp-border)] bg-white text-[var(--ailp-foreground)] hover:bg-[var(--ailp-muted)] transition-colors">
+            <i data-lucide="save" class="w-3.5 h-3.5"></i>
+            保存
+          </button>
+          <button class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold text-white shadow-md transition-transform hover:scale-105 active:scale-95" style="background: linear-gradient(135deg, #4f46e5, #6366f1);">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            预览
+          </button>
+          <button class="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--ailp-muted-foreground)] hover:bg-[var(--ailp-muted)] transition-colors" aria-label="导出课件">
+            <i data-lucide="download" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- 工作区：缩略图 / 画布 / 属性面板 -->
+      <div id="wk-workarea" class="flex h-[calc(100vh-56px)] min-h-0">
+        <!-- 左侧页面缩略图 -->
+        <aside id="wk-thumbs" class="w-40 shrink-0 border-r border-[var(--ailp-border)] bg-white/60 backdrop-blur-sm overflow-y-auto p-3 space-y-2.5">
+          <div class="rounded-lg border p-1.5 cursor-pointer transition-colors border-[var(--ailp-border)] hover:border-[var(--ailp-primary)]/40">
+            <p class="text-[10px] text-[var(--ailp-muted-foreground)] mb-1">1</p>
+            <div class="h-16 rounded flex flex-col items-center justify-center gap-1.5" style="background: var(--ailp-primary);">
+              <div class="h-1 w-3/4 rounded-full bg-white/90"></div>
+              <div class="h-1 w-1/2 rounded-full bg-white/60"></div>
+            </div>
+          </div>
+          <div class="rounded-lg border p-1.5 cursor-pointer transition-colors border-[var(--ailp-border)] hover:border-[var(--ailp-primary)]/40">
+            <p class="text-[10px] text-[var(--ailp-muted-foreground)] mb-1">2</p>
+            <div class="h-16 rounded border border-[var(--ailp-border)] flex flex-col items-center justify-center gap-1.5" style="background: rgba(6,182,212,0.08);">
+              <div class="h-1 w-2/3 rounded-full" style="background: rgba(6,182,212,0.45);"></div>
+              <div class="h-1 w-1/2 rounded-full bg-[var(--ailp-gray-200)]"></div>
+            </div>
+          </div>
+          <div class="rounded-lg border p-1.5 cursor-pointer transition-colors" style="border-color: var(--ailp-primary); box-shadow: 0 0 0 2px rgba(99,102,241,0.2);">
+            <p class="text-[10px] text-[var(--ailp-muted-foreground)] mb-1">3</p>
+            <div class="h-16 rounded border border-[var(--ailp-border)] bg-white flex flex-col items-center justify-center gap-1 overflow-hidden px-1.5">
+              <div class="h-1 w-1/2 rounded-full shrink-0" style="background: rgba(139,92,246,0.55);"></div>
+              <svg class="w-full h-8" viewBox="0 0 100 32" fill="none" aria-hidden="true">
+                <path d="M4 2 C 18 8, 26 12, 26 16 C 26 20, 18 24, 4 30" stroke="var(--ailp-primary-400)" stroke-width="1.5"/>
+                <path d="M96 2 C 82 8, 74 12, 74 16 C 74 20, 82 24, 96 30" stroke="var(--ailp-primary-400)" stroke-width="1.5"/>
+                <circle cx="42" cy="16" r="1.5" fill="var(--ailp-accent-500)"/>
+                <circle cx="58" cy="16" r="1.5" fill="var(--ailp-accent-500)"/>
+              </svg>
+            </div>
+          </div>
+          <div class="rounded-lg border p-1.5 cursor-pointer transition-colors border-[var(--ailp-border)] hover:border-[var(--ailp-primary)]/40">
+            <p class="text-[10px] text-[var(--ailp-muted-foreground)] mb-1">4</p>
+            <div class="h-16 rounded border border-[var(--ailp-border)] bg-white flex flex-col items-start justify-center gap-1.5 px-3">
+              <div class="h-1 w-2/3 rounded-full" style="background: var(--ailp-warning-500);"></div>
+              <div class="h-1 w-1/2 rounded-full bg-[var(--ailp-gray-200)]"></div>
+              <div class="h-1 w-3/5 rounded-full bg-[var(--ailp-gray-200)]"></div>
+            </div>
+          </div>
+          <div class="rounded-lg border p-1.5 cursor-pointer transition-colors border-[var(--ailp-border)] hover:border-[var(--ailp-primary)]/40">
+            <p class="text-[10px] text-[var(--ailp-muted-foreground)] mb-1">5</p>
+            <div class="h-16 rounded border border-[var(--ailp-border)] bg-white flex flex-col items-start justify-center gap-1.5 px-3">
+              <div class="h-1 w-1/2 rounded-full bg-[var(--ailp-gray-400)]"></div>
+              <div class="h-1 w-2/3 rounded-full bg-[var(--ailp-gray-200)]"></div>
+              <div class="h-1 w-3/5 rounded-full bg-[var(--ailp-gray-200)]"></div>
+            </div>
+          </div>
+          <div class="rounded-lg border p-1.5 cursor-pointer transition-colors border-[var(--ailp-border)] hover:border-[var(--ailp-primary)]/40">
+            <p class="text-[10px] text-[var(--ailp-muted-foreground)] mb-1">6</p>
+            <div class="h-16 rounded border border-[var(--ailp-border)] flex flex-col items-start justify-center gap-1.5 px-3" style="background: rgba(16,185,129,0.08);">
+              <div class="h-1 w-1/2 rounded-full" style="background: rgba(16,185,129,0.5);"></div>
+              <div class="h-1 w-2/3 rounded-full bg-[var(--ailp-gray-200)]"></div>
+            </div>
+          </div>
+          <button class="w-full rounded-lg border border-dashed border-[var(--ailp-gray-300)] py-2 flex items-center justify-center gap-1 text-xs text-[var(--ailp-muted-foreground)] hover:border-[var(--ailp-primary)]/50 hover:text-[var(--ailp-primary)] transition-colors">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            新页
+          </button>
+        </aside>
+
+        <!-- 中间幻灯片画布 -->
+        <section id="wk-canvas" class="flex-1 min-w-0 overflow-auto bg-[var(--ailp-background)] p-8 flex items-start justify-center">
+          <div class="w-full max-w-3xl aspect-video bg-white rounded-xl shadow-lg border border-[var(--ailp-border)] relative p-8">
+            <div class="flex items-center gap-2 mb-4">
+              <span class="px-2 py-0.5 rounded-md text-xs font-medium" style="background: rgba(139,92,246,0.1); color: #7c3aed;">概念</span>
+              <span class="text-xs text-[var(--ailp-muted-foreground)]">第 3 页 · 10 分钟</span>
+            </div>
+            <h2 class="text-xl font-bold text-[var(--ailp-foreground)]">概念定义：||MF₁|−|MF₂|| = 2a</h2>
+            <p class="mt-3 text-sm leading-relaxed text-[var(--ailp-foreground)]/90">平面内与两个定点 F₁、F₂ 的距离之差的绝对值等于常数（小于 |F₁F₂|）的点的轨迹叫做双曲线。两个定点叫做双曲线的焦点。</p>
+            <div class="mt-3 inline-block px-4 py-2 rounded-lg" style="background: var(--ailp-primary-50); border: 1px solid var(--ailp-primary-100);">
+              <span style="font-family: var(--ailp-font-math); font-size: 18px; color: var(--ailp-primary-700);">||MF₁| − |MF₂|| = 2a（0 &lt; 2a &lt; |F₁F₂|）</span>
+            </div>
+            <div class="mt-4 rounded-xl border p-4 flex items-center gap-4" style="border-color: rgba(139,92,246,0.4); box-shadow: 0 0 0 3px rgba(139,92,246,0.12);">
+              <svg width="220" height="120" viewBox="0 0 220 120" fill="none" class="shrink-0" aria-hidden="true">
+                <line x1="10" y1="110" x2="210" y2="10" stroke="var(--ailp-gray-300)" stroke-dasharray="4,3"/>
+                <line x1="10" y1="10" x2="210" y2="110" stroke="var(--ailp-gray-300)" stroke-dasharray="4,3"/>
+                <line x1="10" y1="60" x2="210" y2="60" stroke="var(--ailp-gray-300)"/>
+                <line x1="110" y1="8" x2="110" y2="112" stroke="var(--ailp-gray-300)"/>
+                <path d="M210 17 C 188 26, 162 40, 162 60 C 162 80, 188 94, 210 103" stroke="var(--ailp-primary-500)" stroke-width="2" fill="none"/>
+                <path d="M10 17 C 32 26, 58 40, 58 60 C 58 80, 32 94, 10 103" stroke="var(--ailp-primary-500)" stroke-width="2" fill="none"/>
+                <circle cx="52" cy="60" r="3" fill="var(--ailp-accent-500)"/>
+                <circle cx="168" cy="60" r="3" fill="var(--ailp-accent-500)"/>
+                <text x="64" y="78" font-size="10" fill="var(--ailp-accent-600)" font-style="italic" text-anchor="middle">F₁</text>
+                <text x="156" y="78" font-size="10" fill="var(--ailp-accent-600)" font-style="italic" text-anchor="middle">F₂</text>
+              </svg>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-medium text-[var(--ailp-foreground)]">双曲线动态图形</p>
+                <p class="text-xs text-[var(--ailp-muted-foreground)] mt-0.5">参数可调 · 焦点与渐近线实时联动</p>
+              </div>
+            </div>
+            <p class="mt-4 text-xs text-[var(--ailp-gray-400)] text-center">选中元素后可拖动 / 编辑参数；公式与图形工具已收进右下角 AI 工具球</p>
+          </div>
+        </section>
+
+        <!-- 右侧属性面板 -->
+        <aside id="wk-props" class="w-72 shrink-0 border-l border-[var(--ailp-border)] bg-white/80 backdrop-blur-sm overflow-y-auto p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold">图形参数</h3>
+            <span class="text-xs text-[var(--ailp-muted-foreground)]">圆锥曲线 · 实时联动</span>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-[var(--ailp-muted-foreground)]">半长轴 a</span>
+              <span class="font-semibold text-[var(--ailp-foreground)]">3</span>
+            </div>
+            <div class="h-1.5 rounded-full mt-1.5 relative" style="background: var(--ailp-muted);">
+              <div class="h-full rounded-full w-1/2" style="background: var(--ailp-primary);"></div>
+              <div class="absolute top-1/2 -translate-y-1/2 left-1/2 w-3.5 h-3.5 rounded-full bg-white shadow border-2" style="border-color: var(--ailp-primary);"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-[var(--ailp-muted-foreground)]">半短轴 b</span>
+              <span class="font-semibold text-[var(--ailp-foreground)]">2</span>
+            </div>
+            <div class="h-1.5 rounded-full mt-1.5 relative" style="background: var(--ailp-muted);">
+              <div class="h-full rounded-full w-1/3" style="background: var(--ailp-primary);"></div>
+              <div class="absolute top-1/2 -translate-y-1/2 left-1/3 w-3.5 h-3.5 rounded-full bg-white shadow border-2" style="border-color: var(--ailp-primary);"></div>
+            </div>
+          </div>
+          <div class="mt-1 space-y-2">
+            <div class="flex items-center gap-2 text-xs text-[var(--ailp-foreground)]">
+              <span class="w-3.5 h-3.5 rounded flex items-center justify-center shrink-0" style="background: var(--ailp-primary);">
+                <i data-lucide="check" class="w-2.5 h-2.5 text-white"></i>
+              </span>
+              显示焦点
+            </div>
+            <div class="flex items-center gap-2 text-xs text-[var(--ailp-foreground)]">
+              <span class="w-3.5 h-3.5 rounded border-2 shrink-0" style="border-color: var(--ailp-gray-300);"></span>
+              显示渐近线
+            </div>
+          </div>
+          <div class="h-px bg-[var(--ailp-border)]"></div>
+          <div>
+            <p class="text-xs font-semibold text-[var(--ailp-muted-foreground)] mb-2">位置与尺寸（1280×720 逻辑坐标）</p>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="rounded-lg border border-[var(--ailp-border)] px-2.5 py-1.5 bg-white">
+                <p class="text-[10px] text-[var(--ailp-muted-foreground)]">X</p>
+                <p class="text-xs font-medium text-[var(--ailp-foreground)]">140</p>
+              </div>
+              <div class="rounded-lg border border-[var(--ailp-border)] px-2.5 py-1.5 bg-white">
+                <p class="text-[10px] text-[var(--ailp-muted-foreground)]">Y</p>
+                <p class="text-xs font-medium text-[var(--ailp-foreground)]">120</p>
+              </div>
+              <div class="rounded-lg border border-[var(--ailp-border)] px-2.5 py-1.5 bg-white">
+                <p class="text-[10px] text-[var(--ailp-muted-foreground)]">W</p>
+                <p class="text-xs font-medium text-[var(--ailp-foreground)]">460</p>
+              </div>
+              <div class="rounded-lg border border-[var(--ailp-border)] px-2.5 py-1.5 bg-white">
+                <p class="text-[10px] text-[var(--ailp-muted-foreground)]">H</p>
+                <p class="text-xs font-medium text-[var(--ailp-foreground)]">400</p>
+              </div>
+            </div>
+            <button id="wk-del-btn" class="mt-2 w-full py-2 rounded-lg text-xs font-medium transition-colors inline-flex items-center justify-center gap-1.5" style="color: var(--ailp-error-600); background: rgba(239,68,68,0.05);">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              删除元素
+            </button>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <!-- 公式键盘浮层（紧凑、可关闭，替代旧版底部公式键盘 Dock） -->
+    <div class="absolute bottom-24 left-8 z-40 w-[340px]">
+      <div class="rounded-2xl border border-[var(--ailp-border)] bg-white shadow-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold flex items-center gap-1.5">
+            <i data-lucide="sigma" class="w-4 h-4" style="color: var(--ailp-primary);"></i>
+            公式键盘
+          </h3>
+          <button class="w-6 h-6 rounded-md hover:bg-[var(--ailp-muted)] flex items-center justify-center text-[var(--ailp-muted-foreground)] transition-colors" aria-label="关闭公式键盘">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+        <div class="flex items-center gap-1.5 mb-3">
+          <button class="px-2.5 py-1 rounded-full text-xs font-medium" style="background: var(--ailp-primary); color: var(--ailp-primary-foreground);">常用</button>
+          <button class="px-2.5 py-1 rounded-full text-xs bg-[var(--ailp-muted)] text-[var(--ailp-muted-foreground)] hover:bg-[var(--ailp-gray-200)] transition-colors">运算</button>
+          <button class="px-2.5 py-1 rounded-full text-xs bg-[var(--ailp-muted)] text-[var(--ailp-muted-foreground)] hover:bg-[var(--ailp-gray-200)] transition-colors">希腊</button>
+          <button class="px-2.5 py-1 rounded-full text-xs bg-[var(--ailp-muted)] text-[var(--ailp-muted-foreground)] hover:bg-[var(--ailp-gray-200)] transition-colors">集合</button>
+        </div>
+        <div class="grid grid-cols-4 gap-2">
+          <button class="py-2 rounded-lg border border-[var(--ailp-border)] bg-white text-sm font-medium text-[var(--ailp-foreground)] hover:border-[var(--ailp-primary)]/50 hover:bg-[var(--ailp-primary-50)] transition-colors text-center">√</button>
+          <button class="py-2 rounded-lg border border-[var(--ailp-border)] bg-white text-sm font-medium text-[var(--ailp-foreground)] hover:border-[var(--ailp-primary)]/50 hover:bg-[var(--ailp-primary-50)] transition-colors text-center">a/b</button>
+          <button class="py-2 rounded-lg border border-[var(--ailp-border)] bg-white text-sm font-medium text-[var(--ailp-foreground)] hover:border-[var(--ailp-primary)]/50 hover:bg-[var(--ailp-primary-50)] transition-colors text-center">x²</button>
+          <button class="py-2 rounded-lg border border-[var(--ailp-border)] bg-white text-sm font-medium text-[var(--ailp-foreground)] hover:border-[var(--ailp-primary)]/50 hover:bg-[var(--ailp-primary-50)] transition-colors text-center">xₐ</button>
+          <button class="py-2 rounded-lg border border-[var(--ailp-border)] bg-white text-sm font-medium text-[var(--ailp-foreground)] hover:border-[var(--ailp-primary)]/50 hover:bg-[var(--ailp-primary-50)] transition-colors text-center">Σ</button>
+          <button class="py-2 rounded-lg border border-[var(--ailp-border)] bg-white text-sm font-medium text-[var(--ailp-foreground)] hover:border-[var(--ailp-primary)]/50 hover:bg-[var(--ailp-primary-50)] transition-colors text-center">∫</button>
+          <button class="py-2 rounded-lg border border-[var(--ailp-border)] bg-white text-sm font-medium text-[var(--ailp-foreground)] hover:border-[var(--ailp-primary)]/50 hover:bg-[var(--ailp-primary-50)] transition-colors text-center">lim</button>
+          <button class="py-2 rounded-lg border border-[var(--ailp-border)] bg-white text-sm font-medium text-[var(--ailp-foreground)] hover:border-[var(--ailp-primary)]/50 hover:bg-[var(--ailp-primary-50)] transition-colors text-center">eˣ</button>
+        </div>
+        <p class="text-[10px] text-[var(--ailp-gray-400)] mt-2">点击插入到当前公式框 · Backspace 逐位删除</p>
+      </div>
+    </div>
+
+    <!-- 右下角悬浮 AI 工具球（绘图工作台唯一入口） -->
+    <div class="fixed bottom-6 right-6 z-50">
+      <!-- 子功能按钮（展开状态） -->
+      <div class="flex flex-col items-center gap-3 mb-3">
+        <!-- 资源推荐 -->
+        <div class="group relative flex items-center justify-end gap-2">
+          <span class="tooltip-text text-xs text-foreground bg-card border border-border rounded-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md whitespace-nowrap pointer-events-none">
+            资源推荐
+          </span>
+          <button class="w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground hover:border-primary/40 hover:text-primary transition-colors" style="color: var(--ailp-primary);" aria-label="资源推荐">
+            <i data-lucide="library" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <!-- 绘图工具 -->
+        <div class="group relative flex items-center justify-end gap-2">
+          <span class="tooltip-text text-xs text-foreground bg-card border border-border rounded-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md whitespace-nowrap pointer-events-none">
+            绘图工具
+          </span>
+          <button class="w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground hover:border-primary/40 hover:text-primary transition-colors" style="color: var(--ailp-primary);" aria-label="绘图工具">
+            <i data-lucide="pen-tool" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <!-- 公式编辑 -->
+        <div class="group relative flex items-center justify-end gap-2">
+          <span class="tooltip-text text-xs text-foreground bg-card border border-border rounded-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md whitespace-nowrap pointer-events-none">
+            公式编辑
+          </span>
+          <button class="w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground hover:border-primary/40 hover:text-primary transition-colors" style="color: var(--ailp-primary);" aria-label="公式编辑">
+            <i data-lucide="sigma" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <!-- 拍照上传 -->
+        <div class="group relative flex items-center justify-end gap-2">
+          <span class="tooltip-text text-xs text-foreground bg-card border border-border rounded-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md whitespace-nowrap pointer-events-none">
+            拍照上传
+          </span>
+          <button class="w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground hover:border-primary/40 hover:text-primary transition-colors" style="color: var(--ailp-primary);" aria-label="拍照上传">
+            <i data-lucide="camera" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 主悬浮球 -->
+      <div class="relative">
+        <button class="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent shadow-xl flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-transform ai-glow" style="background: linear-gradient(135deg, var(--ailp-primary-600), var(--ailp-accent-500));" aria-label="AI 工具球">
+          <i data-lucide="sparkles" class="w-6 h-6"></i>
+        </button>
+      </div>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上传资料备课</title>
+    <style id="theme-vars">
+/* ============================================================
+   AI 备课工作台 - 设计令牌 / Design Tokens
+   ============================================================ */
+
+:root {
+  /* ---- Primary Brand ---- */
+  --ailp-primary-50: #eef2ff;
+  --ailp-primary-100: #e0e7ff;
+  --ailp-primary-200: #c7d2fe;
+  --ailp-primary-300: #a5b4fc;
+  --ailp-primary-400: #818cf8;
+  --ailp-primary-500: #6366f1;
+  --ailp-primary-600: #4f46e5;
+  --ailp-primary-700: #4338ca;
+  --ailp-primary-800: #3730a3;
+  --ailp-primary-900: #312e81;
+
+  /* ---- Accent (teal / AI glow) ---- */
+  --ailp-accent-50: #ecfeff;
+  --ailp-accent-100: #cffafe;
+  --ailp-accent-200: #a5f3fc;
+  --ailp-accent-300: #67e8f9;
+  --ailp-accent-400: #22d3ee;
+  --ailp-accent-500: #06b6d4;
+  --ailp-accent-600: #0891b2;
+
+  /* ---- Neutrals ---- */
+  --ailp-gray-50: #f8fafc;
+  --ailp-gray-100: #f1f5f9;
+  --ailp-gray-200: #e2e8f0;
+  --ailp-gray-300: #cbd5e1;
+  --ailp-gray-400: #94a3b8;
+  --ailp-gray-500: #64748b;
+  --ailp-gray-600: #475569;
+  --ailp-gray-700: #334155;
+  --ailp-gray-800: #1e293b;
+  --ailp-gray-900: #0f172a;
+  --ailp-gray-950: #020617;
+
+  /* ---- Success / Warning / Error ---- */
+  --ailp-success-500: #10b981;
+  --ailp-success-600: #059669;
+  --ailp-warning-500: #f59e0b;
+  --ailp-warning-600: #d97706;
+  --ailp-error-500: #ef4444;
+  --ailp-error-600: #dc2626;
+
+  /* ---- Semantic aliases ---- */
+  --ailp-background: #f8fafc;
+  --ailp-foreground: #0f172a;
+  --ailp-card: #ffffff;
+  --ailp-card-foreground: #0f172a;
+  --ailp-popover: #ffffff;
+  --ailp-popover-foreground: #0f172a;
+  --ailp-primary: #4f46e5;
+  --ailp-primary-foreground: #ffffff;
+  --ailp-secondary: #f1f5f9;
+  --ailp-secondary-foreground: #0f172a;
+  --ailp-muted: #f1f5f9;
+  --ailp-muted-foreground: #64748b;
+  --ailp-accent: #06b6d4;
+  --ailp-accent-foreground: #ffffff;
+  --ailp-destructive: #ef4444;
+  --ailp-destructive-foreground: #ffffff;
+  --ailp-border: #e2e8f0;
+  --ailp-input: #e2e8f0;
+  --ailp-ring: #6366f1;
+
+  /* ---- Radius scale ---- */
+  --ailp-radius-sm: 6px;
+  --ailp-radius-md: 10px;
+  --ailp-radius-lg: 14px;
+  --ailp-radius-xl: 20px;
+  --ailp-radius-2xl: 28px;
+  --ailp-radius-full: 9999px;
+
+  /* ---- Shadow scale ---- */
+  --ailp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ailp-shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-xl: 0 20px 40px -10px rgba(15, 23, 42, 0.15);
+  --ailp-shadow-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+
+  /* ---- Typography ---- */
+  --ailp-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --ailp-font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
+    "Liberation Mono", Menlo, monospace;
+  --ailp-font-math: "Cambria Math", "Latin Modern Math", "STIX Two Math",
+    Georgia, serif;
+}
+
+/* ---- Dark mode (editor focus mode) ---- */
+.dark {
+  --ailp-background: #0f172a;
+  --ailp-foreground: #f8fafc;
+  --ailp-card: #1e293b;
+  --ailp-card-foreground: #f8fafc;
+  --ailp-popover: #1e293b;
+  --ailp-popover-foreground: #f8fafc;
+  --ailp-primary: #818cf8;
+  --ailp-primary-foreground: #0f172a;
+  --ailp-secondary: #334155;
+  --ailp-secondary-foreground: #f8fafc;
+  --ailp-muted: #334155;
+  --ailp-muted-foreground: #94a3b8;
+  --ailp-border: #334155;
+  --ailp-input: #334155;
+  --ailp-ring: #6366f1;
+}
+
+/* ---- Base reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--ailp-font-sans);
+  background: var(--ailp-background);
+  color: var(--ailp-foreground);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ailp-gray-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ailp-gray-400);
+}
+
+/* ---- Math formula display ---- */
+.math-display {
+  font-family: var(--ailp-font-math);
+  font-size: 1.1em;
+  line-height: 1.8;
+}
+
+.math-inline {
+  font-family: var(--ailp-font-math);
+  font-style: italic;
+}
+
+/* ---- Utility: AI glow effect ---- */
+.ai-glow {
+  position: relative;
+}
+.ai-glow::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.3),
+    rgba(6, 182, 212, 0.3)
+  );
+  filter: blur(12px);
+  opacity: 0.6;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ---- Gradient text ---- */
+.gradient-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- AI message bubble gradient ---- */
+.ai-bubble-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(6, 182, 212, 0.06) 100%
+  );
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--ailp-background);
+    --color-foreground: var(--ailp-foreground);
+    --color-card: var(--ailp-card);
+    --color-card-foreground: var(--ailp-card-foreground);
+    --color-popover: var(--ailp-popover);
+    --color-popover-foreground: var(--ailp-popover-foreground);
+    --color-primary: var(--ailp-primary);
+    --color-primary-foreground: var(--ailp-primary-foreground);
+    --color-secondary: var(--ailp-secondary);
+    --color-secondary-foreground: var(--ailp-secondary-foreground);
+    --color-muted: var(--ailp-muted);
+    --color-muted-foreground: var(--ailp-muted-foreground);
+    --color-accent: var(--ailp-accent);
+    --color-accent-foreground: var(--ailp-accent-foreground);
+    --color-destructive: var(--ailp-destructive);
+    --color-destructive-foreground: var(--ailp-destructive-foreground);
+    --color-border: var(--ailp-border);
+    --color-input: var(--ailp-input);
+    --color-ring: var(--ailp-ring);
+    --radius-sm: var(--ailp-radius-sm);
+    --radius-md: var(--ailp-radius-md);
+    --radius-lg: var(--ailp-radius-lg);
+    --radius-xl: var(--ailp-radius-xl);
+  }
+  @layer base {
+    body { background: var(--ailp-background); color: var(--ailp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--ailp-background); }
+      .text-background { color: var(--ailp-background); }
+      .border-background { border-color: var(--ailp-background); }
+      .ring-background { --tw-ring-color: var(--ailp-background); }
+      .bg-foreground { background-color: var(--ailp-foreground); }
+      .text-foreground { color: var(--ailp-foreground); }
+      .border-foreground { border-color: var(--ailp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--ailp-foreground); }
+      .bg-card { background-color: var(--ailp-card); }
+      .text-card { color: var(--ailp-card); }
+      .border-card { border-color: var(--ailp-card); }
+      .ring-card { --tw-ring-color: var(--ailp-card); }
+      .bg-card-foreground { background-color: var(--ailp-card-foreground); }
+      .text-card-foreground { color: var(--ailp-card-foreground); }
+      .border-card-foreground { border-color: var(--ailp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--ailp-card-foreground); }
+      .bg-popover { background-color: var(--ailp-popover); }
+      .text-popover { color: var(--ailp-popover); }
+      .border-popover { border-color: var(--ailp-popover); }
+      .ring-popover { --tw-ring-color: var(--ailp-popover); }
+      .bg-popover-foreground { background-color: var(--ailp-popover-foreground); }
+      .text-popover-foreground { color: var(--ailp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--ailp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--ailp-popover-foreground); }
+      .bg-primary { background-color: var(--ailp-primary); }
+      .text-primary { color: var(--ailp-primary); }
+      .border-primary { border-color: var(--ailp-primary); }
+      .ring-primary { --tw-ring-color: var(--ailp-primary); }
+      .bg-primary-foreground { background-color: var(--ailp-primary-foreground); }
+      .text-primary-foreground { color: var(--ailp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--ailp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--ailp-primary-foreground); }
+      .bg-secondary { background-color: var(--ailp-secondary); }
+      .text-secondary { color: var(--ailp-secondary); }
+      .border-secondary { border-color: var(--ailp-secondary); }
+      .ring-secondary { --tw-ring-color: var(--ailp-secondary); }
+      .bg-secondary-foreground { background-color: var(--ailp-secondary-foreground); }
+      .text-secondary-foreground { color: var(--ailp-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--ailp-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--ailp-secondary-foreground); }
+      .bg-muted { background-color: var(--ailp-muted); }
+      .text-muted { color: var(--ailp-muted); }
+      .border-muted { border-color: var(--ailp-muted); }
+      .ring-muted { --tw-ring-color: var(--ailp-muted); }
+      .bg-muted-foreground { background-color: var(--ailp-muted-foreground); }
+      .text-muted-foreground { color: var(--ailp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--ailp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--ailp-muted-foreground); }
+      .bg-accent { background-color: var(--ailp-accent); }
+      .text-accent { color: var(--ailp-accent); }
+      .border-accent { border-color: var(--ailp-accent); }
+      .ring-accent { --tw-ring-color: var(--ailp-accent); }
+      .bg-accent-foreground { background-color: var(--ailp-accent-foreground); }
+      .text-accent-foreground { color: var(--ailp-accent-foreground); }
+      .border-accent-foreground { border-color: var(--ailp-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--ailp-accent-foreground); }
+      .bg-destructive { background-color: var(--ailp-destructive); }
+      .text-destructive { color: var(--ailp-destructive); }
+      .border-destructive { border-color: var(--ailp-destructive); }
+      .ring-destructive { --tw-ring-color: var(--ailp-destructive); }
+      .bg-destructive-foreground { background-color: var(--ailp-destructive-foreground); }
+      .text-destructive-foreground { color: var(--ailp-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--ailp-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--ailp-destructive-foreground); }
+      .bg-border { background-color: var(--ailp-border); }
+      .text-border { color: var(--ailp-border); }
+      .border-border { border-color: var(--ailp-border); }
+      .ring-border { --tw-ring-color: var(--ailp-border); }
+      .bg-input { background-color: var(--ailp-input); }
+      .text-input { color: var(--ailp-input); }
+      .border-input { border-color: var(--ailp-input); }
+      .ring-input { --tw-ring-color: var(--ailp-input); }
+      .bg-ring { background-color: var(--ailp-ring); }
+      .text-ring { color: var(--ailp-ring); }
+      .border-ring { border-color: var(--ailp-ring); }
+      .ring-ring { --tw-ring-color: var(--ailp-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased bg-[var(--ailp-background)]">
+    <style>
+      @keyframes ai-glow-pulse {
+        0%, 100% { opacity: 0.5; transform: scale(1); }
+        50% { opacity: 0.8; transform: scale(1.05); }
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-6px); }
+      }
+      @keyframes fade-in-up {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+      }
+      .animate-float { animation: float 4s ease-in-out infinite; }
+      .animate-glow-pulse { animation: ai-glow-pulse 3s ease-in-out infinite; }
+      .animate-fade-in-up { animation: fade-in-up 0.6s ease-out both; }
+      .delay-100 { animation-delay: 0.1s; }
+      .delay-200 { animation-delay: 0.2s; }
+      .delay-300 { animation-delay: 0.3s; }
+
+      .bg-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.35;
+        pointer-events: none;
+      }
+
+      .floating-ai-btn {
+        position: relative;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%);
+        box-shadow: 0 8px 32px rgba(79, 70, 229, 0.4), 0 0 60px rgba(6, 182, 212, 0.2);
+      }
+      .floating-ai-btn::before {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(6, 182, 212, 0.5));
+        filter: blur(12px);
+        z-index: -1;
+        animation: ai-glow-pulse 2.5s ease-in-out infinite;
+      }
+      .tooltip-bubble {
+        position: absolute;
+        right: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-right: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      .tooltip-bubble::after {
+        content: "";
+        position: absolute;
+        left: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 6px solid transparent;
+        border-left-color: #1e293b;
+      }
+      .floating-ai-btn:hover .tooltip-bubble { opacity: 1; }
+
+      .step-dot {
+        transition: all 0.3s ease;
+      }
+      .step-line {
+        transition: all 0.3s ease;
+      }
+
+      .tree-item {
+        transition: background-color 0.15s ease;
+      }
+      .tree-item:hover {
+        background-color: var(--ailp-gray-50);
+      }
+
+      .upload-dropzone {
+        transition: all 0.2s ease;
+      }
+      .upload-dropzone:hover {
+        border-color: var(--ailp-primary-400);
+        background-color: var(--ailp-primary-50);
+      }
+
+      .tab-active {
+        color: var(--ailp-primary);
+        border-bottom-color: var(--ailp-primary);
+      }
+
+      .confidence-bar {
+        background: linear-gradient(90deg, var(--ailp-primary-400), var(--ailp-accent-400));
+      }
+
+      .parse-progress-item {
+        position: relative;
+      }
+      .parse-progress-item::before {
+        content: "";
+        position: absolute;
+        left: 11px;
+        top: 28px;
+        bottom: -8px;
+        width: 2px;
+        background: var(--ailp-gray-200);
+      }
+      .parse-progress-item:last-child::before {
+        display: none;
+      }
+      .parse-progress-item.done::before {
+        background: var(--ailp-success-500);
+      }
+    </style>
+
+    <div class="relative min-h-screen overflow-hidden">
+      <!-- Decorative background blobs -->
+      <div class="bg-blob w-[400px] h-[400px] bg-[#c7d2fe] top-[-100px] left-[-80px]"></div>
+      <div class="bg-blob w-[350px] h-[350px] bg-[#a5f3fc] top-[100px] right-[-80px] opacity-25"></div>
+      <div class="bg-blob w-[500px] h-[500px] bg-[#e0e7ff] bottom-[-150px] left-1/4 opacity-40"></div>
+
+      <!-- ========== 顶部导航 ========== -->
+      <header class="relative z-20 border-b border-[var(--ailp-border)] bg-white/80 backdrop-blur-md">
+        <div class="max-w-[1440px] mx-auto px-8 h-16 flex items-center justify-between">
+          <!-- 左侧：返回 + 标题 -->
+          <div class="flex items-center gap-4">
+            <button class="w-9 h-9 rounded-lg hover:bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-600)] hover:text-[var(--ailp-foreground)] flex items-center justify-center transition-colors">
+              <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <div class="h-6 w-px bg-[var(--ailp-border)]"></div>
+            <h1 class="text-lg font-semibold text-[var(--ailp-foreground)]">上传资料备课</h1>
+          </div>
+
+          <!-- 右侧：步骤指示器 -->
+          <div class="flex items-center gap-3">
+            <!-- Step 1 -->
+            <div class="flex items-center gap-2">
+              <div class="step-dot w-7 h-7 rounded-full bg-[var(--ailp-success-500)] text-white flex items-center justify-center">
+                <i data-lucide="check" class="w-4 h-4"></i>
+              </div>
+              <span class="text-sm font-medium text-[var(--ailp-gray-700)]">上传资料</span>
+            </div>
+            <!-- Line 1-2 -->
+            <div class="step-line w-10 h-0.5 bg-[var(--ailp-success-500)] rounded"></div>
+            <!-- Step 2 -->
+            <div class="flex items-center gap-2">
+              <div class="step-dot w-7 h-7 rounded-full bg-gradient-to-br from-[var(--ailp-primary-500)] to-[var(--ailp-accent-500)] text-white flex items-center justify-center shadow-md animate-glow-pulse">
+                <i data-lucide="sparkles" class="w-4 h-4"></i>
+              </div>
+              <span class="text-sm font-semibold text-[var(--ailp-primary)]">AI 解析</span>
+            </div>
+            <!-- Line 2-3 -->
+            <div class="step-line w-10 h-0.5 bg-[var(--ailp-gray-200)] rounded"></div>
+            <!-- Step 3 -->
+            <div class="flex items-center gap-2">
+              <div class="step-dot w-7 h-7 rounded-full bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-400)] flex items-center justify-center border border-[var(--ailp-gray-200)]">
+                <span class="text-xs font-semibold">3</span>
+              </div>
+              <span class="text-sm font-medium text-[var(--ailp-gray-400)]">确认生成</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ========== 主体区域 ========== -->
+      <main class="relative z-10 max-w-[1440px] mx-auto px-8 py-6 pb-28">
+        <div class="flex gap-6 h-[calc(100vh-180px)] min-h-[600px]">
+
+          <!-- ========== 左侧：文件上传区 ========== -->
+          <aside class="w-[38%] flex flex-col gap-4 animate-fade-in-up">
+            <div class="bg-white rounded-2xl border border-[var(--ailp-border)] shadow-sm flex flex-col flex-1 overflow-hidden">
+              <!-- 标题 -->
+              <div class="px-5 py-4 border-b border-[var(--ailp-border)] flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--ailp-primary-500)]/10 to-[var(--ailp-accent-500)]/10 flex items-center justify-center">
+                    <i data-lucide="folder-open" class="w-4 h-4 text-[var(--ailp-primary)]"></i>
+                  </div>
+                  <h2 class="text-base font-semibold text-[var(--ailp-foreground)]">已上传文件</h2>
+                  <span class="text-xs text-[var(--ailp-gray-400)]">（2个）</span>
+                </div>
+              </div>
+
+              <!-- 文件列表 -->
+              <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                <!-- 文件 1：PDF -->
+                <div class="group p-3.5 rounded-xl border border-[var(--ailp-border)] hover:border-[var(--ailp-primary-200)] bg-white transition-all">
+                  <div class="flex items-start gap-3">
+                    <div class="w-11 h-11 shrink-0 rounded-lg bg-[var(--ailp-error-50)] flex items-center justify-center">
+                      <i data-lucide="file-text" class="w-5 h-5 text-[var(--ailp-error-500)]"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-start justify-between gap-2">
+                        <h3 class="text-sm font-medium text-[var(--ailp-foreground)] truncate">微积分第7章讲义.pdf</h3>
+                        <button class="shrink-0 w-6 h-6 rounded-md hover:bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-400)] hover:text-[var(--ailp-error-500)] flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100">
+                          <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                      </div>
+                      <div class="flex items-center gap-2 mt-1.5">
+                        <span class="text-xs text-[var(--ailp-gray-500)]">3.4 MB</span>
+                        <span class="text-[var(--ailp-gray-300)]">·</span>
+                        <span class="text-xs text-[var(--ailp-gray-500)]">48 页</span>
+                      </div>
+                      <div class="flex items-center gap-1.5 mt-2">
+                        <span class="w-4 h-4 rounded-full bg-[var(--ailp-success-50)] flex items-center justify-center">
+                          <i data-lucide="check" class="w-3 h-3 text-[var(--ailp-success-500)]"></i>
+                        </span>
+                        <span class="text-xs font-medium text-[var(--ailp-success-600)]">已解析</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 文件 2：Word -->
+                <div class="group p-3.5 rounded-xl border-2 border-[var(--ailp-primary-200)] bg-[var(--ailp-primary-50)]/30 transition-all ring-2 ring-[var(--ailp-primary-100)]/50">
+                  <div class="flex items-start gap-3">
+                    <div class="w-11 h-11 shrink-0 rounded-lg bg-[var(--ailp-primary-50)] flex items-center justify-center">
+                      <i data-lucide="file-text" class="w-5 h-5 text-[var(--ailp-primary-600)]"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-start justify-between gap-2">
+                        <h3 class="text-sm font-semibold text-[var(--ailp-foreground)] truncate">椭圆优秀教案参考.docx</h3>
+                        <button class="shrink-0 w-6 h-6 rounded-md hover:bg-white/60 text-[var(--ailp-gray-400)] hover:text-[var(--ailp-error-500)] flex items-center justify-center transition-colors">
+                          <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                      </div>
+                      <div class="flex items-center gap-2 mt-1.5">
+                        <span class="text-xs text-[var(--ailp-gray-500)]">1.2 MB</span>
+                        <span class="text-[var(--ailp-gray-300)]">·</span>
+                        <span class="text-xs text-[var(--ailp-gray-500)]">12 页</span>
+                      </div>
+                      <div class="flex items-center gap-1.5 mt-2">
+                        <span class="w-4 h-4 rounded-full bg-[var(--ailp-success-50)] flex items-center justify-center">
+                          <i data-lucide="check" class="w-3 h-3 text-[var(--ailp-success-500)]"></i>
+                        </span>
+                        <span class="text-xs font-medium text-[var(--ailp-success-600)]">已解析</span>
+                        <span class="ml-auto text-[11px] px-1.5 py-0.5 rounded bg-[var(--ailp-primary-100)] text-[var(--ailp-primary-700)] font-medium">当前预览</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 继续上传区域 -->
+              <div class="p-4 border-t border-[var(--ailp-border)]">
+                <p class="text-xs text-[var(--ailp-gray-500)] mb-2.5 flex items-center gap-1.5">
+                  <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                  继续添加文件
+                </p>
+                <div class="upload-dropzone border-2 border-dashed border-[var(--ailp-gray-200)] rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer bg-[var(--ailp-gray-50)]/50 hover:bg-[var(--ailp-primary-50)]">
+                  <div class="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center mb-2">
+                    <i data-lucide="upload" class="w-4 h-4 text-[var(--ailp-primary)]"></i>
+                  </div>
+                  <p class="text-xs font-medium text-[var(--ailp-gray-600)]">点击或拖拽上传</p>
+                  <p class="text-[11px] text-[var(--ailp-gray-400)] mt-1">PDF · Word · PPT · 图片 · 文本</p>
+                  <p class="text-[10px] text-[var(--ailp-gray-400)] mt-0.5">单文件 ≤ 20MB</p>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <!-- ========== 右侧：AI 解析预览区 ========== -->
+          <section class="w-[62%] flex flex-col gap-4 animate-fade-in-up delay-100">
+            <div class="bg-white rounded-2xl border border-[var(--ailp-border)] shadow-sm flex flex-col flex-1 overflow-hidden">
+              <!-- 标题栏 + Tab -->
+              <div class="border-b border-[var(--ailp-border)]">
+                <div class="px-5 pt-4 pb-0 flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--ailp-primary-500)] to-[var(--ailp-accent-500)] flex items-center justify-center shadow-sm">
+                      <i data-lucide="scan-search" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div>
+                      <h2 class="text-base font-semibold text-[var(--ailp-foreground)]">AI 解析预览</h2>
+                      <p class="text-xs text-[var(--ailp-gray-500)]">AI 已识别文档结构与核心内容</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs px-2 py-1 rounded-full bg-[var(--ailp-success-50)] text-[var(--ailp-success-600)] font-medium flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-[var(--ailp-success-500)]"></span>
+                      解析完成
+                    </span>
+                  </div>
+                </div>
+                <!-- Tab 导航 -->
+                <div class="flex gap-6 px-5 mt-3">
+                  <button class="tab-btn tab-active py-3 text-sm font-medium border-b-2 border-transparent flex items-center gap-1.5" data-tab="structure">
+                    <i data-lucide="list-tree" class="w-4 h-4"></i>
+                    内容结构
+                  </button>
+                  <button class="tab-btn py-3 text-sm font-medium text-[var(--ailp-gray-500)] border-b-2 border-transparent hover:text-[var(--ailp-gray-700)] flex items-center gap-1.5" data-tab="knowledge">
+                    <i data-lucide="tags" class="w-4 h-4"></i>
+                    知识点提取
+                  </button>
+                  <button class="tab-btn py-3 text-sm font-medium text-[var(--ailp-gray-500)] border-b-2 border-transparent hover:text-[var(--ailp-gray-700)] flex items-center gap-1.5" data-tab="examples">
+                    <i data-lucide="book-open-check" class="w-4 h-4"></i>
+                    题目/例题
+                  </button>
+                </div>
+              </div>
+
+              <!-- Tab 内容区 -->
+              <div class="flex-1 overflow-y-auto">
+                <!-- Tab 1：内容结构 -->
+                <div class="tab-content p-5 space-y-2" id="tab-structure">
+                  <!-- 文档名 -->
+                  <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[var(--ailp-gray-50)] border border-[var(--ailp-border)] mb-3">
+                    <i data-lucide="file-text" class="w-4 h-4 text-[var(--ailp-primary)]"></i>
+                    <span class="text-sm font-semibold text-[var(--ailp-foreground)]">椭圆优秀教案参考.docx</span>
+                    <span class="text-xs text-[var(--ailp-gray-400)] ml-auto">共 5 个一级章节</span>
+                  </div>
+
+                  <!-- 树状结构 -->
+                  <div class="space-y-1">
+                    <!-- 一、教学目标（展开） -->
+                    <div class="tree-item rounded-lg overflow-hidden">
+                      <div class="flex items-center gap-2 px-3 py-2.5 cursor-pointer">
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-[var(--ailp-gray-400)]"></i>
+                        <span class="w-6 h-6 rounded-md bg-[var(--ailp-primary-100)] text-[var(--ailp-primary-700)] text-xs font-bold flex items-center justify-center">1</span>
+                        <span class="text-sm font-medium text-[var(--ailp-foreground)]">教学目标</span>
+                        <span class="text-xs text-[var(--ailp-gray-400)] ml-auto">3 条</span>
+                      </div>
+                      <div class="pl-11 pb-2 space-y-1.5">
+                        <div class="flex items-start gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--ailp-gray-50)]">
+                          <span class="w-1 h-1 rounded-full bg-[var(--ailp-primary-400)] mt-2 shrink-0"></span>
+                          <span class="text-xs text-[var(--ailp-gray-700)] leading-relaxed">理解椭圆的定义，掌握椭圆标准方程的两种形式</span>
+                        </div>
+                        <div class="flex items-start gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--ailp-gray-50)]">
+                          <span class="w-1 h-1 rounded-full bg-[var(--ailp-primary-400)] mt-2 shrink-0"></span>
+                          <span class="text-xs text-[var(--ailp-gray-700)] leading-relaxed">经历椭圆标准方程的推导过程，体会数形结合思想</span>
+                        </div>
+                        <div class="flex items-start gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--ailp-gray-50)]">
+                          <span class="w-1 h-1 rounded-full bg-[var(--ailp-primary-400)] mt-2 shrink-0"></span>
+                          <span class="text-xs text-[var(--ailp-gray-700)] leading-relaxed">能根据给定条件求椭圆的标准方程，解决简单几何应用</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 二、教学重点与难点（展开） -->
+                    <div class="tree-item rounded-lg overflow-hidden">
+                      <div class="flex items-center gap-2 px-3 py-2.5 cursor-pointer">
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-[var(--ailp-gray-400)]"></i>
+                        <span class="w-6 h-6 rounded-md bg-[var(--ailp-primary-100)] text-[var(--ailp-primary-700)] text-xs font-bold flex items-center justify-center">2</span>
+                        <span class="text-sm font-medium text-[var(--ailp-foreground)]">教学重点与难点</span>
+                        <span class="text-xs text-[var(--ailp-gray-400)] ml-auto">2 项</span>
+                      </div>
+                      <div class="pl-11 pb-2 space-y-1.5">
+                        <div class="flex items-start gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--ailp-gray-50)]">
+                          <span class="px-1.5 py-0.5 rounded text-[10px] font-bold text-white bg-[var(--ailp-primary)] shrink-0">重</span>
+                          <span class="text-xs text-[var(--ailp-gray-700)] leading-relaxed">椭圆的定义与标准方程的建立；理解 a、b、c 的含义及其关系</span>
+                        </div>
+                        <div class="flex items-start gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--ailp-gray-50)]">
+                          <span class="px-1.5 py-0.5 rounded text-[10px] font-bold text-white bg-[var(--ailp-accent-500)] shrink-0">难</span>
+                          <span class="text-xs text-[var(--ailp-gray-700)] leading-relaxed">椭圆标准方程推导过程中坐标系的选择与化简</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 三、教学过程（展开） -->
+                    <div class="tree-item rounded-lg overflow-hidden">
+                      <div class="flex items-center gap-2 px-3 py-2.5 cursor-pointer">
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-[var(--ailp-gray-400)]"></i>
+                        <span class="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--ailp-primary-500)] to-[var(--ailp-accent-500)] text-white text-xs font-bold flex items-center justify-center">3</span>
+                        <span class="text-sm font-semibold text-[var(--ailp-foreground)]">教学过程</span>
+                        <span class="text-xs px-1.5 py-0.5 rounded bg-[var(--ailp-primary-50)] text-[var(--ailp-primary-600)] font-medium ml-auto">核心 · 6 环节</span>
+                      </div>
+                      <div class="pl-11 pb-2 space-y-1">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--ailp-gray-50)]">
+                          <i data-lucide="chevron-right" class="w-3 h-3 text-[var(--ailp-gray-300)]"></i>
+                          <span class="text-xs font-medium text-[var(--ailp-gray-700)]">情境引入</span>
+                          <span class="text-[10px] text-[var(--ailp-gray-400)] ml-auto">5 min</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--ailp-gray-50)]">
+                          <i data-lucide="chevron-right" class="w-3 h-3 text-[var(--ailp-gray-300)]"></i>
+                          <span class="text-xs font-medium text-[var(--ailp-gray-700)]">概念形成</span>
+                          <span class="text-[10px] text-[var(--ailp-gray-400)] ml-auto">10 min</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--ailp-gray-50)]">
+                          <i data-lucide="chevron-right" class="w-3 h-3 text-[var(--ailp-gray-300)]"></i>
+                          <span class="text-xs font-medium text-[var(--ailp-gray-700)]">例题精讲</span>
+                          <span class="text-[10px] text-[var(--ailp-gray-400)] ml-auto">12 min</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--ailp-gray-50)]">
+                          <i data-lucide="chevron-right" class="w-3 h-3 text-[var(--ailp-gray-300)]"></i>
+                          <span class="text-xs font-medium text-[var(--ailp-gray-700)]">课堂练习</span>
+                          <span class="text-[10px] text-[var(--ailp-gray-400)] ml-auto">8 min</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--ailp-gray-50)]">
+                          <i data-lucide="chevron-right" class="w-3 h-3 text-[var(--ailp-gray-300)]"></i>
+                          <span class="text-xs font-medium text-[var(--ailp-gray-700)]">课堂小结</span>
+                          <span class="text-[10px] text-[var(--ailp-gray-400)] ml-auto">5 min</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--ailp-gray-50)]">
+                          <i data-lucide="chevron-right" class="w-3 h-3 text-[var(--ailp-gray-300)]"></i>
+                          <span class="text-xs font-medium text-[var(--ailp-gray-700)]">作业布置</span>
+                          <span class="text-[10px] text-[var(--ailp-gray-400)] ml-auto">5 min</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 四、板书设计（折叠） -->
+                    <div class="tree-item rounded-lg overflow-hidden">
+                      <div class="flex items-center gap-2 px-3 py-2.5 cursor-pointer">
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-[var(--ailp-gray-400)]"></i>
+                        <span class="w-6 h-6 rounded-md bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-500)] text-xs font-bold flex items-center justify-center">4</span>
+                        <span class="text-sm font-medium text-[var(--ailp-gray-600)]">板书设计</span>
+                        <span class="text-xs text-[var(--ailp-gray-400)] ml-auto">折叠</span>
+                      </div>
+                    </div>
+
+                    <!-- 五、教学反思（折叠） -->
+                    <div class="tree-item rounded-lg overflow-hidden">
+                      <div class="flex items-center gap-2 px-3 py-2.5 cursor-pointer">
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-[var(--ailp-gray-400)]"></i>
+                        <span class="w-6 h-6 rounded-md bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-500)] text-xs font-bold flex items-center justify-center">5</span>
+                        <span class="text-sm font-medium text-[var(--ailp-gray-600)]">教学反思</span>
+                        <span class="text-xs text-[var(--ailp-gray-400)] ml-auto">折叠</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tab 2：知识点提取（隐藏） -->
+                <div class="tab-content hidden p-5" id="tab-knowledge">
+                  <div class="mb-4 flex items-center justify-between">
+                    <p class="text-sm text-[var(--ailp-gray-600)]">共识别出 <span class="font-semibold text-[var(--ailp-primary)]">6</span> 个核心知识点</p>
+                    <div class="flex items-center gap-1.5 text-xs text-[var(--ailp-gray-500)]">
+                      <span class="w-2 h-2 rounded-full bg-[var(--ailp-success-500)]"></span>
+                      高置信度
+                      <span class="w-2 h-2 rounded-full bg-[var(--ailp-warning-500)] ml-2"></span>
+                      待确认
+                    </div>
+                  </div>
+
+                  <div class="space-y-3">
+                    <!-- 知识点 1 -->
+                    <div class="p-3.5 rounded-xl border border-[var(--ailp-border)] hover:border-[var(--ailp-primary-200)] bg-white transition-all">
+                      <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                          <span class="w-5 h-5 rounded-full bg-[var(--ailp-success-50)] flex items-center justify-center">
+                            <i data-lucide="check" class="w-3 h-3 text-[var(--ailp-success-500)]"></i>
+                          </span>
+                          <span class="text-sm font-medium text-[var(--ailp-foreground)]">椭圆的定义</span>
+                        </div>
+                        <span class="text-xs font-semibold text-[var(--ailp-success-600)]">98%</span>
+                      </div>
+                      <div class="w-full h-1.5 bg-[var(--ailp-gray-100)] rounded-full overflow-hidden">
+                        <div class="confidence-bar h-full rounded-full" style="width: 98%"></div>
+                      </div>
+                      <p class="text-xs text-[var(--ailp-gray-500)] mt-2">平面内与两定点距离之和为常数的点的轨迹</p>
+                    </div>
+
+                    <!-- 知识点 2 -->
+                    <div class="p-3.5 rounded-xl border border-[var(--ailp-border)] hover:border-[var(--ailp-primary-200)] bg-white transition-all">
+                      <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                          <span class="w-5 h-5 rounded-full bg-[var(--ailp-success-50)] flex items-center justify-center">
+                            <i data-lucide="check" class="w-3 h-3 text-[var(--ailp-success-500)]"></i>
+                          </span>
+                          <span class="text-sm font-medium text-[var(--ailp-foreground)]">椭圆的标准方程</span>
+                        </div>
+                        <span class="text-xs font-semibold text-[var(--ailp-success-600)]">95%</span>
+                      </div>
+                      <div class="w-full h-1.5 bg-[var(--ailp-gray-100)] rounded-full overflow-hidden">
+                        <div class="confidence-bar h-full rounded-full" style="width: 95%"></div>
+                      </div>
+                      <p class="text-xs text-[var(--ailp-gray-500)] mt-2">焦点在 x 轴 / y 轴上的两种标准形式</p>
+                    </div>
+
+                    <!-- 知识点 3 -->
+                    <div class="p-3.5 rounded-xl border border-[var(--ailp-border)] hover:border-[var(--ailp-primary-200)] bg-white transition-all">
+                      <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                          <span class="w-5 h-5 rounded-full bg-[var(--ailp-success-50)] flex items-center justify-center">
+                            <i data-lucide="check" class="w-3 h-3 text-[var(--ailp-success-500)]"></i>
+                          </span>
+                          <span class="text-sm font-medium text-[var(--ailp-foreground)]">a、b、c 的关系</span>
+                        </div>
+                        <span class="text-xs font-semibold text-[var(--ailp-success-600)]">96%</span>
+                      </div>
+                      <div class="w-full h-1.5 bg-[var(--ailp-gray-100)] rounded-full overflow-hidden">
+                        <div class="confidence-bar h-full rounded-full" style="width: 96%"></div>
+                      </div>
+                      <p class="text-xs text-[var(--ailp-gray-500)] mt-2">a² = b² + c²，三者的几何意义与联系</p>
+                    </div>
+
+                    <!-- 知识点 4 -->
+                    <div class="p-3.5 rounded-xl border border-[var(--ailp-border)] hover:border-[var(--ailp-primary-200)] bg-white transition-all">
+                      <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                          <span class="w-5 h-5 rounded-full bg-[var(--ailp-success-50)] flex items-center justify-center">
+                            <i data-lucide="check" class="w-3 h-3 text-[var(--ailp-success-500)]"></i>
+                          </span>
+                          <span class="text-sm font-medium text-[var(--ailp-foreground)]">待定系数法</span>
+                        </div>
+                        <span class="text-xs font-semibold text-[var(--ailp-success-600)]">92%</span>
+                      </div>
+                      <div class="w-full h-1.5 bg-[var(--ailp-gray-100)] rounded-full overflow-hidden">
+                        <div class="confidence-bar h-full rounded-full" style="width: 92%"></div>
+                      </div>
+                      <p class="text-xs text-[var(--ailp-gray-500)] mt-2">求椭圆标准方程的基本方法与步骤</p>
+                    </div>
+
+                    <!-- 知识点 5 -->
+                    <div class="p-3.5 rounded-xl border border-[var(--ailp-border)] hover:border-[var(--ailp-primary-200)] bg-white transition-all">
+                      <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                          <span class="w-5 h-5 rounded-full bg-[var(--ailp-success-50)] flex items-center justify-center">
+                            <i data-lucide="check" class="w-3 h-3 text-[var(--ailp-success-500)]"></i>
+                          </span>
+                          <span class="text-sm font-medium text-[var(--ailp-foreground)]">数形结合思想</span>
+                        </div>
+                        <span class="text-xs font-semibold text-[var(--ailp-success-600)]">90%</span>
+                      </div>
+                      <div class="w-full h-1.5 bg-[var(--ailp-gray-100)] rounded-full overflow-hidden">
+                        <div class="confidence-bar h-full rounded-full" style="width: 90%"></div>
+                      </div>
+                      <p class="text-xs text-[var(--ailp-gray-500)] mt-2">坐标法思想，几何问题代数化</p>
+                    </div>
+
+                    <!-- 知识点 6 -->
+                    <div class="p-3.5 rounded-xl border border-[var(--ailp-warning-200)] bg-[var(--ailp-warning-50)]/30 transition-all">
+                      <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                          <span class="w-5 h-5 rounded-full bg-[var(--ailp-warning-100)] flex items-center justify-center">
+                            <i data-lucide="alert-circle" class="w-3 h-3 text-[var(--ailp-warning-500)]"></i>
+                          </span>
+                          <span class="text-sm font-medium text-[var(--ailp-foreground)]">椭圆的几何性质</span>
+                          <span class="text-[10px] px-1.5 py-0.5 rounded bg-[var(--ailp-warning-100)] text-[var(--ailp-warning-600)] font-medium">部分识别</span>
+                        </div>
+                        <span class="text-xs font-semibold text-[var(--ailp-warning-600)]">68%</span>
+                      </div>
+                      <div class="w-full h-1.5 bg-[var(--ailp-gray-100)] rounded-full overflow-hidden">
+                        <div class="h-full rounded-full bg-gradient-to-r from-[var(--ailp-warning-400)] to-[var(--ailp-warning-500)]" style="width: 68%"></div>
+                      </div>
+                      <p class="text-xs text-[var(--ailp-gray-500)] mt-2">范围、对称性、顶点、离心率（文档中涉及较少）</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tab 3：题目/例题（隐藏） -->
+                <div class="tab-content hidden p-5" id="tab-examples">
+                  <div class="mb-4 flex items-center justify-between">
+                    <p class="text-sm text-[var(--ailp-gray-600)]">共提取 <span class="font-semibold text-[var(--ailp-primary)]">3</span> 道例题</p>
+                    <button class="text-xs text-[var(--ailp-primary)] hover:text-[var(--ailp-primary-700)] font-medium flex items-center gap-1">
+                      <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                      手动添加
+                    </button>
+                  </div>
+
+                  <div class="space-y-4">
+                    <!-- 例1 -->
+                    <div class="rounded-xl border border-[var(--ailp-border)] overflow-hidden bg-white hover:border-[var(--ailp-primary-200)] transition-all">
+                      <div class="flex items-center gap-2 px-4 py-2.5 bg-[var(--ailp-gray-50)] border-b border-[var(--ailp-border)]">
+                        <span class="px-2 py-0.5 rounded text-xs font-bold text-white bg-[var(--ailp-primary)]">例 1</span>
+                        <span class="text-sm font-medium text-[var(--ailp-foreground)]">求椭圆标准方程题</span>
+                        <div class="ml-auto flex items-center gap-2">
+                          <span class="text-[11px] px-2 py-0.5 rounded-full bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-600)]">解答题</span>
+                          <span class="text-[11px] px-2 py-0.5 rounded-full bg-[var(--ailp-success-50)] text-[var(--ailp-success-600)] font-medium">基础</span>
+                        </div>
+                      </div>
+                      <div class="p-4">
+                        <p class="text-sm text-[var(--ailp-gray-700)] leading-relaxed">
+                          已知椭圆的两个焦点坐标分别是 <span class="math-inline">(-2, 0)</span>、<span class="math-inline">(2, 0)</span>，并且经过点 <span class="math-inline">(5/2, -3/2)</span>，求它的标准方程。
+                        </p>
+                        <div class="mt-3 flex items-center justify-between">
+                          <span class="text-xs text-[var(--ailp-gray-400)] flex items-center gap-1">
+                            <i data-lucide="file-text" class="w-3 h-3"></i>
+                            来自 P.6 例题 2
+                          </span>
+                          <div class="flex items-center gap-1">
+                            <button class="w-7 h-7 rounded-md hover:bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-400)] hover:text-[var(--ailp-primary)] flex items-center justify-center transition-colors">
+                              <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                            <button class="w-7 h-7 rounded-md hover:bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-400)] hover:text-[var(--ailp-primary)] flex items-center justify-center transition-colors">
+                              <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 例2 -->
+                    <div class="rounded-xl border border-[var(--ailp-border)] overflow-hidden bg-white hover:border-[var(--ailp-primary-200)] transition-all">
+                      <div class="flex items-center gap-2 px-4 py-2.5 bg-[var(--ailp-gray-50)] border-b border-[var(--ailp-border)]">
+                        <span class="px-2 py-0.5 rounded text-xs font-bold text-white bg-[var(--ailp-accent-500)]">例 2</span>
+                        <span class="text-sm font-medium text-[var(--ailp-foreground)]">椭圆性质应用题</span>
+                        <div class="ml-auto flex items-center gap-2">
+                          <span class="text-[11px] px-2 py-0.5 rounded-full bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-600)]">解答题</span>
+                          <span class="text-[11px] px-2 py-0.5 rounded-full bg-[var(--ailp-warning-50)] text-[var(--ailp-warning-600)] font-medium">中等</span>
+                        </div>
+                      </div>
+                      <div class="p-4">
+                        <p class="text-sm text-[var(--ailp-gray-700)] leading-relaxed">
+                          已知椭圆 <span class="math-inline">x²/25 + y²/9 = 1</span> 上一点 <span class="math-inline">P</span> 到一个焦点的距离为 <span class="math-inline">6</span>，求点 <span class="math-inline">P</span> 到另一个焦点的距离，并判断点 <span class="math-inline">P</span> 的位置。
+                        </p>
+                        <div class="mt-3 flex items-center justify-between">
+                          <span class="text-xs text-[var(--ailp-gray-400)] flex items-center gap-1">
+                            <i data-lucide="file-text" class="w-3 h-3"></i>
+                            来自 P.8 例 3
+                          </span>
+                          <div class="flex items-center gap-1">
+                            <button class="w-7 h-7 rounded-md hover:bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-400)] hover:text-[var(--ailp-primary)] flex items-center justify-center transition-colors">
+                              <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                            <button class="w-7 h-7 rounded-md hover:bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-400)] hover:text-[var(--ailp-primary)] flex items-center justify-center transition-colors">
+                              <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 例3 -->
+                    <div class="rounded-xl border border-[var(--ailp-border)] overflow-hidden bg-white hover:border-[var(--ailp-primary-200)] transition-all">
+                      <div class="flex items-center gap-2 px-4 py-2.5 bg-[var(--ailp-gray-50)] border-b border-[var(--ailp-border)]">
+                        <span class="px-2 py-0.5 rounded text-xs font-bold text-white" style="background: #8b5cf6;">例 3</span>
+                        <span class="text-sm font-medium text-[var(--ailp-foreground)]">待定系数法综合题</span>
+                        <div class="ml-auto flex items-center gap-2">
+                          <span class="text-[11px] px-2 py-0.5 rounded-full bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-600)]">解答题</span>
+                          <span class="text-[11px] px-2 py-0.5 rounded-full bg-[var(--ailp-error-50)] text-[var(--ailp-error-500)] font-medium">提高</span>
+                        </div>
+                      </div>
+                      <div class="p-4">
+                        <p class="text-sm text-[var(--ailp-gray-700)] leading-relaxed">
+                          已知椭圆经过两点 <span class="math-inline">A(√3, -2)</span> 和 <span class="math-inline">B(-2√3, 1)</span>，求椭圆的标准方程，并求其焦点坐标和离心率。
+                        </p>
+                        <div class="mt-3 flex items-center justify-between">
+                          <span class="text-xs text-[var(--ailp-gray-400)] flex items-center gap-1">
+                            <i data-lucide="file-text" class="w-3 h-3"></i>
+                            来自 P.10 拓展题
+                          </span>
+                          <div class="flex items-center gap-1">
+                            <button class="w-7 h-7 rounded-md hover:bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-400)] hover:text-[var(--ailp-primary)] flex items-center justify-center transition-colors">
+                              <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                            <button class="w-7 h-7 rounded-md hover:bg-[var(--ailp-gray-100)] text-[var(--ailp-gray-400)] hover:text-[var(--ailp-primary)] flex items-center justify-center transition-colors">
+                              <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 解析进度状态条 -->
+              <div class="border-t border-[var(--ailp-border)] px-5 py-3.5 bg-[var(--ailp-gray-50)]/50">
+                <div class="flex items-center gap-6">
+                  <span class="text-xs font-medium text-[var(--ailp-gray-600)] flex items-center gap-1.5 shrink-0">
+                    <i data-lucide="cpu" class="w-3.5 h-3.5 text-[var(--ailp-primary)]"></i>
+                    解析步骤
+                  </span>
+                  <div class="flex items-center gap-5 flex-1">
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-5 h-5 rounded-full bg-[var(--ailp-success-500)] text-white flex items-center justify-center">
+                        <i data-lucide="check" class="w-3 h-3"></i>
+                      </span>
+                      <span class="text-xs text-[var(--ailp-gray-700)]">识别版面布局</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-5 h-5 rounded-full bg-[var(--ailp-success-500)] text-white flex items-center justify-center">
+                        <i data-lucide="check" class="w-3 h-3"></i>
+                      </span>
+                      <span class="text-xs text-[var(--ailp-gray-700)]">提取公式与图形</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-5 h-5 rounded-full bg-[var(--ailp-success-500)] text-white flex items-center justify-center">
+                        <i data-lucide="check" class="w-3 h-3"></i>
+                      </span>
+                      <span class="text-xs text-[var(--ailp-gray-700)]">分析教学结构</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-5 h-5 rounded-full bg-[var(--ailp-success-500)] text-white flex items-center justify-center">
+                        <i data-lucide="check" class="w-3 h-3"></i>
+                      </span>
+                      <span class="text-xs text-[var(--ailp-gray-700)]">生成大纲草稿</span>
+                    </div>
+                    <span class="ml-auto text-xs text-[var(--ailp-success-600)] font-medium flex items-center gap-1">
+                      <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                      全部完成
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <!-- ========== 底部操作栏 ========== -->
+      <div class="fixed bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-md border-t border-[var(--ailp-border)] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <div class="max-w-[1440px] mx-auto px-8 h-16 flex items-center justify-between">
+          <!-- 左侧：单选切换 -->
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-[var(--ailp-gray-600)]">使用方式：</span>
+            <div class="inline-flex rounded-lg bg-[var(--ailp-gray-100)] p-1">
+              <button class="px-3.5 py-1.5 rounded-md text-xs font-medium bg-white text-[var(--ailp-primary)] shadow-sm border border-[var(--ailp-border)] flex items-center gap-1.5">
+                <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                作为参考资料使用
+              </button>
+              <button class="px-3.5 py-1.5 rounded-md text-xs font-medium text-[var(--ailp-gray-500)] hover:text-[var(--ailp-gray-700)] flex items-center gap-1.5">
+                <i data-lucide="layout-template" class="w-3.5 h-3.5"></i>
+                提炼为我的模板
+              </button>
+            </div>
+          </div>
+
+          <!-- 右侧：操作按钮 -->
+          <div class="flex items-center gap-3">
+            <button class="px-4 py-2 rounded-lg text-sm font-medium text-[var(--ailp-gray-600)] hover:text-[var(--ailp-foreground)] hover:bg-[var(--ailp-gray-100)] border border-[var(--ailp-border)] transition-colors flex items-center gap-1.5">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              重新解析
+            </button>
+            <button class="px-6 py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg hover:shadow-xl transition-all flex items-center gap-2 group" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%);">
+              <span>确认并生成教案</span>
+              <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== 右下角悬浮球 ========== -->
+      <div class="fixed bottom-24 right-8 z-40">
+        <button class="floating-ai-btn w-14 h-14 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform animate-float">
+          <i data-lucide="bot" class="w-6 h-6"></i>
+          <div class="tooltip-bubble">
+            <span class="px-3 py-1.5 bg-[#1e293b] text-white text-xs rounded-lg shadow-lg">AI 助手</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <script>
+      // Tab 切换
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tab = btn.dataset.tab;
+          // 更新按钮状态
+          document.querySelectorAll('.tab-btn').forEach(b => {
+            b.classList.remove('tab-active');
+            b.classList.add('text-[var(--ailp-gray-500)]');
+          });
+          btn.classList.add('tab-active');
+          btn.classList.remove('text-[var(--ailp-gray-500)]');
+          // 更新内容显示
+          document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+          });
+          document.getElementById('tab-' + tab).classList.remove('hidden');
+        });
+      });
+
+      lucide.createIcons();
+    </script>
+</body>
+</html>

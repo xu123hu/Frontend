@@ -72,7 +72,7 @@
 
             <template v-else-if="recogState === 'done'">
               <div class="tv3-form-label" style="display:flex;gap:6px;align-items:center">
-                识别结果 · 审查后插入 <span class="tv3-tag" :class="conf > .8 ? 'tv3-tag--ok' : 'tv3-tag--warn'">置信度 {{ Math.round(conf * 100) }}%</span>
+                识别结果 · 审查后插入 <span class="tv3-tag tv3-tag--warn" title="原型为固定样例演示，未接入真实识别服务">识别演示（样例值）</span>
               </div>
               <MathField v-model="formula" ref="mf" :font-size="20" :testid="'mxd-photo-formula'" placeholder="在此修正识别结果…" />
               <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px">

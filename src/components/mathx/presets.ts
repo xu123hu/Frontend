@@ -10,6 +10,7 @@
 import type { V3FigureCategory, V3FigurePreset } from '@/types/teacherV3'
 import { drawSolid2d } from './draw/solids'
 import { CUBE_EDGES, CUBE_VERTS, pointOnEdge, sectionPolygon, type V3 } from './section'
+import { isoProject } from './draw/solids'
 
 export interface BuildCtx {
   board: any
@@ -551,6 +552,205 @@ const defs: FigurePresetDef[] = [
         `<polyline points="${pts.join(' ')}" fill="none" stroke="${NAVY}" stroke-width="1.8"/>` +
         `<line x1="${f1(60 - (p.sigma ?? 1) * 16)}" y1="70" x2="${f1(60 - (p.sigma ?? 1) * 16)}" y2="8" stroke="${GOLD}" stroke-width="0.8" stroke-dasharray="3 2"/>` +
         `<line x1="${f1(60 + (p.sigma ?? 1) * 16)}" y1="70" x2="${f1(60 + (p.sigma ?? 1) * 16)}" y2="8" stroke="${GOLD}" stroke-width="0.8" stroke-dasharray="3 2"/>`,
+      )
+    },
+  },
+  /* ==================== B7 构图导演首批（确定性构造，配 steps 依赖解释） ==================== */
+  {
+    id: 'solid/pyramid-section', category: 'solid', name: '正四棱锥截面（L2）', desc: '三条棱上取点，截面实时求交重算（斜二测投影，虚实线）', level: 2,
+    boundingbox: [-5.2, 5.4, 5.2, -4.4], axis: false, extent: [-3.3, -3.3, 3.3, 3.3],
+    params: [
+      { key: 't1', label: 'M 在 SB 点位', min: 0.12, max: 0.88, step: 0.01, def: 0.5 },
+      { key: 't2', label: 'N 在 SC 点位', min: 0.12, max: 0.88, step: 0.01, def: 0.5 },
+      { key: 't3', label: 'P 在 SD 点位', min: 0.12, max: 0.88, step: 0.01, def: 0.5 },
+    ],
+    toggles: [{ key: 'showVerts', label: '显示取点与顶点', def: true }],
+    build({ board, p, t }) {
+      const H = 2.2
+      const verts: V3[] = [
+        [-1.6, -1.6, 0], [1.6, -1.6, 0], [1.6, 1.6, 0], [-1.6, 1.6, 0], [0, 0, H],
+      ]
+      const edges: [number, number][] = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3]]
+      const P = (i: number) => isoProject(verts[i][0], verts[i][1], verts[i][2])
+      const names = ['A', 'B', 'C', 'D', 'S']
+      const hiddenEdges = new Set([2, 3, 7])
+      if (t.showVerts !== false) {
+        verts.forEach((v, i) => { const pp = P(i); board.create('point', [pp[0], pp[1]], { size: 1.6, name: names[i], strokeColor: NAVY, fillColor: '#fff', fixed: true, fontSize: 12 }) })
+      }
+      edges.forEach(([ai, bi]) => {
+        const A = P(ai), B = P(bi)
+        const hidden = hiddenEdges.has(ai) && hiddenEdges.has(bi)
+        board.create('segment', [A, B], { strokeColor: hidden ? LINEC : NAVY, strokeWidth: 1.8, dash: hidden ? 2 : 0 })
+      })
+      const lerp = (i: number, t: number): V3 => [
+        verts[4][0] + (verts[i][0] - verts[4][0]) * t,
+        verts[4][1] + (verts[i][1] - verts[4][1]) * t,
+        verts[4][2] + (verts[i][2] - verts[4][2]) * t,
+      ]
+      const M3 = lerp(1, p.t1), N3 = lerp(2, p.t2), P3 = lerp(3, p.t3)
+      const sec3 = sectionPolygon(verts, edges, M3, N3, P3)
+      if (t.showVerts !== false) {
+        for (const [q, nm] of [[M3, 'M'], [N3, 'N'], [P3, 'P']] as [V3, string][]) {
+          const pp = isoProject(q[0], q[1], q[2])
+          board.create('point', [pp[0], pp[1]], { size: 2.2, name: nm, strokeColor: GOLD, fillColor: GOLD, fixed: true, fontSize: 12 })
+        }
+      }
+      if (sec3.length >= 3) {
+        const poly = sec3.map((q) => isoProject(q[0], q[1], q[2]))
+        board.create('polygon', poly, { fillColor: 'rgba(201,151,53,0.30)', borders: { strokeColor: GOLD, strokeWidth: 2.2, fixed: true }, vertices: { visible: false }, flexible: false })
+      }
+    },
+    miniSvg: (p) => svgWrap(
+      `<polygon points="24,64 88,64 104,80 40,80" fill="none" stroke="${NAVY}" stroke-width="1.6"/>` +
+      `<line x1="24" y1="64" x2="64" y2="12" stroke="${NAVY}" stroke-width="1.6"/>` +
+      `<line x1="88" y1="64" x2="64" y2="12" stroke="${NAVY}" stroke-width="1.6"/>` +
+      `<line x1="104" y1="80" x2="64" y2="12" stroke="${LINEC}" stroke-width="1.2" stroke-dasharray="3 2"/>` +
+      `<line x1="40" y1="80" x2="64" y2="12" stroke="${LINEC}" stroke-width="1.2" stroke-dasharray="3 2"/>` +
+      `<polygon points="52,46 76,52 70,66 48,58" fill="rgba(201,151,53,0.35)" stroke="${GOLD}" stroke-width="1.5"/>`
+    ),
+  },
+  {
+    id: 'solid/sphere-section', category: 'solid', name: '球的截面（L2）', desc: '截面到球心距离 d 实时可调，r′=√(r²−d²)', level: 2,
+    boundingbox: [-5.4, 5.4, 5.4, -5.4], axis: false, extent: [-4.2, -4.2, 4.2, 4.2],
+    params: [
+      { key: 'r', label: '球半径 r', min: 1.2, max: 3, step: 0.05, def: 2.4 },
+      { key: 'd', label: '球心到截面距离 d', min: 0, max: 3, step: 0.05, def: 1.2 },
+    ],
+    toggles: [{ key: 'equator', label: '赤道参考（虚线）', def: true }],
+    build({ board, p, t }) {
+      const O = board.create('point', [0, 0], { size: 1.5, name: 'O', strokeColor: NAVY, fillColor: NAVY, fixed: true })
+      board.create('circle', [O, p.r], { strokeColor: NAVY, strokeWidth: 2.2 })
+      if (t.equator !== false) {
+        board.create('circle', [O, p.r], { strokeColor: LINEC, strokeWidth: 1, dash: 2 })
+      }
+      const rr = Math.sqrt(Math.max(0, p.r * p.r - p.d * p.d))
+      const O2 = board.create('point', [0, p.d], { size: 1.5, name: "O'", strokeColor: GOLD, fillColor: GOLD, fixed: true })
+      if (rr > 0.02) {
+        board.create('circle', [O2, rr], { strokeColor: GOLD, strokeWidth: 2.2 })
+        board.create('segment', [[0, 0], [0, p.d]], { strokeColor: LINEC, strokeWidth: 1.2, dash: 2 })
+        board.create('segment', [[0, p.d], [rr, p.d]], { strokeColor: GOLD, strokeWidth: 1.2 })
+        board.create('point', [rr, p.d], { size: 1.5, name: 'r′', strokeColor: GOLD, fillColor: '#fff', fixed: true, fontSize: 11 })
+      } else {
+        board.create('point', [0, p.d], { size: 3, name: '切点', strokeColor: GOLD, fillColor: GOLD, fixed: true })
+      }
+    },
+    miniSvg: (p) => {
+      const r = ((p.r ?? 2.4) / 3) * 52
+      const d = ((p.d ?? 1.2) / 3) * 52
+      const rr = (Math.sqrt(Math.max(0, (p.r ?? 2.4) ** 2 - (p.d ?? 1.2) ** 2)) / 3) * 52
+      const cy = 60 - d
+      return svgWrap(
+        `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${NAVY}" stroke-width="1.8"/>` +
+        `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${LINEC}" stroke-dasharray="3 2" stroke-width="0.8"/>` +
+        `<circle cx="60" cy="${cy}" r="${Math.max(1, rr)}" fill="rgba(201,151,53,0.18)" stroke="${GOLD}" stroke-width="1.6"/>` +
+        `<line x1="60" y1="60" x2="60" y2="${cy}" stroke="${LINEC}" stroke-width="1"/>`
+      )
+    },
+  },
+  {
+    id: 'plane/line-plane', category: 'plane', name: '直线与平面位置关系（L2）', desc: '相交（夹角可调）/平行/在面内 三态切换，含射影与角标', level: 2,
+    boundingbox: [-5.6, 5, 5.6, -4.6], axis: false, extent: [-4.4, -3.4, 4.4, 3.4],
+    params: [
+      { key: 'mode', label: '位置（0相交 1平行 2在面内）', min: 0, max: 2, step: 1, def: 0 },
+      { key: 'theta', label: '线面夹角 θ（度）', min: 10, max: 90, step: 5, def: 40 },
+    ],
+    toggles: [{ key: 'showProj', label: '显示射影 l′', def: true }],
+    build({ board, p, t }) {
+      const A = [-3.6, -1.2], B = [2.8, 0.4], C = [3.8, -0.9], D = [-2.6, -2.5]
+      const poly = [A, B, C, D].map((q) => board.create('point', [q[0], q[1]], { visible: false, fixed: true }))
+      board.create('polygon', poly, { fillColor: 'rgba(15,71,135,0.08)', borders: { strokeColor: NAVY, strokeWidth: 1.6, fixed: true }, vertices: { visible: false }, flexible: false })
+      board.create('point', [1.6, -0.55], { size: 1.4, name: 'α', strokeColor: NAVY, fillColor: NAVY, fixed: true, fontSize: 14 })
+      const mode = Math.round(p.mode)
+      if (mode === 0) {
+        const th = (p.theta * Math.PI) / 180
+        const foot = [0.2, -0.35]
+        const top = [foot[0] + 2.4 * Math.cos(th), foot[1] + 2.4 * Math.sin(th) + 0.4]
+        board.create('segment', [[top[0] - 3 * Math.cos(th), top[1] - 3 * Math.sin(th)], top], { strokeColor: NAVY, strokeWidth: 2.2 })
+        board.create('point', [top[0], top[1]], { size: 1.4, name: 'l', strokeColor: NAVY, fillColor: NAVY, fixed: true, fontSize: 13 })
+        board.create('point', foot, { size: 1.6, name: 'A', strokeColor: GOLD, fillColor: GOLD, fixed: true, fontSize: 12 })
+        if (t.showProj !== false) {
+          board.create('segment', [foot, [foot[0] + 3, foot[1] - 0.35]], { strokeColor: GOLD, strokeWidth: 1.6, dash: 2 })
+          board.create('point', [foot[0] + 3, foot[1] - 0.35], { size: 1.2, name: "l′", strokeColor: GOLD, fillColor: '#fff', fixed: true, fontSize: 12 })
+        }
+      } else if (mode === 1) {
+        board.create('segment', [[-2.6, 1.8], [3, 1.8]], { strokeColor: NAVY, strokeWidth: 2.2 })
+        board.create('point', [3, 1.8], { size: 1.4, name: 'l', strokeColor: NAVY, fillColor: NAVY, fixed: true, fontSize: 13 })
+        board.create('segment', [[-2.6, -1.4], [3, -1.4]], { strokeColor: LINEC, strokeWidth: 1, dash: 2 })
+      } else {
+        board.create('segment', [[-2.4, -0.9], [3.2, -1.7]], { strokeColor: NAVY, strokeWidth: 2.2 })
+        board.create('point', [3.2, -1.7], { size: 1.4, name: 'l', strokeColor: NAVY, fillColor: NAVY, fixed: true, fontSize: 13 })
+      }
+    },
+    miniSvg: (p) => {
+      const mode = Math.round(p.mode ?? 0)
+      const line = mode === 1
+        ? `<line x1="12" y1="26" x2="108" y2="26" stroke="${NAVY}" stroke-width="1.8"/>`
+        : mode === 2
+          ? `<line x1="14" y1="62" x2="106" y2="70" stroke="${NAVY}" stroke-width="1.8"/>`
+          : `<line x1="52" y1="10" x2="30" y2="70" stroke="${NAVY}" stroke-width="1.8"/>`
+      return svgWrap(
+        `<polygon points="10,56 92,66 112,50 30,40" fill="rgba(15,71,135,0.07)" stroke="${NAVY}" stroke-width="1.3"/>` + line
+      )
+    },
+  },
+  {
+    id: 'conic/ellipse-tangent', category: 'conic', name: '椭圆切线与焦半径（L2）', desc: '切点参数角可调，切线 + 双焦半径（光学性质演示）', level: 2,
+    boundingbox: [-6, 4.6, 6, -4.2], axis: true, extent: [-4.6, -3.4, 4.6, 3.4],
+    params: [
+      { key: 'a', label: '半长轴 a', min: 2, max: 3.6, step: 0.1, def: 3 },
+      { key: 'b', label: '半短轴 b', min: 1.4, max: 2.6, step: 0.1, def: 2 },
+      { key: 't', label: '切点离心角', min: 0, max: 6.28, step: 0.05, def: 0.9 },
+    ],
+    toggles: [{ key: 'focal', label: '焦半径 F₁T/F₂T', def: true }],
+    build({ board, p, t }) {
+      const c = Math.sqrt(Math.max(0.01, p.a * p.a - p.b * p.b))
+      const F1 = board.create('point', [-c, 0], { size: 2, name: 'F₁', strokeColor: GOLD, fillColor: GOLD, fixed: true })
+      const F2 = board.create('point', [c, 0], { size: 2, name: 'F₂', strokeColor: GOLD, fillColor: GOLD, fixed: true })
+      board.create('curve', [(u: number) => p.a * Math.cos(u), (u: number) => p.b * Math.sin(u), 0, 2 * Math.PI], { strokeColor: NAVY, strokeWidth: 2.2 })
+      const x0 = p.a * Math.cos(p.t), y0 = p.b * Math.sin(p.t)
+      board.create('point', [x0, y0], { size: 2.4, name: 'T', strokeColor: GOLD, fillColor: GOLD })
+      const tx1 = x0 + p.a * Math.sin(p.t), ty1 = y0 - p.b * Math.cos(p.t)
+      board.create('line', [[x0, y0], [tx1, ty1]], { strokeColor: '#0e9488', strokeWidth: 1.8 })
+      if (t.focal !== false) {
+        board.create('segment', [F1, [x0, y0]], { strokeColor: GOLD, strokeWidth: 1.6 })
+        board.create('segment', [[x0, y0], F2], { strokeColor: GOLD, strokeWidth: 1.6, dash: 2 })
+      }
+    },
+    miniSvg: (p) => {
+      const a = ((p.a ?? 3) / 3.6) * 52
+      const b = ((p.b ?? 2) / 3.6) * 52
+      const tx = 60 + a * Math.cos(p.t ?? 0.9)
+      const ty = 40 - b * Math.sin(p.t ?? 0.9)
+      return svgWrap(
+        `<ellipse cx="60" cy="40" rx="${a}" ry="${b}" fill="none" stroke="${NAVY}" stroke-width="1.8"/>` +
+        `<circle cx="${tx}" cy="${ty}" r="2.4" fill="${GOLD}"/>` +
+        `<line x1="${tx - 34}" y1="${ty + 18}" x2="${tx + 34}" y2="${ty - 18}" stroke="#0e9488" stroke-width="1.4"/>` +
+        `<circle cx="${60 - a * 0.75}" cy="40" r="2" fill="${GOLD}"/><circle cx="${60 + a * 0.75}" cy="40" r="2" fill="${GOLD}"/>`
+      )
+    },
+  },
+  {
+    id: 'function/intersection', category: 'function', name: '函数交点与参数（L2）', desc: 'y=kx 与 y=x²/2 的交点随 k 实时重算并标注', level: 2,
+    boundingbox: [-5.4, 5.2, 5.4, -3.4], axis: true, extent: [-4.4, -2.4, 4.4, 4.2],
+    params: [{ key: 'k', label: '直线斜率 k', min: -2, max: 2, step: 0.05, def: 1 }],
+    toggles: [{ key: 'guide', label: '交点虚线引导', def: true }],
+    build({ board, p, t }) {
+      board.create('functiongraph', [(x: number) => (x * x) / 2, -4.4, 4.4], { strokeColor: NAVY, strokeWidth: 2.2 })
+      board.create('functiongraph', [(x: number) => p.k * x, -4.4, 4.4], { strokeColor: '#0e9488', strokeWidth: 1.8 })
+      for (const x of [0, 2 * p.k]) {
+        board.create('point', [x, (x * x) / 2], { size: 2.4, name: 'A(' + x.toFixed(2) + ',' + ((x * x) / 2).toFixed(2) + ')', strokeColor: GOLD, fillColor: GOLD, fixed: true, fontSize: 12 })
+        if (t.guide !== false) {
+          board.create('segment', [[x, (x * x) / 2], [x, 0]], { strokeColor: LINEC, strokeWidth: 1, dash: 2 })
+        }
+      }
+    },
+    miniSvg: (p) => {
+      const xs = 2 * (p.k ?? 1)
+      const px = 60 + xs * 10
+      return svgWrap(
+        `<path d="M12,80 Q60,-40 108,80" fill="none" stroke="${NAVY}" stroke-width="1.7"/>` +
+        `<line x1="14" y1="60" x2="106" y2="60" stroke="#0e9488" stroke-width="1.5"/>` +
+        `<circle cx="${Math.min(108, Math.max(12, px))}" cy="40" r="2.6" fill="${GOLD}"/>`
       )
     },
   },

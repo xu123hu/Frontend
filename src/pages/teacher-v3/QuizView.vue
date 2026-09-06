@@ -80,6 +80,7 @@
           <div class="tv3-card__spacer" />
           <button class="tv3-btn tv3-btn--sm" :disabled="!paperQuestions.length" data-testid="tv3-paper-clear" @click="paper = []">清空</button>
           <button class="tv3-btn tv3-btn--sm tv3-btn--primary" :disabled="!paperQuestions.length" data-testid="tv3-paper-export" @click="exportPaper">导出 PDF</button>
+          <button class="tv3-btn tv3-btn--sm tv3-btn--gold" :disabled="!paperQuestions.length" data-testid="tv3-paper-publish" @click="openPublish">发布为作业</button>
         </div>
         <div class="tv3-card__body" style="padding: 0">
           <div class="tv3-paper" data-testid="tv3-paper-preview">
@@ -173,6 +174,51 @@
       </div>
     </div>
   </div>
+
+  <!-- B4 · 发布为作业（发布前检查 + 二次确认；演示：未真实发送学生端） -->
+  <div v-if="publishOpen" class="tv3-push" @click.self="publishOpen = false">
+    <div class="tv3-card tv3-push__panel" style="max-width: 620px" data-testid="tv3-publish-panel">
+      <div class="tv3-card__head">
+        <span class="tv3-card__title">发布为作业 · {{ paperQuestions.length }} 题</span>
+        <div class="tv3-card__spacer" />
+        <button class="tv3-btn tv3-btn--sm" @click="publishOpen = false">×</button>
+      </div>
+      <div class="tv3-card__body" style="display: flex; flex-direction: column; gap: 12px">
+        <!-- 发布前检查 -->
+        <div style="padding: 8px 10px; border-radius: 10px; background: var(--tv3-bg2); display: flex; flex-direction: column; gap: 4px" data-testid="tv3-publish-checks">
+          <div style="font-size: 11.5px; font-weight: 700">发布前检查</div>
+          <div style="font-size: 11.5px; color: var(--tv3-ink2)">✓ 题目数：{{ paperQuestions.length }}</div>
+          <div v-for="w in publishWarnings" :key="w.text" style="font-size: 11.5px" :style="{ color: w.block ? '#b1382c' : '#b45309' }">
+            {{ w.block ? '✗' : '⚠' }} {{ w.text }}
+          </div>
+        </div>
+        <div class="tv3-form-label">班级</div>
+        <select v-model="pubForm.class_id" class="tv3-input" data-testid="tv3-publish-class">
+          <option v-for="c in pubClasses" :key="c.class_id" :value="c.class_id">{{ c.name }}（{{ c.students }} 人）</option>
+        </select>
+        <div class="tv3-form-label">截止时间</div>
+        <div class="tv3-seg">
+          <button v-for="d in [['今晚 22:00', '今晚 22:00'], ['明晚 22:00', '明晚 22:00'], ['后天 22:00', '后天 22:00']]" :key="d[1]" class="tv3-seg__btn" :class="{ 'is-active': pubForm.deadline === d[1] }" :data-testid="`tv3-publish-ddl-${d[0]}`" @click="pubForm.deadline = d[1]">{{ d[0] }}</button>
+        </div>
+        <div class="tv3-form-label">作答与公布设置</div>
+        <label style="display: inline-flex; gap: 7px; align-items: center; font-size: 13px">
+          <input type="checkbox" v-model="pubForm.allow_photo" style="accent-color: var(--tv3-gold)"> 允许拍照提交（纸质作答拍照回传）
+        </label>
+        <label style="display: inline-flex; gap: 7px; align-items: center; font-size: 13px">
+          <input type="checkbox" v-model="pubForm.auto_reveal" style="accent-color: var(--tv3-gold)"> 截止后自动公布答案与解析
+        </label>
+        <div style="font-size: 11.5px; color: var(--tv3-ink3); padding: 6px 10px; border-radius: 8px; background: var(--tv3-teal-soft, #e8f6f4)">
+          评分方式：<b>AI 预批 + 教师逐题复核</b>（正式成绩 100% 来自教师确认——固定策略，不可关闭）
+        </div>
+      </div>
+      <div class="tv3-modal__foot" style="display: flex; gap: 8px; justify-content: flex-end; align-items: center">
+        <span v-if="publishBlockers" style="font-size: 11.5px; color: #b1382c; flex: 1">存在阻断项：请先为缺答案的题目补答案</span>
+        <span v-else style="font-size: 11px; color: var(--tv3-ink4); flex: 1">演示环境：不会真实发送学生端</span>
+        <button class="tv3-btn tv3-btn--sm" @click="publishOpen = false">取消</button>
+        <button class="tv3-btn tv3-btn--gold" :disabled="publishBlockers" data-testid="tv3-publish-confirm" @click="doPublish">确认发布（{{ paperQuestions.length }} 题）</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -182,7 +228,18 @@
  * 扫描入库（P4）：手写/试卷原图 → 图片题或识别题，POST 进题库并即时刷新
  * 图片题型（P4）：q_type='image' 时题干为 stem_image 扫描原图，照常可选入试卷
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useToastStore } from '@/stores/toast'
+import { updateTv3Context } from '@/stores/teacherContext'
+import { setReceipt, registerUndo } from '@/stores/companion'
+import type { CompanionCandidate } from '@/pages/teacher-v3/companionData'
+
+/* toast/router 惰性获取（测试环境无 Pinia/Router） */
+const toast = { success: (t: string) => dynamicToast().success(t), error: (t: string) => dynamicToast().error(t), info: (t: string) => dynamicToast().info(t) }
+function dynamicToast() { return useToastStore() }
+const router = { push: (loc: string) => dynamicRouter().push(loc) }
+function dynamicRouter() { return useRouter() }
 import { v3Api, type V3QuizQuestion, type V3KpTreeNode } from '@/api/teacherV3'
 import { renderLatex } from '@/components/mathx/latex'
 
@@ -253,11 +310,81 @@ function escapeHtmlRaw(t: string): string {
   return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+/* B6 上下文写入 + 管家快捷动作 */
+watch(paper, () => {
+  updateTv3Context({ route: '/teacher-v3/quiz', topic: paper.value.length ? `试卷 ${paper.value.length} 题` : undefined })
+})
+function onButlerQuick(ev: Event) {
+  const action = (ev as CustomEvent).detail?.action
+  if (action === 'publish-check') {
+    if (!paperQuestions.value.length) toast.info('试卷为空：先从左侧选题，再看发布前清单')
+    else openPublish()
+  } else if (action === 'scan-open') scanOpen.value = true
+}
+
+/* B4：题库/洞察带来的 kp 上下文预筛选（断点修复：之前 query 被忽略） */
+onMounted(() => window.addEventListener('tv3-butler-quick', onButlerQuick as EventListener))
+
+/* ---------- C2 伴随工具层：绘图台插入 → 真实「题图入库 + 入卷」（scan-import 同一通道） ---------- */
+let companionSeqDone = ''
+let lastInsertedId = ''
+async function onCompanionInsert(ev: Event) {
+  const d = (ev as CustomEvent).detail as { reqId: string; kind: string; draw?: { type: string; src?: string; expr?: string; latex?: string }; candidate?: CompanionCandidate } | undefined
+  if (!d || d.reqId === companionSeqDone) return
+  /* 图片类图形 → 题图题（原样入库，不转文字）并入卷 */
+  if (d.kind === 'figure' && d.draw?.type === 'image' && d.draw.src) {
+    try {
+      const r = await v3Api.catalog.quizScanImport({ src: d.draw.src, as_image: true, kp_code: 'DRAW-01', kp_name: '绘图插入' })
+      const q = r.data as V3QuizQuestion
+      questions.value.unshift(q)
+      if (!paper.value.includes(q.id)) paper.value.push(q.id)
+      companionSeqDone = d.reqId
+      lastInsertedId = q.id
+      updateTv3Context({ route: '/teacher-v3/quiz', topic: `试卷 ${paper.value.length} 题`, extra: '刚插入：绘图题图' })
+      setReceipt({ ok: true, message: `已把绘图落为题图并入卷（${q.kp_name} · 图片题，原样入库）`, locationLabel: '右侧试卷预览', undoLabel: '撤销' })
+      registerUndo('撤销', async () => {
+        paper.value = paper.value.filter((x) => x !== q.id)
+        questions.value = questions.value.filter((x) => x.id !== q.id)
+        try { await v3Api.catalog.quizRemove(q.id) } catch { /* mock */ }
+      })
+      window.dispatchEvent(new CustomEvent('tv3-companion-inserted', { detail: { reqId: d.reqId, handled: true } }))
+    } catch {
+      window.dispatchEvent(new CustomEvent('tv3-companion-inserted', { detail: { reqId: d.reqId, handled: false } }))
+    }
+    return
+  }
+  window.dispatchEvent(new CustomEvent('tv3-companion-inserted', { detail: { reqId: d.reqId, handled: false } }))
+}
+function onCompanionLocateQuiz() {
+  if (!lastInsertedId) return
+  nextTickLocate()
+}
+function nextTickLocate() {
+  Promise.resolve().then(() => {
+    document.querySelector('[data-testid="tv3-paper-preview"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  })
+}
+onMounted(() => {
+  window.addEventListener('tv3-companion-insert', onCompanionInsert as EventListener)
+  window.addEventListener('tv3-companion-locate', onCompanionLocateQuiz as EventListener)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('tv3-butler-quick', onButlerQuick as EventListener)
+  window.removeEventListener('tv3-companion-insert', onCompanionInsert as EventListener)
+  window.removeEventListener('tv3-companion-locate', onCompanionLocateQuiz as EventListener)
+})
 onMounted(async () => {
+  const kpQuery = new URLSearchParams(window.location.search).get('kp')
+
   try {
     const [qr, tr] = await Promise.all([v3Api.catalog.quizQuestions(), v3Api.catalog.quizKpTree()])
     questions.value = qr.data.items
     tree.value = tr.data.tree
+    if (kpQuery) {
+      // 按知识点名称匹配叶子 → 选中该知识点（与点击分类树同路径）
+      const leaf = treeItems.value.find((t) => t.leaf && t.name === kpQuery)
+      if (leaf) selectedKp.value = leaf
+    }
     if (kpLeafOptions.value.length) scanKpCode.value = kpLeafOptions.value[0].code
   } catch { /* mock */ }
 })
@@ -287,7 +414,55 @@ function togglePick(id: string) {
   if (i >= 0) paper.value.splice(i, 1)
   else paper.value.push(id)
 }
-function exportPaper() { /* mock：实际走任务中心 */ }
+/* ---------- B4 发布为作业 ---------- */
+const publishOpen = ref(false)
+const pubClasses = ref<{ class_id: string; name: string; students: number }[]>([])
+const pubForm = ref({ class_id: 'c2-03', deadline: '明晚 22:00', allow_photo: true, auto_reveal: false })
+const publishBlockers = computed(() => publishWarnings.value.some((w) => w.block))
+const publishWarnings = computed(() => {
+  const out: { text: string; block: boolean }[] = []
+  for (const q of paperQuestions.value) {
+    if (!q.answer || q.answer === '待批改') out.push({ text: `「${(q.stem_latex || '').slice(0, 16)}…」缺标准答案——发布前必须补齐（批改与公布的依据）`, block: true })
+    else if (!q.analysis) out.push({ text: `「${(q.stem_latex || '').slice(0, 16)}…」缺解析——建议补充（不影响发布）`, block: false })
+  }
+  return out
+})
+async function openPublish() {
+  if (!paperQuestions.value.length) return
+  publishOpen.value = true
+  if (!pubClasses.value.length) {
+    try { const r = await v3Api.catalog.classes(); pubClasses.value = r.data.items } catch { pubClasses.value = [] }
+  }
+}
+async function doPublish() {
+  if (publishBlockers.value) return
+  if (!window.confirm(`确认发布？\n· ${pubClasses.value.find((c) => c.class_id === pubForm.value.class_id)?.name || ''} · 截止 ${pubForm.value.deadline}\n· ${paperQuestions.value.length} 题 · 演示环境不会真实发送学生端`)) return
+  try {
+    const r: any = await (v3Api as any).assignments.publish({
+      title: `《${publishTitle.value}》课后作业`,
+      class_id: pubForm.value.class_id,
+      deadline: pubForm.value.deadline,
+      answer_policy: pubForm.value.auto_reveal ? 'auto' : 'manual',
+      allow_photo: pubForm.value.allow_photo,
+      questions: paperQuestions.value.map((q) => ({ stem_latex: q.stem_latex, answer: q.answer, analysis: q.analysis, full_score: 5, kp_name: q.kp_name })),
+    })
+    publishOpen.value = false
+    paper.value = []
+    toast.success('作业已创建（演示数据，未真实发送学生端）。即将打开批改工作区。')
+    window.setTimeout(() => router.push('/teacher-v3/assign'), 900)
+    void r
+  } catch { toast.error('发布失败（mock 服务未启动？）') }
+}
+const publishTitle = computed(() => {
+  const k = paperQuestions.value[0]?.kp_name || '数学'
+  return k + '等 · 精选练习'
+})
+
+function exportPaper() {
+  /* B0 诚实化：不再静默空函数。PDF/PPTX 导出依赖真实文件生成服务（后端 M3 接入），
+     原型阶段明确告知边界，不伪装"导出成功"。toast 在调用时惰性获取（避免测试环境依赖 Pinia）。 */
+  import('@/stores/toast').then(({ useToastStore }) => useToastStore().info('原型说明：PDF 导出将在真实后端接入后可用。当前可先打印此预览页，或把试题通过「发布为作业」下发（规划中）。'))
+}
 
 /* ---- 扫描入库（V3.2：双图分开 + AI 识别归属） ---- */
 function onFilePick(e: Event) {

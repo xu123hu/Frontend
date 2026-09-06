@@ -70,6 +70,9 @@ vi.mock('@/api/teacherV3', () => ({
     catalog: {
       classes: (...a: unknown[]) => classesFn(...a),
       deckTemplates: (...a: unknown[]) => deckTemplatesFn(...a),
+      /* C1：AI 备课台挂载需要（今日授课 + 章节级联），本文件不关注，给空桩 */
+      today: vi.fn().mockResolvedValue({ data: { schedule: [] } }),
+      textbookChapters: vi.fn().mockResolvedValue({ data: { textbooks: [] } }),
     },
     plans: { list: (...a: unknown[]) => plansListFn(...a) },
   },
@@ -439,7 +442,7 @@ describe('HandMode：手写公式识别（识别不定稿红线）', () => {
     await w.find('[data-testid="mxd-hand-recognize"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="mxd-hand-result-field"]').text()).toContain('a^{2}+b^{2}=c^{2}')
-    expect(w.text()).toContain('90%')
+    expect(w.text()).toContain('识别演示（未接入真实识别服务）') // B0：不显示伪造置信度
     expect(w.text()).toContain('原笔迹')
 
     await w.find('[data-testid="mxd-hand-insert"]').trigger('click')
@@ -627,5 +630,57 @@ describe('SlidesView 集成：绘图工作台入口与插入落盘', () => {
     const free = db.findComponent(FreeMode)
     expect(free.exists()).toBe(true)
     expect(free.find('[data-testid="mxd-free-count"]').text()).toContain('1 条')
+  })
+
+  it('工具球收纳改版：底部 Dock 移除；选中公式 → 键盘浮层自动唤出，关闭后同元素不重复弹', async () => {
+    /* 本测试自带 seed：画布含 1 个公式元素 + 1 个图片元素 */
+    decksGetFn.mockResolvedValue({
+      data: {
+        id: 'd2', title: '公式键盘浮层', class_name: '高二(3)班', template_id: 'tpl-academic-blue',
+        source: 'topic', slide_count: 1, updated_at: '2026-09-01', photo_context: null,
+        slides: [{
+          id: 'sl1', layout: 'blank', fill_rate: 0.3,
+          elements: [
+            { id: 'fx1', type: 'formula' as const, left: 120, top: 120, width: 320, height: 56, z: 2, latex: 'c^2 = a^2 + b^2', font_size: 22, display: false, teacher_confirmed: false },
+            { id: 'tx1', type: 'text' as const, left: 120, top: 260, width: 400, height: 60, z: 2, html: '勾股定理', font_size: 18, teacher_confirmed: false },
+          ],
+        }],
+      },
+    })
+    const w = mount(SlidesView, { global: { plugins: [createPinia()], stubs: { teleport: true } } })
+    await flushPromises()
+    await w.find('.tv3-qcard').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="tv3-editor"]').exists()).toBe(true)
+
+    /* 底部 Dock 已移除；绘图入口移到顶栏（悬浮球/顶栏为唯二入口） */
+    expect(w.find('.tv3-editor__dock').exists()).toBe(false)
+    expect(w.find('[data-testid="tv3-open-drawboard"]').exists()).toBe(true)
+
+    /* 选中公式元素 → 浮层自动唤出（含 MathKeyboard 分类 tabs） */
+    const fxWrap = w.find('.tv3-editor__canvas-wrap').findAll('.v3sc__el').find((elw) => elw.find('.v3sc__formula').exists())
+    expect(fxWrap).toBeTruthy()
+    await fxWrap!.trigger('click')
+    await flushPromises()
+    const floatKbd = w.find('[data-testid="tv3-kbd-float"]')
+    expect(floatKbd.exists()).toBe(true)
+    expect(floatKbd.find('.mx-kbd__tabs').exists()).toBe(true)
+
+    /* 手动关闭 → 消失；同一元素再次点击 → 不重复弹（防打扰） */
+    await w.find('[data-testid="tv3-kbd-float-close"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="tv3-kbd-float"]').exists()).toBe(false)
+    await fxWrap!.trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="tv3-kbd-float"]').exists()).toBe(false)
+
+    /* 切到非公式元素 → 浮层不出现 */
+    const txWrap = w.find('.tv3-editor__canvas-wrap').findAll('.v3sc__el').find((elw) => elw.find('.v3sc__formula').exists() === false)
+    if (txWrap) {
+      await txWrap.trigger('click')
+      await flushPromises()
+      expect(w.find('[data-testid="tv3-kbd-float"]').exists()).toBe(false)
+    }
+    expect(w.text()).not.toContain('undefined')
   })
 })

@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI生成教案</title>
+    <style id="theme-vars">
+/* ============================================================
+   AI 备课工作台 - 设计令牌 / Design Tokens
+   ============================================================ */
+
+:root {
+  /* ---- Primary Brand ---- */
+  --ailp-primary-50: #eef2ff;
+  --ailp-primary-100: #e0e7ff;
+  --ailp-primary-200: #c7d2fe;
+  --ailp-primary-300: #a5b4fc;
+  --ailp-primary-400: #818cf8;
+  --ailp-primary-500: #6366f1;
+  --ailp-primary-600: #4f46e5;
+  --ailp-primary-700: #4338ca;
+  --ailp-primary-800: #3730a3;
+  --ailp-primary-900: #312e81;
+
+  /* ---- Accent (teal / AI glow) ---- */
+  --ailp-accent-50: #ecfeff;
+  --ailp-accent-100: #cffafe;
+  --ailp-accent-200: #a5f3fc;
+  --ailp-accent-300: #67e8f9;
+  --ailp-accent-400: #22d3ee;
+  --ailp-accent-500: #06b6d4;
+  --ailp-accent-600: #0891b2;
+
+  /* ---- Neutrals ---- */
+  --ailp-gray-50: #f8fafc;
+  --ailp-gray-100: #f1f5f9;
+  --ailp-gray-200: #e2e8f0;
+  --ailp-gray-300: #cbd5e1;
+  --ailp-gray-400: #94a3b8;
+  --ailp-gray-500: #64748b;
+  --ailp-gray-600: #475569;
+  --ailp-gray-700: #334155;
+  --ailp-gray-800: #1e293b;
+  --ailp-gray-900: #0f172a;
+  --ailp-gray-950: #020617;
+
+  /* ---- Success / Warning / Error ---- */
+  --ailp-success-500: #10b981;
+  --ailp-success-600: #059669;
+  --ailp-warning-500: #f59e0b;
+  --ailp-warning-600: #d97706;
+  --ailp-error-500: #ef4444;
+  --ailp-error-600: #dc2626;
+
+  /* ---- Semantic aliases ---- */
+  --ailp-background: #f8fafc;
+  --ailp-foreground: #0f172a;
+  --ailp-card: #ffffff;
+  --ailp-card-foreground: #0f172a;
+  --ailp-popover: #ffffff;
+  --ailp-popover-foreground: #0f172a;
+  --ailp-primary: #4f46e5;
+  --ailp-primary-foreground: #ffffff;
+  --ailp-secondary: #f1f5f9;
+  --ailp-secondary-foreground: #0f172a;
+  --ailp-muted: #f1f5f9;
+  --ailp-muted-foreground: #64748b;
+  --ailp-accent: #06b6d4;
+  --ailp-accent-foreground: #ffffff;
+  --ailp-destructive: #ef4444;
+  --ailp-destructive-foreground: #ffffff;
+  --ailp-border: #e2e8f0;
+  --ailp-input: #e2e8f0;
+  --ailp-ring: #6366f1;
+
+  /* ---- Radius scale ---- */
+  --ailp-radius-sm: 6px;
+  --ailp-radius-md: 10px;
+  --ailp-radius-lg: 14px;
+  --ailp-radius-xl: 20px;
+  --ailp-radius-2xl: 28px;
+  --ailp-radius-full: 9999px;
+
+  /* ---- Shadow scale ---- */
+  --ailp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ailp-shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-xl: 0 20px 40px -10px rgba(15, 23, 42, 0.15);
+  --ailp-shadow-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+
+  /* ---- Typography ---- */
+  --ailp-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --ailp-font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
+    "Liberation Mono", Menlo, monospace;
+  --ailp-font-math: "Cambria Math", "Latin Modern Math", "STIX Two Math",
+    Georgia, serif;
+}
+
+/* ---- Dark mode (editor focus mode) ---- */
+.dark {
+  --ailp-background: #0f172a;
+  --ailp-foreground: #f8fafc;
+  --ailp-card: #1e293b;
+  --ailp-card-foreground: #f8fafc;
+  --ailp-popover: #1e293b;
+  --ailp-popover-foreground: #f8fafc;
+  --ailp-primary: #818cf8;
+  --ailp-primary-foreground: #0f172a;
+  --ailp-secondary: #334155;
+  --ailp-secondary-foreground: #f8fafc;
+  --ailp-muted: #334155;
+  --ailp-muted-foreground: #94a3b8;
+  --ailp-border: #334155;
+  --ailp-input: #334155;
+  --ailp-ring: #6366f1;
+}
+
+/* ---- Base reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--ailp-font-sans);
+  background: var(--ailp-background);
+  color: var(--ailp-foreground);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ailp-gray-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ailp-gray-400);
+}
+
+/* ---- Math formula display ---- */
+.math-display {
+  font-family: var(--ailp-font-math);
+  font-size: 1.1em;
+  line-height: 1.8;
+}
+
+.math-inline {
+  font-family: var(--ailp-font-math);
+  font-style: italic;
+}
+
+/* ---- Utility: AI glow effect ---- */
+.ai-glow {
+  position: relative;
+}
+.ai-glow::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.3),
+    rgba(6, 182, 212, 0.3)
+  );
+  filter: blur(12px);
+  opacity: 0.6;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ---- Gradient text ---- */
+.gradient-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- AI message bubble gradient ---- */
+.ai-bubble-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(6, 182, 212, 0.06) 100%
+  );
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--ailp-background);
+    --color-foreground: var(--ailp-foreground);
+    --color-card: var(--ailp-card);
+    --color-card-foreground: var(--ailp-card-foreground);
+    --color-popover: var(--ailp-popover);
+    --color-popover-foreground: var(--ailp-popover-foreground);
+    --color-primary: var(--ailp-primary);
+    --color-primary-foreground: var(--ailp-primary-foreground);
+    --color-secondary: var(--ailp-secondary);
+    --color-secondary-foreground: var(--ailp-secondary-foreground);
+    --color-muted: var(--ailp-muted);
+    --color-muted-foreground: var(--ailp-muted-foreground);
+    --color-accent: var(--ailp-accent);
+    --color-accent-foreground: var(--ailp-accent-foreground);
+    --color-destructive: var(--ailp-destructive);
+    --color-destructive-foreground: var(--ailp-destructive-foreground);
+    --color-border: var(--ailp-border);
+    --color-input: var(--ailp-input);
+    --color-ring: var(--ailp-ring);
+    --radius-sm: var(--ailp-radius-sm);
+    --radius-md: var(--ailp-radius-md);
+    --radius-lg: var(--ailp-radius-lg);
+    --radius-xl: var(--ailp-radius-xl);
+  }
+  @layer base {
+    body { background: var(--ailp-background); color: var(--ailp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--ailp-background); }
+      .text-background { color: var(--ailp-background); }
+      .border-background { border-color: var(--ailp-background); }
+      .ring-background { --tw-ring-color: var(--ailp-background); }
+      .bg-foreground { background-color: var(--ailp-foreground); }
+      .text-foreground { color: var(--ailp-foreground); }
+      .border-foreground { border-color: var(--ailp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--ailp-foreground); }
+      .bg-card { background-color: var(--ailp-card); }
+      .text-card { color: var(--ailp-card); }
+      .border-card { border-color: var(--ailp-card); }
+      .ring-card { --tw-ring-color: var(--ailp-card); }
+      .bg-card-foreground { background-color: var(--ailp-card-foreground); }
+      .text-card-foreground { color: var(--ailp-card-foreground); }
+      .border-card-foreground { border-color: var(--ailp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--ailp-card-foreground); }
+      .bg-popover { background-color: var(--ailp-popover); }
+      .text-popover { color: var(--ailp-popover); }
+      .border-popover { border-color: var(--ailp-popover); }
+      .ring-popover { --tw-ring-color: var(--ailp-popover); }
+      .bg-popover-foreground { background-color: var(--ailp-popover-foreground); }
+      .text-popover-foreground { color: var(--ailp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--ailp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--ailp-popover-foreground); }
+      .bg-primary { background-color: var(--ailp-primary); }
+      .text-primary { color: var(--ailp-primary); }
+      .border-primary { border-color: var(--ailp-primary); }
+      .ring-primary { --tw-ring-color: var(--ailp-primary); }
+      .bg-primary-foreground { background-color: var(--ailp-primary-foreground); }
+      .text-primary-foreground { color: var(--ailp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--ailp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--ailp-primary-foreground); }
+      .bg-secondary { background-color: var(--ailp-secondary); }
+      .text-secondary { color: var(--ailp-secondary); }
+      .border-secondary { border-color: var(--ailp-secondary); }
+      .ring-secondary { --tw-ring-color: var(--ailp-secondary); }
+      .bg-secondary-foreground { background-color: var(--ailp-secondary-foreground); }
+      .text-secondary-foreground { color: var(--ailp-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--ailp-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--ailp-secondary-foreground); }
+      .bg-muted { background-color: var(--ailp-muted); }
+      .text-muted { color: var(--ailp-muted); }
+      .border-muted { border-color: var(--ailp-muted); }
+      .ring-muted { --tw-ring-color: var(--ailp-muted); }
+      .bg-muted-foreground { background-color: var(--ailp-muted-foreground); }
+      .text-muted-foreground { color: var(--ailp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--ailp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--ailp-muted-foreground); }
+      .bg-accent { background-color: var(--ailp-accent); }
+      .text-accent { color: var(--ailp-accent); }
+      .border-accent { border-color: var(--ailp-accent); }
+      .ring-accent { --tw-ring-color: var(--ailp-accent); }
+      .bg-accent-foreground { background-color: var(--ailp-accent-foreground); }
+      .text-accent-foreground { color: var(--ailp-accent-foreground); }
+      .border-accent-foreground { border-color: var(--ailp-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--ailp-accent-foreground); }
+      .bg-destructive { background-color: var(--ailp-destructive); }
+      .text-destructive { color: var(--ailp-destructive); }
+      .border-destructive { border-color: var(--ailp-destructive); }
+      .ring-destructive { --tw-ring-color: var(--ailp-destructive); }
+      .bg-destructive-foreground { background-color: var(--ailp-destructive-foreground); }
+      .text-destructive-foreground { color: var(--ailp-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--ailp-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--ailp-destructive-foreground); }
+      .bg-border { background-color: var(--ailp-border); }
+      .text-border { color: var(--ailp-border); }
+      .border-border { border-color: var(--ailp-border); }
+      .ring-border { --tw-ring-color: var(--ailp-border); }
+      .bg-input { background-color: var(--ailp-input); }
+      .text-input { color: var(--ailp-input); }
+      .border-input { border-color: var(--ailp-input); }
+      .ring-input { --tw-ring-color: var(--ailp-input); }
+      .bg-ring { background-color: var(--ailp-ring); }
+      .text-ring { color: var(--ailp-ring); }
+      .border-ring { border-color: var(--ailp-ring); }
+      .ring-ring { --tw-ring-color: var(--ailp-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+
+      /* ===== Animations ===== */
+      @keyframes ai-glow-pulse {
+        0%, 100% { opacity: 0.4; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.08); }
+      }
+      @keyframes ai-glow-pulse-strong {
+        0%, 100% { opacity: 0.5; transform: scale(1); }
+        50% { opacity: 0.9; transform: scale(1.12); }
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+      }
+      @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+      }
+      @keyframes fade-in-up {
+        from { opacity: 0; transform: translateY(24px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes scale-in {
+        from { opacity: 0; transform: scale(0.8); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      @keyframes check-draw {
+        0% { stroke-dashoffset: 100; }
+        100% { stroke-dashoffset: 0; }
+      }
+      @keyframes pulse-ring {
+        0% { transform: scale(0.9); opacity: 0.8; }
+        100% { transform: scale(1.5); opacity: 0; }
+      }
+      @keyframes progress-dot {
+        0%, 100% { opacity: 0.4; transform: scale(0.8); }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+      @keyframes slide-in-right {
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+
+      .animate-float { animation: float 4s ease-in-out infinite; }
+      .animate-glow-pulse { animation: ai-glow-pulse 3s ease-in-out infinite; }
+      .animate-glow-pulse-strong { animation: ai-glow-pulse-strong 2s ease-in-out infinite; }
+      .animate-spin-slow { animation: spin-slow 8s linear infinite; }
+      .animate-fade-in-up { animation: fade-in-up 0.7s ease-out both; }
+      .animate-fade-in { animation: fade-in 0.5s ease-out both; }
+      .animate-scale-in { animation: scale-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+      .animate-pulse-ring { animation: pulse-ring 2s ease-out infinite; }
+      .animate-progress-dot { animation: progress-dot 1.4s ease-in-out infinite; }
+      .animate-slide-in-right { animation: slide-in-right 0.5s ease-out both; }
+
+      .delay-100 { animation-delay: 0.1s; }
+      .delay-200 { animation-delay: 0.2s; }
+      .delay-300 { animation-delay: 0.3s; }
+      .delay-400 { animation-delay: 0.4s; }
+      .delay-500 { animation-delay: 0.5s; }
+      .delay-600 { animation-delay: 0.6s; }
+      .delay-700 { animation-delay: 0.7s; }
+      .delay-800 { animation-delay: 0.8s; }
+
+      /* ===== Background blobs ===== */
+      .bg-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.35;
+        pointer-events: none;
+      }
+
+      /* ===== AI generating icon ===== */
+      .ai-generating-icon {
+        position: relative;
+        width: 120px;
+        height: 120px;
+      }
+      .ai-generating-icon .outer-ring {
+        position: absolute;
+        inset: -12px;
+        border-radius: 50%;
+        background: conic-gradient(from 0deg, rgba(79, 70, 229, 0.1), rgba(6, 182, 212, 0.4), rgba(79, 70, 229, 0.1), rgba(139, 92, 246, 0.3), rgba(6, 182, 212, 0.1));
+        filter: blur(8px);
+        opacity: 0.7;
+      }
+      .ai-generating-icon .inner-circle {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 32px rgba(79, 70, 229, 0.4), 0 0 60px rgba(6, 182, 212, 0.2);
+      }
+      .ai-generating-icon .pulse-ring {
+        position: absolute;
+        inset: -20px;
+        border-radius: 50%;
+        border: 2px solid rgba(99, 102, 241, 0.3);
+      }
+
+      /* ===== Success check icon ===== */
+      .success-check-icon {
+        position: relative;
+        width: 100px;
+        height: 100px;
+      }
+      .success-check-icon .glow-layer {
+        position: absolute;
+        inset: -20px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, rgba(6, 182, 212, 0.2) 40%, transparent 70%);
+        filter: blur(12px);
+      }
+      .success-check-icon .glow-layer-2 {
+        position: absolute;
+        inset: -8px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(129, 140, 248, 0.5) 0%, transparent 60%);
+        filter: blur(6px);
+      }
+      .success-check-icon .check-circle {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #7c3aed 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 40px rgba(79, 70, 229, 0.4), 0 0 80px rgba(99, 102, 241, 0.3);
+      }
+      .success-check-icon .pulse-ring-1 {
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 2px solid rgba(99, 102, 241, 0.4);
+      }
+      .success-check-icon .pulse-ring-2 {
+        position: absolute;
+        inset: -16px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(6, 182, 212, 0.3);
+      }
+
+      /* ===== Outline section card ===== */
+      .outline-section {
+        border: 1px solid var(--ailp-border);
+        border-radius: var(--ailp-radius-xl);
+        background: #ffffff;
+        transition: all 0.25s ease;
+      }
+      .outline-section:hover {
+        border-color: rgba(99, 102, 241, 0.3);
+        box-shadow: 0 4px 20px rgba(79, 70, 229, 0.08);
+      }
+
+      /* ===== Step indicator ===== */
+      .step-dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+      .step-dot.active {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        color: white;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+      }
+      .step-dot.completed {
+        background: var(--ailp-success-500);
+        color: white;
+      }
+      .step-dot.pending {
+        background: var(--ailp-gray-100);
+        color: var(--ailp-gray-400);
+      }
+      .step-line {
+        flex: 1;
+        height: 2px;
+        margin: 0 8px;
+        border-radius: 1px;
+      }
+      .step-line.active {
+        background: linear-gradient(90deg, var(--ailp-success-500), var(--ailp-primary-500));
+      }
+      .step-line.pending {
+        background: var(--ailp-gray-200);
+      }
+
+      /* ===== Progress step item ===== */
+      .progress-step {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 18px;
+        border-radius: var(--ailp-radius-lg);
+        transition: all 0.3s ease;
+      }
+      .progress-step.completed {
+        background: rgba(16, 185, 129, 0.06);
+      }
+      .progress-step.current {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(6, 182, 212, 0.06) 100%);
+        border: 1px solid rgba(99, 102, 241, 0.15);
+      }
+      .progress-step.pending {
+        opacity: 0.5;
+      }
+
+      /* ===== Teaching phase card ===== */
+      .phase-card {
+        position: relative;
+        padding: 16px 18px 16px 20px;
+        border-radius: var(--ailp-radius-lg);
+        background: var(--ailp-gray-50);
+        border-left: 3px solid var(--ailp-primary-300);
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      .phase-card:hover {
+        background: var(--ailp-primary-50);
+        border-left-color: var(--ailp-primary-500);
+        transform: translateX(2px);
+      }
+      .phase-card.intro { border-left-color: #f59e0b; }
+      .phase-card.concept { border-left-color: #8b5cf6; }
+      .phase-card.example { border-left-color: #4f46e5; }
+      .phase-card.practice { border-left-color: #06b6d4; }
+      .phase-card.summary { border-left-color: #10b981; }
+      .phase-card.homework { border-left-color: #ec4899; }
+
+      /* ===== Quick adjust chip ===== */
+      .quick-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 9999px;
+        background: white;
+        border: 1px solid var(--ailp-border);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ailp-gray-700);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+      }
+      .quick-chip:hover {
+        border-color: var(--ailp-primary-300);
+        background: var(--ailp-primary-50);
+        color: var(--ailp-primary-700);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.12);
+      }
+
+      /* ===== Primary gradient button ===== */
+      .btn-primary-gradient {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #7c3aed 100%);
+        color: white;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+      }
+      .btn-primary-gradient::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .btn-primary-gradient:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35), 0 0 40px rgba(99, 102, 241, 0.2);
+      }
+      .btn-primary-gradient:hover::before {
+        opacity: 1;
+      }
+
+      /* ===== Floating AI button ===== */
+      .floating-ai-btn {
+        position: relative;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%);
+        box-shadow: 0 8px 32px rgba(79, 70, 229, 0.4), 0 0 60px rgba(6, 182, 212, 0.2);
+      }
+      .floating-ai-btn::before {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(6, 182, 212, 0.5));
+        filter: blur(12px);
+        z-index: -1;
+        animation: ai-glow-pulse 2.5s ease-in-out infinite;
+      }
+
+      /* ===== State divider label ===== */
+      .state-divider {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin: 60px 0 40px;
+      }
+      .state-divider::before,
+      .state-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--ailp-gray-300), transparent);
+      }
+      .state-divider span {
+        padding: 6px 20px;
+        border-radius: 9999px;
+        background: white;
+        border: 1px solid var(--ailp-border);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ailp-gray-500);
+      }
+
+      /* ===== Adjust button ===== */
+      .adjust-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: var(--ailp-radius-full);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ailp-primary-600);
+        background: var(--ailp-primary-50);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .adjust-btn:hover {
+        background: var(--ailp-primary-100);
+        border-color: var(--ailp-primary-200);
+      }
+
+      /* ===== Generating progress bar ===== */
+      .gen-progress-bar {
+        height: 4px;
+        border-radius: 2px;
+        background: var(--ailp-gray-100);
+        overflow: hidden;
+      }
+      .gen-progress-bar .fill {
+        height: 100%;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #4f46e5, #06b6d4);
+        width: 55%;
+        position: relative;
+        overflow: hidden;
+      }
+      .gen-progress-bar .fill::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+        background-size: 200% 100%;
+        animation: shimmer 2s linear infinite;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <div class="relative min-h-screen overflow-hidden bg-[var(--ailp-background)]">
+      <!-- Decorative background blobs -->
+      <div class="bg-blob w-[500px] h-[500px] bg-[#c7d2fe] top-[-150px] left-[-100px]"></div>
+      <div class="bg-blob w-[400px] h-[400px] bg-[#a5f3fc] top-[300px] right-[-100px] opacity-30"></div>
+      <div class="bg-blob w-[600px] h-[600px] bg-[#e0e7ff] bottom-[-200px] left-1/3 opacity-50"></div>
+
+      <!-- ========== TOP NAVIGATION ========== -->
+      <nav class="relative z-10 flex items-center justify-between px-8 py-4">
+        <div class="flex items-center gap-3">
+          <button class="w-10 h-10 rounded-xl bg-white/60 backdrop-blur-sm border border-[var(--ailp-border)] flex items-center justify-center text-[var(--ailp-gray-600)] hover:text-[var(--ailp-primary)] hover:bg-white transition-all">
+            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+          </button>
+          <h1 class="text-lg font-semibold text-[var(--ailp-foreground)]">AI 生成教案</h1>
+        </div>
+
+        <!-- Step indicator -->
+        <div class="flex items-center gap-2">
+          <div class="step-dot completed">
+            <i data-lucide="check" class="w-4 h-4"></i>
+          </div>
+          <span class="text-sm font-medium text-[var(--ailp-gray-600)]">配置</span>
+          <div class="w-8 h-0.5 bg-[var(--ailp-success-500)] rounded"></div>
+          <div class="step-dot completed">
+            <i data-lucide="check" class="w-4 h-4"></i>
+          </div>
+          <span class="text-sm font-medium text-[var(--ailp-gray-600)]">AI生成</span>
+          <div class="w-8 h-0.5 rounded" style="background: linear-gradient(90deg, var(--ailp-success-500), var(--ailp-primary-500));"></div>
+          <div class="step-dot active">3</div>
+          <span class="text-sm font-semibold text-[var(--ailp-primary)]">确认编辑</span>
+        </div>
+
+        <div class="flex items-center gap-2 pl-2 border-l border-[var(--ailp-border)]">
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#818cf8] to-[#c084fc] flex items-center justify-center text-white text-sm font-medium shadow-md">
+            李
+          </div>
+          <span class="text-sm font-medium text-[var(--ailp-foreground)]">李老师</span>
+        </div>
+      </nav>
+
+      <main class="relative z-10">
+        <!-- ================================================== -->
+        <!-- STATE 1: AI GENERATING                              -->
+        <!-- ================================================== -->
+        <section class="max-w-2xl mx-auto px-6 pt-16 pb-10">
+          <div class="text-center mb-10 animate-fade-in-up">
+            <!-- AI Generating Icon -->
+            <div class="ai-generating-icon mx-auto mb-8">
+              <div class="outer-ring animate-spin-slow"></div>
+              <div class="pulse-ring animate-pulse-ring"></div>
+              <div class="pulse-ring animate-pulse-ring" style="animation-delay: 1s;"></div>
+              <div class="inner-circle animate-glow-pulse-strong">
+                <i data-lucide="sparkles" class="w-12 h-12 text-white"></i>
+              </div>
+            </div>
+
+            <h2 class="text-3xl font-bold text-[var(--ailp-foreground)] mb-3 tracking-tight">
+              AI 正在为你生成教案...
+            </h2>
+            <p class="text-[var(--ailp-muted-foreground)] text-base">
+              椭圆及其标准方程（第1课时）· 新授课 · 45分钟
+            </p>
+          </div>
+
+          <!-- Progress Steps Card -->
+          <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-[var(--ailp-border)] shadow-lg p-6 animate-fade-in-up delay-200">
+            <div class="space-y-2">
+              <!-- Step 1: Completed -->
+              <div class="progress-step completed">
+                <div class="w-7 h-7 rounded-full bg-[var(--ailp-success-500)] flex items-center justify-center flex-shrink-0">
+                  <i data-lucide="check" class="w-4 h-4 text-white"></i>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-medium text-[var(--ailp-gray-800)]">分析教材与知识点</span>
+                    <span class="text-xs text-[var(--ailp-success-600)] font-medium">已完成</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 2: Completed -->
+              <div class="progress-step completed">
+                <div class="w-7 h-7 rounded-full bg-[var(--ailp-success-500)] flex items-center justify-center flex-shrink-0">
+                  <i data-lucide="check" class="w-4 h-4 text-white"></i>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-medium text-[var(--ailp-gray-800)]">匹配教案模板结构</span>
+                    <span class="text-xs text-[var(--ailp-success-600)] font-medium">已完成</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 3: Completed -->
+              <div class="progress-step completed">
+                <div class="w-7 h-7 rounded-full bg-[var(--ailp-success-500)] flex items-center justify-center flex-shrink-0">
+                  <i data-lucide="check" class="w-4 h-4 text-white"></i>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-medium text-[var(--ailp-gray-800)]">生成教学目标与重难点</span>
+                    <span class="text-xs text-[var(--ailp-success-600)] font-medium">已完成</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 4: Current / In Progress -->
+              <div class="progress-step current">
+                <div class="w-7 h-7 rounded-full relative flex items-center justify-center flex-shrink-0">
+                  <div class="absolute inset-0 rounded-full" style="background: linear-gradient(135deg, #4f46e5, #06b6d4);"></div>
+                  <div class="absolute inset-[3px] rounded-full bg-white flex items-center justify-center">
+                    <div class="w-2 h-2 rounded-full animate-progress-dot" style="background: linear-gradient(135deg, #4f46e5, #06b6d4);"></div>
+                  </div>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="font-semibold text-[var(--ailp-primary-700)]">设计教学过程各环节</span>
+                    <span class="text-xs text-[var(--ailp-primary)] font-medium">生成中</span>
+                  </div>
+                  <div class="gen-progress-bar">
+                    <div class="fill"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 5: Pending -->
+              <div class="progress-step pending">
+                <div class="w-7 h-7 rounded-full bg-[var(--ailp-gray-200)] flex items-center justify-center flex-shrink-0">
+                  <div class="w-2 h-2 rounded-full bg-[var(--ailp-gray-400)]"></div>
+                </div>
+                <div class="flex-1">
+                  <span class="font-medium text-[var(--ailp-gray-500)]">选配例题与习题</span>
+                </div>
+              </div>
+
+              <!-- Step 6: Pending -->
+              <div class="progress-step pending">
+                <div class="w-7 h-7 rounded-full bg-[var(--ailp-gray-200)] flex items-center justify-center flex-shrink-0">
+                  <div class="w-2 h-2 rounded-full bg-[var(--ailp-gray-400)]"></div>
+                </div>
+                <div class="flex-1">
+                  <span class="font-medium text-[var(--ailp-gray-500)]">生成板书与作业设计</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ETA -->
+            <div class="mt-6 pt-5 border-t border-[var(--ailp-border)] flex items-center justify-center gap-2 text-sm text-[var(--ailp-muted-foreground)]">
+              <i data-lucide="clock" class="w-4 h-4"></i>
+              <span>预计还需 <span class="font-semibold text-[var(--ailp-primary)]">8 秒</span></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- State Divider -->
+        <div class="state-divider max-w-4xl mx-auto px-6">
+          <span>以下为生成完成后的大纲确认页面</span>
+        </div>
+
+        <!-- ================================================== -->
+        <!-- STATE 2: GENERATION COMPLETE + OUTLINE CONFIRMATION  -->
+        <!-- ================================================== -->
+        <section class="max-w-[900px] mx-auto px-6 pb-24">
+          <!-- Success Header -->
+          <div class="text-center mb-10 animate-fade-in-up">
+            <!-- Success Check Icon -->
+            <div class="success-check-icon mx-auto mb-8">
+              <div class="glow-layer animate-glow-pulse"></div>
+              <div class="glow-layer-2 animate-glow-pulse-strong"></div>
+              <div class="pulse-ring-1 animate-pulse-ring"></div>
+              <div class="pulse-ring-2 animate-pulse-ring" style="animation-delay: 0.5s;"></div>
+              <div class="check-circle animate-scale-in">
+                <i data-lucide="check" class="w-12 h-12 text-white" style="stroke-width: 3;"></i>
+              </div>
+            </div>
+
+            <h2 class="text-4xl font-bold text-[var(--ailp-foreground)] mb-3 tracking-tight">
+              教案大纲已生成 <span class="text-[#f59e0b]">🎉</span>
+            </h2>
+            <p class="text-lg text-[var(--ailp-gray-700)] mb-2 font-medium">
+              椭圆及其标准方程（第1课时）· 新授课 · 45分钟
+            </p>
+            <p class="text-sm text-[var(--ailp-muted-foreground)]">
+              <i data-lucide="zap" class="w-3.5 h-3.5 inline-block mr-1 -mt-0.5 text-[var(--ailp-warning-500)]"></i>
+              AI 用了 <span class="font-semibold text-[var(--ailp-gray-600)]">12 秒</span> 生成了这份教案初稿
+            </p>
+          </div>
+
+          <!-- Outline Preview Card -->
+          <div class="bg-white rounded-2xl border border-[var(--ailp-border)] shadow-xl overflow-hidden animate-fade-in-up delay-200">
+            <!-- Card Header -->
+            <div class="px-7 py-5 border-b border-[var(--ailp-border)] bg-gradient-to-r from-[var(--ailp-primary-50)]/50 to-[var(--ailp-accent-50)]/50 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, #4f46e5, #7c3aed);">
+                  <i data-lucide="file-text" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-[var(--ailp-foreground)] text-base">教案大纲预览</h3>
+                  <p class="text-xs text-[var(--ailp-muted-foreground)]">共 5 个模块 · 6 个教学环节</p>
+                </div>
+              </div>
+              <button class="adjust-btn">
+                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                全屏预览
+              </button>
+            </div>
+
+            <!-- Card Body -->
+            <div class="p-6 space-y-4">
+              <!-- ===== Section 1: 教学目标 ===== -->
+              <div class="outline-section">
+                <div class="flex items-center justify-between px-5 py-4 cursor-pointer" onclick="this.parentElement.classList.toggle('expanded')">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-[var(--ailp-primary-100)] flex items-center justify-center">
+                      <i data-lucide="target" class="w-4 h-4 text-[var(--ailp-primary-600)]"></i>
+                    </div>
+                    <div>
+                      <h4 class="font-semibold text-[var(--ailp-foreground)]">教学目标</h4>
+                      <span class="text-xs text-[var(--ailp-muted-foreground)]">3 条目标</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button class="adjust-btn" onclick="event.stopPropagation()">
+                      <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+                      调整
+                    </button>
+                    <i data-lucide="chevron-down" class="w-5 h-5 text-[var(--ailp-gray-400)] transition-transform"></i>
+                  </div>
+                </div>
+                <div class="px-5 pb-5 pt-0 border-t border-[var(--ailp-border)]">
+                  <ul class="space-y-3 mt-4">
+                    <li class="flex items-start gap-3">
+                      <span class="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--ailp-primary-100)] text-[var(--ailp-primary-700)] text-xs font-semibold flex items-center justify-center mt-0.5">1</span>
+                      <div>
+                        <p class="text-[var(--ailp-gray-700)] leading-relaxed"><span class="font-medium text-[var(--ailp-primary-700)]">理解椭圆的定义：</span>掌握平面内与两个定点 F₁、F₂ 的距离之和等于常数（大于 |F₁F₂|）的点的轨迹叫椭圆，理解焦点、焦距的概念。</p>
+                      </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                      <span class="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--ailp-primary-100)] text-[var(--ailp-primary-700)] text-xs font-semibold flex items-center justify-center mt-0.5">2</span>
+                      <div>
+                        <p class="text-[var(--ailp-gray-700)] leading-relaxed"><span class="font-medium text-[var(--ailp-primary-700)]">掌握椭圆的标准方程：</span>能推导焦点在 x 轴和 y 轴上的椭圆标准方程，会根据条件求椭圆的标准方程。</p>
+                      </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                      <span class="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--ailp-primary-100)] text-[var(--ailp-primary-700)] text-xs font-semibold flex items-center justify-center mt-0.5">3</span>
+                      <div>
+                        <p class="text-[var(--ailp-gray-700)] leading-relaxed"><span class="font-medium text-[var(--ailp-primary-700)]">体会数形结合思想：</span>通过椭圆定义的形成过程和标准方程的推导，培养学生观察、分析、归纳的思维能力。</p>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- ===== Section 2: 教学重点与难点 ===== -->
+              <div class="outline-section">
+                <div class="flex items-center justify-between px-5 py-4 cursor-pointer">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-[#f59e0b]/15 flex items-center justify-center">
+                      <i data-lucide="alert-circle" class="w-4 h-4 text-[#f59e0b]"></i>
+                    </div>
+                    <div>
+                      <h4 class="font-semibold text-[var(--ailp-foreground)]">教学重点与难点</h4>
+                      <span class="text-xs text-[var(--ailp-muted-foreground)]">重点 1 项 · 难点 1 项</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button class="adjust-btn" onclick="event.stopPropagation()">
+                      <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+                      调整
+                    </button>
+                  </div>
+                </div>
+                <div class="px-5 pb-5 border-t border-[var(--ailp-border)]">
+                  <div class="grid grid-cols-2 gap-4 mt-4">
+                    <!-- 重点 -->
+                    <div class="p-4 rounded-xl bg-[var(--ailp-success-50)] border border-[var(--ailp-success-100)]">
+                      <div class="flex items-center gap-2 mb-2">
+                        <div class="w-6 h-6 rounded-md bg-[var(--ailp-success-500)] flex items-center justify-center">
+                          <i data-lucide="star" class="w-3.5 h-3.5 text-white"></i>
+                        </div>
+                        <span class="font-semibold text-[var(--ailp-success-700)] text-sm">教学重点</span>
+                      </div>
+                      <p class="text-sm text-[var(--ailp-gray-700)] leading-relaxed">
+                        椭圆的定义和标准方程。理解椭圆定义中的"常数大于 |F₁F₂|"这一条件，掌握焦点在不同坐标轴上的标准方程形式及 a、b、c 的关系。
+                      </p>
+                    </div>
+                    <!-- 难点 -->
+                    <div class="p-4 rounded-xl bg-[var(--ailp-error-50)] border border-[var(--ailp-error-100)]">
+                      <div class="flex items-center gap-2 mb-2">
+                        <div class="w-6 h-6 rounded-md bg-[var(--ailp-error-500)] flex items-center justify-center">
+                          <i data-lucide="flame" class="w-3.5 h-3.5 text-white"></i>
+                        </div>
+                        <span class="font-semibold text-[var(--ailp-error-700)] text-sm">教学难点</span>
+                      </div>
+                      <p class="text-sm text-[var(--ailp-gray-700)] leading-relaxed">
+                        椭圆标准方程的推导。难点在于建立适当坐标系后，对含两个根号的等式进行化简，以及理解 a > c > 0 和 b² = a² - c² 的几何意义。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ===== Section 3: 教学过程 ===== -->
+              <div class="outline-section">
+                <div class="flex items-center justify-between px-5 py-4 cursor-pointer">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-[var(--ailp-accent)]/15 flex items-center justify-center">
+                      <i data-lucide="layout-list" class="w-4 h-4 text-[var(--ailp-accent-600)]"></i>
+                    </div>
+                    <div>
+                      <h4 class="font-semibold text-[var(--ailp-foreground)]">教学过程</h4>
+                      <span class="text-xs text-[var(--ailp-muted-foreground)]">6 个环节 · 共 45 分钟</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button class="adjust-btn" onclick="event.stopPropagation()">
+                      <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                      增删环节
+                    </button>
+                  </div>
+                </div>
+                <div class="px-5 pb-5 border-t border-[var(--ailp-border)]">
+                  <div class="mt-4 space-y-3">
+                    <!-- Phase 1: 情境引入 -->
+                    <div class="phase-card intro">
+                      <div class="flex items-start justify-between mb-1.5">
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-bold text-[#f59e0b] bg-[#f59e0b]/15 px-2 py-0.5 rounded-md">一</span>
+                          <h5 class="font-semibold text-[var(--ailp-gray-800)]">情境引入</h5>
+                        </div>
+                        <span class="text-xs font-medium text-[var(--ailp-gray-500)] bg-white px-2 py-0.5 rounded border border-[var(--ailp-gray-200)]">5 分钟</span>
+                      </div>
+                      <p class="text-sm text-[var(--ailp-gray-600)] leading-relaxed pl-7">
+                        通过展示太阳系行星轨道运行动画，引导学生观察行星运行轨迹，提出"行星轨道是什么形状"的问题，从生活中的椭圆实例（油罐车截面、卫星轨道）引入新课，激发学习兴趣。
+                      </p>
+                    </div>
+
+                    <!-- Phase 2: 概念形成 -->
+                    <div class="phase-card concept">
+                      <div class="flex items-start justify-between mb-1.5">
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-bold text-[#8b5cf6] bg-[#8b5cf6]/15 px-2 py-0.5 rounded-md">二</span>
+                          <h5 class="font-semibold text-[var(--ailp-gray-800)]">概念形成</h5>
+                        </div>
+                        <span class="text-xs font-medium text-[var(--ailp-gray-500)] bg-white px-2 py-0.5 rounded border border-[var(--ailp-gray-200)]">10 分钟</span>
+                      </div>
+                      <p class="text-sm text-[var(--ailp-gray-600)] leading-relaxed pl-7">
+                        <span class="font-medium">细绳实验：</span>用一根细绳和两个图钉在黑板上演示椭圆的画法，让学生观察动点的运动规律。引导学生归纳椭圆定义：平面内与两定点距离之和等于常数（大于 |F₁F₂|）的点的轨迹。强调定义中的关键条件。
+                      </p>
+                    </div>
+
+                    <!-- Phase 3: 例题精讲 -->
+                    <div class="phase-card example">
+                      <div class="flex items-start justify-between mb-1.5">
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-bold text-[#4f46e5] bg-[#4f46e5]/15 px-2 py-0.5 rounded-md">三</span>
+                          <h5 class="font-semibold text-[var(--ailp-gray-800)]">例题精讲</h5>
+                        </div>
+                        <span class="text-xs font-medium text-[var(--ailp-gray-500)] bg-white px-2 py-0.5 rounded border border-[var(--ailp-gray-200)]">12 分钟</span>
+                      </div>
+                      <p class="text-sm text-[var(--ailp-gray-600)] leading-relaxed pl-7">
+                        <span class="font-medium">例1：</span>已知椭圆焦点坐标和椭圆上一点，求标准方程（待定系数法）。<br>
+                        <span class="font-medium">例2：</span>已知 a、b 关系及焦点位置，求椭圆标准方程。<br>
+                        两道例题由浅入深，每题后配 1 道变式训练，强化 a、b、c 关系的运用。
+                      </p>
+                    </div>
+
+                    <!-- Phase 4: 课堂练习 -->
+                    <div class="phase-card practice">
+                      <div class="flex items-start justify-between mb-1.5">
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-bold text-[#06b6d4] bg-[#06b6d4]/15 px-2 py-0.5 rounded-md">四</span>
+                          <h5 class="font-semibold text-[var(--ailp-gray-800)]">课堂练习</h5>
+                        </div>
+                        <span class="text-xs font-medium text-[var(--ailp-gray-500)] bg-white px-2 py-0.5 rounded border border-[var(--ailp-gray-200)]">8 分钟</span>
+                      </div>
+                      <p class="text-sm text-[var(--ailp-gray-600)] leading-relaxed pl-7">
+                        <span class="font-medium">3 道分层练习：</span><br>
+                        基础题：直接套用公式求标准方程（必做）<br>
+                        提高题：已知椭圆过两点求方程（选做）<br>
+                        拓展题：与椭圆定义有关的焦点三角形问题（挑战）
+                      </p>
+                    </div>
+
+                    <!-- Phase 5: 课堂小结 -->
+                    <div class="phase-card summary">
+                      <div class="flex items-start justify-between mb-1.5">
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-bold text-[#10b981] bg-[#10b981]/15 px-2 py-0.5 rounded-md">五</span>
+                          <h5 class="font-semibold text-[var(--ailp-gray-800)]">课堂小结</h5>
+                        </div>
+                        <span class="text-xs font-medium text-[var(--ailp-gray-500)] bg-white px-2 py-0.5 rounded border border-[var(--ailp-gray-200)]">5 分钟</span>
+                      </div>
+                      <p class="text-sm text-[var(--ailp-gray-600)] leading-relaxed pl-7">
+                        <span class="font-medium">知识总结：</span>椭圆的定义、标准方程、a/b/c 的关系（思维导图形式）。<br>
+                        <span class="font-medium">方法总结：</span>待定系数法、数形结合思想、分类讨论思想（焦点在 x 轴 / y 轴）。
+                      </p>
+                    </div>
+
+                    <!-- Phase 6: 作业布置 -->
+                    <div class="phase-card homework">
+                      <div class="flex items-start justify-between mb-1.5">
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-bold text-[#ec4899] bg-[#ec4899]/15 px-2 py-0.5 rounded-md">六</span>
+                          <h5 class="font-semibold text-[var(--ailp-gray-800)]">作业布置</h5>
+                        </div>
+                        <span class="text-xs font-medium text-[var(--ailp-gray-500)] bg-white px-2 py-0.5 rounded border border-[var(--ailp-gray-200)]">5 分钟</span>
+                      </div>
+                      <p class="text-sm text-[var(--ailp-gray-600)] leading-relaxed pl-7">
+                        <span class="font-medium">分层作业：</span>基础题（课本 P42 习题 2.2 A 组 1-3）+ 提升题（B 组 1-2）+ 拓展探究（动手画椭圆，体会定义）。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ===== Section 4: 板书设计 ===== -->
+              <div class="outline-section">
+                <div class="flex items-center justify-between px-5 py-4 cursor-pointer">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-[#8b5cf6]/15 flex items-center justify-center">
+                      <i data-lucide="layout-template" class="w-4 h-4 text-[#8b5cf6]"></i>
+                    </div>
+                    <div>
+                      <h4 class="font-semibold text-[var(--ailp-foreground)]">板书设计</h4>
+                      <span class="text-xs text-[var(--ailp-muted-foreground)]">主板书 + 副板书</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button class="adjust-btn" onclick="event.stopPropagation()">
+                      <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+                      调整
+                    </button>
+                  </div>
+                </div>
+                <div class="px-5 pb-5 border-t border-[var(--ailp-border)]">
+                  <div class="grid grid-cols-3 gap-3 mt-4">
+                    <div class="col-span-2 p-3 rounded-lg bg-[var(--ailp-gray-50)] border border-[var(--ailp-gray-200)]">
+                      <div class="text-xs font-semibold text-[var(--ailp-gray-500)] mb-2">主板书（左侧 2/3）</div>
+                      <div class="text-xs text-[var(--ailp-gray-600)] space-y-1.5 leading-relaxed">
+                        <p>§2.2.1 椭圆及其标准方程</p>
+                        <p>一、椭圆定义：|MF₁|+|MF₂|=2a (2a>|F₁F₂|)</p>
+                        <p>二、标准方程：</p>
+                        <p class="pl-3">x²/a² + y²/b² = 1 (a>b>0) 焦点在x轴</p>
+                        <p class="pl-3">y²/a² + x²/b² = 1 焦点在y轴</p>
+                        <p>三、关系：a² = b² + c²</p>
+                      </div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-[var(--ailp-gray-50)] border border-[var(--ailp-gray-200)]">
+                      <div class="text-xs font-semibold text-[var(--ailp-gray-500)] mb-2">副板书（右侧 1/3）</div>
+                      <div class="text-xs text-[var(--ailp-gray-600)] space-y-1.5 leading-relaxed">
+                        <p>• 例题演板</p>
+                        <p>• 学生练习</p>
+                        <p>• 推导草稿</p>
+                        <p>• 图形演示区</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ===== Section 5: 作业布置 ===== -->
+              <div class="outline-section">
+                <div class="flex items-center justify-between px-5 py-4 cursor-pointer">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-[#ec4899]/15 flex items-center justify-center">
+                      <i data-lucide="book-open" class="w-4 h-4 text-[#ec4899]"></i>
+                    </div>
+                    <div>
+                      <h4 class="font-semibold text-[var(--ailp-foreground)]">作业布置</h4>
+                      <span class="text-xs text-[var(--ailp-muted-foreground)]">基础 + 提升 + 拓展 · 3 层</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button class="adjust-btn" onclick="event.stopPropagation()">
+                      <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+                      调整
+                    </button>
+                  </div>
+                </div>
+                <div class="px-5 pb-5 border-t border-[var(--ailp-border)]">
+                  <div class="grid grid-cols-3 gap-3 mt-4">
+                    <div class="p-3 rounded-lg bg-[var(--ailp-success-50)] border border-[var(--ailp-success-100)]">
+                      <div class="flex items-center gap-1.5 mb-1.5">
+                        <i data-lucide="leaf" class="w-3.5 h-3.5 text-[var(--ailp-success-600)]"></i>
+                        <span class="text-xs font-semibold text-[var(--ailp-success-700)]">基础题（必做）</span>
+                      </div>
+                      <p class="text-xs text-[var(--ailp-gray-600)] leading-relaxed">
+                        课本 P42 习题 2.2 A 组 第 1、2、3 题<br>
+                        <span class="text-[var(--ailp-success-600)]">预计 10 分钟</span>
+                      </p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-[var(--ailp-warning-50)] border border-[var(--ailp-warning-100)]">
+                      <div class="flex items-center gap-1.5 mb-1.5">
+                        <i data-lucide="trending-up" class="w-3.5 h-3.5 text-[var(--ailp-warning-600)]"></i>
+                        <span class="text-xs font-semibold text-[var(--ailp-warning-700)]">提升题（选做）</span>
+                      </div>
+                      <p class="text-xs text-[var(--ailp-gray-600)] leading-relaxed">
+                        课本 P43 习题 2.2 B 组 第 1、2 题<br>
+                        <span class="text-[var(--ailp-warning-600)]">预计 15 分钟</span>
+                      </p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-[var(--ailp-primary-50)] border border-[var(--ailp-primary-100)]">
+                      <div class="flex items-center gap-1.5 mb-1.5">
+                        <i data-lucide="rocket" class="w-3.5 h-3.5 text-[var(--ailp-primary-600)]"></i>
+                        <span class="text-xs font-semibold text-[var(--ailp-primary-700)]">拓展探究</span>
+                      </div>
+                      <p class="text-xs text-[var(--ailp-gray-600)] leading-relaxed">
+                        动手实验：用硬纸板和细绳画椭圆，改变绳长和焦距观察变化<br>
+                        <span class="text-[var(--ailp-primary-600)]">预计 20 分钟</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Adjust Area -->
+          <div class="mt-8 animate-fade-in-up delay-400">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-7 h-7 rounded-lg bg-[var(--ailp-primary)]/10 flex items-center justify-center">
+                <i data-lucide="wand-2" class="w-4 h-4 text-[var(--ailp-primary)]"></i>
+              </div>
+              <h4 class="font-semibold text-[var(--ailp-gray-800)]">AI 快捷调整</h4>
+              <span class="text-xs text-[var(--ailp-muted-foreground)]">点击快速微调，AI 重新生成对应部分</span>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <button class="quick-chip">
+                <i data-lucide="sliders-horizontal" class="w-4 h-4 text-[var(--ailp-primary)]"></i>
+                调整难度
+                <span class="text-[var(--ailp-gray-400)]">·</span>
+                <span class="text-[var(--ailp-gray-600)]">中等</span>
+              </button>
+              <button class="quick-chip">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-[#8b5cf6]"></i>
+                增加例题
+              </button>
+              <button class="quick-chip">
+                <i data-lucide="lightbulb" class="w-4 h-4 text-[#f59e0b]"></i>
+                增加互动环节
+              </button>
+              <button class="quick-chip">
+                <i data-lucide="users" class="w-4 h-4 text-[var(--ailp-accent)]"></i>
+                针对本班学情调整
+              </button>
+              <button class="quick-chip">
+                <i data-lucide="graduation-cap" class="w-4 h-4 text-[#ec4899]"></i>
+                增加高考真题
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom Action Area -->
+          <div class="mt-10 flex items-center justify-between animate-fade-in-up delay-500">
+            <button class="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--ailp-border)] bg-white text-[var(--ailp-gray-600)] hover:bg-[var(--ailp-gray-50)] hover:text-[var(--ailp-gray-800)] font-medium transition-all">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              重新生成
+            </button>
+
+            <div class="flex flex-col items-end gap-1.5">
+              <button class="btn-primary-gradient flex items-center gap-2.5 px-8 py-3.5 rounded-xl font-semibold text-base shadow-lg">
+                继续编辑
+                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+              </button>
+              <span class="text-xs text-[var(--ailp-muted-foreground)]">进入编辑器后可自由修改所有内容</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Floating AI Assistant Button (collapsed) -->
+      <div class="fixed bottom-8 right-8 z-50">
+        <button class="floating-ai-btn w-14 h-14 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform">
+          <i data-lucide="bot" class="w-6 h-6"></i>
+        </button>
+      </div>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

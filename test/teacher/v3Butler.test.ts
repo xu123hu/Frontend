@@ -7,8 +7,10 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 
 /* ---------- 组件层依赖 mock（vi.mock 工厂提升，引用一律走 vi.mocked(importee)) ---------- */
+/* 可变的 route mock：个别用例（插入本页）需要 deck 上下文 */
+const mockRoute: { path: string; query: Record<string, string> } = { path: '/teacher-v3/slides', query: {} }
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ path: '/teacher-v3/slides', query: {} }),
+  useRoute: () => mockRoute,
   useRouter: () => ({ push: vi.fn() }),
 }))
 vi.mock('@/api/teacherV3', () => ({
@@ -139,7 +141,7 @@ describe('butler mock · chat 意图路由（SSE）', () => {
     const res = await call('POST', '/teacher-v3/butler/chat', { message: '椭圆的定义是什么', web_search: true })
     const parsed = parseSse(res)
     const cite = parsed.find((x) => x.event === 'citation')?.data
-    expect(cite.sources.length).toBe(3)
+    expect(cite.sources.length).toBe(2) // B0：移除 example.com 伪引用，仅保留官方来源
     expect(cite.sources.every((s: any) => s.title && s.url)).toBe(true)
   })
 
@@ -173,10 +175,11 @@ describe('butler mock · 写动作确认（红线：教师点了执行才入库�
     const r = await call('POST', '/teacher-v3/butler/actions/act-1/confirm', { params: { kp_name: '圆锥曲线' } })
     expect(r.body.data.ok).toBe(true)
     expect(r.body.data.result.question_id).toBeTruthy()
+    expect(r.body.data.result.demo).toBe(true) // B0：入库样例标记为演示数据
     expect(await quizTotal()).toBe(before + 1)
     const tasks = await call('GET', '/teacher-v3/tasks')
     expect(tasks.body.data.items.some((t: any) => t.capability === 'butler')).toBe(true)
-    const q = await call('GET', '/teacher-v3/quiz/questions?q=管家识别入库')
+    const q = await call('GET', '/teacher-v3/quiz/questions?q=演示数据')
     expect(q.body.data.total).toBe(1)
   })
 })
@@ -202,7 +205,7 @@ describe('ButlerPanel 对话流', () => {
   it('空态：欢迎语 + 快捷提问；上下文条跟随当前页面', () => {
     const w = mountPanel()
     expect(w.find('.tv3-butler__empty-title').text()).toContain('李老师')
-    expect(w.findAll('.tv3-butler__chip').length).toBe(4)
+    expect(w.findAll('.tv3-butler__chip').length).toBe(3) // B6：快捷动作随页面变化（slides=3）
     expect(w.find('[data-testid="tv3-butler-ctx"]').text()).toContain('课件工坊')
   })
 
@@ -229,7 +232,7 @@ describe('ButlerPanel 对话流', () => {
     const card = w.find('[data-testid="tv3-butler-card-formula"]')
     expect(card.html()).toContain('katex')
     expect(card.attributes('draggable')).toBe('true')
-    expect(card.text()).toContain('88%')
+    expect(card.text()).toContain('解析候选（演示）') // B0：不再显示伪造的精确置信度
     expect(w.emitted('activity')).toBeTruthy()
   })
 
@@ -299,12 +302,18 @@ describe('ButlerPanel 对话流', () => {
     ]))
     const spy = vi.fn()
     window.addEventListener('tv3-butler-insert', spy)
+    mockRoute.query.deck = 'deck-1' // B0：插入按钮需要课件上下文（deck query）才可用
     const w = mountPanel()
     await w.find('[data-testid="tv3-butler-input"]').setValue('y=x平方')
     await w.find('[data-testid="tv3-butler-send"]').trigger('click')
     await flushPromises()
 
+    // B0：有课件上下文时插入按钮可用（无上下文时显示"未打开课件"禁用态）
+    expect(w.find('.tv3-butler__card--formula .tv3-butler__mini').attributes('disabled')).toBeUndefined()
+    // B6：两步确认——第一次点出预览，确认才派发
     await w.find('.tv3-butler__card--formula .tv3-butler__mini').trigger('click')
+    expect(spy).toHaveBeenCalledTimes(0)
+    await w.find('[data-testid^="tv3-butler-insert-confirm-"]').trigger('click')
     window.removeEventListener('tv3-butler-insert', spy)
     expect(spy).toHaveBeenCalledTimes(1)
     expect(spy.mock.calls[0][0].detail).toMatchObject({ type: 'formula', latex: 'y=x^{2}', teacher_confirmed: false })

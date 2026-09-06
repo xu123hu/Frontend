@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="tv3-app" :class="{ 'tv3-app--butler': butlerOpen }">
     <aside class="tv3-nav">
       <div class="tv3-nav__brand">
@@ -61,9 +61,25 @@
       </main>
     </div>
 
-    <!-- AI 管家：右下角悬浮球 + 侧边栏（展开时主区右侧避让，不遮挡内容） -->
-    <ButlerFab v-if="!butlerOpen" :open="false" :unread="butlerUnread" @toggle="butlerOpen = true" />
+    <!-- C2 伴随工具层：右下角统一 Dock（AI 助教 / 伴随资源 / 数学绘图）+ 两个覆盖式工具层。
+         互斥：同一时刻只开一个覆盖层；关闭后原位返回（不跳页、不丢滚动）。 -->
+    <TeacherCompanionDock
+      :butler-open="butlerOpen"
+      :unread="butlerUnread"
+      @ai="openButlerFromDock"
+      @tool="onDockTool"
+    />
     <ButlerPanel :open="butlerOpen" @close="butlerOpen = false" @activity="onButlerActivity" />
+    <ResourceCompanionPanel :open="companion.open === 'resource'" @close="closeTool()" />
+
+    <!-- 全局数学绘图工作台（复用 Slides 同一组件，不复制实现；插入经事件总线落回当前工作页） -->
+    <DrawBoard
+      v-model:open="drawOpen"
+      :reopen="globalDrawReopen"
+      :context-label="drawContextLabel"
+      @insert="onGlobalDrawInsert"
+      @stash="onDrawStash"
+    />
   </div>
 </template>
 
@@ -76,8 +92,13 @@ import {
   FolderOpenOutline, LibraryOutline, NotificationsOutline, SchoolOutline, TodayOutline,
 } from '@vicons/ionicons5'
 import { v3Api } from '@/api/teacherV3'
-import ButlerFab from '@/components/teacherV3/ButlerFab.vue'
 import ButlerPanel from '@/components/teacherV3/ButlerPanel.vue'
+import TeacherCompanionDock from '@/components/teacherV3/TeacherCompanionDock.vue'
+import ResourceCompanionPanel from '@/components/teacherV3/ResourceCompanionPanel.vue'
+import DrawBoard, { type DrawReopen } from '@/components/mathx/draw/DrawBoard.vue'
+import { useTv3Context } from '@/stores/teacherContext'
+import { useCompanion, openTool, closeTool, stashFigure, setReceipt, type DrawTargetContext } from '@/stores/companion'
+import type { V3DrawInsert } from '@/components/mathx/draw/drawCore'
 import type { V3Task } from '@/types/teacherV3'
 
 const route = useRoute()
@@ -89,6 +110,87 @@ const butlerOpen = ref(false)
 const butlerUnread = ref(0)
 watch(butlerOpen, (v) => { if (v) butlerUnread.value = 0 })
 function onButlerActivity() { if (!butlerOpen.value) butlerUnread.value += 1 }
+
+/* ---------- C2 伴随工具层 ---------- */
+const companion = useCompanion()
+const tv3ctx = useTv3Context()
+
+function openButlerFromDock() {
+  if (companion.open) closeTool() // 覆盖层互斥
+  butlerOpen.value = true
+}
+function onDockTool(tool: 'resource' | 'draw') {
+  if (butlerOpen.value) butlerOpen.value = false // 覆盖层互斥
+  if (tool === 'resource') {
+    openTool('resource')
+    return
+  }
+  openTool('draw', drawTargetCtx.value)
+}
+
+/** 绘图目标上下文：知道"我要把东西放到哪里"；定位不到就诚实标注 */
+const drawTargetCtx = computed<DrawTargetContext>(() => {
+  const r = route.path
+  if (r === '/teacher-v3/slides') {
+    const sel = tv3ctx.selection?.summary
+    const page = tv3ctx.slide_index != null ? `第 ${tv3ctx.slide_index + 1} 页` : '当前课件'
+    return { targetLabel: sel ? `${page} · ${sel}` : page, insertLabel: tv3ctx.slide_index != null ? `插入${page}` : '插入当前页' }
+  }
+  if (r === '/teacher-v3/prep') {
+    const m = (tv3ctx.selection?.summary || '').match(/环节「(.+?)」/)
+    return { targetLabel: m ? `环节「${m[1]}」` : (tv3ctx.topic || '当前教案'), insertLabel: '插入当前片段' }
+  }
+  if (r === '/teacher-v3/bank') return { targetLabel: tv3ctx.extra || '题库当前题目', insertLabel: '插入为题图' }
+  if (r === '/teacher-v3/quiz') return { targetLabel: tv3ctx.extra || '当前试卷', insertLabel: '插入为题图' }
+  return { targetLabel: '（未定位插入位置：完成后将暂存）', insertLabel: '暂存图形' }
+})
+const drawOpen = computed({
+  get: () => companion.open === 'draw',
+  set: (v: boolean) => { if (!v) closeTool() },
+})
+const globalDrawReopen = computed(() => (companion.drawReopen as DrawReopen | null) ?? null)
+const drawContextLabel = computed(() => {
+  const c = drawTargetCtx.value
+  return `当前用于：${c.targetLabel} · 完成后：${c.insertLabel}`
+})
+
+/** 全局绘图插入 → 事件总线交回当前工作页真实落稿；600ms 无人接手则暂存并如实回执（reqId 命名空间 draw-*，与资源台 res-* 互不串号） */
+let drawSeq = 0
+let drawHandledSeq = 0
+function onGlobalDrawInsert(payload: V3DrawInsert, elementId?: string) {
+  const reqId = ++drawSeq
+  window.dispatchEvent(new CustomEvent('tv3-companion-insert', {
+    detail: { reqId: `draw-${reqId}`, kind: 'figure', draw: payload, reopenElementId: elementId || '', target: { page: route.path, targetLabel: drawTargetCtx.value.targetLabel } },
+  }))
+  window.setTimeout(() => {
+    if (reqId !== drawHandledSeq) {
+      drawHandledSeq = reqId
+      if (payload.type === 'image') {
+        stashFigure({ name: `暂存图形 ${new Date().getMonth() + 1}/${new Date().getDate()}`, kind: 'free', thumb: payload.src, records: payload.records })
+        setReceipt({ ok: false, message: '当前页面不支持直接插入图形：已存入「暂存图形」（可在伴随资源台「我的」继续编辑）', locationLabel: '暂存区' })
+      } else {
+        setReceipt({ ok: false, message: '当前页面不支持直接插入该图形类型：未做改动（可在课件页使用）' })
+      }
+    }
+  }, 600)
+}
+function onDrawStash(desc: { kind: 'free' | 'fx'; thumb: string; records?: unknown[]; expr?: string }) {
+  stashFigure({ name: desc.kind === 'fx' ? `函数 ${String(desc.expr || '').slice(0, 14)}` : `画布图形 ${new Date().getMonth() + 1}/${new Date().getDate()}`, kind: desc.kind, thumb: desc.thumb, records: desc.records, expr: desc.expr })
+  setReceipt({ ok: false, message: '已暂存本次图形（画一半关掉也不丢）：可在伴随资源台「我的」继续编辑', locationLabel: '暂存区' })
+}
+/** 工作页接手落稿后回执：标记该请求已处理（阻止布局层暂存兜底） */
+function onDrawHandled(ev: Event) {
+  const d = (ev as CustomEvent).detail as { reqId: string } | undefined
+  if (d?.reqId && typeof d.reqId === 'string' && d.reqId.startsWith('draw-')) {
+    const n = Number(d.reqId.slice(5))
+    if (Number.isFinite(n)) drawHandledSeq = Math.max(drawHandledSeq, n)
+  }
+}
+/** Butler 工具卡 → 打开对应伴随工具（AI 调用工具，不做万能聊天） */
+function onOpenCompanion(ev: Event) {
+  const d = (ev as CustomEvent).detail as { tool: 'resource' | 'draw' } | undefined
+  if (d?.tool === 'resource' || d?.tool === 'draw') onDockTool(d.tool)
+}
 
 const dailyMenus = [
   { path: '/teacher-v3/today', label: '今日工作台', icon: TodayOutline },
@@ -109,7 +211,7 @@ const pageTitle = computed(() => (route.meta.title as string) || '教师工作�
 const runningTasks = computed(() => tasks.value.filter((t) => t.status === 'running' || t.status === 'queued').length)
 const pageSub = computed(() => subTitles[route.path] || '高二年级 · 2026 秋季学期')
 const subTitles: Record<string, string> = {
-  '/teacher-v3/today': '课表 · 待办 · 班级速览',
+  '/teacher-v3/today': 'AI 助手 · 今日教学 · 最近工作',
   '/teacher-v3/prep': '教案模板 · 两段式生成 · 公式内联',
   '/teacher-v3/slides': '五区编辑器 · 公式图形可编辑 · 拍照出课件',
   '/teacher-v3/bank': '分类树 · 专题夹 · 拍照/自编入库',
@@ -130,16 +232,24 @@ async function refreshTasks() {
 onMounted(() => {
   refreshTasks()
   timer = window.setInterval(refreshTasks, 3000)
+  window.addEventListener('tv3-companion-inserted', onDrawHandled as EventListener)
+  window.addEventListener('tv3-open-companion', onOpenCompanion as EventListener)
 })
-onBeforeUnmount(() => { if (timer) window.clearInterval(timer) })
+onBeforeUnmount(() => {
+  if (timer) window.clearInterval(timer)
+  window.removeEventListener('tv3-companion-inserted', onDrawHandled as EventListener)
+  window.removeEventListener('tv3-open-companion', onOpenCompanion as EventListener)
+})
 </script>
 
 <style scoped>
 /* AI 管家侧栏展开：主区右侧避让（与面板同宽 400px，同步过渡），小屏不压缩改为覆盖 */
 .tv3-main { transition: margin-right .22s ease; }
+/* B6：≥1500px 才侧推避让；更窄屏一律覆盖式抽屉（面板自带阴影），不压缩主编辑区（DEF-33） */
 .tv3-app--butler :deep(.tv3-main) { margin-right: 400px; }
-@media (max-width: 980px) {
+@media (max-width: 1499px) {
   .tv3-app--butler :deep(.tv3-main) { margin-right: 0; }
+  .tv3-app--butler :deep(.tv3-butler) { box-shadow: -18px 0 48px rgba(10, 30, 58, 0.28); }
 }
 .tv3-bell-badge {
   min-width: 16px; height: 16px; border-radius: 999px;
@@ -166,3 +276,4 @@ onBeforeUnmount(() => { if (timer) window.clearInterval(timer) })
 .tv3-topbar__taskitem:hover { background: var(--tv3-bg2); }
 .tv3-topbar__taskitem-title { font-size: 12.5px; color: var(--tv3-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
 </style>
+

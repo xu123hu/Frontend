@@ -532,6 +532,9 @@ onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
   document.removeEventListener('mousedown', onDocMousedown)
   clearTimeout(highlightTimer)
+  // B0 修复轮询泄漏：组件卸载（如切换教师端）后必须停掉模块级 5s 轮询，
+  // 否则 /api/tasks、/api/notifications 会在教师页面持续 404（审计 DEF-10）
+  store.stopPolling()
 })
 </script>
 

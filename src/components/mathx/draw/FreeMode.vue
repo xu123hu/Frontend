@@ -253,7 +253,7 @@ const hintOf = computed(() => TOOLS.find((t) => t.id === tool.value)?.tip || '')
 
 const KIND_LABEL: Record<V3DrawRecord['kind'], string> = {
   pen: '手绘曲线', line: '直线', circle: '圆', polygon: '多边形',
-  point: '点', text: '文字', preset: '规整图形',
+  point: '点', text: '文字', preset: '规整图形', geomdoc: '立体几何',
 }
 function recLabel(r: V3DrawRecord): string {
   if (r.kind === 'preset') return selPresetIdName(r.preset_id)

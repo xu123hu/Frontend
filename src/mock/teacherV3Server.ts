@@ -55,6 +55,10 @@ const plans: V3LessonPlan[] = JSON.parse(JSON.stringify(V3_LESSON_PLANS))
 const tasks: V3Task[] = [...V3_TASKS]
 const recipes = [...V3_RECIPES]
 const grading = JSON.parse(JSON.stringify(V3_GRADING_DATA))
+/* B4：作业发布内存态（示例作业 + 教师新发布的实例）；类型层不扩 shared types（IFC-PRODUCT-03 登记中） */
+const steps = (arr: [string, 'ok' | 'ai-flag' | 'corrected'][]) => arr.map(([latex, status]) => ({ latex, status }))
+const assignments: any[] = JSON.parse(JSON.stringify(V3_GRADING_ASSIGNMENTS))
+const publishedDetails: Record<string, any> = {}
 const drawLibrary: V3FigureLibraryItem[] = JSON.parse(JSON.stringify(V3_DRAW_LIBRARY))
 const quizQuestions = JSON.parse(JSON.stringify(V3_QUIZ_QUESTIONS))
 const folders = JSON.parse(JSON.stringify(V3_FOLDERS)) as { id: string; name: string; desc?: string; count: number; updated_at: string }[]
@@ -105,7 +109,7 @@ function voiceToLatex(spoken: string): string {
   s = s.replace(/的([a-z])次方/g, '^{$1}')
   // 运算与符号词
   s = s.replace(/加减/g, '\\pm')
-  s = s.replace(/乘以|乘/g, '\\times').replace(/除以/g, '\\div')
+  s = s.replace(/加上|加/g, '+').replace(/减去|减/g, '-').replace(/乘以|乘/g, '\\times').replace(/除以|除/g, '\\div')
   s = s.replace(/绝对值([^，。 ]{1,12}?)(?=[，。 ]|$)/g, '\\left|$1\\right|')
   s = s.replace(/等于/g, '=').replace(/大于等于/g, '\\geq').replace(/小于等于/g, '\\leq').replace(/不等于/g, '\\neq')
   s = s.replace(/约等于/g, '\\approx')
@@ -137,6 +141,146 @@ function goalOf(b: { id: string; name: string }, topic: string, lessonType: stri
   }
   if (lessonType === '讲评课' && b.id === 'bd-intro') return `出示 ${topic} 的得分分布，让学生先看自己的位置。`
   return map[b.id] || `围绕「${topic}」完成本环节。`
+}
+
+/**
+ * B0 反污染：内容源按「章节（教师显式选择）→ 课题关键词」路由。
+ * 原型内置三套真实内容源（椭圆 / 双曲线 / 导数），未命中的课题在封面标注「演示模板页」，
+ * 不再用固定椭圆内容冒充任意课题（审计决定性反例 #1/#2 的根治）。
+ */
+type FixtureKey = 'ellipse' | 'hyperbola' | 'derivative'
+const CHAPTER_FIXTURES: { key: FixtureKey; chapterKw: string[]; topicKw: string[]; deckId: string; planId: string; outline: string[] }[] = [
+  { key: 'hyperbola', chapterKw: ['双曲线'], topicKw: ['双曲线'], deckId: 'deck-hyperbola', planId: 'plan-hyperbola', outline: ['复习对照 · 椭圆', '双曲线的定义', '标准方程推导', '例题精讲', '变式训练', '课堂小结'] },
+  { key: 'derivative', chapterKw: ['导数', '单调性'], topicKw: ['导数', '单调性', '极值'], deckId: 'deck-derivative', planId: 'plan-derivative', outline: ['情境引入', '判定链推导', '例题精讲', '变式训练', '课堂小结'] },
+  { key: 'ellipse', chapterKw: ['椭圆'], topicKw: ['椭圆', '焦点弦', '离心率'], deckId: 'deck-ellipse', planId: 'plan-ellipse', outline: ['复习回顾', '概念定义', '标准方程推导', '例题精讲', '变式训练', '课堂小结'] },
+]
+function resolveFixture(topic: string, chapter?: string): (typeof CHAPTER_FIXTURES)[number] | null {
+  const c = String(chapter || '')
+  const t = String(topic || '')
+  // 课型含"复习/综合/专题/讲评"时允许跨章：仅在章节显式命中时路由，不做课题关键词硬套
+  return CHAPTER_FIXTURES.find((f) => f.chapterKw.some((k) => c.includes(k)))
+    || CHAPTER_FIXTURES.find((f) => f.topicKw.some((k) => t.includes(k)))
+    || null
+}
+
+/* ============ C1.1 要求编译器（规则词表，确定性）：教师自然语言要求 → 大纲结构改造 + 逐条回应台账 ============
+ * 审计迭代（2026-09-06 用户反馈）：备课台的自由文本要求此前被丢弃，大纲永远回显固定模板——"提前编排"。
+ * 现在要求被真实编译进大纲（改页名/拆例题/插环节/删环节），未支持的要求如实标注 uncovered。
+ * 原型边界：词表规则匹配（非大模型理解），内容源仍为内置 fixture；词表外要求诚实降级，不假装听懂。 */
+type OutlineItem = { title: string; kind: string }
+type ReqEntry = { id: number; text: string; status: 'applied' | 'uncovered'; pages: number[]; note?: string; _refs?: string[] }
+
+const OUTLINE_REQ_LEXICON = {
+  intro: [
+    { kw: ['拉链'], label: '拉链实验' },
+    { kw: ['实验'], label: '动手实验' },
+    { kw: ['几何画板', '动画', '演示'], label: '动画演示' },
+    { kw: ['生活', '实际', '情境'], label: '生活情境' },
+  ],
+  extras: [
+    { kw: ['易错', '辨析', '错例'], title: '易错辨析', kind: 'review' },
+    { kw: ['真题', '高考题', '模考'], title: '真题演练', kind: 'example' },
+    { kw: ['当堂检测', '随堂测', '课堂检测', '小测'], title: '当堂检测', kind: 'variation' },
+    { kw: ['小组讨论', '小组合作', '合作探究', '探究活动', '小组探究'], title: '小组探究', kind: 'blank' },
+    { kw: ['数学文化', '数学史'], title: '数学文化 · 背景', kind: 'blank' },
+  ],
+} as const
+
+function compileRequirements(texts: string[], outline: OutlineItem[], topic: string): ReqEntry[] {
+  const reqs: ReqEntry[] = []
+  const topicCore = topic.replace(/（[^）]*）|\([^)]*\)/g, '').trim()
+  let id = 0
+  const insertBeforeSummary = (item: OutlineItem) => {
+    const si = outline.findIndex((o) => o.kind === 'summary')
+    if (si >= 0) outline.splice(si, 0, item)
+    else outline.push(item)
+  }
+  for (const raw of texts) {
+    for (const seg0 of raw.split(/[，。；,;\n]+/)) {
+      const seg = seg0.trim()
+      if (seg.length < 2) continue
+      if (topicCore && (seg.includes(topicCore) || topicCore.includes(seg))) continue // 课题本身不算要求
+      id += 1
+      const req: ReqEntry = { id, text: seg, status: 'applied', pages: [] }
+      const pageRefs: string[] = []
+      let handled = false
+      // ① 移除类要求：只删「复习对照/复习铺垫」等复习页（标题前缀判定），不得误删易错辨析等 review 型环节
+      if (/不要复习|无需复习|跳过复习|删掉复习|去掉复习/.test(seg)) {
+        for (let i = outline.length - 1; i >= 0; i--) {
+          if (/^复习/.test(outline[i].title)) outline.splice(i, 1)
+        }
+        req.note = '已移除复习类页面'
+        handled = true
+      }
+      // ② 明确要视频 → 诚实未支持（课件内嵌视频引用属 C2）
+      if (!handled && /视频|微课/.test(seg)) {
+        req.status = 'uncovered'
+        req.note = '课件内嵌视频引用属下一批次（C2）：当前可先在课堂直接打开 B站播放'
+        handled = true
+      }
+      // ③ 引入方式：改「引入」页名；无引入页则在封面后插入
+      if (!handled) {
+        const intro = OUTLINE_REQ_LEXICON.intro.find((l) => l.kw.some((k) => seg.includes(k)))
+        if (intro) {
+          const ii = outline.findIndex((o) => /引入/.test(o.title))
+          if (ii >= 0) {
+            outline[ii].title = `${outline[ii].title.split(' · ')[0]} · ${intro.label}`
+            pageRefs.push(outline[ii].title)
+          } else {
+            const item: OutlineItem = { title: `情境引入 · ${intro.label}`, kind: 'blank' }
+            const ci = outline.findIndex((o) => o.kind === 'cover')
+            outline.splice(ci >= 0 ? ci + 1 : 0, 0, item)
+            pageRefs.push(item.title)
+          }
+          handled = true
+        }
+      }
+      // ④ 例题分层：例题页拆「基础 / 提升」两页
+      if (!handled && /从基础到提升|由浅入深|分层|梯度|基础到提高|从易到难/.test(seg)) {
+        const ei = outline.findIndex((o) => o.kind === 'example')
+        if (ei >= 0) {
+          const base = outline[ei].title.split(' · ')[0]
+          outline[ei].title = `${base} · 基础`
+          outline.splice(ei + 1, 0, { title: `${base} · 提升`, kind: 'example' })
+          pageRefs.push(`${base} · 基础`, `${base} · 提升`)
+          handled = true
+        }
+      }
+      // ⑤ 环节增补：一段话里的多个环节都吃掉（如「加易错辨析和当堂检测」）
+      if (!handled) {
+        for (const extra of OUTLINE_REQ_LEXICON.extras) {
+          if (extra.kw.some((k) => seg.includes(k))) {
+            if (!outline.some((o) => o.title === extra.title)) insertBeforeSummary({ title: extra.title, kind: extra.kind })
+            pageRefs.push(extra.title)
+            handled = true
+          }
+        }
+      }
+      // ⑥ 多课时 → 结构性建议（不假装自动拆分）
+      if (!handled && /两课时|2\s*课时|第二课时/.test(seg)) {
+        req.note = '原型不自动拆分多课时：生成后用「＋页」扩充，或按课时分开生成'
+        handled = true
+      }
+      if (!handled) {
+        req.status = 'uncovered'
+        req.note = '原型规则词表未覆盖该要求：已按通用结构生成，可在下方逐页手改'
+      }
+      req._refs = [...pageRefs]
+      reqs.push(req)
+    }
+  }
+  /* 页码在全部结构变更结束后按标题统一回查（中途插删会移位） */
+  for (const req of reqs) {
+    req.pages = (req._refs || []).map((t) => outline.findIndex((o) => o.title === t)).filter((i) => i >= 0)
+    delete req._refs
+  }
+  return reqs
+}
+
+/** server 端安全富文本：latex 混文本 → 内联 span（原型简版；real = KaTeX 服务端渲染） */
+function renderRichSafe(text: string): string {
+  const escaped = String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return escaped.replace(/\$([^$]+)\$/g, '<i style="font-family:Georgia,serif">$1</i>')
 }
 
 export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
@@ -378,7 +522,12 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
   const exportMatch = path.match(/^\/teacher-v3\/decks\/([^/]+)\/export$/)
   if (method === 'POST' && exportMatch) {
     const taskId = uid('task')
-    tasks.unshift({ task_id: taskId, title: `导出课件（${body.format}）`, capability: 'generation', status: 'running', progress: 10, stage: '渲染公式与图形' })
+    /* B3 导出真实性：文件生成服务（PPTX 渲染）属 M2-B 后端门，原型阶段任务停留在排队态并如实标注，不伪装完成 */
+    tasks.unshift({
+      task_id: taskId, title: `导出课件（${body.format}）· 原型`, capability: 'generation',
+      status: 'queued', progress: 0,
+      stage: '等待文件生成服务（原型未接入，本任务仅演示进度流，不产出文件）',
+    })
     return ok(res, { task_id: taskId }), true
   }
 
@@ -407,7 +556,9 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
   const pushMatch = path.match(/^\/teacher-v3\/plans\/([^/]+)\/push-to-deck$/)
   if (method === 'POST' && pushMatch) {
     const src = plans.find((x) => x.id === pushMatch[1])
-    const deck = JSON.parse(JSON.stringify(decks.find((d) => d.id === 'deck-ellipse')))
+    /* B0 反污染：教案直通同样按课题路由内容源 */
+    const fixture = resolveFixture(String(src?.topic || ''))
+    const deck = JSON.parse(JSON.stringify(decks.find((d) => d.id === (fixture?.deckId || 'deck-ellipse'))))
     deck.id = uid('deck')
     deck.title = `${src?.topic ?? '教案'} · 教案直通`
     deck.template_id = body.template_id
@@ -483,20 +634,103 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
   }
 
   /* ============ generation AI 生成域（SSE） ============ */
+  if (method === 'POST' && path === '/teacher-v3/generation/deck-outline') {
+    /* B3 大纲 Gate 第一段：课题 → 大纲草稿（页标题+页型），教师可改/可增删，确认后才逐页生成。
+       大纲确认是"真 Gate"（执行提示词 §16.2）：mock 纯增量端点，不改既有契约。
+       C1 环节语义大纲：课型决定结构骨架（习题/讲评/复习各有环节链，环节 kind 随页下发）；
+       章节参与内容源路由（教师显式选章节优先于课题关键词）。输入扩展登记 IFC-C1-a。 */
+    const topic = String(body.topic || '')
+    const chapter = String(body.chapter || '')
+    const courseType = String(body.course_type || '新授课')
+    const fixture = resolveFixture(topic, chapter)
+    const OUTLINE_BY_TYPE: Record<string, { title: string; kind: string }[]> = {
+      习题课: [
+        { title: '复习铺垫', kind: 'review' }, { title: '典型例题', kind: 'example' },
+        { title: '方法提炼', kind: 'blank' }, { title: '分层练习', kind: 'variation' }, { title: '纠错小结', kind: 'summary' },
+      ],
+      讲评课: [
+        { title: '得分概览', kind: 'blank' }, { title: '错因聚焦', kind: 'review' },
+        { title: '典型错例剖析', kind: 'example' }, { title: '变式再练', kind: 'variation' }, { title: '方法归纳', kind: 'summary' },
+      ],
+      复习课: [
+        { title: '知识梳理', kind: 'review' }, { title: '典型例题', kind: 'example' },
+        { title: '综合练习', kind: 'variation' }, { title: '方法归纳', kind: 'blank' }, { title: '课堂小结', kind: 'summary' },
+      ],
+    }
+    let outline: { title: string; kind: string }[]
+    if (OUTLINE_BY_TYPE[courseType]) {
+      outline = OUTLINE_BY_TYPE[courseType].map((o) => ({ ...o }))
+    } else {
+      outline = (fixture?.outline || ['情境引入', '概念定义', '例题精讲', '变式训练', '课堂小结']).map((t, i) => ({
+        title: t,
+        kind: i === 0 ? 'cover' : /定义|概念/.test(t) ? 'definition' : /推导|探究/.test(t) ? 'derivation' : /例题/.test(t) ? 'example' : /变式|练习/.test(t) ? 'variation' : /小结|回顾/.test(t) ? 'summary' : 'blank',
+      }))
+    }
+    /* C1.1：教师自然语言要求真实编译进大纲（改页名/拆例题/插环节/删环节），并产出逐条回应台账 */
+    const reqTexts: string[] = Array.isArray(body.requirements)
+      ? body.requirements.map((r: unknown) => String(r || '').trim()).filter(Boolean)
+      : []
+    const reqs = compileRequirements(reqTexts, outline, topic)
+    /* 备小研改版：每页建议时长（kind→分钟，确定性映射），供大纲确认卡片展示（IFC-WS-a） */
+    const MINUTES_BY_KIND: Record<string, number> = { cover: 2, review: 5, definition: 10, derivation: 10, example: 12, variation: 10, summary: 6, blank: 5 }
+    const outlineWithMinutes = outline.map((o) => ({ ...o, minutes: MINUTES_BY_KIND[o.kind] ?? 6 }))
+    const notes = [
+      fixture ? `已按${chapter ? '章节' : '课题'}匹配内置内容源（椭圆/双曲线/导数）` : '该课题暂无内置内容源：将生成流程演示页并在封面标注，请勿直接上课使用',
+      chapter ? `章节锚定：${chapter}` : '',
+      OUTLINE_BY_TYPE[courseType] ? `课型结构：${courseType}（环节链可在大纲中调整）` : '',
+      reqs.length ? `已按规则词表编译 ${reqs.filter((r) => r.status === 'applied').length}/${reqs.length} 条要求进大纲（原型：词表匹配，非大模型理解）` : '',
+    ].filter(Boolean)
+    return ok(res, {
+      outline: outlineWithMinutes,
+      matched: !!fixture,
+      course_type: courseType,
+      chapter: chapter || undefined,
+      reqs,
+      note: notes.join('；'),
+    }), true
+  }
+  /* 备小研改版：拍照链路的识别确认步——fixture 识别预览（不接真实 OCR，诚实标注），可编辑文本仅供预览校对；IFC-WS-a */
+  if (method === 'POST' && path === '/teacher-v3/recognition/preview') {
+    const imgs = Array.isArray(body.photos) ? body.photos : []
+    const items = imgs.slice(0, 6).map((_: unknown, i: number) => ({
+      photo_id: `photo_${String(i + 1).padStart(2, '0')}`,
+      confidence: i % 3 === 1 ? 0.78 : 0.96,
+      warn: i % 3 === 1,
+      text: i % 3 === 1
+        ? '设双曲线与椭圆 x²/25 + y²/9 = 1 有相同的焦点，且经过点 (3, 2)，求双曲线的标准方程。'
+        : '已知双曲线 x²/9 − y²/16 = 1 的左、右焦点分别为 F₁、F₂，过 F₁ 的直线交双曲线的左支于 A、B 两点，求 △ABF₂ 的周长。',
+      kps: i % 3 === 1 ? ['双曲线标准方程', '待确认'] : ['双曲线定义', '焦点弦'],
+    }))
+    return ok(res, { items, note: '演示识别（fixture）：原型阶段未接真实 OCR；生成时后端按原图重新识别，此处文本用于提前校对' }), true
+  }
   if (method === 'POST' && path === '/teacher-v3/generation/deck') {
     startSse(res)
-    sendSse(res, 'meta', { topic: body.topic, template_id: body.template_id, class_id: body.class_id })
+    sendSse(res, 'meta', { topic: body.topic, template_id: body.template_id, class_id: body.class_id, chapter: body.chapter || undefined, course_type: body.course_type || '新授课' })
     await sleep(400)
-    const outline = ['复习回顾', '概念定义', '标准方程推导', '例题精讲', '变式训练', '课堂小结']
-    sendSse(res, 'outline', { items: outline })
-    const tpl = decks.find((d) => d.id === 'deck-ellipse')
+    /* C1：章节显式参与内容源路由（resolveFixture 章节关键词优先于课题关键词，B0 既有规则） */
+    const fixture = resolveFixture(String(body.topic || ''), String(body.chapter || ''))
+    /* B3 真大纲 Gate：教师确认的 outline（若有）决定页数与每页标题；未传时回退章节默认大纲 */
+    const userOutline: { title?: string; kind?: string }[] = Array.isArray(body.outline) && body.outline.length ? body.outline : []
+    const outlineTitles = userOutline.length ? userOutline.map((o) => String(o.title || '新页')) : (fixture?.outline || ['情境引入', '概念定义', '例题精讲', '变式训练', '课堂小结'])
+    sendSse(res, 'outline', { items: outlineTitles, matched: !!fixture, confirmed: userOutline.length > 0 })
+    const tpl = decks.find((d) => d.id === (fixture?.deckId || 'deck-ellipse'))
     if (!tpl) { sendSse(res, 'done', { deck_id: '', slides: 0, note: '模板缺失' }); res.end(); return true }
-    for (let i = 0; i < Math.min(outline.length, tpl.slides.length); i++) {
+    const builtSlides: V3Slide[] = []
+    const KIND_LAYOUT: Record<string, string> = { variation: 'example', blank: 'blank' }
+    for (let i = 0; i < outlineTitles.length; i++) {
       await sleep(520)
-      const s = JSON.parse(JSON.stringify(tpl.slides[i]))
+      /* 版式选择：优先按教师在大纲 Gate 选的页型匹配版式；无匹配再按页序循环 */
+      const wantedKind = userOutline[i]?.kind || ''
+      const wantedLayout = KIND_LAYOUT[wantedKind] || wantedKind
+      const byKind = wantedLayout ? tpl.slides.find((x) => x.layout === wantedLayout) : undefined
+      const base = byKind || tpl.slides[i % tpl.slides.length]
+      const s = JSON.parse(JSON.stringify(base))
       s.id = uid('sl')
       for (const e of s.elements) { e.teacher_confirmed = false; e.id = uid('e') }
-      sendSse(res, 'slide', { index: i, slide: s, note: 'AI 草稿页：所有元素未确认，等教师审定' })
+      const titleEl = s.elements.find((e: any) => e.type === 'text')
+      if (titleEl && outlineTitles[i]) titleEl.html = outlineTitles[i]
+      builtSlides.push(s)
+      sendSse(res, 'slide', { index: i, slide: s, note: `按确认大纲生成 第 ${i + 1}/${outlineTitles.length} 页（未确认草稿）` })
     }
     await sleep(280)
     const deck = JSON.parse(JSON.stringify(tpl))
@@ -505,6 +739,25 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
     deck.template_id = body.template_id
     deck.source = 'topic'
     deck.updated_at = new Date().toISOString().slice(0, 16).replace('T', ' ')
+    deck.slides = builtSlides
+    /* C1：接地上下文回显（课型/章节/材料），编辑器顶栏展示；契约登记 IFC-C1-a */
+    if (body.chapter || (body.course_type && body.course_type !== '新授课') || body.material_name) {
+      deck.brief_context = {
+        course_type: String(body.course_type || '新授课'),
+        chapter: String(body.chapter || ''),
+        material: String(body.material_name || ''),
+      }
+    }
+    if (!fixture) {
+      /* 未命中内置内容源：诚实标注演示模板页，不冒充该课题的真实内容（R0 反伪造） */
+      const cover = deck.slides[0]
+      cover?.elements?.push({
+        id: uid('e'), z: 9, type: 'text', left: 92, top: 468, width: 640, height: 76,
+        html: '⚠ 原型说明：该课题的内容源尚未内置（当前覆盖椭圆 / 双曲线 / 导数），本稿为流程演示页，请勿直接用于上课。',
+        font_size: 15, color: '#b1382c',
+      })
+      sendSse(res, 'note', { text: '该课题暂无内置内容源，已生成流程演示稿并在封面标注' })
+    }
     decks.unshift(deck)
     sendSse(res, 'done', { deck_id: deck.id, slides: deck.slides.length })
     res.end()
@@ -528,6 +781,28 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       goal: goalOf(b, topic, lessonType),
       example_suggestion: b.attachable ? `${exampleSrc}：围绕「${topic}」配 1 道${b.id === 'bd-variation' ? '变式' : b.id === 'bd-homework' ? '分层作业' : '基础例题'}（难度可调）` : undefined,
     }))
+    /* P 大纲确认页富模块：教学目标 / 重难点 / 板书 / 分层作业（确定性编排，教师可改；IFC-P-a）
+       + requirements[]：教师自然语言要求 → 诚实回应（调整进 notes / 例题建议 / 学情锚点） */
+    const core = topic.replace(/（.*?）|\(.*?\)/g, '').trim() || '本课'
+    const reqTexts: string[] = Array.isArray(body.requirements) ? body.requirements.map((r: unknown) => String(r || '').trim()).filter(Boolean) : []
+    const notes2: string[] = []
+    let difficulty = '中等'
+    const objectives = [
+      `理解${core}的核心定义，能准确说出其中的关键条件与限制`,
+      `掌握${core}的基本方法（坐标法 / 待定系数法），会解决课本层级的标准问题`,
+      `经历${core}的形成过程，体会数形结合与化归思想，发展数学运算与逻辑推理素养`,
+    ]
+    const major = [`${core}的定义与基本量之间的关系`, `用${core}解决问题时「定位条件 → 选方法 → 书写规范」的三步链`]
+    const hard = [`${core}中含参或含根号式子的化简与分类讨论`, `定义中的限制条件为什么必要（反例辨析）`]
+    for (const seg of reqTexts.flatMap((t) => t.split(/[，。；,;\n]+/)).map((x) => x.trim()).filter((x) => x.length >= 2)) {
+      if (/难度|简单|容易/.test(seg)) { difficulty = /难|提高|加深/.test(seg) ? '较高' : '较低'; notes2.push(`已按要求调整预设难度：${difficulty}（例题与练习建议随之标注）`) ; continue }
+      if (/增加例题|多道例题|补充例题/.test(seg)) { for (const s of sections) if (s.id === 'bd-examples') s.example_suggestion = `${exampleSrc}：按教师要求加配 1 道例题（${seg}）`; notes2.push(`已按要求增加例题建议：${seg}`); continue }
+      if (/增加互动|互动环节|小组/.test(seg)) { sections.splice(Math.min(3, sections.length), 0, { id: 'bd-extra-activity', name: '互动探究', minutes: 5, goal: `围绕「${core}」组织小组活动：先猜想再验证，教师巡视收集典型想法` } as (typeof sections)[number]); notes2.push('已按要求插入「互动探究」环节（5 分钟）'); continue }
+      if (/真题|高考/.test(seg)) { for (const s of sections) if (s.id === 'bd-variation') s.example_suggestion = '高考真题：选用近年真题变式，标注考点与年份（原型为建议文案）'; notes2.push('已按要求在变式环节标记高考真题建议'); continue }
+      if (/学情|本班/.test(seg)) { const wk = (V3_TODAY.class_brief.find((b) => b.class_id === body.class_id)?.weak_kp) || '待补充学情数据'; notes2.push(`已结合本班学情锚点：薄弱点「${wk}」，例题入口降低起点`); continue }
+      if (/情境|引入|实验|动画/.test(seg)) { for (const s of sections) if (s.id === 'bd-intro') s.goal = `引入方式按教师要求调整：${seg}。${s.goal}`; notes2.push(`已按要求调整情境引入：${seg}`); continue }
+      notes2.push(`原型规则词表未覆盖该要求：「${seg}」已记录，可在编辑器继续手改`)
+    }
     // 按一节课时长等比缩放（0 分钟板块不缩放），保证 total = duration
     const raw = sections.filter((s) => s.minutes > 0)
     const rawSum = raw.reduce((a, s) => a + s.minutes, 0) || 1
@@ -538,11 +813,26 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       `依据：${body.textbook_version || '人教A版（2019）'}${body.chapter ? ` · ${body.chapter}` : ''}`,
       body.lesson_no ? `第 ${body.lesson_no} 课时` : '',
       `课型：${lessonType} · 一节课 ${duration} 分钟`,
-      body.class_id ? `班级学情锚点：${(V3_CLASSES.find((c) => c.class_id === body.class_id)?.name) || ''}（薄弱：椭圆离心率与几何性质）` : '',
+      body.class_id ? `班级学情锚点：${(V3_CLASSES.find((c) => c.class_id === body.class_id)?.name) || ''}（薄弱：${V3_TODAY.class_brief.find((b) => b.class_id === body.class_id)?.weak_kp || '待补充学情数据'}）` : '',
       body.key_points ? `强调重难点：${body.key_points}` : '',
       `例题来源：${exampleSrc}（先检索相似题，避免重复出题）`,
     ].filter(Boolean)
-    return ok(res, { topic, duration, sections, total_minutes: total, notes }), true
+    return ok(res, {
+      topic, duration, sections, total_minutes: total,
+      notes: [...notes, ...notes2],
+      objectives,
+      keypoints: { major, hard },
+      blackboard: {
+        main: [`§ ${topic}`, `一、${core}的定义（图形 + 符号双表征）`, `二、基本方法三步链`, `三、易错点与限制条件`],
+        side: ['例题演板', '学生练习', '推导草稿', '图形演示区'],
+      },
+      homework: [
+        { tier: 'basic', label: '基础题（必做）', items: [`${core}：课本对应习题 A 组 1-3（定义与基本量直查）`], minutes: '预计 10 分钟' },
+        { tier: 'raise', label: '提升题（选做）', items: [`${core}：B 组 1-2（含参 / 综合应用）`], minutes: '预计 15 分钟' },
+        { tier: 'expand', label: '拓展探究', items: [`动手实验 / 跨学科应用：围绕「${core}」写一条发现`], minutes: '预计 20 分钟' },
+      ],
+      difficulty,
+    }), true
   }
   if (method === 'POST' && path === '/teacher-v3/generation/plan') {
     startSse(res)
@@ -553,12 +843,16 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       ? body.outline.map((s: any, i: number) => ({ id: s.id || `bd-${i}`, name: s.name, minutes: Number(s.minutes) || 0 }))
       : V3_TEN_BOARDS.map((b) => ({ id: b.id, name: b.name, minutes: b.minutes }))
     sendSse(res, 'outline', { sections: outline.map((s) => s.name) })
-    const src = plans[0]
+    /* B0 反污染：教案内容源同样按章节/课题路由（椭圆 / 双曲线 / 导数），不再固定克隆 plan-ellipse */
+    const fixture = resolveFixture(String(body.topic || ''), String(body.chapter || ''))
+    const src = plans.find((p) => p.id === (fixture?.planId || 'plan-ellipse')) || plans[0]
     for (let i = 0; i < outline.length; i++) {
       await sleep(360)
       const o = outline[i]
       const b = V3_TEN_BOARDS.find((x) => x.id === o.id)
-      const s: any = JSON.parse(JSON.stringify(src?.sections[Math.min(i, (src?.sections.length || 1) - 1)] || {}))
+      /* 优先按板块 id 取内容源对应板块（十板块骨架对齐）；自定义环节按位置回退 */
+      const byId = src.sections.find((x) => x.id === o.id)
+      const s: any = JSON.parse(JSON.stringify(byId || src.sections[Math.min(i, (src?.sections.length || 1) - 1)] || {}))
       s.id = o.id
       s.name = o.name
       s.minutes = o.minutes
@@ -637,9 +931,9 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
   if (method === 'POST' && path === '/teacher-v3/draw/hand-recognize') {
     startSse(res)
     const strokes = Math.max(1, Number(body.strokes) || 1)
-    sendSse(res, 'meta', { model: 'mock-hand-latex', strokes, note: '手写公式识别（VLM）：识别结果载入编辑器审查，不直接定稿' })
+    sendSse(res, 'meta', { model: 'mock-hand-latex', strokes, note: '手写公式识别为「演示」：固定样例池，未接入真实识别服务；结果必须经编辑器审查' })
     await sleep(420)
-    sendSse(res, 'recognizing', { stage: '笔迹分割 → 符号分类 → LaTeX 组装', progress: 40 })
+    sendSse(res, 'recognizing', { stage: '演示流程：笔迹分割 → 符号分类 → LaTeX 组装', progress: 40 })
     await sleep(560)
     const pool = [
       'a^{2}+b^{2}=c^{2}',
@@ -651,9 +945,9 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       '\\int_{1}^{e}\\frac{1}{x}\\,\\mathrm{d}x=1',
       '\\sqrt{a^{2}+b^{2}}',
     ]
-    sendSse(res, 'result', { latex: pool[strokes % pool.length], confidence: 0.82 + (strokes % 5) * 0.03 })
+    sendSse(res, 'result', { latex: pool[strokes % pool.length], confidence: 0.82 + (strokes % 5) * 0.03, demo: true })
     await sleep(240)
-    sendSse(res, 'done', { editable: true, note: '识别结果已生成，请在编辑器中审查修改后使用' })
+    sendSse(res, 'done', { editable: true, note: '以上为演示识别结果（非真实识别），请在编辑器中核对修改后使用' })
     res.end()
     return true
   }
@@ -685,6 +979,11 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
     const wantsQuizImport = (hasImages && /存(入|到).{0,6}(题库|题目|错题)|入库/.test(text)) || (/存(入|到).{0,6}(题库|错题)/.test(text) && hasImages)
     const wantsSearch = body.web_search === true || /联网|搜索|查一查|最新/.test(text)
     const wantsFormula = /根号|平方|分之|阶乘|绝对值|正弦|余弦|正切|对数|极限|导数/.test(msg)
+    /* B0 反假执行：插入类跨工件请求不再落到"通用公式卡"兜底（审计反例 #6） */
+    const wantsInsert = /插入|放到|放进|加到|添加到/.test(text) && /(课件|第\s*\d+\s*页|页面|画布)/.test(text)
+    /* C2：找资源 / 画数学图 → 调用伴随工具（优先级高于做课件：'备课找题'应进资源台而非课件向导） */
+    const wantsFindResource = /找.{0,10}(一些|几道|道|个)?题|找(个|点|些)?(素材|资源)|推荐.{0,10}(题|素材|视频)/.test(text)
+    const wantsDrawFigure = /画.{0,16}(图|动图|演示)|动态图|构图/.test(text) && !/课件|ppt/.test(text)
 
     if (wantsQuizImport) {
       /* 剧本B：题目图片 + 存入题库 → 识别预览卡 → 确认动作卡（R2：教师确认后才入库） */
@@ -704,6 +1003,24 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       })
       await sleep(180)
       sendSse(res, 'token', { text: '已生成入库草稿。请核对右侧动作卡的内容，点击「执行」后才会真正写入题库；原图与识别结果均可在题库中查看修改。' })
+    } else if (wantsFindResource) {
+      /* C2 剧本：找题/找素材/找资源 → 打开伴随资源台（AI 调用工具，不在聊天里丢题） */
+      sendSse(res, 'meta', { session_id: sessionId, intent: 'find_resource', note: '资源检索带上下文进伴随资源台，教师确认后才插入' })
+      await sleep(280)
+      sendSse(res, 'thinking', { text: '找资源应该带着当前课题/环节去伴随资源台，候选有来源和推荐理由，而不是在聊天里丢几道题。' })
+      await sleep(240)
+      sendSse(res, 'token', { text: '已按当前页面上下文为你准备资源候选：按教学意图分镜头、来源分四层（我的/备课组/教材官方/外部），插入前可预览，插入后可撤销。' })
+      await sleep(200)
+      sendSse(res, 'card', { type: 'tool', id: uid('tl'), tool: 'resource', title: '打开伴随资源', summary: '按当前上下文找题 / 素材 / 视频卡' })
+    } else if (wantsDrawFigure) {
+      /* C2 剧本：画图/动态演示 → 打开数学绘图（含构图导演），完成后插回当前工作位 */
+      sendSse(res, 'meta', { session_id: sessionId, intent: 'draw_figure', note: '数学绘图是全局工具：任何页面画完插回当前工作' })
+      await sleep(280)
+      sendSse(res, 'thinking', { text: '数学图形应在绘图工作台里做成结构化对象（函数 / 构图导演 / 手写公式），我可以直接帮你打开。' })
+      await sleep(240)
+      sendSse(res, 'token', { text: '已打开数学绘图：完成后点「插入」，图形会回到你当前的工作位置；关掉也不丢，会进暂存图形。' })
+      await sleep(200)
+      sendSse(res, 'card', { type: 'tool', id: uid('tl'), tool: 'draw', title: '打开数学绘图', summary: '函数绘图 / 构图导演 / 手写公式' })
     } else if (wantsDeck) {
       /* 剧本A：我要做PPT → 理解摘要 + 预填跳转（进入既有生成工作流，模板选择/大纲确认保留） */
       sendSse(res, 'meta', { session_id: sessionId, intent: 'deck_generate', note: '跳转课件工坊并预填' })
@@ -721,6 +1038,17 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       })
       await sleep(160)
       sendSse(res, 'action', { action: 'navigate', route: '/teacher-v3/slides', query: { mode: 'topic', topic, class_id: 'c2-03', template_id: 'tpl-academic-blue' }, toast: `已预填主题「${topic}」` })
+    } else if (wantsInsert) {
+      /* 跨工件插入：诚实说明当前边界 + 给出可达路径，不伪造插入结果（回执与真实执行在 B6 实现） */
+      sendSse(res, 'meta', { session_id: sessionId, intent: 'insert_request', note: '跨工件操作在原型阶段的边界说明' })
+      await sleep(280)
+      const pageM = msg.match(/第\s*(\d+)\s*页/)
+      const target = pageM ? `第 ${pageM[1]} 页` : '目标页'
+      sendSse(res, 'thinking', { text: `插入到课件${target}需要"目标课件 + 页码 + 内容"三者都明确，当前会话缺少已打开的课件上下文。` })
+      await sleep(220)
+      sendSse(res, 'token', { text: `这个插入操作我暂时不能直接执行（需要目标课件上下文，完整执行与回执在管家动作版接入）。现在可以：① 打开目标课件后，在资源中心对该素材点「插入课件」并选页；② 或把公式/图形卡从本面板直接拖入画布。${pageM ? `已记住你要的是${target}。` : ''}` })
+      await sleep(180)
+      sendSse(res, 'card', { type: 'link', id: uid('lnk'), title: '课件工坊 · 打开目标课件后可插入', route: '/teacher-v3/slides', query: {}, note: '在编辑器内通过「资源/管家卡片拖入」完成插入' })
     } else if (wantsSearch) {
       sendSse(res, 'meta', { session_id: sessionId, intent: 'web_search' })
       await sleep(280)
@@ -733,7 +1061,6 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       sendSse(res, 'citation', { sources: [
         { index: 1, title: '人教A版选择性必修一 · 2.2 椭圆', url: 'https://www.pep.com.cn/gzsx/xrjdgzsx/ssl', snippet: '教材原文：平面内与两个定点F₁、F₂的距离的和等于常数…' },
         { index: 2, title: '课程标准（2017版2020修订）· 圆锥曲线', url: 'http://www.moe.gov.cn', snippet: '经历从具体情境中抽象出椭圆的过程…' },
-        { index: 3, title: '椭圆定义的六种引入方式比较', url: 'https://example.com/ellipse-intro', snippet: '绳长实验引入在课堂实测中概念留存率最高…' },
       ] })
     } else if (wantsFormula) {
       /* 数学口语直接出公式卡（与语音公式链路同一解析层） */
@@ -744,18 +1071,16 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       await sleep(200)
       sendSse(res, 'card', { type: 'formula', id: uid('fml'), latex, confidence: 0.88, source: 'chat' })
     } else {
-      /* 默认：数学对话（流式 + KaTeX 内联） */
-      sendSse(res, 'meta', { session_id: sessionId, intent: 'math_chat' })
+      /* 默认：诚实的能力边界说明（B0 反假执行：不用固定椭圆问答冒充任意问题的回答） */
+      sendSse(res, 'meta', { session_id: sessionId, intent: 'fallback' })
       await sleep(280)
-      sendSse(res, 'thinking', { text: ctx.route_title ? `结合当前页面（${ctx.route_title}）回答。` : '直接回答数学问题。' })
+      sendSse(res, 'thinking', { text: ctx.route_title ? `结合当前页面（${ctx.route_title}）判断意图。` : '判断意图。' })
       await sleep(200)
-      const reply = `好的。以 $\\frac{x^{2}}{a^{2}}+\\frac{y^{2}}{b^{2}}=1\\;(a>b>0)$ 为例：这个方程里 $a$ 定长轴、$b$ 定短轴，离心率 $e=\\frac{c}{a}$ 反映扁圆程度。需要我把它做成公式卡片拖进课件，还是展开讲解推导？`
+      const reply = `我是原型阶段的规则引擎（未接入大模型），当前能可靠执行这些事：①「帮我做一份《××》课件」→ 预填跳转工坊；② 口述公式（说"根号下 x 加一"）；③ 附题目照片说「存入题库」；④ 联网检索演示。数学问答与跨工件插入将在真实服务接入后开放——我不想用编造的回答占用你的时间。`
       for (const seg of reply.match(/[\s\S]{1,14}/g) || []) {
         sendSse(res, 'token', { text: seg })
         await sleep(90)
       }
-      await sleep(140)
-      sendSse(res, 'card', { type: 'formula', id: uid('fml'), latex: '\\frac{x^{2}}{a^{2}}+\\frac{y^{2}}{b^{2}}=1\\;(a>b>0)', confidence: 0.92, source: 'chat' })
     }
     await sleep(160)
     sendSse(res, 'done', { finish_reason: 'stop' })
@@ -789,7 +1114,8 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
 
   const butlerConfirmMatch = path.match(/^\/teacher-v3\/butler\/actions\/([^/]+)\/confirm$/)
   if (method === 'POST' && butlerConfirmMatch) {
-    /* 写动作确认（R 红线：教师点了执行才入库；这里复用题库 quizQuestions 的内存态） */
+    /* 写动作确认（R 红线：教师点了执行才入库；这里复用题库 quizQuestions 的内存态）。
+       B0 诚实标注：样例题为演示数据，非真实识别结果。 */
     const kp = String((body.params as Record<string, unknown>)?.kp_name || '圆锥曲线')
     const q = {
       id: uid('q'),
@@ -798,28 +1124,101 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       kp_path: ['数学', '圆锥曲线'],
       q_type: 'solve',
       difficulty: 'medium',
-      stem_latex: '\\text{（管家识别入库）设椭圆}\\frac{x^{2}}{4}+\\frac{y^{2}}{3}=1\\text{的左右焦点为}F_1,F_2\\text{，过}F_1\\text{的直线交椭圆于}A,B\\text{，求}\\triangle ABF_2\\text{的周长。}',
+      stem_latex: '\\text{（演示数据）设椭圆}\\frac{x^{2}}{4}+\\frac{y^{2}}{3}=1\\text{的左右焦点为}F_1,F_2\\text{，过}F_1\\text{的直线交椭圆于}A,B\\text{，求}\\triangle ABF_2\\text{的周长。}',
       answer: '8',
-      analysis: '由椭圆定义 |AF₁|+|AF₂|=2a=4，|BF₁|+|BF₂|=4，周长=8。',
+      analysis: '由椭圆定义 |AF₁|+|AF₂|=2a=4，|BF₁|+|BF₂|=4，周长=8。（本题为原型演示样例，非真实识别结果）',
       source: '拍照入库',
       year: '2026',
       use_count: 0,
       folder_refs: [],
     }
     quizQuestions.unshift(q)
-    tasks.unshift({ task_id: uid('task'), title: `管家入库：${kp}题目`, capability: 'butler', status: 'succeeded', progress: 100, stage: '完成' })
-    return ok(res, { ok: true as const, result: { question_id: q.id, kp_name: kp } }), true
+    tasks.unshift({ task_id: uid('task'), title: `原型演示 · 管家入库（${kp}）`, capability: 'butler', status: 'succeeded', progress: 100, stage: '完成（演示数据）' })
+    return ok(res, { ok: true as const, result: { question_id: q.id, kp_name: kp, demo: true } }), true
   }
 
   /* ============ grading 批改域 ============ */
-  if (method === 'GET' && path === '/teacher-v3/grading/assignments') return ok(res, { items: V3_GRADING_ASSIGNMENTS }), true
+  if (method === 'GET' && path === '/teacher-v3/grading/assignments') {
+    /* B4：新发布实例排前（待提交态），示例数据殿后并标注 */
+    const items = [...assignments].sort((a) => (a.id.startsWith('ga-pub') ? -1 : 1))
+    return ok(res, { items }), true
+  }
   const gaMatch = path.match(/^\/teacher-v3\/grading\/assignments\/([^/]+)$/)
-  if (method === 'GET' && gaMatch) return ok(res, grading), true
+  if (method === 'GET' && gaMatch) {
+    if (publishedDetails[gaMatch[1]]) return ok(res, publishedDetails[gaMatch[1]]), true
+    return ok(res, grading), true
+  }
+  /* B4：发布作业为实例（演示：未真实发送学生端） */
+  if (method === 'POST' && path === '/teacher-v3/assignments/publish') {
+    const id = uid('ga-pub')
+    const cls = V3_CLASSES.find((c) => c.class_id === body.class_id) || V3_CLASSES[0]
+    const questions = (Array.isArray(body.questions) ? body.questions : []).map((q: any, i: number) => ({
+      q_no: i + 1,
+      stem_latex: q.stem_latex || '',
+      full_score: Number(q.full_score) || 5,
+      answer: q.answer || '',
+      kp_name: q.kp_name || '',
+      standard_answer: q.answer || '待补标准答案',
+      rubric: [{ point: '按步骤给分（原型默认评分点，可在批改时调整）', score: Number(q.full_score) || 5 }],
+      accuracy: 0, error_dist: [], clusters: [],
+    }))
+    const inst = {
+      id, title: String(body.title || '未命名作业'), class_id: cls.class_id, class_name: cls.name,
+      submitted: 0, total: cls.students, graded: 0, updated_at: new Date().toISOString().slice(0, 10),
+      source: 'published' as const, deadline: body.deadline || '', answer_policy: body.answer_policy || 'manual',
+      allow_photo: body.allow_photo !== false, status: 'collecting' as const, is_sample: false,
+    }
+    assignments.unshift(inst)
+    publishedDetails[id] = {
+      id, title: inst.title, class_id: cls.class_id, submitted: 0, total: cls.students, graded: 0,
+      deadline: inst.deadline, answer_policy: inst.answer_policy, status: 'collecting',
+      questions,
+      tiers: [],
+    }
+    return ok(res, { ok: true as const, assignment_id: id, demo: true, note: '演示：作业实例已创建（mock 内存态），未真实发送学生端' }), true
+  }
+  /* B4：模拟学生提交（确定性演示数据，明确标注非真实学生）→ 生成聚类 fixture */
+  const simMatch = path.match(/^\/teacher-v3\/grading\/assignments\/([^/]+)\/simulate-submissions$/)
+  if (method === 'POST' && simMatch) {
+    const inst = assignments.find((a) => a.id === simMatch[1])
+    const detail = publishedDetails[simMatch[1]]
+    if (!inst || !detail) return fail(res, 404, 40402, '作业不存在'), true
+    const NAMES = ['王雨桐', '陈子豪', '刘一鸣', '林小满', '赵启铭', '孙浩然', '周可欣', '吴宇轩', '郑好', '冯天佑', '何雨欣', '李嘉明']
+    for (const q of detail.questions) {
+      const full = q.full_score
+      const good = NAMES.slice(0, 6).map((n) => ({ name: n, score: full }))
+      const mid = NAMES.slice(6, 10).map((n) => ({ name: n, score: Math.max(1, Math.floor(full * 0.6)) }))
+      const bad = NAMES.slice(10).map((n) => ({ name: n, score: Math.max(0, Math.floor(full * 0.3)) }))
+      q.clusters = [
+        { id: uid('c'), kind: 'correct', count: good.length, members: good, sample: [{ student: good[0].name, score: full, photo_region: { x: 0.1, y: 0.1, w: 0.5, h: 0.3 }, recognized_steps: steps([['（演示作答）按标准答案完整完成', 'ok']]) }] },
+        { id: uid('c'), kind: 'partial', tag: '步骤缺失', count: mid.length, members: mid, sample: [{ student: mid[0].name, score: mid[0].score, photo_region: { x: 0.1, y: 0.45, w: 0.5, h: 0.3 }, recognized_steps: steps([['（演示作答）前两步正确', 'ok'], ['最后一步跳步（演示分歧）', 'ai-flag']]), feedback: 'AI 起草：末步骤缺失，按评分点扣后两步分' }] },
+        { id: uid('c'), kind: 'wrong', tag: '概念混淆', count: bad.length, members: bad, sample: [{ student: bad[0]?.name || NAMES[10], score: bad[0]?.score ?? 1, photo_region: { x: 0.1, y: 0.75, w: 0.5, h: 0.2 }, recognized_steps: steps([['（演示作答）思路偏离标准解法', 'ai-flag']]), feedback: 'AI 起草：方法选择错误，建议对照标准答案重讲' }] },
+      ]
+      q.accuracy = 0.5
+      q.error_dist = [{ tag: '步骤缺失' as const, count: mid.length }, { tag: '概念混淆' as const, count: bad.length }]
+    }
+    inst.submitted = detail.submitted = inst.total - 2
+    inst.status = detail.status = 'grading'
+    return ok(res, { ok: true as const, demo: true, note: '已注入确定性演示作答（非真实学生数据）' }), true
+  }
   const clusterMatch = path.match(/^\/teacher-v3\/grading\/assignments\/([^/]+)\/clusters\/([^/]+)\/confirm$/)
   if (method === 'POST' && clusterMatch) {
-    for (const q of grading.questions) {
-      const c = q.clusters.find((x: { id: string }) => x.id === clusterMatch[2])
-      if (c) { for (const s of c.sample) s.feedback = body.feedback }
+    /* B4：教师确认即终审。body 可携带 reviews（逐步骤判定 + 最终得分），全部存 mock 内存态 */
+    const sets: any[] = [grading, ...Object.values(publishedDetails)]
+    for (const g of sets) {
+      for (const q of g.questions) {
+        const c = q.clusters.find((x: { id: string }) => x.id === clusterMatch[2])
+        if (c) {
+          for (const s of c.sample) s.feedback = body.feedback
+          ;(c as any).confirmed = { at: new Date().toISOString().slice(0, 16).replace('T', ' '), reviews: body.reviews || [] }
+          if (publishedDetails[clusterMatch[1]]) {
+            const det = publishedDetails[clusterMatch[1]]
+            det.graded = Math.min(det.submitted, (det.graded || 0) + (c.count || 1))
+            const inst = assignments.find((a) => a.id === clusterMatch[1])
+            if (inst) inst.graded = det.graded
+          }
+        }
+      }
     }
     return ok(res, { ok: true as const }), true
   }
@@ -838,7 +1237,34 @@ export async function handleTeacherV3Api(req: any, res: any): Promise<boolean> {
       })
     }
     await sleep(240)
-    sendSse(res, 'done', { deck_id: 'deck-review-1', slides: grading.questions.length + 1 })
+    /* B4：讲评课件为真实 Artifact（改写为讲评页结构），可从回执直接打开 */
+    const srcDeck = decks.find((d) => d.id === 'deck-photo') || decks[0]
+    const deck = JSON.parse(JSON.stringify(srcDeck))
+    deck.id = uid('deck-review')
+    deck.title = '讲评 · ' + grading.title
+    deck.source = 'review-notes'
+    deck.slides = [
+      {
+        id: uid('rv'), layout: 'cover' as const, elements: [
+          { id: uid('e'), z: 1, type: 'text', left: 90, top: 210, width: 800, height: 80, html: '讲评 · ' + grading.title, font_size: 40, bold: true, color: '#1e3a2f' },
+          { id: uid('e'), z: 2, type: 'text', left: 92, top: 306, width: 620, height: 40, html: '按错误率排序 · 每题：错因分布 → 第一处分歧 → 变式', font_size: 18, color: '#4a5568' },
+        ],
+      },
+      ...grading.questions.map((q: any, i: number) => ({
+        id: uid('rv'), layout: 'example' as const, anchor_bar: i === 0 ? '' : '接上页 · 第 ' + q.q_no + ' 题',
+        elements: [
+          { id: uid('e'), z: 1, type: 'text', left: 70, top: 44, width: 700, height: 46, html: '第 ' + q.q_no + ' 题 · 正确率 ' + Math.round(q.accuracy * 100) + '%', font_size: 26, bold: true, color: '#1e3a2f' },
+          { id: uid('e'), z: 2, type: 'text', left: 70, top: 110, width: 1060, height: 60, html: renderRichSafe(q.stem_latex), font_size: 20 },
+          { id: uid('e'), z: 3, type: 'text', left: 70, top: 190, width: 1060, height: 60, html: '<b>标准答案：</b>' + renderRichSafe(q.standard_answer || '见解析'), font_size: 17, color: '#0e9488' },
+          { id: uid('e'), z: 4, type: 'text', left: 70, top: 270, width: 1060, height: 60, html: '<b>主错因：</b>' + ((q.error_dist[0] || {}).tag || '—') + '（' + ((q.error_dist[0] || {}).count || 0) + ' 人）· 第一处分歧见批改记录', font_size: 16, color: '#b45309' },
+          { id: uid('e'), z: 5, type: 'text', left: 70, top: 350, width: 1060, height: 60, html: '<b>变式建议：</b>按错因生成变式（错因驱动例题链，后续批次接入）', font_size: 15, color: '#64748b' },
+        ],
+      })),
+    ]
+    deck.updated_at = new Date().toISOString().slice(0, 16).replace('T', ' ')
+    decks.unshift(deck)
+    const topError = grading.questions.reduce((a: any, q: any) => (((q.error_dist[0] || {}).count || 0) > ((a.error_dist && a.error_dist[0] ? a.error_dist[0].count : 0)) ? q : a), grading.questions[0])
+    sendSse(res, 'done', { deck_id: deck.id, slides: deck.slides.length, top_error: (topError.error_dist[0] || {}).tag || '', top_q: topError.q_no })
     res.end()
     return true
   }

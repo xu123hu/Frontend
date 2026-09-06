@@ -10,8 +10,8 @@
         <div v-for="a in assignments" :key="a.id" class="tv3-row" style="cursor: pointer" @click="openAssignment(a.id)">
           <span class="tv3-tag tv3-tag--primary">{{ a.class_name }}</span>
           <div style="flex: 1">
-            <div style="font-size: 14px; font-weight: 600">{{ a.title }}</div>
-            <div style="font-size: 11.5px; color: var(--tv3-ink3)">提交 {{ a.submitted }}/{{ a.total }} · 已批 {{ a.graded }}</div>
+            <div style="font-size: 14px; font-weight: 600">{{ a.title }} <span v-if="a.is_sample === false" class="tv3-tag tv3-tag--gold" style="font-size: 10px">我发布</span><span v-else-if="a.is_sample" class="tv3-tag" style="font-size: 10px" title="来自原型种子数据">示例</span></div>
+            <div style="font-size: 11.5px; color: var(--tv3-ink3)">提交 {{ a.submitted }}/{{ a.total }} · 已批 {{ a.graded }}{{ a.deadline ? ' · 截止 ' + a.deadline : '' }}{{ a.status === 'collecting' ? ' · 待提交' : '' }}</div>
           </div>
           <div class="tv3-fillbar" style="max-width: 180px"><div class="tv3-fillbar__bar" :class="a.graded / Math.max(1, a.submitted) > 0.9 ? 'tv3-fillbar__bar--ok' : 'tv3-fillbar__bar--warn'" :style="{ width: (a.graded / Math.max(1, a.submitted)) * 100 + '%' }" /></div>
           <span style="color: var(--tv3-ink4)">›</span>
@@ -30,7 +30,27 @@
           <div class="tv3-card__spacer" />
           <button class="tv3-btn tv3-btn--sm tv3-btn--gold" data-testid="tv3-review-pack" @click="genReview">✦ 生成讲评课件</button>
         </div>
-        <div class="tv3-card__body" style="display: flex; align-items: center; gap: 14px">
+        <!-- B4：待提交态（新发布作业） -->
+        <div v-if="assignment.submitted === 0" class="tv3-card__body" style="display: flex; align-items: center; gap: 12px" data-testid="tv3-awaiting">
+          <span class="tv3-tag tv3-tag--gold">已发布 · 等待学生提交</span>
+          <span style="font-size: 12px; color: var(--tv3-ink3)">截止 {{ assignment.deadline || '未设置' }} · {{ assignment.total }} 人 · {{ assignment.allow_photo ? '允许拍照提交' : '仅线上作答' }}</span>
+          <div class="tv3-card__spacer" />
+          <button class="tv3-btn tv3-btn--sm tv3-btn--gold" data-testid="tv3-simulate-submit" @click="simulateSubmissions">模拟学生提交（演示数据）</button>
+        </div>
+        <div v-else class="tv3-card__body" style="display: flex; align-items: center; gap: 14px">
+          <!-- B4：讲评 Artifact 回执 -->
+          <div v-if="reviewArtifact" class="tv3-prep__diffitem" style="flex: 1; min-width: 260px; border-color: var(--tv3-teal, #0e9488); background: #f4fbfa" data-testid="tv3-review-artifact">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+              <span class="tv3-tag tv3-tag--ok" style="font-size: 10px">✓ Artifact</span>
+              <b style="font-size: 12px; flex: 1">讲评课件已生成（{{ reviewArtifact.top_q ? `主错因：${reviewArtifact.top_error}，第 ${reviewArtifact.top_q} 题` : '' }}）</b>
+              <button class="tv3-btn tv3-btn--sm tv3-btn--primary" data-testid="tv3-review-open" @click="$router.push({ path: '/teacher-v3/slides', query: { deck: reviewArtifact.deck_id } })">打开讲评课件</button>
+              <button class="tv3-btn tv3-btn--sm" data-testid="tv3-review-remedial" @click="addRemedialTask">把主错因记入下一课</button>
+            </div>
+          </div>
+          <div v-if="remedialTasks.length" style="display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--tv3-ink2)" data-testid="tv3-remedial-tasks">
+            <span style="font-weight: 700">下一课补救清单</span>
+            <span v-for="(t, i) in remedialTasks" :key="i">· {{ t }}</span>
+          </div>
           <div class="tv3-seg" data-testid="tv3-grading-seg">
             <button class="tv3-seg__btn" :class="{ 'is-active': gview === 'byQuestion' }" @click="gview = 'byQuestion'">按题聚类</button>
             <button class="tv3-seg__btn" :class="{ 'is-active': gview === 'byStudent' }" @click="gview = 'byStudent'">按人</button>
@@ -86,8 +106,16 @@
             <div class="tv3-card__body">
               <!-- 题干（可编辑，MathLive） -->
               <div class="tv3-form-label">题干（点击可编辑 · 结构化公式）</div>
-              <MathField :model-value="currentQ?.stem_latex" readonly :font-size="17" style="margin-bottom: 14px" />
+              <MathField :model-value="currentQ?.stem_latex" readonly :font-size="17" style="margin-bottom: 10px" />
               <div v-if="!currentQ">无数据</div>
+
+              <!-- B4：标准答案 + 评分点（教师批改的依据，永远可见） -->
+              <div v-if="currentQ && (currentQ as any).standard_answer || currentQ && (currentQ as any).rubric" class="tv3-prep__diffitem" style="margin-bottom: 12px; border-color: var(--tv3-teal, #0e9488); background: #f4fbfa" data-testid="tv3-standard-answer">
+                <div style="font-size: 12px; line-height: 1.7"><b>标准答案：</b><span v-html="renderLatex((currentQ as any).standard_answer || '待补')" /></div>
+                <div v-if="(currentQ as any).rubric" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px">
+                  <span v-for="(r, ri) in (currentQ as any).rubric" :key="ri" class="tv3-tag" style="font-size: 10.5px; background: #fff">评分点 {{ ri + 1 }}：{{ r.point }}（{{ r.score }} 分）</span>
+                </div>
+              </div>
 
               <div v-for="c in currentQ?.clusters || []" :key="c.id" class="tv3-cluster" :data-kind="c.kind">
                 <div class="tv3-cluster__head">
@@ -107,21 +135,69 @@
                       <div class="tv3-sample__region" :style="regionStyle(s.photo_region)" />
                       <span class="tv3-sample__name">{{ s.student }} · {{ s.score }}/{{ currentQ?.full_score }}</span>
                     </div>
-                    <!-- 识别步骤（可校正状态） -->
+                    <!-- B4 识别步骤：第一处分歧自动定位 + 教师逐步骤终审 -->
                     <div class="tv3-sample__steps">
-                      <div style="font-size: 11px; color: var(--tv3-ink3); margin-bottom: 4px">识别步骤（点击公式可进入编辑）</div>
-                      <div v-for="(st, ti) in s.recognized_steps" :key="ti" class="tv3-sample__step">
-                        <span class="tv3-stepflag" :data-status="st.status">{{ st.status === 'ok' ? '✓' : st.status === 'ai-flag' ? '⚑ AI 标注' : '✎ 已校正' }}</span>
+                      <div style="font-size: 11px; color: var(--tv3-ink3); margin-bottom: 4px">
+                        识别步骤 · AI 判定（逐步核对；<b style="color: #b45309">⚑ = 疑似第一处分歧</b>）
+                      </div>
+                      <div
+                        v-for="(st, ti) in s.recognized_steps" :key="ti"
+                        class="tv3-sample__step"
+                        :style="ti === firstDivergence(s) ? { background: '#fff7ed', border: '1px solid #e5c96a', borderRadius: '8px', padding: '3px 6px' } : {}"
+                        :data-testid="`tv3-step-${si}-${ti}`"
+                      >
+                        <span class="tv3-stepflag" :data-status="st.status">{{ ti === firstDivergence(s) ? '⚑' : st.status === 'ok' ? '✓' : st.status === 'ai-flag' ? '⚑ AI 标注' : '✎ 已校正' }}</span>
                         <span class="tv3-sample__latex" v-html="renderLatex(st.latex)" />
+                        <span v-if="ti === firstDivergence(s)" style="font-size: 10px; color: #b45309; font-weight: 700">疑似第一处分歧</span>
+                        <span style="flex: 1" />
+                        <span style="display: inline-flex; gap: 3px" :data-testid="`tv3-step-marks-${si}-${ti}`">
+                          <button v-for="mk in [['对', 'ok'], ['OCR 错', 'ocr'], ['判断错', 'judge']]" :key="mk[1]"
+                            class="tv3-btn tv3-btn--sm" style="font-size: 9.5px; padding: 1px 5px"
+                            :class="{ 'tv3-btn--primary': stepMark(c.id, si, ti) === mk[1] }"
+                            :data-testid="`tv3-mark-${si}-${ti}-${mk[1]}`"
+                            @click="setStepMark(c.id, si, ti, mk[1])">{{ mk[0] }}</button>
+                        </span>
                       </div>
                       <div v-if="!s.recognized_steps.length" style="font-size: 12px; color: var(--tv3-ink4)">（空白卷 · 未作答）</div>
+                      <!-- 建议得分 + 教师终审改分 -->
+                      <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap">
+                        <span class="tv3-tag tv3-tag--primary" style="font-size: 11px">AI 建议得分：{{ s.score }} / {{ currentQ?.full_score }}</span>
+                        <label style="font-size: 11.5px; display: inline-flex; gap: 5px; align-items: center">
+                          教师终审得分：
+                          <input
+                            type="number" :min="0" :max="currentQ?.full_score"
+                            class="tv3-input" style="width: 68px; padding: 2px 6px"
+                            :data-testid="`tv3-score-override-${si}`"
+                            :value="scoreOf(c.id, si, s.score)"
+                            @input="setScore(c.id, si, Number(($event.target as HTMLInputElement).value))"
+                          >
+                        </label>
+                        <button
+                          class="tv3-btn tv3-btn--sm" :class="{ 'tv3-btn--primary': !studentConfirmed(c.id, si) }"
+                          :data-testid="`tv3-confirm-student-${si}`"
+                          @click="confirmStudent(c, si)"
+                        >{{ studentConfirmed(c.id, si) ? '✓ 已终审' : '确认该生批改' }}</button>
+                      </div>
                       <!-- 反馈：AI 起草教师审定 -->
                       <div class="tv3-form-label" style="margin-top: 8px">评语（AI 起草 · 教师审定后生效）</div>
                       <textarea v-model="s.feedback" class="tv3-textarea" rows="2" style="font-size: 12px" placeholder="AI 将按聚类错因起草，可修改" />
                     </div>
                   </div>
-                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px">
-                    <button class="tv3-btn tv3-btn--sm tv3-btn--gold" :data-testid="`tv3-confirm-cluster-${c.id}`" @click="confirmCluster(c)">
+                  <!-- B4 全组成员（演示名单） -->
+                  <div v-if="(c as any).members && (c as any).members.length" style="margin-top: 6px; padding: 7px 10px; border-radius: 10px; background: var(--tv3-bg2)" :data-testid="`tv3-members-${c.id}`">
+                    <div style="font-size: 11px; color: var(--tv3-ink3); margin-bottom: 4px">组内全部成员（{{ (c as any).members.length }} 人 · 演示名单）——确认前可抽查任意一份</div>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap">
+                      <span v-for="m in (c as any).members" :key="m.name" class="tv3-tag" style="font-size: 10.5px; background: #fff">{{ m.name }} · {{ m.score }}分</span>
+                    </div>
+                  </div>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; align-items: center">
+                    <span v-if="pendingStudents(c)" style="font-size: 11px; color: #b45309">还有 {{ pendingStudents(c) }} 名样例未逐生终审</span>
+                    <button
+                      class="tv3-btn tv3-btn--sm tv3-btn--gold" :disabled="pendingStudents(c) > 0"
+                      :data-testid="`tv3-confirm-cluster-${c.id}`"
+                      :title="pendingStudents(c) > 0 ? '请先逐生确认（正式成绩必须来自教师终审）' : '教师终审完成，写入该组全部成绩'"
+                      @click="confirmCluster(c)"
+                    >
                       ✓ 确认批注（应用到 {{ c.count }} 人）
                     </button>
                   </div>
@@ -201,20 +277,26 @@
  * byTier：A/B/C 分层 + 按层布置变式作业
  * 讲评课件：SSE 逐题生成（错误率 → 讲评页），完成后跳转提示
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { v3Api } from '@/api/teacherV3'
 import { renderLatex } from '@/components/mathx/latex'
 import MathField from '@/components/mathx/MathField.vue'
+import { useToastStore } from '@/stores/toast'
+import { updateTv3Context } from '@/stores/teacherContext'
 import type { V3GradingAssignment, V3GradingView } from '@/types/teacherV3'
 
-const assignments = ref<{ id: string; title: string; class_id: string; class_name: string; submitted: number; total: number; graded: number; updated_at: string }[]>([])
-const assignment = ref<V3GradingAssignment | null>(null)
+/* B4：扩展字段（is_sample/deadline/status/allow_photo）走本地视图模型类型，shared types 不扩（IFC-PRODUCT-03） */
+interface AssignRow { id: string; title: string; class_id: string; class_name: string; submitted: number; total: number; graded: number; updated_at: string; is_sample?: boolean; deadline?: string; status?: string; allow_photo?: boolean; source?: string }
+const assignments = ref<AssignRow[]>([])
+const assignment = ref<(V3GradingAssignment & { deadline?: string; allow_photo?: boolean; status?: string; class_name?: string }) | null>(null)
 const gview = ref<V3GradingView>('byQuestion')
 const openQ = ref(-1)
 const expandCluster = ref('')
 const reviewProgress = ref(0)
 const reviewStage = ref('')
 const reviewDone = ref(false)
+const _toastStore = useToastStore()
+function toastOf() { return _toastStore }
 let sseCtrl: { abort: () => void } | null = null
 
 const ERR_COLORS = ['#dc2646', '#b45309', '#7c3aed', '#0e9488', '#64748b', '#0f4787']
@@ -250,6 +332,7 @@ const students = computed(() => {
     .sort((a, b) => b.total - a.total)
 })
 
+onMounted(() => window.addEventListener('tv3-butler-quick', onButlerQuick as EventListener))
 onMounted(async () => {
   try {
     const r = await v3Api.grading.assignments()
@@ -275,10 +358,85 @@ const regionStyle = (r: { x: number; y: number; w: number; h: number }) => ({
 })
 const scoreTone = (v: number | undefined, full: number) => (v === undefined ? 'none' : v / full > 0.8 ? 'good' : v / full > 0.5 ? 'mid' : 'bad')
 
-async function confirmCluster(c: { id: string; sample: { feedback?: string }[] }) {
+/* ============ B4 第一处分歧批改：状态与方法 ============ */
+const stepMarks = ref<Record<string, string>>({})
+const scoreOverrides = ref<Record<string, number | undefined>>({})
+const confirmedStudents = ref<Record<string, boolean>>({})
+const reviewArtifact = ref<{ deck_id: string; top_error?: string; top_q?: number } | null>(null)
+const remedialTasks = ref<string[]>([])
+/* ---------- B6 上下文写入 + 管家快捷动作 ---------- */
+watch([assignment, reviewArtifact], () => {
+  updateTv3Context({
+    route: '/teacher-v3/assign',
+    topic: assignment.value?.title,
+    class_name: assignment.value?.class_name,
+    extra: assignment.value ? `提交 ${assignment.value.submitted}/${assignment.value.total} · 已批 ${assignment.value.graded}` : undefined,
+  })
+})
+function onButlerQuick(ev: Event) {
+  const action = (ev as CustomEvent).detail?.action
+  if (action === 'gen-review') genReview()
+}
+
+
+
+const stepKey = (cid: string, si: number, ti: number) => `${cid}:${si}:${ti}`
+const stuKey = (cid: string, si: number) => `${cid}:${si}`
+function stepMark(cid: string, si: number, ti: number): string | undefined {
+  return stepMarks.value[stepKey(cid, si, ti)]
+}
+function setStepMark(cid: string, si: number, ti: number, mark: string) {
+  stepMarks.value[stepKey(cid, si, ti)] = mark
+}
+function scoreOf(cid: string, si: number, fallback: number): number {
+  return scoreOverrides.value[stuKey(cid, si)] ?? fallback
+}
+function setScore(cid: string, si: number, v: number) {
+  scoreOverrides.value[stuKey(cid, si)] = v
+}
+function studentConfirmed(cid: string, si: number): boolean {
+  return !!confirmedStudents.value[stuKey(cid, si)]
+}
+function confirmStudent(c: { id: string }, si: number) {
+  const key = stuKey(c.id, si)
+  confirmedStudents.value[key] = !confirmedStudents.value[key]
+}
+function pendingStudents(c: { id: string; sample: unknown[] }): number {
+  return c.sample.reduce<number>((acc, _s, si) => acc + (studentConfirmed(c.id, si) ? 0 : 1), 0)
+}
+/** 第一处分歧 = 识别步骤中第一个非 ok 状态（AI 预标注），教师可改判 */
+function firstDivergence(s: { recognized_steps: { status: string }[] }): number {
+  return s.recognized_steps.findIndex((st) => st.status !== 'ok')
+}
+async function simulateSubmissions() {
+  if (!assignment.value) return
+  if (!window.confirm('注入确定性演示作答（非真实学生数据）？演示用于核对批改确认面。')) return
+  try {
+    await (v3Api as any).simulateSubmissions(assignment.value.id)
+    toastOf().success('演示作答已注入（数据标注为演示），请逐生终审')
+    await openAssignment(assignment.value.id)
+  } catch { toastOf().error('模拟提交失败（mock 未启动？）') }
+}
+function addRemedialTask() {
+  if (!reviewArtifact.value) return
+  const task = `重讲「${reviewArtifact.value.top_error || '主错因'}」（第 ${reviewArtifact.value.top_q} 题），配 1 道变式`
+  if (!remedialTasks.value.includes(task)) remedialTasks.value.push(task)
+  toastOf().info('已记入本作业的下一课补救清单（演示；跨课流转在 LessonWorkItem 接入后生效）')
+}
+
+async function confirmCluster(c: { id: string; count?: number; sample: { feedback?: string }[] }) {
   if (!assignment.value) return
   const fb = c.sample[0]?.feedback || ''
-  try { await v3Api.grading.confirmCluster(assignment.value.id, c.id, { feedback: fb }) } catch { /* mock */ }
+  /* B4：确认 = 教师终审。携带逐步骤判定与最终得分；未逐生确认不可写正式成绩。 */
+  const n = c.count ?? c.sample.length
+  const reviews = c.sample.map((smp: any, si: number) => ({
+    student: smp.student || `学生${si + 1}`,
+    score: scoreOf(c.id, si, smp.score ?? 0),
+    steps: (smp.recognized_steps || []).map((st: { status: string }, ti: number) => ({ step: ti, verdict: stepMark(c.id, si, ti) || (st.status === 'ok' ? 'ok' : 'ai-flag') })),
+  }))
+  if (!window.confirm(`教师终审确认：将写入本聚类全部 ${n} 份成绩与评语。\n· 评分依据：标准答案 + 评分点 + 逐步骤判定（已逐生确认）\n· 演示数据不会发布给学生\n\n确认写入？`)) return
+  try { await v3Api.grading.confirmCluster(assignment.value.id, c.id, { feedback: fb, reviews } as any) } catch { /* mock */ }
+  c.sample.forEach((_smp, si) => { confirmedStudents.value[stuKey(c.id, si)] = true })
 }
 
 async function genReview() {
@@ -292,6 +450,11 @@ async function genReview() {
         reviewStage.value = `第 ${data.q_no} 题：正确率 ${Math.round(data.accuracy * 100)}%，主错因「${data.top_error}」`
         reviewProgress.value = Math.min(92, 10 + (data.index + 1) * 26)
       } else if (event === 'done') {
+        reviewProgress.value = 100
+        reviewStage.value = '讲评课件已生成（见上方回执卡）'
+        reviewDone.value = true
+        reviewArtifact.value = { deck_id: data.deck_id, top_error: data.top_error, top_q: data.top_q }
+        toastOf().success('讲评课件已生成：可从回执卡直接打开')
         reviewProgress.value = 100
         reviewDone.value = true
         reviewStage.value = '完成'

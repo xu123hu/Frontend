@@ -23,9 +23,9 @@ export const V3_TODAY: {
 } = {
   teacher: V3_TEACHER,
   schedule: [
-    { time: '08:00', class_name: '高二(3)班', topic: '椭圆及其标准方程（第2课时）', status: 'done' },
-    { time: '09:55', class_name: '高二(5)班', topic: '椭圆及其标准方程（第1课时）', status: 'next', missing: ['课件未最终确认'] },
-    { time: '14:00', class_name: '高二(3)班', topic: '习题课：椭圆几何性质', status: 'later', missing: ['缺少 2 道分层变式题'] },
+    { time: '08:00', class_name: '高二(3)班', topic: '椭圆及其标准方程（第1课时）', status: 'done' },
+    { time: '09:55', class_name: '高二(3)班', topic: '椭圆及其标准方程（第2课时）', status: 'next', missing: ['课件未最终确认'] },
+    { time: '14:00', class_name: '高二(5)班', topic: '椭圆及其标准方程（第1课时）', status: 'later', missing: ['缺少 2 道分层变式题'] },
   ],
   todos: [
     { id: 't1', time: '10:40', text: '批改高二(3)班《导数单调性》作业（剩 9 份）', kind: 'grade' },
@@ -77,6 +77,12 @@ export const V3_DECK_TEMPLATES = [
     page_kinds: ['cover', 'definition', 'example', 'summary', 'blank'],
     recommended_for: '复习课·概念梳理', sample_topic: '圆锥曲线小结',
   },
+  {
+    id: 'tpl-warm-orange', name: '暖橙·活力', style: 'minimal' as const,
+    swatch: { bg: '#ea580c', primary: '#ea580c', accent: '#f59e0b', light: true },
+    page_kinds: ['cover', 'example', 'variation', 'summary'],
+    recommended_for: '活动课·兴趣课', sample_topic: '数学建模入门',
+  },
 ]
 
 export const V3_LESSON_TEMPLATES = [
@@ -120,10 +126,10 @@ export const V3_LESSON_TEMPLATES = [
  * attachable=true 的板块支持「挂例题」（结构化题，可复用到试卷）。
  * 教案生成与编辑均以本框架为骨架；课型（习题/讲评）只裁剪内容，不替换骨架。
  */
-export const V3_TEN_BOARDS: { id: string; name: string; minutes: number; attachable: boolean }[] = [
+export const V3_TEN_BOARDS: { id: string; name: string; minutes: number; attachable: boolean; non_instructional?: boolean }[] = [
   { id: 'bd-context',    name: '课标与学情',     minutes: 2, attachable: false },
-  { id: 'bd-objectives', name: '教学目标',       minutes: 0, attachable: false },
-  { id: 'bd-keypoints',  name: '教学重难点',     minutes: 0, attachable: false },
+  { id: 'bd-objectives', name: '教学目标',       minutes: 0, attachable: false, non_instructional: true },
+  { id: 'bd-keypoints',  name: '教学重难点',     minutes: 0, attachable: false, non_instructional: true },
   { id: 'bd-intro',      name: '情境引入',       minutes: 4, attachable: false },
   { id: 'bd-explore',    name: '新知探究',       minutes: 12, attachable: false },
   { id: 'bd-examples',   name: '例题精讲',       minutes: 14, attachable: true },
@@ -190,6 +196,46 @@ export const V3_LESSON_PLANS = [
       { tier: '挑战', items: ['$f(x)=x\\cdot e^{ax}$ 的单调性讨论'] },
     ],
     refs: ['人教A版选择性必修二 P86-90'],
+  },
+  {
+    id: 'plan-hyperbola', topic: '双曲线及其标准方程（第1课时）', class_id: 'c2-05', lesson_type: '新授课', template_id: 'lt-explorer',
+    objectives: [
+      '理解双曲线的定义，能说出定义中两个定点与距离差的定值关系（$2a<|F_1F_2|$）',
+      '掌握双曲线标准方程的推导过程，会区分焦点在 $x$ 轴与 $y$ 轴时的两种形式',
+      '能根据条件求双曲线的标准方程，并与椭圆方程进行对照',
+    ],
+    key_points: [
+      '定义中「距离之差的绝对值为定值 $2a$（$0<2a<|F_1F_2|$）」的必要性',
+      '两种标准方程的判别：看 $x^2$、$y^2$ 项系数的正负（与椭圆"看分母大小"不同）',
+    ],
+    sections: [
+      { id: 'bd-context', name: '课标与学情', minutes: 2, teacher_activity: '出示本节目标，结合本班学情提示核心是「把双曲线定义翻译成代数方程」，并点出与椭圆的最大差异：差为定值 vs 和为定值。', student_activity: '回看椭圆定义与标准方程笔记，准备对照学习。', design_intent: '用"和 vs 差"的认知冲突先行，对照椭圆学习双曲线。' },
+      { id: 'bd-objectives', name: '教学目标', minutes: 0, teacher_activity: '通过拉链实验探究双曲线的定义，激发学生学习数学的兴趣，培养学生分析问题与解决问题的能力。', student_activity: '体会知识的形成过程，增强学好数学的信心。', design_intent: '基于操作经验与代数推导，让学生自然获得双曲线的标准方程。', cliche: true, cliche_hits: ['空泛的「激发……兴趣」，未说清用什么激', '口号式能力表述，缺具体题例'] },
+      { id: 'bd-keypoints', name: '教学重难点', minutes: 0, teacher_activity: '重点：定义中 $|MF_1|-|MF_2|=\\pm 2a$ 与 $0<2a<|F_1F_2|$ 的必要性；难点：两种标准方程的判别（看项系数正负，不是看分母大小）。', student_activity: '明确重难点，做好与椭圆判别法的对照笔记。', design_intent: '把"判别方式反转"这一高频易错点前置。' },
+      { id: 'bd-intro', name: '情境引入', minutes: 4, teacher_activity: '演示拉链实验：拉开拉链时笔尖轨迹；提问：椭圆是"距离之和为定值"，若改成"距离之差的绝对值为定值"，会得到什么曲线？', student_activity: '观察拉链实验，猜想轨迹形状。', design_intent: '从椭圆定义的反向操作引入，建立"差为定值"的直观。' },
+      { id: 'bd-explore', name: '新知探究', minutes: 12, teacher_activity: '用拉链/图钉复现定义实验，板书定义 $\\big||MF_1|-|MF_2|\\big|=2a\\;(0<2a<|F_1F_2|)$；随后建系，演示 $\\sqrt{(x+c)^{2}+y^{2}}-\\sqrt{(x-c)^{2}+y^{2}}=\\pm 2a$ 的化简（对比椭圆：一次平方即可）。', student_activity: '两人一组操作拉链（改变 $2a$ 观察开口变化），跟随推导完成填空。', design_intent: '经历"差为定值"的生成过程，对比椭圆化简体会结构差异。' },
+      { id: 'bd-examples', name: '例题精讲', minutes: 14, teacher_activity: '讲例 1：焦点在 $x$ 轴、$a=4$、$b=3$ 求双曲线方程，板书分三步书写，并当场与椭圆版本（$\\frac{x^{2}}{16}+\\frac{y^{2}}{9}=1$）对照。', student_activity: '精听并同步演算例 1，亲手写出对照的椭圆方程。', design_intent: '标准方程正用 + 与椭圆对照固化判别。',
+        examples: [
+          { id: 'ex-hg1', label: '例 1', q_type: 'solve', difficulty: 'easy', stem_latex: '焦点在 x 轴、a=4、b=3 的双曲线，求它的标准方程。', answer: '\\frac{x^{2}}{16}-\\frac{y^{2}}{9}=1', source: '校本' },
+        ] },
+      { id: 'bd-variation', name: '变式训练', minutes: 8, teacher_activity: '给变式：焦点在 $y$ 轴、$c=5$、$a=3$，求方程；提示先定位焦点所在轴，再看 $y^2$ 项系数为正。', student_activity: '独立完成变式，同桌互批并互述判别理由。', design_intent: '焦轴定位 + 项系数判别。',
+        examples: [
+          { id: 'ex-hvar1', label: '变式 1', q_type: 'solve', difficulty: 'medium', stem_latex: '焦点在 y 轴、c=5、a=3 的双曲线，求标准方程。', answer: '\\frac{y^{2}}{9}-\\frac{x^{2}}{16}=1', source: '校本' },
+        ] },
+      { id: 'bd-pitfalls', name: '易错辨析', minutes: 5, teacher_activity: '对比三道易错结构：$2a\\ge|F_1F_2|$ 时轨迹不存在或退化；误用椭圆"分母大小"判别双曲线焦轴；漏掉差的绝对值导致只画一支。让学生判断错例。', student_activity: '判断下列写法的对错并说明理由。', design_intent: '用反例固化定义条件与判别方式。' },
+      { id: 'bd-summary', name: '课堂小结与检测', minutes: 3, teacher_activity: '用对照表梳理「定义 → 方程 → 判别」，布置一道当堂检测：已知 $a=2$、$c=4$ 求标准方程（焦轴自判）。', student_activity: '完成当堂检测并订正，说出一处与椭圆的差异。', design_intent: '结构化收束并即时回收掌握度。' },
+      { id: 'bd-homework', name: '分层作业', minutes: 2, teacher_activity: '按基础/巩固/挑战三层布置，挑战题探究双曲线渐近线对开口的刻画。', student_activity: '按层次选题完成。', design_intent: '分层落实，挑战层衔接几何性质。',
+        examples: [
+          { id: 'ex-hw1', label: '挑战题', q_type: 'solve', difficulty: 'hard', stem_latex: '双曲线 \\frac{x^{2}}{9}-\\frac{y^{2}}{16}=1 的渐近线方程是什么？改变 a、b 观察渐近线张角，写一条发现。', answer: 'y=±\\frac{4}{3}x（提示：开口随 b/a 增大而变大）', source: '校本' },
+        ] },
+    ],
+    board_design_note: '主板书：左侧对照表（椭圆 vs 双曲线），中间推导主线，右侧例题与变式；副板书留拉链实验图',
+    homework_tiers: [
+      { tier: '基础', items: ['课本 P48 习题 2-2 第 1、2 题'] },
+      { tier: '巩固', items: ['焦点在 $y$ 轴、$c=6$、$b=4$ 的双曲线标准方程'] },
+      { tier: '挑战', items: ['探究 $\\frac{x^{2}}{9}-\\frac{y^{2}}{16}=1$ 的渐近线，并说明 $b/a$ 对开口的影响'] },
+    ],
+    refs: ['人教A版选择性必修一 P46-49', '2007 课标 · 圆锥曲线', '校本资源：拉链实验视频'],
   },
 ]
 
@@ -320,6 +366,119 @@ export const V3_DECKS = [
     ],
     updated_at: '2026-09-03 09:48',
   },
+  {
+    id: 'deck-hyperbola', title: '双曲线及其标准方程（第1课时）', template_id: 'tpl-academic-blue',
+    source: 'topic' as const,
+    slides: [
+      {
+        id: 'hl1', layout: 'cover' as const, elements: [
+          el({ type: 'text', left: 90, top: 210, width: 760, height: 90, html: '双曲线及其标准方程', font_size: 48, bold: true, color: '#0a3568' }),
+          el({ type: 'text', left: 92, top: 306, width: 620, height: 40, html: '人教A版选择性必修一 · 第二章 §2.3 · 第 1 课时', font_size: 18, color: '#4a5568' }),
+          el({ type: 'formula', left: 92, top: 380, width: 460, height: 60, latex: '\\frac{x^{2}}{a^{2}}-\\frac{y^{2}}{b^{2}}=1\\;(a>0,b>0)', font_size: 22, display: true }),
+          el({ type: 'geometry', left: 830, top: 170, width: 360, height: 320, preset_id: 'conic/hyperbola', params: { a: 2 } }),
+        ],
+      },
+      {
+        id: 'hl2', layout: 'review' as const, elements: [
+          el({ type: 'text', left: 70, top: 52, width: 480, height: 52, html: '复习对照 · 椭圆的定义', font_size: 28, bold: true, color: '#0a3568' }),
+          el({ type: 'text', left: 70, top: 140, width: 560, height: 44, html: '椭圆：到两定点距离<b>之和</b>为定值（$2a>|F_1F_2|$）', font_size: 20 }),
+          el({ type: 'formula', left: 70, top: 210, width: 340, height: 46, latex: '|MF_{1}|+|MF_{2}|=2a', font_size: 22 }),
+          el({ type: 'text', left: 70, top: 300, width: 620, height: 120, html: '<b>改变条件：</b>把「距离之和」改成「距离之差的绝对值」为定值，轨迹会是什么样子？', font_size: 21, color: '#a87b24' }),
+        ],
+      },
+      {
+        id: 'hl3', layout: 'definition' as const, elements: [
+          el({ type: 'text', left: 70, top: 52, width: 500, height: 52, html: '双曲线的定义', font_size: 28, bold: true, color: '#0a3568' }),
+          el({ type: 'text', left: 70, top: 140, width: 640, height: 110, html: '平面内与两个定点 $F_1$、$F_2$ 的距离的<b>差的绝对值</b>等于常数（小于 $|F_1F_2|$）的点的轨迹叫做双曲线。两个定点叫做双曲线的<b>焦点</b>。', font_size: 21 }),
+          el({ type: 'formula', left: 70, top: 288, width: 420, height: 56, latex: '\\big||MF_{1}|-|MF_{2}|\\big|=2a\\;(0<2a<|F_{1}F_{2}|)', font_size: 22, display: true }),
+          el({ type: 'text', left: 70, top: 372, width: 640, height: 66, html: '思考：当 $2a=|F_1F_2|$ 时？（两条射线）　当 $2a>|F_1F_2|$ 时？（不存在）　若不加绝对值？（只有一支）', font_size: 19, color: '#b45309' }),
+          el({ type: 'geometry', left: 760, top: 140, width: 440, height: 400, preset_id: 'conic/hyperbola', params: { a: 2 } }),
+        ],
+      },
+      {
+        id: 'hl4', layout: 'derivation' as const, elements: [
+          el({ type: 'text', left: 70, top: 52, width: 560, height: 52, html: '标准方程的推导', font_size: 28, bold: true, color: '#0a3568' }),
+          el({ type: 'text', left: 70, top: 130, width: 640, height: 40, html: '建系同椭圆：$F_1(-c,0)$、$F_2(c,0)$，设点 $M(x,y)$', font_size: 20 }),
+          el({ type: 'formula', left: 70, top: 192, width: 660, height: 56, latex: '\\sqrt{(x+c)^{2}+y^{2}}-\\sqrt{(x-c)^{2}+y^{2}}=\\pm 2a', font_size: 22, display: true }),
+          el({ type: 'text', left: 70, top: 264, width: 640, height: 36, html: '一次平方即可去根号（对比椭圆的两次平方）：', font_size: 20 }),
+          el({ type: 'formula', left: 70, top: 306, width: 620, height: 56, latex: '(c^{2}-a^{2})x^{2}-a^{2}y^{2}=a^{2}(c^{2}-a^{2})', font_size: 22, display: true }),
+          el({ type: 'formula', left: 70, top: 380, width: 660, height: 56, latex: 'b^{2}=c^{2}-a^{2}\\;(b>0)\\;\\Rightarrow\\;\\frac{x^{2}}{a^{2}}-\\frac{y^{2}}{b^{2}}=1', font_size: 22, display: true }),
+          el({ type: 'text', left: 70, top: 456, width: 660, height: 40, html: '<b>判别反转：</b>双曲线看 $x^2$、$y^2$ 项系数的<b>正负</b>（正者为实轴），不是看分母大小！', font_size: 20, color: '#0e9488' }),
+        ],
+      },
+      {
+        id: 'hl5', layout: 'example' as const, elements: [
+          el({ type: 'text', left: 70, top: 52, width: 500, height: 52, html: '例 1 · 求标准方程', font_size: 28, bold: true, color: '#0a3568' }),
+          el({ type: 'text', left: 70, top: 132, width: 1000, height: 66, html: '双曲线的焦点在 $x$ 轴上，$a=4$，$b=3$，求它的标准方程。', font_size: 21 }),
+          el({ type: 'text', left: 70, top: 240, width: 120, height: 40, html: '解：', font_size: 21, bold: true }),
+          el({ type: 'formula', left: 150, top: 238, width: 520, height: 46, latex: 'b^{2}=c^{2}-a^{2}=9 \\Rightarrow c=5,\\; F_{1}(-5,0),F_{2}(5,0)', font_size: 22 }),
+          el({ type: 'text', left: 70, top: 320, width: 1000, height: 40, html: '焦点在 x 轴，$x^2$ 项系数为正，直接写出：', font_size: 20 }),
+          el({ type: 'formula', left: 150, top: 364, width: 460, height: 52, latex: '\\frac{x^{2}}{16}-\\frac{y^{2}}{9}=1', font_size: 24, display: true }),
+          el({ type: 'text', left: 70, top: 460, width: 1000, height: 60, html: '<b>变式：</b>若改为「焦点在 y 轴，c=5，a=3」，方程变成什么？判别依据是什么？', font_size: 20, color: '#a87b24' }),
+        ],
+      },
+      {
+        id: 'hl6', layout: 'summary' as const, elements: [
+          el({ type: 'text', left: 70, top: 52, width: 500, height: 52, html: '课堂小结 · 与椭圆对照', font_size: 28, bold: true, color: '#0a3568' }),
+          el({ type: 'text', left: 70, top: 140, width: 1000, height: 44, html: '① 定义：和为定值 $\\Leftrightarrow$ 差的绝对值为定值（$0<2a<|F_1F_2|$）', font_size: 22 }),
+          el({ type: 'text', left: 70, top: 204, width: 1000, height: 44, html: '② 方程：$\\frac{x^{2}}{a^{2}}+\\frac{y^{2}}{b^{2}}=1$　vs　$\\frac{x^{2}}{a^{2}}-\\frac{y^{2}}{b^{2}}=1$', font_size: 22 }),
+          el({ type: 'text', left: 70, top: 268, width: 1000, height: 44, html: '③ 判别：椭圆看分母大小；双曲线看项系数<b>正负</b>　④ 关系：$b^2=c^2-a^2$（$c$ 最大）', font_size: 22 }),
+          el({ type: 'geometry', left: 360, top: 320, width: 560, height: 320, preset_id: 'conic/hyperbola', params: { a: 2.4 } }),
+        ],
+      },
+    ],
+    updated_at: '2026-09-05 20:10',
+  },
+  {
+    id: 'deck-derivative', title: '导数与函数单调性（第1课时）', template_id: 'tpl-chalkboard',
+    source: 'topic' as const,
+    slides: [
+      {
+        id: 'dr1', layout: 'cover' as const, elements: [
+          el({ type: 'text', left: 90, top: 210, width: 760, height: 90, html: '导数与函数单调性', font_size: 48, bold: true, color: '#1e3a2f' }),
+          el({ type: 'text', left: 92, top: 306, width: 620, height: 40, html: '人教A版选择性必修二 · 第五章 · 第 1 课时', font_size: 18, color: '#4a5568' }),
+          el({ type: 'formula', left: 92, top: 380, width: 420, height: 60, latex: "f'(x)>0 \\Rightarrow f(x) \\text{ 单调递增}", font_size: 22, display: true }),
+        ],
+      },
+      {
+        id: 'dr2', layout: 'review' as const, elements: [
+          el({ type: 'text', left: 70, top: 52, width: 520, height: 52, html: '情境引入 · 瞬时变化率', font_size: 28, bold: true, color: '#1e3a2f' }),
+          el({ type: 'text', left: 70, top: 140, width: 620, height: 88, html: '高台跳水：运动员离水面高度 $h(t)$ 随时间变化——哪一段在上升、哪一段在下降？由什么量决定？', font_size: 20 }),
+          el({ type: 'formula', left: 70, top: 260, width: 420, height: 52, latex: "v(t)=h'(t)", font_size: 22, display: true }),
+          el({ type: 'text', left: 70, top: 350, width: 620, height: 66, html: '<b>核心问题：</b>能否用导数的符号，直接判断函数的单调性？', font_size: 21, color: '#e8c56a' }),
+        ],
+      },
+      {
+        id: 'dr3', layout: 'derivation' as const, elements: [
+          el({ type: 'text', left: 70, top: 52, width: 560, height: 52, html: '判定链的推导', font_size: 28, bold: true, color: '#1e3a2f' }),
+          el({ type: 'text', left: 70, top: 130, width: 660, height: 44, html: '在区间 $(a,b)$ 上任取 $x_1<x_2$，用导数定义作差：', font_size: 20 }),
+          el({ type: 'formula', left: 70, top: 192, width: 660, height: 56, latex: '\\frac{f(x_{2})-f(x_{1})}{x_{2}-x_{1}}=f\'(\\xi)>0', font_size: 22, display: true }),
+          el({ type: 'text', left: 70, top: 264, width: 660, height: 66, html: '由拉格朗日中值定理，$f(x_2)-f(x_1)=f\'(\\xi)(x_2-x_1)>0$，故 $f$ 在 $(a,b)$ 递增。', font_size: 20 }),
+          el({ type: 'formula', left: 70, top: 356, width: 520, height: 56, latex: "f'(x)>0 \\Rightarrow \\text{增}；\\quad f'(x)<0 \\Rightarrow \\text{减}", font_size: 22, display: true }),
+          el({ type: 'text', left: 70, top: 440, width: 660, height: 40, html: '注意：逆命题不成立（$f\'\\ge 0$ 且零点离散亦可增，如 $y=x^3$）。', font_size: 19, color: '#e8c56a' }),
+        ],
+      },
+      {
+        id: 'dr4', layout: 'example' as const, elements: [
+          el({ type: 'text', left: 70, top: 52, width: 500, height: 52, html: '例 1 · 求单调区间', font_size: 28, bold: true, color: '#1e3a2f' }),
+          el({ type: 'text', left: 70, top: 132, width: 1000, height: 66, html: '已知 $f(x)=x^{3}-3x$，求它的单调区间。', font_size: 21 }),
+          el({ type: 'text', left: 70, top: 226, width: 120, height: 40, html: '解：', font_size: 21, bold: true }),
+          el({ type: 'formula', left: 150, top: 224, width: 480, height: 46, latex: "f'(x)=3x^{2}-3=3(x-1)(x+1)", font_size: 22 }),
+          el({ type: 'formula', left: 150, top: 300, width: 620, height: 52, latex: "f'(x)>0 \\Rightarrow x\\in(-\\infty,-1)\\cup(1,+\\infty)", font_size: 22, display: true }),
+          el({ type: 'text', left: 70, top: 380, width: 1000, height: 44, html: '单调递增区间 $(-\\infty,-1)$、$(1,+\\infty)$；单调递减区间 $(-1,1)$。', font_size: 20 }),
+          el({ type: 'text', left: 70, top: 452, width: 1000, height: 60, html: '<b>变式：</b>求 $f(x)=x^{3}-3x^{2}+1$ 的单调递减区间（注意先写定义域）。', font_size: 20, color: '#e8c56a' }),
+        ],
+      },
+      {
+        id: 'dr5', layout: 'summary' as const, elements: [
+          el({ type: 'text', left: 70, top: 52, width: 500, height: 52, html: '课堂小结', font_size: 28, bold: true, color: '#1e3a2f' }),
+          el({ type: 'text', left: 70, top: 140, width: 1000, height: 44, html: '① 三步链：定定义域 → 求导 → 解 $f\'(x)>0\\ / <0$', font_size: 22 }),
+          el({ type: 'text', left: 70, top: 204, width: 1000, height: 44, html: '② 区间之间用「和」不用「并」　③ 逆命题不成立：$y=x^3$', font_size: 22 }),
+        ],
+      },
+    ],
+    updated_at: '2026-09-05 20:12',
+  },
 ]
 
 /* ==================== 批改（三视图数据） ==================== */
@@ -328,8 +487,8 @@ const steps = (arr: [string, 'ok' | 'ai-flag' | 'corrected'][]) =>
   arr.map(([latex, status]) => ({ latex, status }))
 
 export const V3_GRADING_ASSIGNMENTS = [
-  { id: 'ga-1', title: '《导数与单调性》课后作业', class_id: 'c2-03', class_name: '高二(3)班', submitted: 44, total: 46, graded: 37, updated_at: '2026-09-02' },
-  { id: 'ga-2', title: '《椭圆标准方程》随堂练习', class_id: 'c2-05', class_name: '高二(5)班', submitted: 42, total: 44, graded: 42, updated_at: '2026-09-01' },
+  { id: 'ga-1', title: '《导数与单调性》课后作业', class_id: 'c2-03', class_name: '高二(3)班', submitted: 44, total: 46, graded: 37, updated_at: '2026-09-02', is_sample: true },
+  { id: 'ga-2', title: '《椭圆标准方程》随堂练习', class_id: 'c2-05', class_name: '高二(5)班', submitted: 42, total: 44, graded: 42, updated_at: '2026-09-01', is_sample: true },
 ]
 
 export const V3_GRADING_DATA = {
@@ -340,26 +499,44 @@ export const V3_GRADING_DATA = {
       q_no: 1, stem_latex: 'f(x)=x^{3}-3x^{2}+1 的单调递减区间为\\underline{\\qquad}', full_score: 5, accuracy: 0.78,
       error_dist: [{ tag: '计算错误' as const, count: 5 }, { tag: '概念混淆' as const, count: 2 }],
       clusters: [
-        { id: 'q1c1', kind: 'correct' as const, count: 31, tag: undefined, sample: [{ student: '王雨桐', score: 5, photo_region: { x: 0.1, y: 0.1, w: 0.5, h: 0.3 }, recognized_steps: steps([['f\'(x)=3x^{2}-6x=3x(x-2)', 'ok'], ['0<x<2', 'ok']]) }] },
-        { id: 'q1c2', kind: 'partial' as const, tag: '计算错误' as const, count: 5, sample: [{ student: '陈子豪', score: 3, photo_region: { x: 0.1, y: 0.45, w: 0.5, h: 0.3 }, recognized_steps: steps([['f\'(x)=3x^{2}-6x', 'ok'], ['0<x<-2', 'corrected']]), feedback: '解 3x(x−2)<0 时不等号方向处理出错，建议复习一元二次不等式' }] },
-        { id: 'q1c3', kind: 'blank' as const, count: 3, sample: [{ student: '刘一鸣', score: 0, photo_region: { x: 0.1, y: 0.8, w: 0.5, h: 0.15 }, recognized_steps: [] }] },
+        { id: 'q1c1', kind: 'correct' as const, count: 31, tag: undefined,
+          members: [{ name: '王雨桐', score: 5 }, { name: '林小满', score: 5 }, { name: '周可欣', score: 5 }, { name: '郑好', score: 5 }, { name: '冯天佑', score: 5 }],
+          sample: [{ student: '王雨桐', score: 5, photo_region: { x: 0.1, y: 0.1, w: 0.5, h: 0.3 }, recognized_steps: steps([['f\'(x)=3x^{2}-6x=3x(x-2)', 'ok'], ['0<x<2', 'ok']]) }] },
+        { id: 'q1c2', kind: 'partial' as const, tag: '计算错误' as const, count: 5,
+          members: [{ name: '陈子豪', score: 3 }, { name: '吴宇轩', score: 3 }],
+          sample: [{ student: '陈子豪', score: 3, photo_region: { x: 0.1, y: 0.45, w: 0.5, h: 0.3 }, recognized_steps: steps([['f\'(x)=3x^{2}-6x', 'ok'], ['0<x<-2', 'corrected']]), feedback: '解 3x(x−2)<0 时不等号方向处理出错，建议复习一元二次不等式' }] },
+        { id: 'q1c3', kind: 'blank' as const, count: 3,
+          members: [{ name: '刘一鸣', score: 0 }],
+          sample: [{ student: '刘一鸣', score: 0, photo_region: { x: 0.1, y: 0.8, w: 0.5, h: 0.15 }, recognized_steps: [] }] },
       ],
     },
     {
       q_no: 2, stem_latex: '讨论 a 取值对 f(x)=ax^{3}-3x^{2}+1 单调性的影响', full_score: 8, accuracy: 0.52,
+      standard_answer: "f'(x)=x(3ax-6)。a=0 时 f=-3x²+1 在 R 递减；a>0 时极值点 x=0,2/a，按 0<2/a 即 a<2 与 a≥2 讨论；a<0 时递增区间 (2/a,0)",
+      rubric: [{ point: '求导并提取公因式 x', score: 2 }, { point: 'a=0 单独讨论', score: 2 }, { point: 'a>0 含参分类完整（比较 2/a 与 0,2）', score: 3 }, { point: 'a<0 情形', score: 1 }],
       error_dist: [{ tag: '步骤缺失' as const, count: 9 }, { tag: '方法选择' as const, count: 4 }, { tag: '概念混淆' as const, count: 3 }],
       clusters: [
-        { id: 'q2c1', kind: 'correct' as const, count: 18, sample: [{ student: '林小满', score: 8, photo_region: { x: 0.6, y: 0.1, w: 0.35, h: 0.4 }, recognized_steps: steps([['a=0\\Rightarrow f=-3x^{2}+1', 'ok'], ['a>0 分 0<a<2,a\\ge 2 讨论', 'ok']]) }] },
-        { id: 'q2c2', kind: 'partial' as const, tag: '步骤缺失' as const, count: 9, sample: [{ student: '赵启铭', score: 5, photo_region: { x: 0.6, y: 0.55, w: 0.35, h: 0.4 }, recognized_steps: steps([['f\'(x)=3ax^{2}-6x', 'ok'], ['a>0 时 f\'(x)\\ge 0 恒成立？', 'ai-flag']]), feedback: '漏掉 a>0 时需比较判别式的分支；「步骤缺失」为 AI 预标注，请核对原图确认' }] },
-        { id: 'q2c3', kind: 'wrong' as const, tag: '概念混淆' as const, count: 4, sample: [{ student: '孙浩然', score: 2, photo_region: { x: 0.1, y: 0.55, w: 0.4, h: 0.35 }, recognized_steps: steps([['a<0 时 f 在 R 上递减', 'ai-flag']]), feedback: 'a<0 时 3ax²−6x 的开口向下，但仍有极值点，不能直接判定全程递减' }] },
+        { id: 'q2c1', kind: 'correct' as const, count: 18,
+          members: [{ name: '林小满', score: 8 }, { name: '王雨桐', score: 8 }],
+          sample: [{ student: '林小满', score: 8, photo_region: { x: 0.6, y: 0.1, w: 0.35, h: 0.4 }, recognized_steps: steps([['a=0\\Rightarrow f=-3x^{2}+1', 'ok'], ['a>0 分 0<a<2,a\\ge 2 讨论', 'ok']]) }] },
+        { id: 'q2c2', kind: 'partial' as const, tag: '步骤缺失' as const, count: 9,
+          members: [{ name: '赵启铭', score: 5 }, { name: '陈子豪', score: 5 }, { name: '吴宇轩', score: 5 }],
+          sample: [{ student: '赵启铭', score: 5, photo_region: { x: 0.6, y: 0.55, w: 0.35, h: 0.4 }, recognized_steps: steps([['f\'(x)=3ax^{2}-6x', 'ok'], ['a>0 时 f\'(x)\\ge 0 恒成立？', 'ai-flag']]), feedback: '漏掉 a>0 时需比较判别式的分支；「步骤缺失」为 AI 预标注，请核对原图确认' }] },
+        { id: 'q2c3', kind: 'wrong' as const, tag: '概念混淆' as const, count: 4,
+          members: [{ name: '孙浩然', score: 2 }, { name: '刘一鸣', score: 2 }],
+          sample: [{ student: '孙浩然', score: 2, photo_region: { x: 0.1, y: 0.55, w: 0.4, h: 0.35 }, recognized_steps: steps([['a<0 时 f 在 R 上递减', 'ai-flag']]), feedback: 'a<0 时 3ax²−6x 的开口向下，但仍有极值点，不能直接判定全程递减' }] },
       ],
     },
     {
       q_no: 3, stem_latex: 'f(x)=x\\cdot e^{-x} 的极大值点为\\underline{\\qquad}', full_score: 7, accuracy: 0.86,
       error_dist: [{ tag: '计算错误' as const, count: 4 }],
       clusters: [
-        { id: 'q3c1', kind: 'correct' as const, count: 34, sample: [{ student: '周可欣', score: 7, photo_region: { x: 0.6, y: 0.6, w: 0.35, h: 0.3 }, recognized_steps: steps([["f'(x)=(1-x)e^{-x}", 'ok'], ['x=1', 'ok']]) }] },
-        { id: 'q3c2', kind: 'partial' as const, tag: '计算错误' as const, count: 4, sample: [{ student: '吴宇轩', score: 4, photo_region: { x: 0.1, y: 0.45, w: 0.4, h: 0.3 }, recognized_steps: steps([["f'(x)=e^{-x}-xe^{-x}", 'ok'], ["f'(x)=0 \\Rightarrow x=-1", 'corrected']]) }] },
+        { id: 'q3c1', kind: 'correct' as const, count: 34,
+          members: [{ name: '周可欣', score: 7 }, { name: '林小满', score: 7 }],
+          sample: [{ student: '周可欣', score: 7, photo_region: { x: 0.6, y: 0.6, w: 0.35, h: 0.3 }, recognized_steps: steps([["f'(x)=(1-x)e^{-x}", 'ok'], ['x=1', 'ok']]) }] },
+        { id: 'q3c2', kind: 'partial' as const, tag: '计算错误' as const, count: 4,
+          members: [{ name: '吴宇轩', score: 4 }],
+          sample: [{ student: '吴宇轩', score: 4, photo_region: { x: 0.1, y: 0.45, w: 0.4, h: 0.3 }, recognized_steps: steps([["f'(x)=e^{-x}-xe^{-x}", 'ok'], ["f'(x)=0 \\Rightarrow x=-1", 'corrected']]) }] },
       ],
     },
   ],

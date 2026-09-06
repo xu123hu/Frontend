@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生成中 - 备小研</title>
+    <style id="theme-vars">
+/* ============================================================
+   AI 备课工作台 - 设计令牌 / Design Tokens
+   ============================================================ */
+
+:root {
+  /* ---- Primary Brand ---- */
+  --ailp-primary-50: #eef2ff;
+  --ailp-primary-100: #e0e7ff;
+  --ailp-primary-200: #c7d2fe;
+  --ailp-primary-300: #a5b4fc;
+  --ailp-primary-400: #818cf8;
+  --ailp-primary-500: #6366f1;
+  --ailp-primary-600: #4f46e5;
+  --ailp-primary-700: #4338ca;
+  --ailp-primary-800: #3730a3;
+  --ailp-primary-900: #312e81;
+
+  /* ---- Accent (teal / AI glow) ---- */
+  --ailp-accent-50: #ecfeff;
+  --ailp-accent-100: #cffafe;
+  --ailp-accent-200: #a5f3fc;
+  --ailp-accent-300: #67e8f9;
+  --ailp-accent-400: #22d3ee;
+  --ailp-accent-500: #06b6d4;
+  --ailp-accent-600: #0891b2;
+
+  /* ---- Neutrals ---- */
+  --ailp-gray-50: #f8fafc;
+  --ailp-gray-100: #f1f5f9;
+  --ailp-gray-200: #e2e8f0;
+  --ailp-gray-300: #cbd5e1;
+  --ailp-gray-400: #94a3b8;
+  --ailp-gray-500: #64748b;
+  --ailp-gray-600: #475569;
+  --ailp-gray-700: #334155;
+  --ailp-gray-800: #1e293b;
+  --ailp-gray-900: #0f172a;
+  --ailp-gray-950: #020617;
+
+  /* ---- Success / Warning / Error ---- */
+  --ailp-success-500: #10b981;
+  --ailp-success-600: #059669;
+  --ailp-warning-500: #f59e0b;
+  --ailp-warning-600: #d97706;
+  --ailp-error-500: #ef4444;
+  --ailp-error-600: #dc2626;
+
+  /* ---- Semantic aliases ---- */
+  --ailp-background: #f8fafc;
+  --ailp-foreground: #0f172a;
+  --ailp-card: #ffffff;
+  --ailp-card-foreground: #0f172a;
+  --ailp-popover: #ffffff;
+  --ailp-popover-foreground: #0f172a;
+  --ailp-primary: #4f46e5;
+  --ailp-primary-foreground: #ffffff;
+  --ailp-secondary: #f1f5f9;
+  --ailp-secondary-foreground: #0f172a;
+  --ailp-muted: #f1f5f9;
+  --ailp-muted-foreground: #64748b;
+  --ailp-accent: #06b6d4;
+  --ailp-accent-foreground: #ffffff;
+  --ailp-destructive: #ef4444;
+  --ailp-destructive-foreground: #ffffff;
+  --ailp-border: #e2e8f0;
+  --ailp-input: #e2e8f0;
+  --ailp-ring: #6366f1;
+
+  /* ---- Radius scale ---- */
+  --ailp-radius-sm: 6px;
+  --ailp-radius-md: 10px;
+  --ailp-radius-lg: 14px;
+  --ailp-radius-xl: 20px;
+  --ailp-radius-2xl: 28px;
+  --ailp-radius-full: 9999px;
+
+  /* ---- Shadow scale ---- */
+  --ailp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ailp-shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-xl: 0 20px 40px -10px rgba(15, 23, 42, 0.15);
+  --ailp-shadow-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+
+  /* ---- Typography ---- */
+  --ailp-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --ailp-font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
+    "Liberation Mono", Menlo, monospace;
+  --ailp-font-math: "Cambria Math", "Latin Modern Math", "STIX Two Math",
+    Georgia, serif;
+}
+
+/* ---- Dark mode (editor focus mode) ---- */
+.dark {
+  --ailp-background: #0f172a;
+  --ailp-foreground: #f8fafc;
+  --ailp-card: #1e293b;
+  --ailp-card-foreground: #f8fafc;
+  --ailp-popover: #1e293b;
+  --ailp-popover-foreground: #f8fafc;
+  --ailp-primary: #818cf8;
+  --ailp-primary-foreground: #0f172a;
+  --ailp-secondary: #334155;
+  --ailp-secondary-foreground: #f8fafc;
+  --ailp-muted: #334155;
+  --ailp-muted-foreground: #94a3b8;
+  --ailp-border: #334155;
+  --ailp-input: #334155;
+  --ailp-ring: #6366f1;
+}
+
+/* ---- Base reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--ailp-font-sans);
+  background: var(--ailp-background);
+  color: var(--ailp-foreground);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ailp-gray-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ailp-gray-400);
+}
+
+/* ---- Math formula display ---- */
+.math-display {
+  font-family: var(--ailp-font-math);
+  font-size: 1.1em;
+  line-height: 1.8;
+}
+
+.math-inline {
+  font-family: var(--ailp-font-math);
+  font-style: italic;
+}
+
+/* ---- Utility: AI glow effect ---- */
+.ai-glow {
+  position: relative;
+}
+.ai-glow::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.3),
+    rgba(6, 182, 212, 0.3)
+  );
+  filter: blur(12px);
+  opacity: 0.6;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ---- Gradient text ---- */
+.gradient-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- AI message bubble gradient ---- */
+.ai-bubble-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(6, 182, 212, 0.06) 100%
+  );
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--ailp-background);
+    --color-foreground: var(--ailp-foreground);
+    --color-card: var(--ailp-card);
+    --color-card-foreground: var(--ailp-card-foreground);
+    --color-popover: var(--ailp-popover);
+    --color-popover-foreground: var(--ailp-popover-foreground);
+    --color-primary: var(--ailp-primary);
+    --color-primary-foreground: var(--ailp-primary-foreground);
+    --color-secondary: var(--ailp-secondary);
+    --color-secondary-foreground: var(--ailp-secondary-foreground);
+    --color-muted: var(--ailp-muted);
+    --color-muted-foreground: var(--ailp-muted-foreground);
+    --color-accent: var(--ailp-accent);
+    --color-accent-foreground: var(--ailp-accent-foreground);
+    --color-destructive: var(--ailp-destructive);
+    --color-destructive-foreground: var(--ailp-destructive-foreground);
+    --color-border: var(--ailp-border);
+    --color-input: var(--ailp-input);
+    --color-ring: var(--ailp-ring);
+    --radius-sm: var(--ailp-radius-sm);
+    --radius-md: var(--ailp-radius-md);
+    --radius-lg: var(--ailp-radius-lg);
+    --radius-xl: var(--ailp-radius-xl);
+  }
+  @layer base {
+    body { background: var(--ailp-background); color: var(--ailp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--ailp-background); }
+      .text-background { color: var(--ailp-background); }
+      .border-background { border-color: var(--ailp-background); }
+      .ring-background { --tw-ring-color: var(--ailp-background); }
+      .bg-foreground { background-color: var(--ailp-foreground); }
+      .text-foreground { color: var(--ailp-foreground); }
+      .border-foreground { border-color: var(--ailp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--ailp-foreground); }
+      .bg-card { background-color: var(--ailp-card); }
+      .text-card { color: var(--ailp-card); }
+      .border-card { border-color: var(--ailp-card); }
+      .ring-card { --tw-ring-color: var(--ailp-card); }
+      .bg-card-foreground { background-color: var(--ailp-card-foreground); }
+      .text-card-foreground { color: var(--ailp-card-foreground); }
+      .border-card-foreground { border-color: var(--ailp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--ailp-card-foreground); }
+      .bg-popover { background-color: var(--ailp-popover); }
+      .text-popover { color: var(--ailp-popover); }
+      .border-popover { border-color: var(--ailp-popover); }
+      .ring-popover { --tw-ring-color: var(--ailp-popover); }
+      .bg-popover-foreground { background-color: var(--ailp-popover-foreground); }
+      .text-popover-foreground { color: var(--ailp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--ailp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--ailp-popover-foreground); }
+      .bg-primary { background-color: var(--ailp-primary); }
+      .text-primary { color: var(--ailp-primary); }
+      .border-primary { border-color: var(--ailp-primary); }
+      .ring-primary { --tw-ring-color: var(--ailp-primary); }
+      .bg-primary-foreground { background-color: var(--ailp-primary-foreground); }
+      .text-primary-foreground { color: var(--ailp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--ailp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--ailp-primary-foreground); }
+      .bg-secondary { background-color: var(--ailp-secondary); }
+      .text-secondary { color: var(--ailp-secondary); }
+      .border-secondary { border-color: var(--ailp-secondary); }
+      .ring-secondary { --tw-ring-color: var(--ailp-secondary); }
+      .bg-secondary-foreground { background-color: var(--ailp-secondary-foreground); }
+      .text-secondary-foreground { color: var(--ailp-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--ailp-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--ailp-secondary-foreground); }
+      .bg-muted { background-color: var(--ailp-muted); }
+      .text-muted { color: var(--ailp-muted); }
+      .border-muted { border-color: var(--ailp-muted); }
+      .ring-muted { --tw-ring-color: var(--ailp-muted); }
+      .bg-muted-foreground { background-color: var(--ailp-muted-foreground); }
+      .text-muted-foreground { color: var(--ailp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--ailp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--ailp-muted-foreground); }
+      .bg-accent { background-color: var(--ailp-accent); }
+      .text-accent { color: var(--ailp-accent); }
+      .border-accent { border-color: var(--ailp-accent); }
+      .ring-accent { --tw-ring-color: var(--ailp-accent); }
+      .bg-accent-foreground { background-color: var(--ailp-accent-foreground); }
+      .text-accent-foreground { color: var(--ailp-accent-foreground); }
+      .border-accent-foreground { border-color: var(--ailp-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--ailp-accent-foreground); }
+      .bg-destructive { background-color: var(--ailp-destructive); }
+      .text-destructive { color: var(--ailp-destructive); }
+      .border-destructive { border-color: var(--ailp-destructive); }
+      .ring-destructive { --tw-ring-color: var(--ailp-destructive); }
+      .bg-destructive-foreground { background-color: var(--ailp-destructive-foreground); }
+      .text-destructive-foreground { color: var(--ailp-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--ailp-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--ailp-destructive-foreground); }
+      .bg-border { background-color: var(--ailp-border); }
+      .text-border { color: var(--ailp-border); }
+      .border-border { border-color: var(--ailp-border); }
+      .ring-border { --tw-ring-color: var(--ailp-border); }
+      .bg-input { background-color: var(--ailp-input); }
+      .text-input { color: var(--ailp-input); }
+      .border-input { border-color: var(--ailp-input); }
+      .ring-input { --tw-ring-color: var(--ailp-input); }
+      .bg-ring { background-color: var(--ailp-ring); }
+      .text-ring { color: var(--ailp-ring); }
+      .border-ring { border-color: var(--ailp-ring); }
+      .ring-ring { --tw-ring-color: var(--ailp-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <style>
+      /* AI Glow animations */
+      @keyframes ai-glow-pulse {
+        0%, 100% { opacity: 0.5; transform: scale(1); }
+        50% { opacity: 0.8; transform: scale(1.05); }
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-6px); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+      }
+      @keyframes fade-in-up {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-float { animation: float 4s ease-in-out infinite; }
+      .animate-glow-pulse { animation: ai-glow-pulse 3s ease-in-out infinite; }
+      .animate-fade-in-up { animation: fade-in-up 0.8s ease-out both; }
+      .delay-100 { animation-delay: 0.1s; }
+      .delay-200 { animation-delay: 0.2s; }
+      .delay-300 { animation-delay: 0.3s; }
+      .delay-400 { animation-delay: 0.4s; }
+      .delay-500 { animation-delay: 0.5s; }
+
+      /* Input glow border effect */
+      .input-glow-wrapper {
+        position: relative;
+        border-radius: var(--ailp-radius-2xl);
+        padding: 2px;
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.4), rgba(6, 182, 212, 0.4), rgba(79, 70, 229, 0.4));
+        background-size: 200% 200%;
+        animation: shimmer 4s linear infinite;
+      }
+      .input-glow-wrapper::before {
+        content: "";
+        position: absolute;
+        inset: -6px;
+        border-radius: calc(var(--ailp-radius-2xl) + 6px);
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(6, 182, 212, 0.15));
+        filter: blur(16px);
+        z-index: -1;
+        animation: ai-glow-pulse 3s ease-in-out infinite;
+      }
+
+      /* Floating AI button */
+      .floating-ai-btn {
+        position: relative;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%);
+        box-shadow: 0 8px 32px rgba(79, 70, 229, 0.4), 0 0 60px rgba(6, 182, 212, 0.2);
+      }
+      .floating-ai-btn::before {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(6, 182, 212, 0.5));
+        filter: blur(12px);
+        z-index: -1;
+        animation: ai-glow-pulse 2.5s ease-in-out infinite;
+      }
+
+      /* Tooltip */
+      .tooltip-bubble {
+        position: absolute;
+        right: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-right: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      .tooltip-bubble::after {
+        content: "";
+        position: absolute;
+        left: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 6px solid transparent;
+        border-left-color: #1e293b;
+      }
+      .floating-ai-btn:hover .tooltip-bubble {
+        opacity: 1;
+      }
+
+      /* Card hover effects */
+      .quick-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .quick-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.15), 0 10px 20px -5px rgba(6, 182, 212, 0.1);
+      }
+
+      /* Background decorative blobs */
+      .bg-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.4;
+        pointer-events: none;
+      }
+    </style>
+    <style id="critical-layout">
+      /* 关键布局兜底：不依赖 Tailwind 运行时编译的首屏骨架 */
+      .pg-shell { position: relative; min-height: 100vh; overflow: hidden; background: var(--ailp-background); color: var(--ailp-foreground); }
+      .pg-topbar { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--ailp-border); background: color-mix(in srgb, var(--ailp-card) 80%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+      .pg-topbar-inner { max-width: 64rem; margin: 0 auto; padding-left: 1.5rem; padding-right: 1.5rem; height: 3.5rem; display: flex; align-items: center; gap: 1rem; }
+      .pg-main { position: relative; z-index: 10; max-width: 64rem; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+      .pg-card { border-radius: 16px; border: 1px solid var(--ailp-border); background: color-mix(in srgb, var(--ailp-card) 80%, transparent); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+      .pg-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: start; }
+      .pg-slide { min-height: 280px; }
+      @media (min-width: 1024px) {
+        .pg-grid { grid-template-columns: 280px 1fr; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .animate-fade-in-up, .animate-float, .animate-glow-pulse { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+        .animate-pulse, .animate-spin { animation: none !important; }
+      }
+    </style>
+    <main>
+      <div class="pg-shell relative min-h-screen overflow-hidden bg-[var(--ailp-background)]">
+        <!-- 背景装饰光斑 -->
+        <div class="bg-blob w-[500px] h-[500px] bg-[var(--ailp-primary-200)] top-[-150px] left-[-100px]"></div>
+        <div class="bg-blob w-[400px] h-[400px] bg-[var(--ailp-accent-200)] top-[200px] right-[-100px] opacity-30"></div>
+
+        <!-- 顶栏 -->
+        <header class="pg-topbar sticky top-0 z-20 border-b border-[var(--ailp-border)] bg-white/80 backdrop-blur">
+          <div class="pg-topbar-inner max-w-5xl mx-auto px-6 h-14 flex items-center gap-4">
+            <h1 class="text-[15px] font-semibold text-[var(--ailp-foreground)] whitespace-nowrap">正在生成课件</h1>
+            <span class="text-sm text-[var(--ailp-muted-foreground)] truncate">《双曲线及其标准方程》第 1 课时 · 学术蓝·严谨推导</span>
+            <span class="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap" style="background: rgba(245, 158, 11, 0.1); color: var(--ailp-warning-600);">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+              生成结果可逐页编辑
+            </span>
+          </div>
+        </header>
+
+        <!-- 主体 -->
+        <div class="pg-main max-w-5xl mx-auto px-6 pt-8 pb-20">
+          <!-- 进度头部 -->
+          <section class="mb-6 animate-fade-in-up">
+            <div class="pg-card rounded-2xl border border-[var(--ailp-border)] bg-white/80 backdrop-blur-sm p-5">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-baseline gap-2">
+                  <span class="text-2xl font-bold text-[var(--ailp-foreground)]">3</span>
+                  <span class="text-base text-[var(--ailp-muted-foreground)]">/ 6 页</span>
+                </div>
+                <span class="flex items-center gap-1.5 text-sm text-[var(--ailp-muted-foreground)]">
+                  <i data-lucide="timer" class="w-4 h-4"></i>
+                  预计剩余 25 秒
+                </span>
+              </div>
+              <div class="h-2 rounded-full overflow-hidden" style="background: var(--ailp-muted);">
+                <div class="h-full rounded-full" style="width: 50%; background: linear-gradient(90deg, #4f46e5, #06b6d4);"></div>
+              </div>
+              <div class="mt-3 flex items-center justify-between gap-2">
+                <span class="text-xs text-[var(--ailp-muted-foreground)] truncate">正在生成「概念定义」页…</span>
+                <div class="flex items-center gap-2 shrink-0">
+                  <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--ailp-border)] bg-white text-[var(--ailp-foreground)] hover:bg-[var(--ailp-muted)] transition-colors">
+                    <i data-lucide="picture-in-picture" class="w-3.5 h-3.5"></i>
+                    后台生成
+                  </button>
+                  <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--ailp-error-600)] hover:bg-[var(--ailp-error-500)]/5 transition-colors">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    取消
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 内容网格 -->
+          <div class="pg-grid grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start">
+            <!-- 左侧生成队列 -->
+            <aside class="pg-card rounded-2xl border border-[var(--ailp-border)] bg-white/80 backdrop-blur-sm p-3 animate-fade-in-up delay-100">
+              <div class="px-2 py-1.5 text-xs font-semibold text-[var(--ailp-muted-foreground)] mb-1">生成队列</div>
+              <div class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm hover:bg-[var(--ailp-muted)]/60 transition-colors">
+                <i data-lucide="circle-check-big" class="w-4 h-4 shrink-0" style="color: var(--ailp-success-600);"></i>
+                <span class="truncate text-[var(--ailp-foreground)]">双曲线及其标准方程</span>
+                <span class="ml-auto shrink-0 text-xs text-[var(--ailp-muted-foreground)]">3 秒</span>
+              </div>
+              <div class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm hover:bg-[var(--ailp-muted)]/60 transition-colors">
+                <i data-lucide="circle-check-big" class="w-4 h-4 shrink-0" style="color: var(--ailp-success-600);"></i>
+                <span class="truncate text-[var(--ailp-foreground)]">情境引入：生活中的双曲线</span>
+                <span class="ml-auto shrink-0 text-xs text-[var(--ailp-muted-foreground)]">4 秒</span>
+              </div>
+              <div class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm hover:bg-[var(--ailp-muted)]/60 transition-colors">
+                <i data-lucide="circle-check-big" class="w-4 h-4 shrink-0" style="color: var(--ailp-success-600);"></i>
+                <span class="truncate text-[var(--ailp-foreground)]">概念定义（第 1 部分）</span>
+                <span class="ml-auto shrink-0 text-xs text-[var(--ailp-muted-foreground)]">5 秒</span>
+              </div>
+              <div class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm" style="background: var(--ailp-primary-50); border: 1px solid rgba(79, 70, 229, 0.3);">
+                <i data-lucide="loader-2" class="w-4 h-4 shrink-0 animate-spin" style="color: var(--ailp-primary);"></i>
+                <span class="truncate font-medium" style="color: var(--ailp-primary);">例题精讲：求标准方程</span>
+                <span class="ml-auto shrink-0 text-xs" style="color: var(--ailp-primary);">生成中</span>
+              </div>
+              <div class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm hover:bg-[var(--ailp-muted)]/60 transition-colors">
+                <i data-lucide="circle" class="w-4 h-4 shrink-0 text-[var(--ailp-gray-300)]"></i>
+                <span class="truncate text-[var(--ailp-muted-foreground)]">变式训练：分层练习</span>
+                <span class="ml-auto shrink-0 text-xs text-[var(--ailp-muted-foreground)]">排队</span>
+              </div>
+              <div class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm hover:bg-[var(--ailp-muted)]/60 transition-colors">
+                <i data-lucide="circle" class="w-4 h-4 shrink-0 text-[var(--ailp-gray-300)]"></i>
+                <span class="truncate text-[var(--ailp-muted-foreground)]">课堂小结与方法提炼</span>
+                <span class="ml-auto shrink-0 text-xs text-[var(--ailp-muted-foreground)]">排队</span>
+              </div>
+            </aside>
+
+            <!-- 右侧当前页预览 -->
+            <section class="animate-fade-in-up delay-200">
+              <div class="pg-card rounded-2xl border border-[var(--ailp-border)] bg-white/80 backdrop-blur-sm p-5">
+                <div class="flex items-center justify-between gap-2 mb-4">
+                  <h2 class="text-sm font-semibold text-[var(--ailp-foreground)]">当前页面预览</h2>
+                  <span class="text-xs text-[var(--ailp-muted-foreground)]">例题精讲 · 第 4 / 6 页</span>
+                </div>
+                <div class="pg-slide aspect-video rounded-xl border border-[var(--ailp-border)] bg-white overflow-hidden relative p-6">
+                  <span class="inline-flex w-fit px-2 py-0.5 rounded-md text-xs font-medium" style="background: var(--ailp-primary-50); color: var(--ailp-primary-600);">例题</span>
+                  <div class="h-5 w-1/2 rounded-md mt-3 animate-pulse" style="background: var(--ailp-muted);"></div>
+                  <div class="h-3 w-3/4 rounded-md mt-3 animate-pulse" style="background: var(--ailp-muted);"></div>
+                  <div class="h-3 w-2/3 rounded-md mt-2 animate-pulse" style="background: var(--ailp-muted);"></div>
+                  <div class="mt-4 h-24 rounded-lg flex items-center justify-center" style="background: color-mix(in srgb, var(--ailp-muted) 50%, transparent);">
+                    <svg width="120" height="80" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M 30 8 C 8 26, 8 54, 30 72" stroke="var(--ailp-primary-400)" stroke-width="2" stroke-linecap="round"></path>
+                      <path d="M 90 8 C 112 26, 112 54, 90 72" stroke="var(--ailp-primary-400)" stroke-width="2" stroke-linecap="round"></path>
+                      <circle cx="46" cy="40" r="3" fill="var(--ailp-accent-500)"></circle>
+                      <circle cx="74" cy="40" r="3" fill="var(--ailp-accent-500)"></circle>
+                    </svg>
+                  </div>
+                  <div class="absolute inset-0 animate-pulse pointer-events-none" style="background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.06), transparent);"></div>
+                </div>
+                <div class="mt-4 flex items-center justify-between gap-2">
+                  <span class="text-xs text-[var(--ailp-muted-foreground)] truncate">生成完成后自动进入编辑器，全部元素可编辑</span>
+                  <button type="button" class="shrink-0 text-xs font-medium hover:underline" style="color: var(--ailp-primary);">查看已完成的 3 页</button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+    <!-- Floating AI Assistant Button -->
+    <div class="fixed bottom-8 right-8 z-50">
+      <button class="floating-ai-btn w-14 h-14 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform animate-float">
+        <i data-lucide="bot" class="w-6 h-6"></i>
+        <!-- Tooltip -->
+        <div class="tooltip-bubble">
+          <span class="px-3 py-1.5 bg-[#1e293b] text-white text-xs rounded-lg shadow-lg">AI 助手</span>
+        </div>
+      </button>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

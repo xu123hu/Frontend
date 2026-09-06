@@ -218,11 +218,23 @@ export const v3Api = {
         '/teacher-v3/recognition/plan-photo-draft',
         body,
       ),
+
+    /** 备小研改版（IFC-WS-a）：识别确认步的预览——fixture 演示识别，可编辑文本供教师提前校对；正式识别仍以生成链路为准 */
+    preview: (body: { photos: string[] }) =>
+      teacherPost<{ items: { photo_id: string; confidence: number; warn?: boolean; text: string; kps: string[] }[]; note: string }>(
+        '/teacher-v3/recognition/preview',
+        body,
+      ),
   },
 
   /* ==================== generation AI 生成域（SSE） ==================== */
   generation: {
     /** 主题生成课件：meta → outline → slide(逐页草稿) → done */
+    /* B3 大纲 Gate 第一段（mock 增量端点；正式契约随 IFC-PRODUCT-01a 评审）
+       C1：+chapter（内容源锚定）/ course_type（环节语义大纲结构），随 IFC-C1-a 评审
+       C1.1：+requirements（教师自然语言要求，server 词表编译进大纲并返回 reqs 回应台账） */
+    deckOutline: (body: { topic: string; class_id?: string; chapter?: string; course_type?: string; requirements?: string[] }) =>
+      teacherPost('/teacher-v3/generation/deck-outline', body),
     deck: (body: { topic: string; class_id: string; template_id: string }, onEvent: (event: string, data: any) => void, signal?: AbortSignal) =>
       v3Sse('POST', '/teacher-v3/generation/deck', body, onEvent, signal),
     /**
@@ -264,6 +276,12 @@ export const v3Api = {
 
   /* ==================== grading 批改域 ==================== */
   grading: {
+    /* B4 发布作业为实例（mock 增量端点；正式契约随 IFC-PRODUCT-03 评审） */
+    publish: (body: { title: string; class_id: string; deadline?: string; answer_policy?: string; allow_photo?: boolean; questions: { stem_latex: string; answer?: string; analysis?: string; full_score?: number; kp_name?: string }[] }) =>
+      teacherPost<{ ok: true; assignment_id: string; demo: boolean; note: string }>('/teacher-v3/assignments/publish', body),
+    /* B4 模拟学生提交（确定性演示数据，明确标注） */
+    simulateSubmissions: (id: string) =>
+      teacherPost<{ ok: true; demo: boolean }>(`/teacher-v3/grading/assignments/${id}/simulate-submissions`, {}),
     assignments: () => teacherGet<{ items: { id: string; title: string; class_id: string; class_name: string; submitted: number; total: number; graded: number; updated_at: string }[] }>('/teacher-v3/grading/assignments'),
     assignment: (id: string, signal?: AbortSignal) => teacherGet<V3GradingAssignment>(`/teacher-v3/grading/assignments/${id}`, undefined, signal),
     /** 聚类反馈批量确认（AI 起草 → 教师审定） */
