@@ -36,13 +36,27 @@ export class StreamAbortedError extends Error {
 export async function streamSse(url: string, opts: StreamOptions): Promise<void> {
   const { body, signal, headers, onEvent, onFirstEvent, firstEventTimeoutMs = 8000 } = opts;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "text/event-stream", ...headers },
-    body: JSON.stringify(body ?? {}),
-    signal,
-  });
+  // 内部 controller 统一承载中止源：外部 signal 转发 + 首包看门狗，二者都能打断 fetch/reader
+  const internal = new AbortController();
+  const onOuterAbort = () => internal.abort(new StreamAbortedError());
+  signal?.addEventListener("abort", onOuterAbort, { once: true });
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "text/event-stream", ...headers },
+      body: JSON.stringify(body ?? {}),
+      signal: internal.signal,
+    });
+  } catch (err) {
+    signal?.removeEventListener("abort", onOuterAbort);
+    if (signal?.aborted) throw new StreamAbortedError();
+    if (internal.signal.reason instanceof FirstTokenTimeoutError) throw internal.signal.reason;
+    throw err;
+  }
   if (!res.ok || !res.body) {
+    signal?.removeEventListener("abort", onOuterAbort);
     let code = "";
     try {
       code = ((await res.json()) as { code?: string }).code ?? "";
@@ -52,14 +66,11 @@ export async function streamSse(url: string, opts: StreamOptions): Promise<void>
     throw new Error(`后端连接失败（HTTP ${res.status}${code ? ` ${code}` : ""}）`);
   }
 
-  // 首 token 看门狗
+  // 首 token 看门狗（abort internal.signal → fetch/reader 立刻失败）
   let gotFirst = false;
-  const controller = new AbortController();
   const watchdog = setTimeout(() => {
-    if (!gotFirst) controller.abort(new FirstTokenTimeoutError());
+    if (!gotFirst) internal.abort(new FirstTokenTimeoutError());
   }, firstEventTimeoutMs);
-  const onOuterAbort = () => controller.abort(new StreamAbortedError());
-  signal?.addEventListener("abort", onOuterAbort, { once: true });
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -104,8 +115,8 @@ export async function streamSse(url: string, opts: StreamOptions): Promise<void>
       if (signal.reason instanceof FirstTokenTimeoutError) throw signal.reason;
       throw new StreamAbortedError();
     }
-    if (controller.signal.aborted && controller.signal.reason instanceof FirstTokenTimeoutError) {
-      throw controller.signal.reason;
+    if (internal.signal.aborted && internal.signal.reason instanceof FirstTokenTimeoutError) {
+      throw internal.signal.reason;
     }
     throw err;
   } finally {
