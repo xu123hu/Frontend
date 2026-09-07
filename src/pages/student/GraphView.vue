@@ -33,18 +33,25 @@
         <div v-else-if="treeError" style="padding:24px;color:var(--err-deep);font-size:13px;">{{ treeError }}</div>
         <div v-else-if="!chapters.length" style="padding:24px;color:var(--ink3);font-size:13px;">暂无知识点数据，完成首次练习后将生成你的学习版图。</div>
         <template v-else>
-          <div v-for="ch in chapters" :key="ch.chap" class="tree-section">
-            <div class="head" :title="ch.chap"><span class="title">{{ ch.title }}</span><span class="count">{{ ch.count_text }}</span></div>
-            <div class="tree-nodes">
-              <div
-                v-for="n in ch.nodes" :key="n.kp_code"
-                class="tree-node"
-                :class="[n.state, { selected: selected?.kp_code === n.kp_code }]"
-                :title="n.kp_code"
+          <div v-for="ch in chapters" :key="ch.chap" class="ch-card" :class="{ folded: !isChapterOpen(ch) }">
+            <div class="ch-head" @click="toggleChapter(ch)">
+              <span class="ch-arrow">{{ isChapterOpen(ch) ? '▾' : '▸' }}</span>
+              <span class="ch-name">{{ ch.title }}</span>
+              <span v-if="chapterStarted(ch).length" class="ch-progress">
+                <span class="ch-bar"><span class="ch-bar-fill" :style="{ width: chapterPct(ch) + '%' }"></span></span>
+                <span class="ch-num">{{ chapterStarted(ch).length }}/{{ ch.nodes.length }}</span>
+              </span>
+              <span v-else class="ch-unlearned">未学 {{ ch.nodes.length }} 个考点</span>
+            </div>
+            <div v-if="isChapterOpen(ch)" class="ch-chips">
+              <button
+                v-for="n in chapterSorted(ch)" :key="n.kp_code"
+                class="ch-chip" :class="[n.state, { selected: selected?.kp_code === n.kp_code }]"
+                :title="n.kp_name || n.kp_code"
                 @click="selectNode(n, ch)"
               >
-                <div class="row"><span class="shape" :class="n.shape"></span><span class="name">{{ n.name }}</span><span class="num">{{ masteryText(n.mastery) }}</span></div>
-              </div>
+                <span class="chip-dot"></span>{{ n.name }}<span v-if="n.mastery != null" class="chip-pct">{{ Math.round(n.mastery * 100) }}%</span>
+              </button>
             </div>
           </div>
         </template>
@@ -90,7 +97,7 @@
               <circle cx="100" cy="100" r="50" fill="#ffffff"/>
               <text x="100" y="95" font-size="36" font-weight="900" fill="#0f172a" text-anchor="middle" font-family="Inter">{{ masteredPct }}%</text>
               <text x="100" y="115" font-size="11" fill="#94a3b8" text-anchor="middle" font-weight="700">{{ pie.center_text }} · {{ pie.mastered.count }}/{{ pie.total }}</text>
-              <text x="100" y="135" font-size="10" fill="#dc2626" text-anchor="middle" font-weight="700">距 80% 还差 {{ gapTo80 }} 节点</text>
+              <text x="100" y="135" font-size="10" fill="#6366f1" text-anchor="middle" font-weight="700">{{ pie.mastered.count + pie.consolidating.count + pie.critical.count }} / {{ pie.total }} 已启动</text>
             </svg>
             <div style="font-size:12px;color:var(--ink2);line-height:1.6;padding:10px;background:var(--bg2);border-radius:8px;margin-top:8px;">
               <template v-if="etaReady">
@@ -197,6 +204,32 @@ const masteredArc = computed(() => {
 
 /* ===== 章节树：GET /api/student/knowledge-graph/tree ===== */
 const chapters = ref([])
+
+// ===== S8（V2 文档）：章节卡片化——未学章节默认折叠，薄弱考点排前 =====
+const openChapters = ref(new Set())
+const initialised = ref(false)
+function chapterStarted(ch) {
+  return (ch.nodes || []).filter((n) => n.state && n.state !== 'unlearned')
+}
+function chapterPct(ch) {
+  const started = chapterStarted(ch)
+  if (!ch.nodes?.length) return 0
+  return Math.round((started.length / ch.nodes.length) * 100)
+}
+function chapterSorted(ch) {
+  const rank = { weak: 0, improving: 1, mastered: 2, unlearned: 3 }
+  return [...(ch.nodes || [])].sort((x, y) => (rank[x.state] ?? 9) - (rank[y.state] ?? 9))
+}
+function isChapterOpen(ch) {
+  if (!initialised.value) return chapterStarted(ch).length > 0
+  return openChapters.value.has(ch.chap)
+}
+function toggleChapter(ch) {
+  const s = new Set(openChapters.value)
+  if (s.has(ch.chap)) s.delete(ch.chap)
+  else s.add(ch.chap)
+  openChapters.value = s
+}
 const treeLoading = ref(true)
 const treeError = ref('')
 
@@ -251,6 +284,9 @@ async function loadTree() {
   try {
     const data = await api.get('/student/knowledge-graph/tree')
     chapters.value = data?.chapters || []
+    // S8：默认展开"有启动考点"的章节，全未学的折叠
+    openChapters.value = new Set(chapters.value.filter((c) => chapterStarted(c).length).map((c) => c.chap))
+  initialised.value = true
     autoSelect()
   } catch (e) {
     treeError.value = e instanceof ApiError ? `知识图谱加载失败：${e.message}` : '知识图谱加载失败'
@@ -365,4 +401,31 @@ onMounted(() => {
 .galaxy-node.selected circle { stroke: var(--brand, #3b7bff); stroke-width: 2.5; }
 .galaxy-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--ink2); }
 .galaxy-legend .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+
+/* ===== S8 章节卡片 ===== */
+.ch-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+.ch-card.folded { opacity: .82; }
+.ch-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; }
+.ch-head:hover { background: var(--bg2); }
+.ch-arrow { color: var(--ink3); font-size: 12px; width: 14px; }
+.ch-name { font-size: 13.5px; font-weight: 800; color: var(--ink); flex: 0 1 auto; }
+.ch-progress { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.ch-bar { width: 90px; height: 6px; border-radius: 99px; background: var(--skeleton-bg, #eef1f8); overflow: hidden; display: inline-block; }
+.ch-bar-fill { display: block; height: 100%; background: var(--gradient-brand); border-radius: 99px; }
+.ch-num { font-size: 11.5px; color: var(--ink3); font-weight: 700; }
+.ch-unlearned { margin-left: auto; font-size: 11.5px; color: var(--ink3); }
+.ch-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 14px 14px; }
+.ch-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--card);
+  font: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer;
+}
+.ch-chip:hover { border-color: var(--primary-border); box-shadow: var(--shadow-sm); }
+.ch-chip.selected { border-color: var(--primary); background: var(--primary-subtle); }
+.ch-chip .chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink4); }
+.ch-chip.weak .chip-dot { background: var(--err); }
+.ch-chip.improving .chip-dot { background: var(--warn); }
+.ch-chip.mastered .chip-dot { background: var(--ok); }
+.ch-chip.unlearned { opacity: .62; }
+.ch-chip .chip-pct { font-size: 10.5px; color: var(--ink3); font-weight: 700; }
 </style>
