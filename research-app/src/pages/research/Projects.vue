@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 项目列表（黄金链路一 TC-F01-05）。
  * 数据：GET /projects（M4 v2.0，当前租户隔离）。
@@ -30,6 +30,21 @@ const STAGE_LABELS: Record<string, string> = {
   review: '评审期',
   published: '已发表',
 };
+const STAGE_ORDER = ['discovery', 'verification', 'writing', 'review', 'published'];
+const STAGE_COLORS: Record<string, string> = {
+  discovery: '#6366f1',
+  verification: '#0ea5e9',
+  writing: '#8b5cf6',
+  review: '#f59e0b',
+  published: '#10b981',
+};
+function stageProgress(stage: string): number {
+  const idx = STAGE_ORDER.indexOf(stage);
+  return idx >= 0 ? ((idx + 1) / STAGE_ORDER.length) * 100 : 0;
+}
+function stageColor(stage: string): string {
+  return STAGE_COLORS[stage] ?? '#64748b';
+}
 function formatDate(iso: string): string {
   try {
     return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(iso));
@@ -115,13 +130,46 @@ function onCreated(projectId: string): void {
           @keydown.enter.prevent="enterProject(project.id, project.title)"
           @keydown.space.prevent="enterProject(project.id, project.title)"
         >
-          <span class="card-top">
-            <span class="project-title">{{ project.title }}</span>
-            <AppChip tone="primary" size="sm">
+          <span
+            class="card-cover"
+            :style="{ background: `linear-gradient(135deg, ${stageColor(project.stage)}22, ${stageColor(project.stage)}08)` }"
+          >
+            <span
+              class="cover-dot"
+              :style="{ background: stageColor(project.stage) }"
+            />
+            <AppChip
+              size="sm"
+              :style="{ color: stageColor(project.stage), borderColor: stageColor(project.stage) }"
+            >
               {{ STAGE_LABELS[project.stage] ?? project.stage }}
             </AppChip>
           </span>
+          <span class="card-top">
+            <span class="project-title">{{ project.title }}</span>
+          </span>
           <span class="project-rq">{{ project.research_question }}</span>
+          <span class="stage-progress">
+            <span class="progress-track">
+              <span
+                class="progress-fill"
+                :style="{ width: stageProgress(project.stage) + '%', background: stageColor(project.stage) }"
+              />
+            </span>
+            <span class="progress-stages">
+              <span
+                v-for="s in STAGE_ORDER"
+                :key="s"
+                class="stage-dot"
+                :style="{ background: STAGE_ORDER.indexOf(s) <= STAGE_ORDER.indexOf(project.stage) ? stageColor(project.stage) : '#e2e8f0' }"
+              />
+            </span>
+          </span>
+          <span class="key-numbers">
+            <span class="kn-item"><span class="kn-num">-</span><span class="kn-label">文献</span></span>
+            <span class="kn-item"><span class="kn-num">-</span><span class="kn-label">主张</span></span>
+            <span class="kn-item"><span class="kn-num">-</span><span class="kn-label">已验证</span></span>
+          </span>
           <span class="card-bottom">
             <span class="muted small">{{ project.domain }} · {{ project.visibility === 'private' ? '私有' : '团队' }}</span>
             <span class="muted small">更新于 {{ formatDate(project.updated_at) }}</span>
@@ -220,4 +268,16 @@ function onCreated(projectId: string): void {
 .small {
   font-size: var(--font-size-xs);
 }
+
+.card-cover { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; }
+.cover-dot { width: 8px; height: 8px; border-radius: 50%; }
+.stage-progress { margin: 10px 0; }
+.progress-track { display: block; height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+.progress-fill { display: block; height: 100%; border-radius: 2px; transition: width 0.3s; }
+.progress-stages { display: flex; justify-content: space-between; }
+.stage-dot { width: 6px; height: 6px; border-radius: 50%; }
+.key-numbers { display: flex; gap: 16px; margin: 10px 0; padding: 8px 0; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+.kn-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.kn-num { font-size: 16px; font-weight: 700; color: #0f172a; }
+.kn-label { font-size: 11px; color: #64748b; }
 </style>
