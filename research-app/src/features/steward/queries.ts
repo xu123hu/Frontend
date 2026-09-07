@@ -7,7 +7,8 @@
 import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 import { useQuery, useMutation, useQueryClient, type UseQueryReturnType } from '@tanstack/vue-query';
 import { ApiError } from '@app/api/client';
-import { decideApproval, fetchApprovals, fetchCycleResult, fetchStewardPlan, fetchStewardPlans, startResearchCycle } from './api';
+import { decideApproval, fetchApprovals, fetchCycleResult, fetchStewardPlan, fetchStewardPlans, sendStewardChat, startResearchCycle } from './api';
+import type { StewardChatMessage, StewardChatResponse } from './api';
 import type { ApprovalView, ResearchCycleResult, StewardPlan } from '@entities/steward/types';
 
 export const stewardKeys = {
@@ -91,5 +92,11 @@ export function useStartResearchCycle() {
       queryClient.invalidateQueries({ queryKey: stewardKeys.approvals() });
       queryClient.invalidateQueries({ queryKey: ['runs'] });
     },
+  });
+}
+
+export function useStewardChat() {
+  return useMutation<StewardChatResponse, Error, { messages: StewardChatMessage[]; reasoningPolicyId?: StewardChatResponse['reasoning_policy_id'] }>({
+    mutationFn: ({ messages, reasoningPolicyId }) => sendStewardChat(messages, reasoningPolicyId ?? 'standard'),
   });
 }

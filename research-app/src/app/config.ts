@@ -7,19 +7,51 @@
 export interface AppConfig {
   apiBaseUrl: string;
   useMock: boolean;
+  runtimeMode: 'demo' | 'hybrid' | 'live';
   appName: string;
+  /**
+   * 统一身份（OIDC）。integration/live 部署设置 VITE_OIDC_ISSUER +
+   * VITE_OIDC_CLIENT_ID 后启用授权码 + PKCE 登录；纯演示（MSW）模式保持
+   * 手机号演示会话，两者互斥，由 oidcEnabled 单一开关决定。
+   */
+  oidcIssuer: string | null;
+  oidcClientId: string | null;
+  oidcEnabled: boolean;
 }
 
-function readEnv(): AppConfig {
-  const env = import.meta.env as Record<string, string | boolean | undefined>;
+export function resolveAppConfig(
+  env: Record<string, string | boolean | undefined>,
+  isDev: boolean,
+): AppConfig {
+  const modeValue = env.VITE_RUNTIME_MODE;
+  const runtimeMode = modeValue === 'demo' || modeValue === 'hybrid' || modeValue === 'live'
+    ? modeValue
+    : isDev
+      ? 'hybrid'
+      : 'live';
+  const useMock =
+    typeof env.VITE_USE_MOCK === 'string'
+      ? env.VITE_USE_MOCK === 'true'
+      : env.VITE_USE_MOCK === true || (isDev && runtimeMode !== 'live');
+  if (!isDev && useMock) {
+    throw new Error('生产模式禁止启用 mock 数据');
+  }
+  const rawIssuer = typeof env.VITE_OIDC_ISSUER === 'string' ? env.VITE_OIDC_ISSUER.trim() : '';
+  const rawClientId = typeof env.VITE_OIDC_CLIENT_ID === 'string' ? env.VITE_OIDC_CLIENT_ID.trim() : '';
+  const oidcIssuer = rawIssuer ? rawIssuer.replace(/\/+$/, '') : null;
+  const oidcClientId = rawClientId || null;
   return {
     apiBaseUrl: typeof env.VITE_API_BASE_URL === 'string' ? env.VITE_API_BASE_URL : '/api/research/v1',
-    // 与 vite.config 的 __USE_MOCK__ 判定保持同构：dev 未显式声明时默认开 mock，
-    // 保证 .env.* 被 gitignore 的新 clone 环境里徽标与实际数据源一致（08 §6 可观察降级）。
-    useMock:
-      typeof env.VITE_USE_MOCK === 'string' ? env.VITE_USE_MOCK === 'true' : env.VITE_USE_MOCK === true || import.meta.env.DEV === true,
+    useMock,
+    runtimeMode,
     appName: '智学数研 · 科研端',
+    oidcIssuer,
+    oidcClientId,
+    oidcEnabled: oidcIssuer !== null && oidcClientId !== null,
   };
 }
 
-export const config: AppConfig = readEnv();
+export const config: AppConfig = resolveAppConfig(
+  import.meta.env as Record<string, string | boolean | undefined>,
+  import.meta.env.DEV === true,
+);

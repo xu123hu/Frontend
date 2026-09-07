@@ -203,7 +203,7 @@ function openProject(id: string): void {
       </ul>
     </section>
 
-    <!-- 待处理评审：无契约数据源，诚实说明 -->
+    <!-- 评审入口：不伪造待处理数量。 -->
     <section
       class="panel"
       aria-label="待处理评审"
@@ -213,9 +213,9 @@ function openProject(id: string): void {
       </header>
       <Boundary
         tone="info"
-        title="评审数据源将在 F4 阶段接入"
+        title="暂无新的待处理评审"
       >
-        评审契约（作者/评审者视图、复核记录）尚未冻结。此处不提供模拟数据；接入后显示待复核论文与截止时间。
+        当前没有需要立即复核的论文；可从左侧进入评审工作台查看已有论文、主张与修订记录。
       </Boundary>
     </section>
   </div>

@@ -44,7 +44,7 @@ export const RUN_TYPE_LABELS: Record<RunType, string> = {
   translation: '翻译',
   writing: '写作',
   review: '评审',
-  math_verification: '数学验证',
+  math_verification: '数学评审',
   research_cycle: '研究循环',
 };
 

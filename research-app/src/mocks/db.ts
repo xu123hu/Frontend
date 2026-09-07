@@ -137,8 +137,8 @@ export function seedDb(): void {
     seedProject(
       'proj-alpha-2',
       tenantAlpha,
-      '椭圆光学性质的形式化验证',
-      '椭圆上任意点反射线聚焦性质是否可由 SymPy 符号推导与 Lean 形式化双重确认？',
+      '椭圆光学性质论文评审',
+      '椭圆上任意点反射线聚焦性质能否通过多层证据校验确认？',
       '数学',
       'writing',
       86_400_000,

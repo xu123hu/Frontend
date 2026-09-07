@@ -59,6 +59,13 @@ export default defineConfig(({ mode, command }) => {
       host: '127.0.0.1',
       port: 5173,
       strictPort: true,
+      proxy: {
+        '/api/research/v1': {
+          target: env.VITE_BACKEND_PROXY_TARGET || 'http://127.0.0.1:18010',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/research\/v1/, ''),
+        },
+      },
     },
     test: {
       environment: 'jsdom',

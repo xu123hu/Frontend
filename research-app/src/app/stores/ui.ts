@@ -9,7 +9,7 @@ export const useUiStore = defineStore('ui', () => {
   const sidebarCollapsed = ref(false);
   const personalCenterOpen = ref(false);
   const agentOpen = ref(false);
-  const agentTab = ref<'evidence' | 'comments' | 'citations' | 'tasks'>('tasks');
+  const agentTab = ref<'chat' | 'tasks'>('chat');
   const currentProjectName = ref('演示项目');
   const systemHealthy = ref(true);
 
@@ -24,12 +24,15 @@ export const useUiStore = defineStore('ui', () => {
   function toggleAgent(): void {
     agentOpen.value = !agentOpen.value;
   }
-  function setAgentTab(tab: 'evidence' | 'comments' | 'citations' | 'tasks'): void {
+  function setAgentTab(tab: 'chat' | 'tasks'): void {
     agentTab.value = tab;
     agentOpen.value = true;
   }
   function setProjectName(name: string): void {
     currentProjectName.value = name;
+  }
+  function setSystemHealthy(healthy: boolean): void {
+    systemHealthy.value = healthy;
   }
 
   return {
@@ -45,5 +48,6 @@ export const useUiStore = defineStore('ui', () => {
     toggleAgent,
     setAgentTab,
     setProjectName,
+    setSystemHealthy,
   };
 });

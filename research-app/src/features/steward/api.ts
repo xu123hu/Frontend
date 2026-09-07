@@ -8,6 +8,32 @@
 import { apiRequest } from '@app/api/client';
 import type { ApprovalView, ResearchCycleResult, StewardPlan } from '@entities/steward/types';
 
+export interface StewardChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface StewardChatResponse {
+  content: string;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  reasoning_policy_id: 'quick' | 'standard' | 'rigorous';
+  degraded: boolean;
+}
+
+export function sendStewardChat(
+  messages: StewardChatMessage[],
+  reasoningPolicyId: StewardChatResponse['reasoning_policy_id'] = 'standard',
+): Promise<StewardChatResponse> {
+  return apiRequest<StewardChatResponse>('/steward/chat', {
+    method: 'POST',
+    body: { messages, reasoning_policy_id: reasoningPolicyId },
+  }).then((envelope) => envelope.data);
+}
+
 export function fetchStewardPlans(signal?: AbortSignal): Promise<StewardPlan[]> {
   return apiRequest<{ items: StewardPlan[]; next_cursor: string | null }>('/steward/plans', { signal }).then((e) => e.data.items);
 }

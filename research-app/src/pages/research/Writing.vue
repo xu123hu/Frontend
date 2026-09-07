@@ -393,7 +393,7 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
             证据检查（无证据句）
           </p>
           <p class="audit-hint">
-            以下句子暂无可追溯证据，可「补证」或「降级措辞」（AI 管家生成侧 F4 收口）。
+            以下句子暂无可追溯证据，可选择“补充证据”或降低表述强度。
           </p>
           <ul class="audit-list">
             <li

@@ -14,7 +14,12 @@ export async function startMockWorker(): Promise<void> {
   // 恢复刷新前会话/偏好事实（模拟服务端持久化语义，TC-F01-02/07）。
   restoreSessions(db);
   await worker.start({
-    onUnhandledRequest: 'warn',
+    onUnhandledRequest(request, print) {
+      const path = new URL(request.url).pathname;
+      if (!path.startsWith('/api/research/v1/')) return;
+      if (path.endsWith('/steward/chat') || path.endsWith('/steward/status')) return;
+      print.warning();
+    },
     quiet: false,
   });
 }

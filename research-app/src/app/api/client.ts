@@ -9,6 +9,7 @@
  * 红线（08 §6）：任何降级必须可观察；吞错返回假成功一律禁止。
  */
 import { config } from '../config';
+import { getValidAccessToken } from '@features/auth/oidc-tokens';
 
 /** 与 M4 ErrorEnvelope.error 对齐的错误码分类（kind 用于前端状态映射，不等于后端 code）。 */
 export type ApiErrorKind =
@@ -191,6 +192,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const headers = new Headers({ Accept: 'application/json' });
   if (body !== undefined) headers.set('Content-Type', 'application/json');
   if (idempotencyKey) headers.set('Idempotency-Key', idempotencyKey);
+  // 统一身份（OIDC）模式：注入短期 Bearer；演示会话模式无令牌，保持 cookie。
+  const bearer = await getValidAccessToken();
+  if (bearer) headers.set('Authorization', `Bearer ${bearer}`);
 
   let response: Response;
   try {

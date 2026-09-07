@@ -229,9 +229,9 @@ onBeforeUnmount(() => {
 
     <Boundary
       tone="info"
-      title="隐私与记忆管理将在后续里程碑接入"
+      title="隐私与长期记忆"
     >
-      记忆可见/编辑/删除依赖 MemoryRecord 契约（M0 已冻结），交互场景在 F4 AI 管家里程碑交付。
+      当前演示版本不写入长期个人记忆。正式部署启用后，用户可查看、编辑或删除自己的记忆记录。
     </Boundary>
   </div>
 </template>

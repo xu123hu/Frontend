@@ -1,19 +1,19 @@
 <script setup lang="ts">
 /**
- * AI 管家上下文抽屉（F4：任务 Tab 填充研究循环，06 §8）。
+ * AI 管家上下文抽屉：真实模型对话 + 研究循环任务与审批。
  * - 任务 Tab：发起研究循环（研究问题）→ StewardTaskTimeline（计划/步骤/预算/产物）+ 待审批 ApprovalCard。
  * - 球体联动：待审批 → waiting + 徽标；运行中 → running；全部完成 → complete（TC-X06-02）。
- * - 其余 Tab（证据/批注/引用）为 F5 证据域接线，保持占位。
+ * - 文献证据、批注、引用留在各自工作台，不在此重复制造空页面。
  */
 import { computed, ref, watch } from 'vue';
 import { X, Send } from 'lucide-vue-next';
 import { useUiStore } from '@app/stores/ui';
 import { useAgentStore } from '@app/stores/agent';
 import { useDialogA11y } from '@shared/lib/use-dialog-a11y';
-import { useApprovals, useStartResearchCycle, useStewardPlans } from '@features/steward/queries';
+import { useApprovals, useStartResearchCycle, useStewardChat, useStewardPlans } from '@features/steward/queries';
+import type { StewardChatMessage } from '@features/steward/api';
 import StewardTaskTimeline from '@widgets/StewardTaskTimeline/StewardTaskTimeline.vue';
 import ApprovalCard from '@widgets/ApprovalCard/ApprovalCard.vue';
-import EmptyState from '@shared/ui/EmptyState.vue';
 
 const ui = useUiStore();
 const agent = useAgentStore();
@@ -32,9 +32,7 @@ useDialogA11y(
 );
 
 const tabDefs = [
-  { id: 'evidence', label: '证据' },
-  { id: 'comments', label: '批注' },
-  { id: 'citations', label: '引用' },
+  { id: 'chat', label: '对话' },
   { id: 'tasks', label: '任务' },
 ] as const;
 type TabId = (typeof tabDefs)[number]['id'];
@@ -43,6 +41,34 @@ const activeTab = computed(() => ui.agentTab);
 
 function selectTab(tab: TabId): void {
   ui.setAgentTab(tab);
+}
+
+// ---------- 真实模型对话 ----------
+const chatInput = ref('');
+const chatMessages = ref<StewardChatMessage[]>([
+  {
+    role: 'assistant',
+    content: '你好，我是科研管家。你可以让我梳理研究问题、检查论证链或规划论文评审。',
+  },
+]);
+const chatMutation = useStewardChat();
+
+async function sendChat(): Promise<void> {
+  const content = chatInput.value.trim();
+  if (!content || chatMutation.isPending.value) return;
+  const userMessage: StewardChatMessage = { role: 'user', content };
+  const history = [...chatMessages.value, userMessage].slice(-20);
+  chatMessages.value.push(userMessage);
+  chatInput.value = '';
+  try {
+    const response = await chatMutation.mutateAsync({
+      messages: history,
+      reasoningPolicyId: 'standard',
+    });
+    chatMessages.value.push({ role: 'assistant', content: response.content });
+  } catch {
+    chatInput.value = content;
+  }
 }
 
 // ---------- 任务 Tab 数据（研究循环 + 审批） ----------
@@ -112,7 +138,7 @@ watch(
     <header class="drawer-head">
       <div>
         <h2>AI 管家</h2>
-        <p>研究循环、审批与证据集中在此。</p>
+        <p>科研对话、研究循环与审批集中在此。</p>
       </div>
       <button
         ref="closeButton"
@@ -158,8 +184,66 @@ watch(
       :hidden="activeTab !== tab.id"
     >
       <div class="drawer-body">
+        <template v-if="tab.id === 'chat'">
+          <div
+            class="chat-thread"
+            aria-live="polite"
+          >
+            <article
+              v-for="(message, index) in chatMessages"
+              :key="`${message.role}-${index}`"
+              class="chat-message"
+              :class="`is-${message.role}`"
+            >
+              <span>{{ message.role === 'assistant' ? 'AI 管家' : '我' }}</span>
+              <p>{{ message.content }}</p>
+            </article>
+            <p
+              v-if="chatMutation.isPending.value"
+              class="chat-status"
+              role="status"
+            >
+              正在分析研究上下文…
+            </p>
+            <p
+              v-if="chatMutation.isError.value"
+              class="start-error"
+              role="alert"
+            >
+              {{ chatMutation.error.value?.message }} 输入内容已保留，可稍后重试。
+            </p>
+          </div>
+          <form
+            class="chat-composer"
+            aria-label="与 AI 科研管家对话"
+            @submit.prevent="sendChat"
+          >
+            <label for="steward-chat-input">向科研管家提问</label>
+            <textarea
+              id="steward-chat-input"
+              v-model="chatInput"
+              rows="3"
+              maxlength="8000"
+              placeholder="例如：请检查这段证明缺少哪些前提，并给出核查顺序。"
+            />
+            <div class="composer-footer">
+              <small>回答会区分事实、推断与候选假设</small>
+              <button
+                class="start-btn"
+                type="submit"
+                :disabled="!chatInput.trim() || chatMutation.isPending.value"
+              >
+                <Send
+                  :size="13"
+                  aria-hidden="true"
+                />
+                发送
+              </button>
+            </div>
+          </form>
+        </template>
         <!-- 任务 Tab：研究循环（TC-F06-01..05） -->
-        <template v-if="tab.id === 'tasks'">
+        <template v-else>
           <form
             class="start-cycle"
             aria-label="发起研究循环"
@@ -208,13 +292,6 @@ watch(
 
           <StewardTaskTimeline />
         </template>
-
-        <!-- 证据/批注/引用：F5 证据域接线占位 -->
-        <EmptyState
-          v-else
-          :title="`${tab.label} 内容等待 F5 证据域接线`"
-          hint="EvidenceRecord / Annotation / CitationRecord 契约已冻结，场景接线在 F5 交付。"
-        />
       </div>
     </section>
   </aside>
@@ -270,7 +347,7 @@ watch(
 }
 .drawer-tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   border-bottom: 1px solid var(--line);
   padding: 0 10px;
 }
@@ -320,6 +397,87 @@ watch(
   display: grid;
   gap: 12px;
   align-content: start;
+}
+.chat-thread {
+  display: grid;
+  gap: 10px;
+}
+.chat-message {
+  max-width: 92%;
+  display: grid;
+  gap: 4px;
+}
+.chat-message.is-user {
+  justify-self: end;
+}
+.chat-message > span {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 750;
+}
+.chat-message.is-user > span {
+  text-align: right;
+}
+.chat-message p {
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--subtle-bg);
+  color: var(--text);
+  font-size: var(--font-size-sm);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.chat-message.is-user p {
+  border-color: rgba(49, 87, 213, 0.2);
+  background: rgba(49, 87, 213, 0.08);
+}
+.chat-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+}
+.chat-composer {
+  position: sticky;
+  bottom: -14px;
+  display: grid;
+  gap: 7px;
+  margin: 4px -2px -14px;
+  padding: 12px 2px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.chat-composer label {
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: var(--muted);
+}
+.chat-composer textarea {
+  width: 100%;
+  min-height: 76px;
+  padding: 9px 10px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.5;
+}
+.chat-composer textarea:focus {
+  outline: 2px solid rgba(49, 87, 213, 0.18);
+  border-color: var(--primary);
+}
+.composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.composer-footer small {
+  color: var(--muted);
+  font-size: 11px;
 }
 .start-cycle {
   border: 1px solid var(--border);

@@ -6,6 +6,7 @@ import { useAgentStore } from '@app/stores/agent';
 import { useUiStore } from '@app/stores/ui';
 import { useSession } from '@features/auth/use-session';
 import ProjectSwitcher from '@widgets/ProjectSwitcher/ProjectSwitcher.vue';
+import { config } from '@app/config';
 
 const router = useRouter();
 const ui = useUiStore();
@@ -15,6 +16,11 @@ const session = useSession();
 const taskCount = computed(() => agent.pendingCount);
 const account = computed(() => session.account.value);
 const isHealthy = computed(() => ui.systemHealthy);
+const headStateLabel = computed(() => {
+  if (config.runtimeMode === 'demo') return '演示模式';
+  if (!isHealthy.value) return 'AI 服务未就绪';
+  return config.useMock ? '演示工作区 · AI 已连接' : '真实服务 · 已连接';
+});
 
 const accountMenuOpen = ref(false);
 const menuRoot = ref<HTMLElement | null>(null);
@@ -51,7 +57,7 @@ async function signOut(): Promise<void> {
         class="dot"
         :class="{ ok: isHealthy, warn: !isHealthy }"
       />
-      {{ isHealthy ? '私有运行 · 已保存' : '运行降级中' }}
+      {{ headStateLabel }}
     </span>
     <div class="header-actions">
       <button
@@ -285,6 +291,15 @@ async function signOut(): Promise<void> {
   .agent-label,
   .account-name {
     display: none;
+  }
+  .header-actions {
+    gap: 4px;
+  }
+  .header-actions > .btn,
+  .account-btn {
+    width: 32px;
+    min-height: 32px;
+    padding: 5px;
   }
 }
 </style>

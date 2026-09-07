@@ -136,7 +136,7 @@ function backToPhone(): void {
         class="mock-hint"
         role="note"
       >
-        契约草案演示环境：演示账号 13800000001，验证码 888888。
+        演示环境：账号 13800000001，验证码 888888。
       </p>
 
       <form
