@@ -68,11 +68,11 @@
 
       <div class="group-toggle" :class="{ collapsed: !labOpen }" data-tip="实验室" @click="toggleLab">
         <span class="arr">▼</span><span>实验室</span>
-        <span style="margin-left:auto;font-size:10px;background:var(--bg2);padding:1px 6px;border-radius:99px;">{{ labNav.length }}</span>
+        <span style="margin-left:auto;font-size:10px;background:var(--bg2);padding:1px 6px;border-radius:99px;">{{ labNavVisible.length }}</span>
       </div>
       <template v-if="labOpen">
         <div
-          v-for="item in labNav" :key="item.key"
+          v-for="item in labNavVisible" :key="item.key"
           class="nav-item" :class="{ active: isActive(item) }" :data-tip="item.name"
           @click="go(item)"
         >
@@ -261,6 +261,9 @@ const labNav = [
   { key: 'daily', icon: '👣', name: '每日任务', to: '', unconfigured: true },
   { key: 'guest', icon: '🧪', name: '游客演示', to: '', unconfigured: true },
 ]
+
+// S14：未配置占位项对学生隐藏（功能冗余清理；重复的"资源推荐"占位随之消失）
+const labNavVisible = labNav.filter((item) => !item.unconfigured)
 
 const isActive = (item) => route.path === item.to || (item.to && route.path.startsWith(item.to + '/'))
 
