@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 写作域 API（CR-F3-01..04 契约草案 + M0 冻结 runs）。
  *
  * - 文稿/文件 CRUD：CR-F3-01（草案）
@@ -114,5 +114,5 @@ export function fetchCompileRun(runId: string, signal?: AbortSignal): Promise<Co
 
 /** 编译产物 PDF（02 §6 签名 URL 语义；草案为直接端点）。 */
 export function compiledPdfUrl(artifactId: string): string {
-  return `/artifacts/${encodeURIComponent(artifactId)}/compiled-pdf`;
+  return `/api/research/v1/artifacts/${encodeURIComponent(artifactId)}/content`;
 }
