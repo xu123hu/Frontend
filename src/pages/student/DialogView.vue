@@ -73,7 +73,7 @@
           <div class="hero-sub">拍照、贴图、上传资料，AI 不直接给答案，一步步带你自己想出来</div>
           <div class="hero-entries">
             <div class="he-card c-indigo" @click="heroPhoto">📷<span>拍一道不会的题</span></div>
-            <div class="he-card c-cyan" @click="heroAttach">📚<span>上传我的资料</span></div>
+            <div class="he-card c-cyan" @click="heroGo('/kb')" title="上传教材/笔记/试卷，AI 解析入库">📚<span>上传我的资料</span></div>
             <div class="he-card c-violet" @click="heroGo('/practice')">✏️<span>开始今日练题</span></div>
             <div class="he-card c-amber" @click="heroGo('/errors')">🔴<span>复习到期错题</span></div>
           </div>
@@ -203,7 +203,8 @@ function heroPhoto() {
   document.querySelector('button[title="拍照识题"]')?.click()
 }
 function heroAttach() {
-  document.querySelector('button[title^="上传附件"]')?.click()
+  // S15：上传资料走知识库页（入库管理），对话内附件仍走输入框 📎
+  router.push('/kb')
 }
 function heroGo(path) {
   router.push(path)

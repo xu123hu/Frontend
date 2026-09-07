@@ -203,7 +203,7 @@
         <div v-if="session?.status === 'failed'" class="dcx-gen-card err">
           <div class="dcx-gen-visual"><div class="dcx-gen-errico">⚠</div></div>
           <b class="dcx-gen-errtitle">课堂生成失败</b>
-          <p class="dcx-gen-sub">{{ session.error || '请稍后重试' }}</p>
+          <p class="dcx-gen-sub">{{ friendlyError(session.error) }}</p>
           <div class="dcx-gen-actions">
             <button class="dcx-btn primary" @click="retryFailed(session)">↻ 重新生成</button>
             <button class="dcx-btn ghost-dark" @click="goHome">返回首页</button>
@@ -331,7 +331,7 @@
       <main class="dcx-center">
         <div v-if="session.status === 'failed'" class="dcx-state err">
           <b>课堂生成失败</b>
-          <p>{{ session.error || '请稍后重试' }}</p>
+          <p>{{ friendlyError(session.error) }}</p>
           <button class="dcx-btn primary" @click="retryFailed(session)">↻ 重新生成</button>
         </div>
         <template v-else>
@@ -740,6 +740,13 @@ watch(
   { immediate: true },
 )
 onBeforeUnmount(() => clearTimeout(practiceWatchdog))
+/** S12（V2 文档）：失败原因对学生人性化——技术细节（断言式/函数名）不暴露 */
+function friendlyError(raw) {
+  const s = String(raw || '')
+  if (/验证失败|数学|导数错误|声称|assert/.test(s)) return '部分页内容未通过数学自动校验（有误的讲解已被系统拦截），点「重新生成」即可重出一版'
+  if (/通道|网络|超时|无任何内容块|生成异常|unavailable/i.test(s)) return 'AI 生成通道临时异常（多为网络波动），点「重新生成」即可'
+  return '生成中断了，点「重新生成」再试一次'
+}
 /** 本页失败原因：生成通道异常（LLM 断连/空内容）≠ 数学校验未过，文案要分开 */
 const pageFailFromGen = computed(() => {
   const d = String(currentSlide.value?.verification_result?.detail || '')
