@@ -1,5 +1,9 @@
 <template>
   <div class="layout" :class="{ collapsed }">
+    <!-- PHASE 6 氛围光斑层（student-next 同款三光斑，pointer-events:none 不挡交互） -->
+    <div class="ambient" aria-hidden="true">
+      <span class="ambient-b1"></span><span class="ambient-b2"></span><span class="ambient-b3"></span>
+    </div>
     <!-- ===== 顶部栏（无导航/搜索；保留 Logo + 连击 + 用户头像→个人中心） ===== -->
     <header class="topbar">
       <div class="topbar-inner">
@@ -412,4 +416,13 @@ async function onRemoveConv(id) {
 .sb-convs :deep(.cs-item:hover) { background: var(--bg2); }
 .sb-convs :deep(.cs-item.active:hover) { background: var(--brand-soft); }
 .sb-convs :deep(.cs-item-time) { color: var(--ink3); }
+
+/* PHASE 6 氛围光斑层 */
+.ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.ambient-b1 { position: absolute; top: -80px; left: -60px; width: 420px; height: 420px; border-radius: 50%;
+  background: rgba(99, 102, 241, .10); filter: blur(70px); }
+.ambient-b2 { position: absolute; top: -40px; right: -80px; width: 380px; height: 380px; border-radius: 50%;
+  background: rgba(6, 182, 212, .08); filter: blur(70px); }
+.ambient-b3 { position: absolute; bottom: -100px; left: 30%; width: 460px; height: 460px; border-radius: 50%;
+  background: rgba(124, 58, 237, .07); filter: blur(80px); }
 </style>

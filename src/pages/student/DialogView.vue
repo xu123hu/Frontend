@@ -68,9 +68,21 @@
         </template>
 
         <div v-else class="empty-state welcome">
-          <div class="es-icon">π</div>
-          <div class="es-text">学习不是功能堆砌,是一场苏格拉底对话</div>
-          <div class="welcome-sub">拍照/粘贴不会的题 → 引导式解题 → 变式巩固 → 错题自动收录。或直接说「帮我出变式」「来一场模拟」「分析我的学情」直达功能</div>
+          <div class="hero-greet">{{ heroGreet }}，{{ auth.nickname || '同学' }} 👋</div>
+          <h1 class="hero-title">今天想搞定什么<span class="text-gradient">数学题</span>？</h1>
+          <div class="hero-sub">拍照、贴图、上传资料，AI 不直接给答案，一步步带你自己想出来</div>
+          <div class="hero-entries">
+            <div class="he-card c-indigo" @click="heroPhoto">📷<span>拍一道不会的题</span></div>
+            <div class="he-card c-cyan" @click="heroAttach">📚<span>上传我的资料</span></div>
+            <div class="he-card c-violet" @click="heroGo('/practice')">✏️<span>开始今日练题</span></div>
+            <div class="he-card c-amber" @click="heroGo('/errors')">🔴<span>复习到期错题</span></div>
+          </div>
+          <div v-if="recentConvs.length" class="hero-recent">
+            <div class="hr-title">最近学习</div>
+            <div v-for="cv in recentConvs" :key="cv.id" class="hr-item" @click="heroOpenConv(cv.id)">
+              <span class="hr-dot"></span><span class="hr-name">{{ cv.title || '未命名对话' }}</span><span class="hr-go">继续 →</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -129,6 +141,7 @@ import { uuid } from '@/components/chat/messageModel'
 import { openImmersive } from '@/composables/useImmersive'
 
 const route = useRoute()
+
 const router = useRouter()
 const toast = useToastStore()
 const upload = useFileUpload(toast)
@@ -174,6 +187,30 @@ const chat = useChat({
     resolveSkills: (keys) => keys.map((k) => SKILL_ID_BY_KEY[k]).filter(Boolean),
   },
 })
+// ===== S1 首页 hero（V2 文档：首页即对话学习） =====
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
+const heroGreet = computed(() => {
+  const h = new Date().getHours()
+  if (h < 6) return '夜深了'
+  if (h < 12) return '上午好'
+  if (h < 14) return '中午好'
+  if (h < 18) return '下午好'
+  return '晚上好'
+})
+const recentConvs = computed(() => (conv?.items || []).slice(0, 3))
+function heroPhoto() {
+  document.querySelector('button[title="拍照识题"]')?.click()
+}
+function heroAttach() {
+  document.querySelector('button[title^="上传附件"]')?.click()
+}
+function heroGo(path) {
+  router.push(path)
+}
+function heroOpenConv(id) {
+  router.push(`/dialog/${id}`)
+}
 
 const activeTitle = computed(
   () => conv.items.find((c) => c.id === conv.activeId)?.title || '新对话'
@@ -492,7 +529,7 @@ function onQuizMore(card) {
   const q = String(it?.question_text || '').slice(0, 400)
   chat.doSend(
     q ? `请基于这道题再来一组难度递进的变式巩固：\n${q}` : '再来一组变式巩固',
-    { displayText: '🔄 再来一组变式', skillKeys: ['quiz_gen'], attachments: item.file_id ? [{ file_id: item.file_id, kind: 'image' }] : [] },
+    { displayText: '🔄 再来一组变式', skillKeys: ['quiz_gen'], attachments: it?.file_id ? [{ file_id: it.file_id, kind: 'image' }] : [] },
   )
 }
 
@@ -652,4 +689,33 @@ watch(
 .v4-thinking .dot:nth-child(2) { animation-delay: .2s; }
 .v4-thinking .dot:nth-child(3) { animation-delay: .4s; }
 .rn-img { max-width: 100%; max-height: 180px; margin-top: 8px; border-radius: 8px; display: block; }
+
+/* ===== S1 首页 hero（V2 文档设计） ===== */
+.hero-greet { font-size: 15px; color: var(--ink2); margin-bottom: 10px; }
+.hero-title { font-size: 34px; font-weight: 800; letter-spacing: .5px; margin: 0 0 12px; }
+.hero-sub { font-size: 15px; color: var(--ink3); margin-bottom: 26px; line-height: 1.7; }
+.hero-entries { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-bottom: 30px; }
+.he-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: 150px; padding: 18px 12px 14px; border-radius: var(--radius-xl, 22px);
+  background: var(--card); border: 1px solid var(--line); cursor: pointer;
+  transition: all .2s ease; font-size: 13.5px; font-weight: 600; color: var(--ink);
+}
+.he-card span { color: var(--ink2); font-weight: 500; font-size: 13.5px; }
+.he-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-glow-brand); border-color: var(--primary-border); }
+.he-card.c-indigo { background: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%); }
+.he-card.c-cyan { background: linear-gradient(180deg, #ecfeff 0%, #ffffff 100%); }
+.he-card.c-violet { background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 100%); }
+.he-card.c-amber { background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%); }
+.hero-recent { width: 100%; max-width: 460px; text-align: left; }
+.hr-title { font-size: 12.5px; color: var(--ink3); font-weight: 600; margin: 0 0 8px 4px; }
+.hr-item {
+  display: flex; align-items: center; gap: 10px; padding: 11px 14px; margin-bottom: 8px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px; cursor: pointer;
+  transition: all .18s ease; font-size: 13.5px;
+}
+.hr-item:hover { border-color: var(--primary-border); box-shadow: var(--shadow-sm); }
+.hr-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gradient-brand); flex: 0 0 auto; }
+.hr-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.hr-go { color: var(--primary); font-size: 12.5px; font-weight: 600; flex: 0 0 auto; }
 </style>

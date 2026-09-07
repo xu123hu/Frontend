@@ -32,7 +32,7 @@ const routes = [
   { path: '/account/security', component: () => import('@/pages/AccountSecurity.vue'), meta: { authFlow: true } },
   { path: '/admin/identity/applications', component: () => import('@/pages/admin/AdminIdentityReview.vue'), meta: { authFlow: true, admin: true, requiresRole: 'admin' } },
   { path: '/research', component: () => import('@/pages/research/ResearchWorkspace.vue'), meta: { authFlow: true, research: true, requiresRole: 'researcher' } },
-  { path: '/', component: { template: '<div />' } },
+  { path: '/', redirect: '/dialog' },  // S1：首页即对话学习（V2 文档原则一）
   ...studentRoutes,
   /* ===== 教师工作台 V3（V2.1 SPEC 落地：数学编辑内核 + 五区编辑器 + 拍照链路 + 批改三视图） ===== */
   {
