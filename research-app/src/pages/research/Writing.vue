@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 写作工作台（黄金链路四，TC-F04-01..06）。
  * 三栏：文件树 | CodeMirror 6 编辑器 | 右侧（编译时间线 + AI diff + 引用插入）。
@@ -9,7 +9,7 @@
  */
 import { computed, ref, watch, onBeforeUnmount, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Plus, BookOpen, Play, FlaskConical, Save } from 'lucide-vue-next';
+import { Plus, BookOpen, Play, FlaskConical, Save, Sparkles, PenLine, BrainCircuit, Quote, Loader2 as Spinner } from 'lucide-vue-next';
 import { AppButton, AppCard, AppInput } from '@shared/ui';
 import Boundary from '@shared/ui/Boundary.vue';
 import Skeleton from '@shared/ui/Skeleton.vue';
@@ -31,6 +31,8 @@ import DiffPanel from '@widgets/DiffPanel/DiffPanel.vue';
 import CitationInsertDialog from '@widgets/CitationInsertDialog/CitationInsertDialog.vue';
 import CompileTimeline from '@widgets/CompileTimeline/CompileTimeline.vue';
 import type { ManuscriptFile, AiSuggestion } from '@entities/writing/types';
+import { useStewardChat } from '@features/steward/queries';
+import type { StewardChatMessage } from '@features/steward/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -188,6 +190,39 @@ const auditOpen = ref(false);
 
 // 清理定时器
 onBeforeUnmount(() => clearTimeout(saveTimer));
+
+// ---------- AI 面板四能力（P0-2 H4/H8：真实调用 /steward/chat） ----------
+const stewardChat = useStewardChat();
+const aiLoading = ref(false);
+const aiError = ref<string | null>(null);
+const aiResult = ref<string | null>(null);
+const aiKind = ref<string | null>(null);
+
+const AI_PROMPTS: Record<string, string> = {
+  polish: '你是学术写作润色助手。请润色以下LaTeX文本，保持学术严谨性，改善表达流畅度，不改变原意。只输出润色后的LaTeX文本。',
+  continue: '你是学术写作续写助手。请基于上下文续写接下来的段落，保持学术风格和逻辑连贯。只输出续写的LaTeX文本。',
+  logic: '你是学术逻辑检查助手。请检查逻辑严密性，指出漏洞或矛盾并给出修改建议。',
+  citation: '你是学术引用建议助手。请分析文本，建议需要添加引用的论断并给出引用关键词。',
+};
+
+async function runAiAction(kind: string): Promise<void> {
+  const text = content.value;
+  if (!text?.trim()) { aiError.value = '请先选择文本或确保文档有内容。'; return; }
+  aiLoading.value = true; aiError.value = null; aiResult.value = null; aiKind.value = kind;
+  const messages: StewardChatMessage[] = [{ role: 'user', content: AI_PROMPTS[kind] + '\n\n文本：\n' + text }];
+  try {
+    const response = await stewardChat.mutateAsync({ messages, reasoningPolicyId: 'standard' });
+    aiResult.value = response.content;
+  } catch (err) {
+    aiError.value = err instanceof Error ? 'AI调用失败：' + err.message : 'AI调用失败，请稍后重试。';
+  } finally { aiLoading.value = false; }
+}
+
+function applyAiResult(): void {
+  if (!aiResult.value) return;
+  editorRef.value?.insertAtCursor(aiResult.value);
+  aiResult.value = null;
+}
 </script>
 
 <template>
@@ -352,6 +387,76 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
             <FlaskConical :size="14" />
             证据检查
           </AppButton>
+        
+          <!-- AI 面板四能力（P0-2：真实调用 /steward/chat） -->
+          <div class="ai-actions">
+            <span class="ai-label">AI 助手</span>
+            <AppButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              :disabled="aiLoading"
+              @click="runAiAction('polish')"
+            >
+              <Sparkles :size="12" /> 润色
+            </AppButton>
+            <AppButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              :disabled="aiLoading"
+              @click="runAiAction('continue')"
+            >
+              <PenLine :size="12" /> 续写
+            </AppButton>
+            <AppButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              :disabled="aiLoading"
+              @click="runAiAction('logic')"
+            >
+              <BrainCircuit :size="12" /> 逻辑检查
+            </AppButton>
+            <AppButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              :disabled="aiLoading"
+              @click="runAiAction('citation')"
+            >
+              <Quote :size="12" /> 引用建议
+            </AppButton>
+          </div>
+          <div
+            v-if="aiLoading"
+            class="ai-loading"
+          >
+            <Spinner :size="14" /> AI 思考中…
+          </div>
+          <div
+            v-if="aiError"
+            class="mini-error"
+            role="alert"
+          >
+            {{ aiError }}
+          </div>
+          <div
+            v-if="aiResult"
+            class="ai-result"
+          >
+            <div class="ai-result-head">
+              <span>AI {{ aiKind }} 结果</span>
+              <AppButton
+                type="button"
+                size="sm"
+                @click="applyAiResult"
+              >
+                应用到文档
+              </AppButton>
+            </div>
+            <pre class="ai-result-text">{{ aiResult }}</pre>
+          </div>
         </div>
         <p
           v-if="compileError"
@@ -620,4 +725,11 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
     height: auto;
   }
 }
+
+.ai-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--s16-border, #e2e8f0); }
+.ai-label { font-size: 12px; font-weight: 600; color: var(--s16-text-secondary, #64748b); margin-right: 4px; }
+.ai-loading { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--s16-primary, #6366f1); margin-top: 8px; }
+.ai-result { margin-top: 12px; padding: 10px; background: var(--s16-bg-subtle, #f8fafc); border-radius: 8px; border: 1px solid var(--s16-border, #e2e8f0); }
+.ai-result-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+.ai-result-text { font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto; margin: 0; }
 </style>
