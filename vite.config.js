@@ -7,6 +7,8 @@ import { mockApi } from './src/mock/server'
 // 需要演示假数据时显式开启 mock：VITE_USE_MOCK=1 npm run dev（mock 中间件完整模拟 /api，代理不启用）
 const useMock = !!process.env.VITE_USE_MOCK
 const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8000'
+// 学生 AI Runtime（B1 集成服务）：/api/agent 走 student-api 方言层（19 事件契约，前端零改动）
+const agentProxyTarget = process.env.VITE_AGENT_API_PROXY_TARGET || 'http://127.0.0.1:8012'
 // 教师平台独立栈（02-ARCHITECTURE §1.3）：/api/teacher-v3 优先于 /api 命中 :8100
 const teacherApiProxyTarget = process.env.VITE_TEACHER_API_PROXY_TARGET || 'http://127.0.0.1:8100'
 // 兼容旧开关：VITE_REAL_API=1 无副作用（真实后端已是默认）
@@ -36,6 +38,7 @@ export default defineConfig({
       ? {
           // 教师平台优先命中（键序即匹配序，前缀更长者在前）
           '/api/teacher-v3': { target: teacherApiProxyTarget, changeOrigin: true },
+          '/api/agent': { target: agentProxyTarget, changeOrigin: true },
           '/api': { target: apiProxyTarget, changeOrigin: true },
         }
       : undefined,
