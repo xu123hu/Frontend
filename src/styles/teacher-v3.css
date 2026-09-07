@@ -1,65 +1,65 @@
 /* =========================================================================
-   教师工作台 V3 设计令牌 · 深海蓝 × 学术金（依据概念图 concept-cover-academic-blue）
-   与 V2 学术蓝的区别：主色更深沉（navy），金色为数学元素/重点标记点缀，
-   AI 能力保留紫罗兰。字体/间距继承全局 tokens.css。
+   教师工作台 V3 设计令牌 · 靛蓝 × 青能量（对标《AI 对话首页》ailp 体系，H5 视觉统一）
+   2026-09-08 用户裁决：全面替换旧「深海蓝×学术金」——主色 #4f46e5、强调 #06b6d4、
+   135° 双色渐变、大圆角（xl=20/2xl=28）、流光辉光。令牌名保持 tv3-*（改动面最小）。
    ========================================================================= */
 :root {
   /* MathLive 虚拟键盘层级：须浮在绘图工作台(300)/预演(200)之上 */
   --keyboard-zindex: 1000;
 
-  /* 主色：深学院蓝 */
-  --tv3-navy: #0a3568;
-  --tv3-navy-deep: #072a5a;
-  --tv3-navy-mid: #0f4787;
-  --tv3-primary: #0f4787;
-  --tv3-primary-soft: #eaf1fb;
-  --tv3-primary-border: #c3d6f2;
+  /* 主色：靛蓝（ailp-primary） */
+  --tv3-navy: #3730a3;
+  --tv3-navy-deep: #1e1b4b;
+  --tv3-navy-mid: #4f46e5;
+  --tv3-primary: #4f46e5;
+  --tv3-primary-soft: #eef2ff;
+  --tv3-primary-border: #c7d2fe;
 
-  /* 学术金：重点标记 / 数学元素 / 待升级提示 */
-  --tv3-gold: #c99735;
-  --tv3-gold-deep: #a87b24;
-  --tv3-gold-soft: #fbf3de;
-  --tv3-gold-border: #ecd9a8;
+  /* 强调：青能量（ailp-accent，原金位） */
+  --tv3-gold: #0891b2;
+  --tv3-gold-deep: #0e7490;
+  --tv3-gold-soft: #cffafe;
+  --tv3-gold-border: #a5f3fc;
 
-  /* AI 能力标识：紫罗兰 */
+  /* AI 能力标识：紫罗兰（ailp 三停渐变中停 #7c3aed） */
   --tv3-ai: #7c3aed;
-  --tv3-ai-deep: #612fb8;
+  --tv3-ai-deep: #6d28d9;
   --tv3-ai-soft: #f3eefd;
   --tv3-ai-border: #ddd0f8;
 
   /* 语义色 */
-  --tv3-teal: #0e9488;
-  --tv3-teal-soft: #e6f5f3;
-  --tv3-teal-border: #b9e0dc;
-  --tv3-amber: #b45309;
-  --tv3-amber-soft: #fdf3e3;
-  --tv3-amber-border: #f3ddb4;
-  --tv3-rose: #dc2646;
-  --tv3-rose-soft: #fdecef;
-  --tv3-rose-border: #f6c3cd;
+  --tv3-teal: #059669;
+  --tv3-teal-soft: #ecfdf5;
+  --tv3-teal-border: #a7f3d0;
+  --tv3-amber: #d97706;
+  --tv3-amber-soft: #fffbeb;
+  --tv3-amber-border: #fde68a;
+  --tv3-rose: #dc2626;
+  --tv3-rose-soft: #fef2f2;
+  --tv3-rose-border: #fecaca;
   --tv3-slate: #64748b;
-  --tv3-slate-soft: #eef1f6;
+  --tv3-slate-soft: #f1f5f9;
 
-  /* 中性 */
-  --tv3-bg: #f5f7fb;
-  --tv3-bg2: #eef1f7;
+  /* 中性（slate 系） */
+  --tv3-bg: #f8fafc;
+  --tv3-bg2: #f1f5f9;
   --tv3-card: #ffffff;
-  --tv3-ink: #16233b;
-  --tv3-ink2: #4a5568;
-  --tv3-ink3: #8b95a7;
-  --tv3-ink4: #c3cad6;
-  --tv3-line: #e3e8f0;
-  --tv3-line2: #eef1f6;
+  --tv3-ink: #0f172a;
+  --tv3-ink2: #334155;
+  --tv3-ink3: #64748b;
+  --tv3-ink4: #cbd5e1;
+  --tv3-line: #e2e8f0;
+  --tv3-line2: #f1f5f9;
 
-  /* 圆角与阴影 */
-  --tv3-radius: 10px;
-  --tv3-radius-lg: 14px;
-  --tv3-radius-xl: 18px;
-  --tv3-shadow: 0 1px 2px rgba(10, 53, 104, 0.05), 0 6px 20px rgba(10, 53, 104, 0.07);
-  --tv3-shadow-sm: 0 1px 3px rgba(10, 53, 104, 0.06);
-  --tv3-shadow-md: 0 4px 14px rgba(10, 53, 104, 0.1);
-  --tv3-shadow-lg: 0 12px 34px rgba(10, 53, 104, 0.15);
-  --tv3-shadow-gold: 0 6px 22px rgba(201, 151, 53, 0.22);
+  /* 圆角与阴影（ailp 大圆角 + 流光） */
+  --tv3-radius: 12px;
+  --tv3-radius-lg: 16px;
+  --tv3-radius-xl: 20px;
+  --tv3-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(79, 70, 229, 0.07);
+  --tv3-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --tv3-shadow-md: 0 4px 14px rgba(79, 70, 229, 0.1);
+  --tv3-shadow-lg: 0 10px 25px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.06);
+  --tv3-shadow-gold: 0 6px 22px rgba(6, 182, 212, 0.22);
   --tv3-shadow-ai: 0 8px 26px rgba(124, 58, 237, 0.18);
 
   /* 结构尺寸 */
@@ -81,8 +81,8 @@
 .tv3-nav {
   width: var(--tv3-nav-w);
   flex-shrink: 0;
-  background: linear-gradient(180deg, #082c54 0%, #0a3568 100%);
-  color: #cdd8ec;
+  background: linear-gradient(180deg, #1e1b4b 0%, #312e81 55%, #3730a3 100%);
+  color: #c7d2fe;
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -92,28 +92,29 @@
 }
 .tv3-nav__brand { display: flex; align-items: center; gap: 10px; padding: 18px 18px 14px; color: #fff; }
 .tv3-nav__brand-badge {
-  width: 34px; height: 34px; border-radius: 10px;
-  background: linear-gradient(135deg, #0f4787, #c99735);
+  width: 34px; height: 34px; border-radius: 12px;
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  box-shadow: 0 0 18px rgba(99, 102, 241, 0.45);
   display: grid; place-items: center; color: #fff; flex-shrink: 0;
   font-family: Georgia, serif; font-size: 17px; font-style: italic; font-weight: 700;
 }
 .tv3-nav__brand-title { font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
-.tv3-nav__brand-sub { font-size: 11px; color: #8fa3c8; margin-top: 1px; }
-.tv3-nav__group-label { font-size: 11px; color: #6d81a8; padding: 14px 20px 6px; letter-spacing: 1px; }
+.tv3-nav__brand-sub { font-size: 11px; color: #a5b4fc; margin-top: 1px; }
+.tv3-nav__group-label { font-size: 11px; color: #818cf8; padding: 14px 20px 6px; letter-spacing: 1px; }
 .tv3-nav__item {
   display: flex; align-items: center; gap: 11px;
-  padding: 10px 20px; color: #b9c7e2; text-decoration: none; font-size: 13.5px;
-  border-left: 3px solid transparent;
-  transition: background 0.15s ease, color 0.15s ease;
+  margin: 2px 10px; padding: 9px 12px; border-radius: 12px;
+  color: #c7d2fe; text-decoration: none; font-size: 13.5px;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
-.tv3-nav__item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.tv3-nav__item:hover { background: rgba(129, 140, 248, 0.16); color: #fff; }
 .tv3-nav__item.is-active {
-  background: rgba(201, 151, 53, 0.16);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: #fff;
-  border-left-color: var(--tv3-gold);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
   font-weight: 600;
 }
-.tv3-nav__footer { margin-top: auto; padding: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.tv3-nav__footer { margin-top: auto; padding: 12px; border-top: 1px solid rgba(129, 140, 248, 0.18); }
 
 .tv3-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .tv3-topbar {
@@ -163,10 +164,10 @@
 }
 .tv3-btn--primary:hover { background: var(--tv3-navy-deep); border-color: var(--tv3-navy-deep); color: #fff; }
 .tv3-btn--gold {
-  background: linear-gradient(135deg, #d4a54a, #c99735); border-color: var(--tv3-gold); color: #fff;
+  background: linear-gradient(135deg, #06b6d4, #0891b2); border-color: var(--tv3-gold); color: #fff;
   box-shadow: var(--tv3-shadow-gold);
 }
-.tv3-btn--gold:hover { background: linear-gradient(135deg, #c99735, #a87b24); color: #fff; }
+.tv3-btn--gold:hover { background: linear-gradient(135deg, #0891b2, #0e7490); color: #fff; }
 .tv3-btn--ghost-ai {
   background: var(--tv3-ai-soft); border-color: var(--tv3-ai-border); color: var(--tv3-ai);
 }

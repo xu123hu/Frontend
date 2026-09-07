@@ -5,7 +5,7 @@
         <div class="tv3-nav__brand-badge">∫</div>
         <div>
           <div class="tv3-nav__brand-title">教师工作台</div>
-          <div class="tv3-nav__brand-sub">V3 · 数学原型</div>
+          <div class="tv3-nav__brand-sub">智学数研 · AI 备课教学</div>
         </div>
       </div>
 
@@ -14,7 +14,7 @@
         <n-icon :size="17"><component :is="m.icon" /></n-icon>{{ m.label }}
       </router-link>
 
-      <div class="tv3-nav__group-label">测评与洞察</div>
+      <div class="tv3-nav__group-label">资源与测评</div>
       <router-link v-for="m in assessMenus" :key="m.path" :to="m.path" class="tv3-nav__item" :class="{ 'is-active': isActive(m.path) }">
         <n-icon :size="17"><component :is="m.icon" /></n-icon>{{ m.label }}
       </router-link>
@@ -28,7 +28,7 @@
           <div class="tv3-topbar__title">{{ pageTitle }}</div>
           <div class="tv3-topbar__sub">{{ pageSub }}</div>
         </div>
-        <span class="tv3-tag tv3-tag--gold" data-testid="tv3-version-tag">V3 原型 · 视觉与交互定稿</span>
+        <span class="tv3-tag tv3-tag--ai" data-testid="tv3-version-tag">AI 助教已就绪</span>
         <div class="tv3-topbar__spacer" />
         <div class="tv3-topbar__tasks">
           <button class="tv3-btn tv3-btn--sm" type="button" data-testid="tv3-task-bell" @click="taskOpen = !taskOpen">
@@ -48,10 +48,10 @@
           </div>
         </div>
         <div class="tv3-teacher-chip">
-          <div class="tv3-teacher-chip__avatar">李</div>
+          <div class="tv3-teacher-chip__avatar">{{ teacherInitial }}</div>
           <div class="tv3-teacher-chip__meta">
-            <div class="tv3-teacher-chip__name">李文澜</div>
-            <div class="tv3-teacher-chip__sub">高二数学 · 教师</div>
+            <div class="tv3-teacher-chip__name">{{ teacherName }}</div>
+            <div class="tv3-teacher-chip__sub">高中数学 · 教师</div>
           </div>
         </div>
       </header>
@@ -88,7 +88,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import {
-  AnalyticsOutline, BookOutline, ClipboardOutline, DocumentTextOutline, EaselOutline,
+  BookOutline, ClipboardOutline, EaselOutline,
   FolderOpenOutline, LibraryOutline, NotificationsOutline, SchoolOutline, TodayOutline,
 } from '@vicons/ionicons5'
 import { v3Api } from '@/api/teacherV3'
@@ -199,12 +199,21 @@ const dailyMenus = [
   { path: '/teacher-v3/classroom', label: '课堂互动', icon: SchoolOutline },
 ]
 const assessMenus = [
-  { path: '/teacher-v3/bank', label: '题库', icon: LibraryOutline },
-  { path: '/teacher-v3/quiz', label: '组卷中心', icon: DocumentTextOutline },
+  { path: '/teacher-v3/bank', label: '题库与组卷', icon: LibraryOutline },
   { path: '/teacher-v3/assign', label: '作业与批改', icon: ClipboardOutline },
-  { path: '/teacher-v3/insights', label: '学情洞察', icon: AnalyticsOutline },
   { path: '/teacher-v3/resources', label: '资源中心', icon: FolderOpenOutline },
 ]
+/* 学情洞察(/insights)、组卷中心(/quiz) 保留路由：入口收进「作业与批改」「题库与组卷」页头
+   （S17 P0：一级导航 ≤7；降级不删路由，页面互链不丢功能） */
+
+const teacherName = computed(() => {
+  try {
+    const raw = localStorage.getItem('ma_user')
+    const u = raw ? JSON.parse(raw) : null
+    return u?.nickname || '老师'
+  } catch { return '老师' }
+})
+const teacherInitial = computed(() => (teacherName.value || '老').slice(0, 1))
 
 const isActive = (p: string) => route.path === p
 const pageTitle = computed(() => (route.meta.title as string) || '教师工作台')

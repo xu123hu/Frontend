@@ -5,6 +5,8 @@
       <div class="tv3-card__head">
         <span class="tv3-card__title">作业与批改</span>
         <span class="tv3-card__sub">按题聚类 · 原图对照 · AI 起草反馈教师审定</span>
+        <span style="flex: 1" />
+        <router-link to="/teacher-v3/insights" class="tv3-btn tv3-btn--sm" data-testid="tv3-assign-to-insights">学情洞察 →</router-link>
       </div>
       <div class="tv3-card__body" style="display: flex; flex-direction: column; gap: 8px">
         <div v-for="a in assignments" :key="a.id" class="tv3-row" style="cursor: pointer" @click="openAssignment(a.id)">
