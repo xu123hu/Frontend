@@ -2,11 +2,44 @@ import { sseResponse, sleep } from "../_sse";
 import { store } from "../_store";
 
 /**
- * Mock：POST /api/v1/chat（B1-1，SSE）
- * 事件序列对齐 event-contracts §3：session → stage_start/end → message(quiz_item) → delta* → wait_for_input → done{waiting_input}
- * ?delay=3000 模拟慢首包；?fail=network 模拟可重试错误
+ * POST /api/v1/chat（B1-1，SSE）
+ * - BACKEND_PROXY=1：服务端直通管道到 B1（rewrite 代理会走压缩通道缓冲 SSE，浏览器收不到流）；
+ *   服务器侧 fetch 无压缩头，upstream.body 原样 pipe，客户端断开联动中止上游。
+ * - 否则：内置 mock 剧本（对齐 event-contracts §3 事件序列；?delay=/?fail= 演示超时/错误）。
  */
+const B1_BASE = process.env.B1_BASE ?? "http://localhost:8011";
+
+async function proxyChat(req: Request): Promise<Response> {
+  const upstreamCtrl = new AbortController();
+  req.signal.addEventListener("abort", () => upstreamCtrl.abort(), { once: true });
+  const headers: Record<string, string> = {
+    "Content-Type": req.headers.get("content-type") ?? "application/json",
+    Accept: "text/event-stream",
+  };
+  const lastEventId = req.headers.get("last-event-id");
+  if (lastEventId) headers["Last-Event-ID"] = lastEventId;
+  const upstream = await fetch(`${B1_BASE}/api/v1/chat`, {
+    method: "POST",
+    headers,
+    body: await req.text(),
+    signal: upstreamCtrl.signal,
+  });
+  return new Response(upstream.body, {
+    status: upstream.status,
+    headers: {
+      "Content-Type": upstream.headers.get("content-type") ?? "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
 export async function POST(req: Request) {
+  if (process.env.BACKEND_PROXY === "1") return proxyChat(req);
+  return mockChat(req);
+}
+
+async function mockChat(req: Request) {
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
   const message = String(body.message ?? "");
   const sessionId = (body.session_id as string | null) ?? null;

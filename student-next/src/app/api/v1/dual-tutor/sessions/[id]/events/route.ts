@@ -1,6 +1,36 @@
 import { sseResponse, sleep } from "../../../../_sse";
 import { store } from "../../../../_store";
 
+const B4_BASE = process.env.BACKEND_BASE ?? "http://localhost:8100";
+
+async function proxyEvents(req: Request, id: string): Promise<Response> {
+  const upstreamCtrl = new AbortController();
+  req.signal.addEventListener("abort", () => upstreamCtrl.abort(), { once: true });
+  const headers: Record<string, string> = { Accept: "text/event-stream" };
+  const lastEventId = req.headers.get("last-event-id");
+  if (lastEventId) headers["Last-Event-ID"] = lastEventId;
+  const upstream = await fetch(`${B4_BASE}/api/v1/dual-tutor/sessions/${id}/events`, {
+    method: "POST",
+    headers,
+    body: await req.text().catch(() => "{}"),
+    signal: upstreamCtrl.signal,
+  });
+  return new Response(upstream.body, {
+    status: upstream.status,
+    headers: {
+      "Content-Type": upstream.headers.get("content-type") ?? "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (process.env.BACKEND_PROXY === "1") return proxyEvents(req, id);
+  return mockEvents(req, id);
+}
+
 /**
  * Mock：POST /api/v1/dual-tutor/sessions/{id}/events（B4-5 SSE）
  * 事件序列：session → progress* → slide*（blocks: text/latex/example/figure_ref）→ done{total}
@@ -35,8 +65,7 @@ const SLIDES = [
   },
 ];
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+async function mockEvents(req: Request, id: string) {
   const lastEventId = Number(req.headers.get("Last-Event-ID") ?? 0);
   return sseResponse(async (send) => {
     let seq = store.dualSeq.get(id) ?? 0;

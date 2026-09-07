@@ -68,6 +68,8 @@ export function ChatSessionProvider({ children }: { children: React.ReactNode })
             body,
             signal: controller.signal,
             headers: lastSeqRef.current > 0 ? { "Last-Event-ID": String(lastSeqRef.current) } : undefined,
+            // 真实 B1 的 session 首包含路由/冷启动延迟（实测 3.7~8.5s+），8s 默认过紧
+            firstEventTimeoutMs: 15000,
             onEvent: (type, data, id) => {
               if (id) lastSeqRef.current = Number(id) || lastSeqRef.current;
               const d = data as Record<string, unknown>;

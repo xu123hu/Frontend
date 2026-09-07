@@ -1,9 +1,41 @@
 import { sseResponse, sleep } from "../../../../_sse";
 import { store } from "../../../../_store";
 
-/** Mock：POST /api/v1/chat/sessions/{sid}/reply（B1-1 追问回答，SSE 同 chat 事件序列） */
+/** POST /api/v1/chat/sessions/{sid}/reply（B1-1）：BACKEND_PROXY=1 时直通管道 B1，否则 mock。 */
+const B1_BASE = process.env.B1_BASE ?? "http://localhost:8011";
+
+async function proxyReply(req: Request, sid: string): Promise<Response> {
+  const upstreamCtrl = new AbortController();
+  req.signal.addEventListener("abort", () => upstreamCtrl.abort(), { once: true });
+  const headers: Record<string, string> = {
+    "Content-Type": req.headers.get("content-type") ?? "application/json",
+    Accept: "text/event-stream",
+  };
+  const lastEventId = req.headers.get("last-event-id");
+  if (lastEventId) headers["Last-Event-ID"] = lastEventId;
+  const upstream = await fetch(`${B1_BASE}/api/v1/chat/sessions/${sid}/reply`, {
+    method: "POST",
+    headers,
+    body: await req.text(),
+    signal: upstreamCtrl.signal,
+  });
+  return new Response(upstream.body, {
+    status: upstream.status,
+    headers: {
+      "Content-Type": upstream.headers.get("content-type") ?? "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ sid: string }> }) {
   const { sid } = await params;
+  if (process.env.BACKEND_PROXY === "1") return proxyReply(req, sid);
+  return mockReply(req, sid);
+}
+
+async function mockReply(req: Request, sid: string) {
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
   const reply = (body.reply ?? {}) as { question_id?: string; kind?: string; value?: string };
   const value = String(reply.value ?? "");
