@@ -64,7 +64,8 @@ function sync() {
     'update:modelValue',
     items.value
       .filter((p) => p.fileId && p.status !== 'failed' && p.status !== 'removed')
-      .map((p) => ({ file_id: p.fileId }))
+      // status/ocr_text/error 随行下发：父组件渲染识别确认卡（S5），消费 file_id 的旧调用方不受影响
+      .map((p) => ({ file_id: p.fileId, status: p.status, ocr_text: p.ocr_text || '', error: p.error || '' }))
   )
 }
 

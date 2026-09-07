@@ -33,8 +33,10 @@
             <option value="">知识点：暂不标注</option>
             <option v-for="k in kpOptions" :key="k.value" :value="k.value">{{ k.label }}</option>
           </select>
+          <button class="secondary" style="flex:0 0 auto;" :disabled="kpGuessing || !manual.question.trim()" title="根据题干自动识别知识点（可修改，S5：AI 分类+人工修正）" @click="guessKp(manual.question, true)">🔍 AI 识别知识点</button>
         </div>
         <HomeworkPhotos v-model="manual.photos" :max="1" @ocr="onManualOcr" />
+        <div v-if="ocrNote" style="font-size:12px;margin-top:6px;" :style="{ color: ocrNote.ok ? 'var(--ok,#16a34a)' : 'var(--err,#dc2626)' }">{{ ocrNote.msg }}</div>
         <div style="display:flex;gap:10px;margin-top:10px;">
           <button class="primary" :disabled="manualSubmitting" @click="submitManual">📌 入本</button>
           <span style="font-size:11.5px;color:var(--ink3);align-self:center;">入本后按 FSRS 自动排期，临到期自动提醒复习</span>
@@ -667,13 +669,47 @@ function onFcClose() {
   loadFilter()
 }
 
-/* ===== 拍错题入本（Vision03） ===== */
+/* ===== 拍错题入本（Vision03）===== */
 const manualOpen = ref(false)
 const manualSubmitting = ref(false)
 const manual = ref({ question: '', note: '', errorType: '', kpCode: '', photos: [] })
-function onManualOcr(text) {
-  if (text && !manual.value.question.trim()) manual.value.question = text
+
+// S5 识别确认卡：OCR 状态显式反馈（不再"只说文件上传"）
+const ocrNote = computed(() => {
+  const p = manual.value.photos[0]
+  if (!p) return null
+  if (p.status === 'parsing') return { ok: true, msg: '🔍 正在识别题干…（识别完成后自动填入，可修改）' }
+  if (p.status === 'ready' && p.ocr_text) return { ok: true, msg: `✓ 已识别题干 ${p.ocr_text.length} 字，已填入上方文本框——请确认无误或手动修正` }
+  if (p.status === 'ready' && !p.ocr_text) return { ok: false, msg: '⚠ 这张照片没识别出文字：请离近一点、光线充足再拍，或在上方手动粘贴题目' }
+  return null
+})
+
+// S5 AI 知识点预识别：确定性词表（POST /api/v1/kp/guess），零幻觉；识别错可人工改
+const kpGuessing = ref(false)
+async function guessKp(text, force = false) {
+  const t = (text || '').trim()
+  if (!t || kpGuessing.value) return
+  if (!force && manual.value.kpCode) return  // 已有标注不覆盖
+  kpGuessing.value = true
+  try {
+    const r = await api.post('/v1/kp/guess', { text: t.slice(0, 500) })
+    if (r?.matched && r.code) {
+      if (!kpOptions.value.some((k) => k.value === r.code)) kpOptions.value = [{ value: r.code, label: `${r.name}（AI 识别）` }, ...kpOptions.value]
+      if (force || !manual.value.kpCode) manual.value.kpCode = r.code
+      toast.info(`AI 识别知识点：${r.name}（可修改）`)
+    } else if (force) {
+      toast.info('没认出知识点，请手动选择')
+    }
+  } catch { /* 识别不可达：学生仍可手动选（诚实降级，不阻塞录入） */ }
+  finally { kpGuessing.value = false }
 }
+
+function onManualOcr(text) {
+  if (!text) return
+  if (!manual.value.question.trim()) manual.value.question = text
+  guessKp(text)  // OCR 完成 → 自动识别知识点（已有标注不覆盖）
+}
+
 async function submitManual() {
   const q = manual.value.question.trim()
   if (!q && !manual.value.photos.length) { toast.error('请先粘贴题干或拍照'); return }
@@ -681,13 +717,17 @@ async function submitManual() {
   manualSubmitting.value = true
   try {
     const fileId = manual.value.photos[0]?.file_id || null
-    await studentApi.createErrorRecord({
+    const kpLabel = kpOptions.value.find((k) => k.value === manual.value.kpCode)?.label || ''
+    const created = await studentApi.createErrorRecord({
       question_text: q || '（拍照错题）',
       error_type: manual.value.errorType || null,
       kp_code: manual.value.kpCode || null,
+      kp_name: kpLabel.replace(/（AI 识别）$/, '') || null,
       file_id: fileId,
       source_channel: 'manual_photo',
     })
+    const nr = created?.next_review_at
+    const nrMsg = nr ? `，首次复习 ${fmtMD(nr)}` : ''
     if (manual.value.note.trim()) {
       // 备注回写 best-effort：查重命中后 PATCH
       try {
@@ -696,7 +736,7 @@ async function submitManual() {
         if (hit) await api.patch(`/student/error-records/${hit.record_id}`, { note: manual.value.note.trim() })
       } catch { /* 备注回写失败不回影响入本 */ }
     }
-    toast.success('已收录，自动排入复习队列')
+    toast.success(`已收录${nrMsg}，自动排入复习队列`)
     manual.value = { question: '', note: '', errorType: '', kpCode: '', photos: [] }
     manualOpen.value = false
     loadHeatmap(); loadDue(); loadFilter()
