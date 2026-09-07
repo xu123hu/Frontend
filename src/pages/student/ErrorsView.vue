@@ -37,6 +37,11 @@
         </div>
         <HomeworkPhotos v-model="manual.photos" :max="1" @ocr="onManualOcr" />
         <div v-if="ocrNote" style="font-size:12px;margin-top:6px;" :style="{ color: ocrNote.ok ? 'var(--ok,#16a34a)' : 'var(--err,#dc2626)' }">{{ ocrNote.msg }}</div>
+        <div v-if="enhancedUrl" style="display:flex;gap:8px;margin-top:6px;align-items:center;">
+          <span style="font-size:11.5px;color:var(--ink3);">✨ 已生成增强图（更清晰，原图仍保留）：</span>
+          <img :src="enhancedUrl" alt="增强图" style="height:64px;border-radius:8px;cursor:zoom-in;border:1px solid var(--border,#e2e8f0);" @click="openLightbox(enhancedUrl)" />
+        </div>
+        <div v-else-if="enhancing" style="font-size:11.5px;color:var(--ink3);margin-top:6px;">✨ 正在生成增强图…</div>
         <div style="display:flex;gap:10px;margin-top:10px;">
           <button class="primary" :disabled="manualSubmitting" @click="submitManual">📌 入本</button>
           <span style="font-size:11.5px;color:var(--ink3);align-self:center;">入本后按 FSRS 自动排期，临到期自动提醒复习</span>
@@ -277,6 +282,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { butlerApi, filesApi, studentApi } from '@/api'
+import { openLightbox } from '@/utils/lightbox'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import LatexText from '@/components/LatexText.vue'
@@ -708,6 +714,23 @@ function onManualOcr(text) {
   if (!text) return
   if (!manual.value.question.trim()) manual.value.question = text
   guessKp(text)  // OCR 完成 → 自动识别知识点（已有标注不覆盖）
+  ensureEnhanced()  // S5 后半：拍照清晰化预览（原图/增强双轨，不覆盖原图）
+}
+
+// S5 后半：图像增强（B4 算法，:8000 files 域代理 → FileAsset 持久化，幂等）
+const enhancing = ref(false)
+const enhancedUrl = ref('')
+async function ensureEnhanced() {
+  const p = manual.value.photos[0]
+  if (!p?.file_id || enhancing.value) return
+  enhancing.value = true
+  try {
+    const r = await api.post(`/files/${p.file_id}/enhance`)
+    if (r?.asset_id) {
+      const u = await api.get(`/files/${p.file_id}/assets/${r.asset_id}/url`)
+      enhancedUrl.value = u?.url || ''
+    }
+  } catch { /* 增强不可达：只少预览，不阻塞录入 */ } finally { enhancing.value = false }
 }
 
 async function submitManual() {

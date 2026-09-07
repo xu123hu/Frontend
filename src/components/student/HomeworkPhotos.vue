@@ -50,7 +50,7 @@ const emit = defineEmits(['update:modelValue', 'ocr'])
 
 const POLL_START_MS = 2000
 const POLL_MAX_MS = 8000
-const TIMEOUT_MS = 90000
+const TIMEOUT_MS = 180000  // MiMo 对模糊/低光图可超 90s（实测），90s 会把 eventual-success 当超时
 let seq = 0
 
 const items = ref([])
