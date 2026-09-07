@@ -56,7 +56,7 @@
             <button class="tv3-seg__btn" :class="{ 'is-active': gview === 'byStudent' }" @click="gview = 'byStudent'">按人</button>
             <button class="tv3-seg__btn" :class="{ 'is-active': gview === 'byTier' }" @click="gview = 'byTier'">分层</button>
           </div>
-          <span style="font-size: 12px; color: var(--tv3-ink3)">AI 错因标签已预标注（ai-flag），教师核对原图后确认</span>
+          <span style="font-size: 12px; color: var(--tv3-ink3)">AI 已预标错因供参考，请核对原图后确认</span>
           <div v-if="reviewProgress < 100 && reviewProgress > 0" style="flex: 1; max-width: 260px">
             <div class="tv3-progress"><div class="tv3-progress__bar" :style="{ width: reviewProgress + '%' }" /></div>
             <div style="font-size: 11px; color: var(--tv3-ink3); margin-top: 3px" data-testid="tv3-review-stage">{{ reviewStage }}</div>

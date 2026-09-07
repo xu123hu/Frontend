@@ -14,7 +14,7 @@
         <div class="ws-hero-pills">
           <span class="ws-pill ws-pill--brand">课件工坊</span>
         </div>
-        <p class="ws-hello">下午好，李老师 👋</p>
+        <p class="ws-hello">{{ hello }}</p>
         <h1 class="ws-h1">把想法变成<span class="ws-grad">课件</span></h1>
         <p class="ws-sub">描述这节课怎么上，AI 先出可编辑的大纲草稿，确认后再逐页生成</p>
 
@@ -30,7 +30,7 @@
               <button class="ws-icon-btn" title="附材料（教案 / 讲义 / 旧课件，原型记录文件名）" @click="docInput?.click()">📎</button>
               <input ref="docInput" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt" multiple hidden @change="ws.onDocFiles($event)">
               <div class="ws-mode-chips">
-                <button class="ws-chip is-primary">✦ 生成新课件</button>
+                <button class="ws-chip is-primary" data-testid="tv3-entry-topic" title="用左侧文本生成大纲草稿" @click="ws.submitHero()">✦ 生成新课件</button>
                 <button class="ws-chip" data-testid="tv3-entry-photo" @click="ws.openNew('photo')">📷 拍照出课件</button>
                 <button class="ws-chip" data-testid="tv3-entry-plan" @click="ws.openNew('plan')">📄 教案直通</button>
                 <button class="ws-chip" data-testid="tv3-entry-adapt" @click="ws.adaptFromDeck()">📚 课件改编</button>
@@ -425,6 +425,11 @@
 import { reactive, ref } from 'vue'
 
 defineProps<{ ws: any }>()
+/* C14：问候语按时段计算（与今日工作台同一口径），不再硬编码「下午好」 */
+const hello = (() => {
+  const h = new Date().getHours()
+  return (h < 12 ? '上午好' : h < 18 ? '下午好' : '晚上好') + '，李老师 👋'
+})()
 const docInput = ref<HTMLInputElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 /** IFC-003：缩略图加载失败 → 回落 swatch 自渲染骨架（记录失败 id，绝不破图） */
