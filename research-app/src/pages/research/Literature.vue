@@ -5,6 +5,7 @@
  * 诚实性：未选择项目时显示明确引导，不臆造数据。
  */
 import { computed, ref } from 'vue';
+import { AppButton } from '@shared/ui';
 import Boundary from '@shared/ui/Boundary.vue';
 import Skeleton from '@shared/ui/Skeleton.vue';
 import EmptyState from '@shared/ui/EmptyState.vue';
@@ -56,22 +57,19 @@ function onImported(itemId?: string): void {
             {{ p.title }}
           </option>
         </select>
-        <button
-          class="btn"
-          type="button"
+        <AppButton
+          variant="secondary"
           :disabled="!projectId"
           @click="searchOpen = true"
         >
           检索文献
-        </button>
-        <button
-          class="btn primary"
-          type="button"
+        </AppButton>
+        <AppButton
           :disabled="!projectId"
           @click="importOpen = true"
         >
           导入文献
-        </button>
+        </AppButton>
       </div>
     </header>
 
@@ -80,13 +78,9 @@ function onImported(itemId?: string): void {
       title="还没有科研项目"
       hint="文献库按项目组织：先创建项目，再导入与检索文献。"
     >
-      <button
-        class="btn primary"
-        type="button"
-        @click="$router.push({ name: 'projects' })"
-      >
+      <AppButton @click="$router.push({ name: 'projects' })">
         前往新建项目
-      </button>
+      </AppButton>
     </EmptyState>
 
     <Skeleton
@@ -100,13 +94,13 @@ function onImported(itemId?: string): void {
       title="项目列表加载失败"
     >
       {{ projectsQuery.error.value?.message }}
-      <button
-        class="retry"
-        type="button"
+      <AppButton
+        variant="ghost"
+        size="sm"
         @click="projectsQuery.refetch()"
       >
         重试
-      </button>
+      </AppButton>
     </Boundary>
 
     <LiteratureBrowser
@@ -131,6 +125,7 @@ function onImported(itemId?: string): void {
   </div>
 </template>
 
+
 <style scoped>
 .page {
   max-width: 1460px;
@@ -144,57 +139,39 @@ function onImported(itemId?: string): void {
   margin-bottom: 16px;
 }
 .page-head h1 {
-  font-size: var(--font-size-3xl);
   margin: 0 0 6px;
+  font-size: var(--font-size-3xl);
+  color: var(--ailp-foreground);
 }
 .page-head p {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--ailp-muted-foreground);
   max-width: 75ch;
+  font-size: var(--font-size-base);
 }
 .actions {
   display: flex;
-  gap: 7px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
 .scope {
   min-height: 34px;
-  padding: 5px 9px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
+  padding: 5px 12px;
+  border: 1px solid var(--ailp-input);
+  border-radius: var(--radius-md);
+  background: var(--ailp-card);
+  font-family: var(--font);
   font-weight: 650;
-  color: var(--text);
-  max-width: 200px;
+  font-size: var(--font-size-base);
+  color: var(--ailp-foreground);
+  max-width: 220px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.btn {
-  min-height: 34px;
-  padding: 6px 11px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  font-weight: 650;
-  color: var(--text);
-  cursor: pointer;
-}
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.btn.primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-.retry {
-  border: 0;
-  background: none;
-  color: var(--primary);
-  font-weight: 700;
-  cursor: pointer;
-  padding: 0 2px;
-  text-decoration: underline;
+.scope:focus {
+  border-color: var(--ailp-ring);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 </style>

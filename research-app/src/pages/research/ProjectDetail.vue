@@ -9,6 +9,7 @@
  */
 import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { AppButton, AppCard, AppChip } from '@shared/ui';
 import Boundary from '@shared/ui/Boundary.vue';
 import Skeleton from '@shared/ui/Skeleton.vue';
 import { useProject } from '@features/projects/use-projects';
@@ -100,13 +101,14 @@ const claimsQuery = useClaims(paperId);
       title="项目详情加载失败"
     >
       {{ projectQuery.error.value?.message }}
-      <button
+      <AppButton
+        variant="danger"
+        size="sm"
         class="retry"
-        type="button"
         @click="projectQuery.refetch()"
       >
         重试
-      </button>
+      </AppButton>
     </Boundary>
 
     <template v-else-if="project">
@@ -120,11 +122,13 @@ const claimsQuery = useClaims(paperId);
             {{ project.research_question }}
           </p>
         </div>
-        <span class="stage-chip">{{ STAGE_LABELS[project.stage] ?? project.stage }}</span>
+        <AppChip tone="primary" size="md">
+          {{ STAGE_LABELS[project.stage] ?? project.stage }}
+        </AppChip>
       </header>
 
-      <section
-        class="panel"
+      <AppCard
+        padding="lg"
         aria-label="研究阶段时间线"
       >
         <h2>研究阶段</h2>
@@ -144,10 +148,10 @@ const claimsQuery = useClaims(paperId);
             </div>
           </li>
         </ol>
-      </section>
+      </AppCard>
 
-      <section
-        class="panel"
+      <AppCard
+        padding="lg"
         aria-label="研究问题—假设—证据—验证"
       >
         <h2>研究问题—假设—证据—验证</h2>
@@ -167,10 +171,13 @@ const claimsQuery = useClaims(paperId);
               v-for="h in latestPlan.hypotheses"
               :key="h.id"
             >
-              <span
-                class="hyp-tag"
+              <AppChip
+                tone="warning"
+                size="sm"
                 aria-label="假设标记"
-              >假设</span>
+              >
+                假设
+              </AppChip>
               {{ h.text }}
             </li>
           </ul>
@@ -202,10 +209,10 @@ const claimsQuery = useClaims(paperId);
             本项目暂无评审批次主张。
           </p>
         </div>
-      </section>
+      </AppCard>
 
-      <section
-        class="panel"
+      <AppCard
+        padding="lg"
         aria-label="项目事实"
       >
         <h2>项目信息</h2>
@@ -224,10 +231,11 @@ const claimsQuery = useClaims(paperId);
           <div><dt>创建时间</dt><dd>{{ formatDate(project.created_at) }}</dd></div>
           <div><dt>更新时间</dt><dd>{{ formatDate(project.updated_at) }}</dd></div>
         </dl>
-      </section>
+      </AppCard>
     </template>
   </div>
 </template>
+
 
 <style scoped>
 .page {
@@ -244,52 +252,40 @@ const claimsQuery = useClaims(paperId);
 }
 .eyebrow {
   margin: 0 0 4px;
-  color: var(--primary);
-  font-size: var(--font-size-sm);
+  color: var(--ailp-primary-600);
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 .page-head h1 {
-  font-size: var(--font-size-3xl);
   margin: 0 0 6px;
+  font-size: var(--font-size-3xl);
+  color: var(--ailp-foreground);
 }
 .rq {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--ailp-muted-foreground);
   max-width: 70ch;
+  font-size: var(--font-size-base);
 }
-.stage-chip {
-  flex-shrink: 0;
-  display: inline-flex;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-}
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 18px;
+.retry {
+  margin-left: 8px;
 }
 .panel h2 {
   margin: 0 0 12px;
   font-size: var(--font-size-lg);
+  color: var(--ailp-foreground);
 }
 .timeline {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 0;
 }
 .timeline li {
   display: flex;
   gap: 12px;
   padding: 8px 0;
   position: relative;
-  color: var(--text-muted);
+  color: var(--ailp-muted-foreground);
 }
 .timeline li:not(:last-child)::before {
   content: '';
@@ -298,34 +294,34 @@ const claimsQuery = useClaims(paperId);
   top: 28px;
   bottom: -8px;
   width: 2px;
-  background: var(--border);
+  background: var(--ailp-border);
 }
 .timeline .dot {
   flex-shrink: 0;
   width: 12px;
   height: 12px;
   margin-top: 4px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  background: var(--surface);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--ailp-border);
+  background: var(--ailp-card);
 }
 .timeline li.done .dot {
-  background: var(--success);
-  border-color: var(--success);
+  background: var(--ailp-success-500);
+  border-color: var(--ailp-success-500);
 }
 .timeline li.current .dot {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: var(--ailp-primary-600);
+  border-color: var(--ailp-primary-600);
 }
 .timeline li.current {
-  color: var(--text);
+  color: var(--ailp-foreground);
 }
 .timeline b {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
 }
 .timeline p {
   margin: 2px 0 0;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
 }
 .facts {
   margin: 0 0 14px;
@@ -335,27 +331,29 @@ const claimsQuery = useClaims(paperId);
 }
 .facts dt {
   font-size: var(--font-size-xs);
-  color: var(--text-muted);
+  color: var(--ailp-muted-foreground);
   font-weight: 700;
 }
 .facts dd {
   margin: 2px 0 0;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
+  color: var(--ailp-foreground);
   word-break: break-all;
 }
 .boundary-text {
   margin: 0 0 6px;
+  font-size: var(--font-size-base);
 }
 .muted {
-  color: var(--text-muted);
+  color: var(--ailp-muted-foreground);
 }
 .small {
   font-size: var(--font-size-xs);
 }
 .panel-desc {
   margin: -6px 0 4px;
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
+  font-size: var(--font-size-base);
+  color: var(--ailp-muted-foreground);
   max-width: 80ch;
 }
 .sub-block + .sub-block {
@@ -363,7 +361,8 @@ const claimsQuery = useClaims(paperId);
 }
 .sub-block h3 {
   margin: 0 0 8px;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-lg);
+  color: var(--ailp-foreground);
 }
 .hyp-list {
   list-style: none;
@@ -373,25 +372,19 @@ const claimsQuery = useClaims(paperId);
   gap: 6px;
 }
 .hyp-list li {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   line-height: 1.55;
+  color: var(--ailp-foreground);
 }
 .hyp-tag {
-  display: inline-flex;
-  padding: 1px 7px;
-  border-radius: 999px;
-  border: 1px dashed var(--warning);
-  color: var(--warning);
-  font-weight: 800;
   margin-right: 6px;
-  font-size: 11px;
 }
 .panel-link {
   display: inline-block;
   margin-top: 10px;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-base);
   font-weight: 700;
-  color: var(--primary);
+  color: var(--ailp-primary-600);
   text-decoration: none;
 }
 .panel-link:hover {
@@ -399,16 +392,5 @@ const claimsQuery = useClaims(paperId);
 }
 .mono {
   font-family: var(--mono);
-}
-.retry {
-  border: 1px solid var(--danger);
-  background: #fff;
-  color: var(--danger);
-  border-radius: 6px;
-  padding: 2px 9px;
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  cursor: pointer;
-  margin-left: 8px;
 }
 </style>

@@ -10,6 +10,7 @@
 import { computed, ref, watch, onBeforeUnmount, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Plus, BookOpen, Play, FlaskConical, Save } from 'lucide-vue-next';
+import { AppButton, AppCard, AppInput } from '@shared/ui';
 import Boundary from '@shared/ui/Boundary.vue';
 import Skeleton from '@shared/ui/Skeleton.vue';
 import EmptyState from '@shared/ui/EmptyState.vue';
@@ -219,20 +220,22 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
           class="new-form"
           @submit.prevent="createManuscript"
         >
-          <input
+          <AppInput
             v-model="newName"
             type="text"
             placeholder="新建文稿名称…"
             aria-label="新文稿名称"
-          >
-          <button
+            class="new-name-input"
+          />
+          <AppButton
+            variant="secondary"
             type="submit"
-            class="btn"
-            :disabled="!newName.trim() || createMutation.isPending.value"
+            :loading="createMutation.isPending.value"
+            :disabled="!newName.trim()"
           >
             <Plus :size="14" />
             新建
-          </button>
+          </AppButton>
         </form>
       </div>
     </header>
@@ -267,7 +270,8 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
       class="workspace"
     >
       <!-- 左：文件树 -->
-      <aside
+      <AppCard
+        padding="sm"
         class="pane tree-pane"
         aria-label="文稿文件"
       >
@@ -276,10 +280,11 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
           :active-path="activePath"
           @select="activePath = $event"
         />
-      </aside>
+      </AppCard>
 
       <!-- 中：编辑器 -->
-      <section
+      <AppCard
+        padding="none"
         class="pane editor-pane"
         aria-label="LaTeX 编辑器"
       >
@@ -314,39 +319,39 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
           :citation-keys="citationKeys"
           :suggestion-lines="suggestionLines"
         />
-      </section>
+      </AppCard>
 
       <!-- 右：编译 + AI diff + 引用 -->
-      <aside
+      <AppCard
+        padding="sm"
         class="pane right-pane"
         aria-label="编译与修订"
       >
         <div class="right-actions">
-          <button
+          <AppButton
             type="button"
-            class="btn primary"
             @click="startCompile()"
           >
             <Play :size="14" />
             编译 PDF
-          </button>
-          <button
+          </AppButton>
+          <AppButton
             type="button"
-            class="btn"
+            variant="secondary"
             @click="citationOpen = true"
           >
             <BookOpen :size="14" />
             插入引用
-          </button>
-          <button
+          </AppButton>
+          <AppButton
             type="button"
-            class="btn"
+            variant="ghost"
             :aria-label="`证据检查${auditOpen ? '收起' : '展开'}`"
             @click="auditOpen = !auditOpen"
           >
             <FlaskConical :size="14" />
             证据检查
-          </button>
+          </AppButton>
         </div>
         <p
           v-if="compileError"
@@ -368,20 +373,22 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
         >
           <summary>演练：编译失败场景</summary>
           <div class="drill-actions">
-            <button
+            <AppButton
               type="button"
-              class="mini-btn"
+              variant="secondary"
+              size="sm"
               @click="startCompile('missing_resource')"
             >
               缺失资源
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
-              class="mini-btn"
+              variant="secondary"
+              size="sm"
               @click="startCompile('unsafe_command')"
             >
               不安全命令
-            </button>
+            </AppButton>
           </div>
         </details>
 
@@ -401,12 +408,13 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
               :key="s"
             >
               <span>「{{ s }}」</span>
-              <button
+              <AppButton
                 type="button"
-                class="mini-btn"
+                variant="secondary"
+                size="sm"
               >
                 请求补证
-              </button>
+              </AppButton>
             </li>
           </ul>
         </div>
@@ -418,7 +426,7 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
           @decide="decide"
           @locate="locateSuggestion"
         />
-      </aside>
+      </AppCard>
     </div>
 
     <CitationInsertDialog
@@ -429,6 +437,7 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
     />
   </div>
 </template>
+
 
 <style scoped>
 .page {
@@ -443,65 +452,48 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
   margin-bottom: 16px;
 }
 .page-head h1 {
-  font-size: var(--font-size-3xl);
   margin: 0 0 6px;
+  font-size: var(--font-size-3xl);
+  color: var(--ailp-foreground);
 }
 .page-head p {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--ailp-muted-foreground);
   max-width: 75ch;
+  font-size: var(--font-size-base);
 }
 .actions {
   display: flex;
-  gap: 7px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
 .scope {
   min-height: 34px;
-  padding: 5px 9px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
+  padding: 5px 12px;
+  border: 1px solid var(--ailp-input);
+  border-radius: var(--radius-md);
+  background: var(--ailp-card);
+  font-family: var(--font);
   font-weight: 650;
-  color: var(--text);
-  max-width: 200px;
+  font-size: var(--font-size-base);
+  color: var(--ailp-foreground);
+  max-width: 220px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.scope:focus {
+  border-color: var(--ailp-ring);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 .new-form {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }
-.new-form input {
-  min-height: 34px;
-  width: 180px;
-  padding: 5px 10px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  font-size: var(--font-size-sm);
-}
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 34px;
-  padding: 6px 11px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  font-weight: 650;
-  color: var(--text);
-  cursor: pointer;
-}
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.btn.primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+.new-name-input {
+  width: 190px;
 }
 .workspace {
   display: grid;
@@ -512,16 +504,12 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
   min-height: 480px;
 }
 .pane {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
 }
 .tree-pane {
-  padding: 10px;
   gap: 8px;
   overflow: auto;
 }
@@ -533,11 +521,12 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 7px 10px;
-  border-bottom: 1px solid var(--border);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ailp-border);
   font-size: var(--font-size-xs);
 }
 .file-path {
+  color: var(--ailp-foreground);
   font-family: var(--mono);
   font-weight: 800;
 }
@@ -545,17 +534,16 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--text-muted);
+  color: var(--ailp-muted-foreground);
   font-weight: 700;
 }
 .save-state.saved {
-  color: #1c6a4a;
+  color: var(--ailp-success-600);
 }
 .save-state.error {
-  color: var(--danger);
+  color: var(--ailp-error-600);
 }
 .right-pane {
-  padding: 10px;
   gap: 10px;
   overflow: auto;
   align-content: start;
@@ -563,64 +551,52 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
 .right-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 .mini-error {
   margin: 0;
-  color: var(--danger);
+  color: var(--ailp-error-600);
   font-size: var(--font-size-xs);
   font-weight: 650;
 }
 .drill {
-  border: 1px dashed var(--border);
-  border-radius: 7px;
-  padding: 6px 8px;
+  border: 1px dashed var(--ailp-border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
 }
 .drill summary {
   cursor: pointer;
   font-size: var(--font-size-xs);
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--ailp-muted-foreground);
 }
 .drill-actions {
   display: flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-.mini-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 26px;
-  padding: 2px 9px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  cursor: pointer;
+  gap: 8px;
+  margin-top: 8px;
 }
 .audit {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
+  border: 1px solid var(--ailp-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
 }
 .audit-title {
-  margin: 0 0 3px;
-  font-size: var(--font-size-sm);
+  margin: 0 0 4px;
+  font-size: var(--font-size-base);
   font-weight: 800;
+  color: var(--ailp-foreground);
 }
 .audit-hint {
-  margin: 0 0 6px;
-  color: var(--text-muted);
-  font-size: var(--font-size-xs);
+  margin: 0 0 8px;
+  color: var(--ailp-muted-foreground);
+  font-size: var(--font-size-base);
 }
 .audit-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 5px;
+  gap: 8px;
 }
 .audit-list li {
   display: flex;
@@ -629,8 +605,10 @@ onBeforeUnmount(() => clearTimeout(saveTimer));
   gap: 8px;
   font-size: var(--font-size-xs);
   background: var(--warning-bg);
-  border-radius: 6px;
-  padding: 5px 8px;
+  border: 1px solid var(--ailp-warning-500);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  color: var(--ailp-warning-600);
 }
 @media (max-width: 1080px) {
   .workspace {

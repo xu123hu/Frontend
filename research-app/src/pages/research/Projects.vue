@@ -6,6 +6,7 @@
  */
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { AppButton, AppCard, AppChip } from '@shared/ui';
 import EmptyState from '@shared/ui/EmptyState.vue';
 import Boundary from '@shared/ui/Boundary.vue';
 import Skeleton from '@shared/ui/Skeleton.vue';
@@ -57,13 +58,12 @@ function onCreated(projectId: string): void {
       </div>
       <div class="actions">
         <DataSourceBadge />
-        <button
-          class="btn primary"
-          type="button"
+        <AppButton
+          size="md"
           @click="dialogOpen = true"
         >
           新建项目
-        </button>
+        </AppButton>
       </div>
     </header>
 
@@ -77,13 +77,14 @@ function onCreated(projectId: string): void {
       title="项目列表加载失败"
     >
       {{ projectsQuery.error.value?.message }}
-      <button
-        class="retry"
-        type="button"
+      <AppButton
+        variant="danger"
+        size="sm"
+        class="boundary-action"
         @click="projectsQuery.refetch()"
       >
         重试
-      </button>
+      </AppButton>
     </Boundary>
 
     <EmptyState
@@ -91,13 +92,9 @@ function onCreated(projectId: string): void {
       title="还没有科研项目"
       hint="项目是科研工作区的组织单元：文献、证据、写作与评审都归属到项目。创建第一个项目开始。"
     >
-      <button
-        class="btn primary"
-        type="button"
-        @click="dialogOpen = true"
-      >
+      <AppButton @click="dialogOpen = true">
         创建第一个项目
-      </button>
+      </AppButton>
     </EmptyState>
 
     <ul
@@ -108,21 +105,28 @@ function onCreated(projectId: string): void {
         v-for="project in projects"
         :key="project.id"
       >
-        <button
-          type="button"
+        <AppCard
+          variant="interactive"
+          padding="md"
+          role="button"
+          tabindex="0"
           class="project-card"
           @click="enterProject(project.id, project.title)"
+          @keydown.enter.prevent="enterProject(project.id, project.title)"
+          @keydown.space.prevent="enterProject(project.id, project.title)"
         >
           <span class="card-top">
             <span class="project-title">{{ project.title }}</span>
-            <span class="stage-chip">{{ STAGE_LABELS[project.stage] ?? project.stage }}</span>
+            <AppChip tone="primary" size="sm">
+              {{ STAGE_LABELS[project.stage] ?? project.stage }}
+            </AppChip>
           </span>
           <span class="project-rq">{{ project.research_question }}</span>
           <span class="card-bottom">
             <span class="muted small">{{ project.domain }} · {{ project.visibility === 'private' ? '私有' : '团队' }}</span>
             <span class="muted small">更新于 {{ formatDate(project.updated_at) }}</span>
           </span>
-        </button>
+        </AppCard>
       </li>
     </ul>
 
@@ -149,44 +153,21 @@ function onCreated(projectId: string): void {
 .page-head h1 {
   font-size: var(--font-size-3xl);
   margin: 0 0 6px;
+  color: var(--ailp-foreground);
 }
 .page-head p {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--ailp-muted-foreground);
   max-width: 75ch;
+  font-size: var(--font-size-base);
 }
 .actions {
   display: flex;
-  gap: 7px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
 }
-.btn {
-  min-height: 34px;
-  padding: 6px 11px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  font-weight: 650;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.btn.primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-.retry {
-  border: 1px solid var(--danger);
-  background: #fff;
-  color: var(--danger);
-  border-radius: 6px;
-  padding: 2px 9px;
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  cursor: pointer;
+.boundary-action {
   margin-left: 8px;
 }
 .project-grid {
@@ -204,16 +185,8 @@ function onCreated(projectId: string): void {
   display: grid;
   gap: 8px;
   align-content: start;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  cursor: pointer;
   font: inherit;
-}
-.project-card:hover {
-  border-color: #b8c4d5;
-  box-shadow: var(--shadow);
+  color: inherit;
 }
 .card-top {
   display: flex;
@@ -224,20 +197,11 @@ function onCreated(projectId: string): void {
 .project-title {
   font-weight: 750;
   font-size: var(--font-size-lg);
-}
-.stage-chip {
-  flex-shrink: 0;
-  display: inline-flex;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
+  color: var(--ailp-foreground);
 }
 .project-rq {
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
+  color: var(--ailp-muted-foreground);
+  font-size: var(--font-size-base);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -251,7 +215,7 @@ function onCreated(projectId: string): void {
   flex-wrap: wrap;
 }
 .muted {
-  color: var(--text-muted);
+  color: var(--ailp-muted-foreground);
 }
 .small {
   font-size: var(--font-size-xs);

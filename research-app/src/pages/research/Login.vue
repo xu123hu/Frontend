@@ -11,6 +11,7 @@ import { useSession } from '@features/auth/use-session';
 import { ApiError } from '@app/api/client';
 import { config } from '@app/config';
 import { isOidcCallback } from '@features/auth/oidc';
+import { AppButton, AppCard, AppInput } from '@shared/ui';
 
 const route = useRoute();
 const router = useRouter();
@@ -155,310 +156,236 @@ function backToPhone(): void {
   fieldError.value = null;
 }
 </script>
-
 <template>
   <div class="login">
+    <span
+      class="bg-blob blob-a"
+      aria-hidden="true"
+    />
+    <span
+      class="bg-blob blob-b"
+      aria-hidden="true"
+    />
     <main
-      class="login-card"
       role="main"
+      class="login-shell"
     >
-      <h1>智学数研 · 科研端</h1>
-      <p class="muted">
-        面向数学科研的证据原生智能科研操作系统
-      </p>
-
-      <p
-        v-if="session.probeDegraded.value"
-        class="degraded"
-        role="alert"
+      <AppCard
+        variant="portal"
+        padding="lg"
+        class="login-card"
       >
-        网络连接不可用或服务暂时无法访问，登录功能可能受限。
-      </p>
-      <p
-        v-if="config.useMock && !config.oidcEnabled"
-        class="mock-hint"
-        role="note"
-      >
-        演示环境：账号 13800000001，验证码 888888。
-      </p>
-
-      <div
-        v-if="config.oidcEnabled"
-        class="form"
-      >
+        <h1>智学数研 · 科研端</h1>
         <p class="muted">
-          本环境使用统一身份登录（Keycloak）。演示账号：alice / alice_dev_only。
+          面向数学科研的证据原生智能科研操作系统
         </p>
+
         <p
-          v-if="oidcError"
-          class="form-error"
+          v-if="session.probeDegraded.value"
+          class="notice warning"
           role="alert"
         >
-          <span>{{ oidcError.message }}</span>
-          <button
-            v-if="oidcError.retryable"
-            type="button"
-            class="retry"
-            @click="startOidcLogin"
-          >
-            重试
-          </button>
+          网络连接不可用或服务暂时无法访问，登录功能可能受限。
         </p>
-        <button
-          class="btn primary"
-          type="button"
-          :disabled="oidcProcessing"
-          @click="startOidcLogin"
+        <p
+          v-if="config.useMock && !config.oidcEnabled"
+          class="notice info"
+          role="note"
         >
-          {{ oidcProcessing ? '正在跳转统一身份…' : '使用统一身份登录' }}
-        </button>
-      </div>
+          演示环境：账号 13800000001，验证码 888888。
+        </p>
 
-      <form
-        v-else
-        class="form"
-        novalidate
-        @submit.prevent="step === 'phone' ? sendOtp() : submitLogin()"
-      >
         <div
-          v-if="step === 'phone'"
-          class="field"
+          v-if="config.oidcEnabled"
+          class="form"
         >
-          <label for="phone">手机号</label>
-          <input
-            id="phone"
-            v-model="phone"
-            type="tel"
-            placeholder="请输入手机号"
-            autocomplete="tel"
-            :aria-invalid="fieldError?.field === 'phone'"
-            :aria-describedby="fieldError?.field === 'phone' ? 'phone-error' : undefined"
-          >
-          <p
-            v-if="fieldError?.field === 'phone'"
-            id="phone-error"
-            class="error"
+          <p class="muted">
+            本环境使用统一身份登录（Keycloak）。演示账号：alice / alice_dev_only。
+          </p>
+          <div
+            v-if="oidcError"
+            class="form-error"
             role="alert"
           >
-            {{ fieldError.message }}
-          </p>
+            <span>{{ oidcError.message }}</span>
+            <AppButton
+              v-if="oidcError.retryable"
+              variant="danger"
+              size="sm"
+              @click="startOidcLogin"
+            >
+              重试
+            </AppButton>
+          </div>
+          <AppButton
+            block
+            size="lg"
+            :loading="oidcProcessing"
+            @click="startOidcLogin"
+          >
+            {{ oidcProcessing ? '正在跳转统一身份…' : '使用统一身份登录' }}
+          </AppButton>
         </div>
 
-        <template v-else>
-          <div class="field">
-            <label for="otp">验证码</label>
-            <div class="otp-row">
-              <input
-                id="otp"
-                ref="otpInput"
-                v-model="otp"
-                type="text"
-                inputmode="numeric"
-                maxlength="6"
-                placeholder="6 位验证码"
-                autocomplete="one-time-code"
-                :aria-invalid="fieldError?.field === 'otp'"
-                :aria-describedby="fieldError?.field === 'otp' ? 'otp-error' : undefined"
-              >
-              <button
-                type="button"
-                class="btn resend"
-                :disabled="otpCountdown > 0"
-                @click="sendOtp"
-              >
-                {{ otpCountdown > 0 ? `${otpCountdown}s 后重发` : '重新发送' }}
-              </button>
-            </div>
-            <p
-              v-if="fieldError?.field === 'otp'"
-              id="otp-error"
-              class="error"
-              role="alert"
+        <form
+          v-else
+          class="form"
+          novalidate
+          @submit.prevent="step === 'phone' ? sendOtp() : submitLogin()"
+        >
+          <AppInput
+            v-if="step === 'phone'"
+            id="phone"
+            v-model="phone"
+            label="手机号"
+            type="text"
+            name="phone"
+            placeholder="请输入手机号"
+            :error="fieldError?.field === 'phone' ? fieldError.message : undefined"
+          />
+
+          <template v-else>
+            <AppInput
+              id="otp"
+              v-model="otp"
+              label="验证码"
+              type="text"
+              name="otp"
+              placeholder="6 位验证码"
+              :error="fieldError?.field === 'otp' ? fieldError.message : undefined"
             >
-              {{ fieldError.message }}
-            </p>
+              <template #suffix>
+                <AppButton
+                  variant="secondary"
+                  size="sm"
+                  :disabled="otpCountdown > 0"
+                  @click="sendOtp"
+                >
+                  {{ otpCountdown > 0 ? `${otpCountdown}s 后重发` : '重新发送' }}
+                </AppButton>
+              </template>
+            </AppInput>
+            <AppButton
+              variant="ghost"
+              size="sm"
+              class="back-link"
+              @click="backToPhone"
+            >
+              更换手机号
+            </AppButton>
+          </template>
+
+          <div
+            v-if="formError"
+            class="form-error"
+            role="alert"
+          >
+            <span>{{ formError.message }}</span>
+            <AppButton
+              v-if="formError.retryable"
+              variant="danger"
+              size="sm"
+              @click="step === 'phone' ? sendOtp() : submitLogin()"
+            >
+              重试
+            </AppButton>
           </div>
-          <button
-            type="button"
-            class="link"
-            @click="backToPhone"
-          >
-            更换手机号
-          </button>
-        </template>
 
-        <p
-          v-if="formError"
-          class="form-error"
-          role="alert"
-        >
-          <span>{{ formError.message }}</span>
-          <button
-            v-if="formError.retryable"
-            type="button"
-            class="retry"
-            @click="step === 'phone' ? sendOtp() : submitLogin()"
+          <AppButton
+            block
+            size="lg"
+            type="submit"
+            :loading="submitting"
           >
-            重试
-          </button>
-        </p>
-
-        <button
-          class="btn primary"
-          type="submit"
-          :disabled="submitting"
-        >
-          {{ submitting ? '处理中…' : step === 'phone' ? '获取验证码' : '登录' }}
-        </button>
-      </form>
+            {{ submitting ? '处理中…' : step === 'phone' ? '获取验证码' : '登录' }}
+          </AppButton>
+        </form>
+      </AppCard>
     </main>
   </div>
 </template>
 
 <style scoped>
 .login {
+  position: relative;
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: var(--app-bg);
+  overflow: hidden;
   padding: 20px;
+  background:
+    radial-gradient(circle at 18% 20%, var(--ailp-primary-100), transparent 34%),
+    radial-gradient(circle at 82% 72%, var(--ailp-accent-100), transparent 32%),
+    var(--ailp-background);
+}
+.blob-a {
+  width: 420px;
+  height: 420px;
+  left: -120px;
+  top: -100px;
+  background: var(--ailp-primary-300);
+}
+.blob-b {
+  width: 360px;
+  height: 360px;
+  right: -100px;
+  bottom: -120px;
+  background: var(--ailp-accent-300);
+}
+.login-shell {
+  position: relative;
+  z-index: 1;
+  width: min(460px, 100%);
 }
 .login-card {
-  width: min(420px, 100%);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  box-shadow: var(--shadow);
-  padding: 24px;
   display: grid;
   gap: 12px;
 }
 .login-card h1 {
-  font-size: var(--font-size-xl);
   margin: 0;
+  font-size: var(--font-size-xl);
+  color: var(--ailp-foreground);
 }
 .muted {
-  color: var(--text-muted);
   margin: 0;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
+  color: var(--ailp-muted-foreground);
 }
-.degraded,
-.mock-hint {
+.notice {
   margin: 0;
-  font-size: var(--font-size-xs);
-  border-radius: 7px;
-  padding: 8px 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
 }
-.degraded {
+.notice.warning {
   background: var(--warning-bg);
-  border: 1px solid #ead29e;
-  color: #8a5b00;
+  border: 1px solid var(--ailp-warning-500);
+  color: var(--ailp-warning-600);
 }
-.mock-hint {
-  background: var(--info-bg);
-  border: 1px solid #c7d9e8;
-  color: var(--primary);
+.notice.info {
+  background: var(--ailp-primary-50);
+  border: 1px solid var(--ailp-primary-200);
+  color: var(--ailp-primary-700);
 }
 .form {
   display: grid;
   gap: 12px;
   margin-top: 8px;
 }
-.field {
-  display: grid;
-  gap: 5px;
-}
-.field label {
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-}
-.field input {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 8px 9px;
-  background: #fff;
-  font: inherit;
-}
-.field input[aria-invalid='true'] {
-  border-color: var(--danger);
-}
-.otp-row {
-  display: flex;
-  gap: 8px;
-}
-.otp-row input {
-  flex: 1;
-}
-.btn {
-  min-height: 36px;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.btn.primary {
-  background: var(--primary);
-  border: 1px solid var(--primary);
-  color: #fff;
-}
-.btn.primary:hover:not(:disabled) {
-  background: var(--primary-hover);
-}
-.btn.resend {
-  white-space: nowrap;
-  font-weight: 650;
-}
-.link {
-  border: 0;
-  background: none;
-  color: var(--primary);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  text-align: left;
-  padding: 0;
-  justify-self: start;
-}
-.error {
-  margin: 0;
-  color: var(--danger);
-  font-size: var(--font-size-xs);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.error::before {
-  content: '⚠';
-}
 .form-error {
-  margin: 0;
-  padding: 9px 11px;
-  background: var(--danger-bg);
-  border: 1px solid #e6c0bc;
-  border-radius: 7px;
-  color: var(--danger);
-  font-size: var(--font-size-sm);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--danger-bg);
+  border: 1px solid var(--ailp-error-500);
+  border-radius: var(--radius-md);
+  color: var(--ailp-error-600);
+  font-size: var(--font-size-base);
 }
-.retry {
-  border: 1px solid var(--danger);
-  background: #fff;
-  color: var(--danger);
-  border-radius: 6px;
-  padding: 2px 9px;
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
+.back-link {
+  justify-self: start;
 }
 </style>
