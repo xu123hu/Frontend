@@ -95,7 +95,12 @@ function applyDurableTeacher(state: TeacherClassroomState, ev: V3ClassroomEvent)
     }
     case 'activity_pushed':
       return p.activity
-        ? { ...state, session: { ...state.session, activities: upsertActivity(state.session.activities, p.activity) }, seq: Math.max(state.seq, ev.seq) }
+        ? {
+            ...state,
+            session: { ...state.session, activities: upsertActivity(state.session.activities, p.activity) },
+            questions: p.question ? { ...state.questions, [p.question.question_id]: p.question } : state.questions,
+            seq: Math.max(state.seq, ev.seq),
+          }
         : state
     case 'response_submitted':
       // 统计只来自服务端聚合载荷（answered/distribution/correct_rate），不本地累计
@@ -171,7 +176,12 @@ function applyDurableStudent(state: StudentClassroomState, ev: V3ClassroomEvent)
       return { ...state, sessionStatus: p.session?.status ?? 'open', seq: ev.seq }
     case 'activity_pushed':
       return p.activity
-        ? { ...state, activities: upsertActivity(state.activities, p.activity), seq: ev.seq }
+        ? {
+            ...state,
+            activities: upsertActivity(state.activities, p.activity),
+            questions: p.question ? { ...state.questions, [p.question.question_id]: p.question } : state.questions,
+            seq: ev.seq,
+          }
         : state
     case 'response_submitted': {
       const mine = p.participant_id === state.participantId

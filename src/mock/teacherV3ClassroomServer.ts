@@ -76,7 +76,7 @@ function revealedIn(snap: V3ClassroomSnapshot, questionId: string): boolean {
   return !!act && (act.status === 'revealed' || act.status === 'completed')
 }
 
-/** durable 事件：seq 唯一、广播所有订阅者（教师流与学生流同源，学生投影在连接层做） */
+/** durable 事件：seq 唯一、广播所有订阅者（学生订阅者拿到的是**投影后**事件——见 attachStream） */
 function emit(room: Room, event_type: string, payload: Record<string, any>): DurableEvent {
   const ev: DurableEvent = { seq: ++room.seq, event_id: `ev-${room.seq}`, event_type, payload, created_at: nowIso() }
   room.events.push(ev)
@@ -91,8 +91,39 @@ function briefOf(questionId: string): V3ClassroomQuestionBrief | null {
   return { question_id: q.id, stem_latex: q.stem_latex, options: q.options, answer: q.answer, analysis: q.analysis }
 }
 
+/** 学生视角 live 事件投影（G7 铁律：公布前答案/分布不出服务端）：
+ * - 推题/锁定：activity.stats 剥分布与正确率、补 my_submitted；question 剥 answer/analysis（推题即带题面，学生端无需二次请求）
+ * - 作答：分布剥离；my_submitted 标注接收者本人
+ * - 公布：答案与分布放开（my_submitted 仍按本人标注） */
+function projectEventForStudent(room: Room, participantId: string, ev: DurableEvent): DurableEvent {
+  const mine = (activityId: string) => room.responses.has(`${activityId}|${participantId}|1`)
+  const stripStats = (a: any, revealed: boolean) => {
+    if (!a) return a
+    const stats: any = revealed ? { ...(a.stats || {}) } : { answered: a.stats?.answered ?? 0 }
+    stats.my_submitted = mine(a.activity_id)
+    if (!revealed) { delete stats.distribution; delete stats.correct_rate }
+    return { ...a, stats }
+  }
+  const stripAnswer = (q: any) => (q ? { question_id: q.question_id, stem_latex: q.stem_latex, options: q.options } : q)
+  const p: any = { ...ev.payload }
+  if (ev.event_type === 'activity_pushed') {
+    p.activity = stripStats(p.activity, false)
+    p.question = stripAnswer(p.question)
+  } else if (ev.event_type === 'response_submitted') {
+    p.activity = stripStats(p.activity, false)
+    if (p.stats) { p.stats = { answered: p.stats.answered ?? 0, my_submitted: p.participant_id === participantId } }
+  } else if (ev.event_type === 'activity_locked') {
+    p.activity = stripStats(p.activity, false)
+    p.question = stripAnswer(p.question)
+  } else if (ev.event_type === 'activity_revealed') {
+    p.activity = stripStats(p.activity, true)
+    // question 原样下发（答案随公布放开）
+  }
+  return { ...ev, payload: p }
+}
+
 /* ---------- SSE 订阅 ---------- */
-function attachStream(res: any, room: Room, projection: (room: Room) => V3ClassroomSnapshot, req: any) {
+function attachStream(res: any, room: Room, projection: (room: Room) => V3ClassroomSnapshot, req: any, student?: { participantId: string }) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache',
@@ -100,11 +131,16 @@ function attachStream(res: any, room: Room, projection: (room: Room) => V3Classr
     'X-Accel-Buffering': 'no',
   })
   res.write('retry: 3000\n\n')
-  // 恢复协议（§12.4）：先 snapshot（权威重置）→ after(Last-Event-ID) 重放 → 续 live
+  // 恢复协议（§12.4）：先 snapshot（权威重置）→ after(Last-Event-ID) 重放 → 续 live；
+  // 学生流：快照与事件都走学生视角投影
+  const project = (ev: DurableEvent) => (student ? projectEventForStudent(room, student.participantId, ev) : ev)
   const lastId = Number(req.headers?.['last-event-id'] || 0)
   sendSse(res, 'snapshot', projection(room))
-  for (const ev of room.events) if (ev.seq > lastId) sendSse(res, 'event', ev)
-  const sub = (event: string, data: unknown) => sendSse(res, event, data)
+  for (const ev of room.events) if (ev.seq > lastId) sendSse(res, 'event', project(ev))
+  const sub = (event: string, data: unknown) => {
+    const wrapped = data as DurableEvent
+    sendSse(res, event, event === 'event' ? project(wrapped) : data)
+  }
   room.subscribers.add(sub)
   const heartbeat = setInterval(() => { if (!res.writableEnded && !res.destroyed) res.write(': ping\n\n') }, 15000)
   res.on('close', () => { clearInterval(heartbeat); room.subscribers.delete(sub) })
@@ -140,7 +176,7 @@ export async function handleTeacherV3ClassroomApi(req: any, res: any): Promise<b
     if (!room) return fail(res, 404, 40401, 'session_not_found'), true
     const pid = room.tokens.get(studentToken)
     if (!pid) return fail(res, 401, 40101, 'classroom_token_required'), true
-    attachStream(res, room, (r) => projectForStudent(r, pid), req)
+    attachStream(res, room, (r) => projectForStudent(r, pid), req, { participantId: pid })
     return true
   }
   const mResponse = path.match(/^\/teacher-v3\/classroom\/sessions\/([^/]+)\/responses$/)
@@ -298,7 +334,8 @@ export async function handleTeacherV3ClassroomApi(req: any, res: any): Promise<b
     }
     room.session.activities.push(act)
     if (brief) room.questions[brief.question_id] = brief
-    emit(room, 'activity_pushed', { activity: act })
+    // 推题事件带题面：教师得全量；学生投影层剥离 answer/analysis（G7）
+    emit(room, 'activity_pushed', { activity: act, question: brief || undefined })
     return ok(res, act), true
   }
 

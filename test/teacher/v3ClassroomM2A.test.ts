@@ -208,6 +208,30 @@ describe('mock classroom · 双端契约', () => {
     expect(after.session.activities.find((a: any) => a.activity_id === act.activity_id).stats.distribution).toBeTruthy()
   })
 
+  it('学生流 live 事件投影：推题即得题面（无答案）、作答事件无分布（G7 防泄漏）', async () => {
+    const session = await openRoom()
+    const stu = await joinRoom(session.join_code, '王小明')
+    // 学生先连接学生流（live 订阅在推题之前建立）
+    const sse = await call('GET', `/teacher-v3/classroom/sessions/${session.session_id}/student-stream`, undefined, { authorization: `Bearer ${stu.token}` })
+    const act = (await call('POST', `/teacher-v3/classroom/sessions/${session.session_id}/activities`, { kind: 'question', question_id: CHOICE.id })).body.data
+    await call('POST', `/teacher-v3/classroom/sessions/${session.session_id}/responses`, { activity_id: act.activity_id, answer: CHOICE.answer }, { authorization: `Bearer ${stu.token}` })
+
+    const evs = parseSse(sse).filter((e) => e.event === 'event')
+    const pushed = evs.find((e) => e.data.event_type === 'activity_pushed')!
+    expect(pushed.data.payload.question.stem_latex).toBeTruthy() // 题面随推题下发
+    expect(pushed.data.payload.question.answer).toBeUndefined() // 答案不下发
+    expect(pushed.data.payload.activity.stats.distribution).toBeUndefined()
+    expect(pushed.data.payload.activity.stats.my_submitted).toBe(false)
+    const submitted = evs.find((e) => e.data.event_type === 'response_submitted')!
+    expect(submitted.data.payload.stats.my_submitted).toBe(true) // 接收者本人标注
+    expect(submitted.data.payload.stats.distribution).toBeUndefined()
+
+    // 教师流同事件不被投影（拿得到答案与分布）
+    const tse = await call('GET', `/teacher-v3/classroom/sessions/${session.session_id}/stream`)
+    const tPushed = parseSse(tse).filter((e) => e.event === 'event').find((e) => e.data.event_type === 'activity_pushed')!
+    expect(tPushed.data.payload.question.answer).toBe(CHOICE.answer)
+  })
+
   it('结课 → ended + 服务端小结（summary_ready），重开失败', async () => {
     const session = await openRoom()
     await joinRoom(session.join_code, '王小明')
