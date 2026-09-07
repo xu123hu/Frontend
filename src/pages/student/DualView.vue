@@ -1,5 +1,5 @@
 <template>
-  <div class="dcx-shell">
+  <div class="dcx-shell" :class="{ 'dcx-light': view !== 'player' }">
     <!-- ===== 顶栏：品牌 / 课程进度 / 计时 / 播控 / 全屏 / 导出 / 报告 ===== -->
     <header class="dcx-top">
       <div class="dcx-brand" @click="goHome">
@@ -2454,4 +2454,47 @@ button { font-family: inherit; }
   .dcx-course-name { max-width: 150px; }
   .dcx-tbtn { padding: 8px 10px; }
 }
+
+/* ===== S11（V2 文档）：创建页/列表页浅色主题（播放页保留深色=课堂全屏模式） ===== */
+.dcx-shell.dcx-light { background: #f8fafc; color: #0f172a; }
+.dcx-shell.dcx-light .dcx-top { background: rgba(255, 255, 255, .82); border-bottom-color: var(--line, #e2e8f0); }
+.dcx-shell.dcx-light .dcx-vline { background: var(--line, #e2e8f0); }
+.dcx-shell.dcx-light .dcx-course-name { color: #0f172a; }
+.dcx-shell.dcx-light .dcx-course-sub { color: #94a3b8; }
+.dcx-shell.dcx-light .dcx-pagechip { color: #4f46e5; background: #eef2ff; border-color: #c7d2fe; }
+.dcx-shell.dcx-light .dcx-pagechip.generating { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+.dcx-shell.dcx-light .dcx-round { border-color: var(--line, #e2e8f0); background: #fff; color: #475569; }
+.dcx-shell.dcx-light .dcx-round:hover:not(:disabled) { border-color: #4f46e5; color: #4f46e5; }
+.dcx-shell.dcx-light .dcx-round.on { background: #eef2ff; border-color: #4f46e5; color: #4f46e5; }
+.dcx-shell.dcx-light .dcx-tbtn { border-color: var(--line, #e2e8f0); background: #fff; color: #475569; }
+.dcx-shell.dcx-light .dcx-tbtn:hover:not(:disabled) { border-color: #4f46e5; color: #4f46e5; }
+.dcx-shell.dcx-light .dcx-timer { color: #4f46e5; background: #eef2ff; border-color: #c7d2fe; }
+.dcx-shell.dcx-light .dcx-home-page, .dcx-shell.dcx-light .dcx-creating { background: transparent; }
+.dcx-shell.dcx-light .dcx-hero h1, .dcx-shell.dcx-light .dcx-hero-title { color: #0f172a; }
+.dcx-shell.dcx-light .dcx-hero p, .dcx-shell.dcx-light .dcx-hero-sub, .dcx-shell.dcx-light .dcx-tip { color: #64748b; }
+.dcx-shell.dcx-light .dcx-input, .dcx-shell.dcx-light .dcx-input.dark, .dcx-shell.dcx-light .dcx-topic {
+  background: #fff; color: #0f172a; border-color: var(--line, #e2e8f0);
+}
+.dcx-shell.dcx-light .dcx-input::placeholder, .dcx-shell.dcx-light .dcx-topic::placeholder { color: #94a3b8; }
+.dcx-shell.dcx-light .dcx-composer { background: #fff; border-color: var(--line, #e2e8f0); box-shadow: 0 10px 40px -12px rgba(79, 70, 229, .25); }
+.dcx-shell.dcx-light .dcx-composer-bar { border-color: var(--line, #e2e8f0); }
+.dcx-shell.dcx-light .dcx-composer-hint { color: #94a3b8; }
+.dcx-shell.dcx-light .dcx-bar { background: var(--line, #e2e8f0); }
+.dcx-shell.dcx-light .dcx-fill { background: var(--gradient-brand, linear-gradient(135deg, #4f46e5, #7c3aed)); }
+.dcx-shell.dcx-light .dcx-card { background: #fff; border-color: var(--line, #e2e8f0); }
+.dcx-shell.dcx-light .dcx-card-title { color: #0f172a; }
+.dcx-shell.dcx-light .dcx-card-sub, .dcx-shell.dcx-light .dcx-card-foot { color: #64748b; }
+.dcx-shell.dcx-light .dcx-btn.ghost-dark { background: #fff; color: #475569; border: 1px solid var(--line, #e2e8f0); }
+.dcx-shell.dcx-light .dcx-btn.ghost-dark:hover { border-color: #4f46e5; color: #4f46e5; }
+.dcx-shell.dcx-light .dcx-mini { background: #fff; border-color: var(--line, #e2e8f0); color: #475569; }
+.dcx-shell.dcx-light .dcx-mini.danger { color: #dc2626; border-color: #fecaca; }
+.dcx-shell.dcx-light .dcx-entry, .dcx-shell.dcx-light .dcx-library, .dcx-shell.dcx-light .dcx-alt-entries { background: #fff; border-color: var(--line, #e2e8f0); }
+.dcx-shell.dcx-light .dcx-library-head, .dcx-shell.dcx-light .dcx-entry-head { color: #0f172a; }
+.dcx-shell.dcx-light .dcx-lib-empty, .dcx-shell.dcx-light .dcx-file-name { color: #64748b; }
+.dcx-shell.dcx-light .dcx-orb.o1 { background: rgba(99, 102, 241, .18); }
+.dcx-shell.dcx-light .dcx-orb.o2 { background: rgba(6, 182, 212, .14); }
+.dcx-shell.dcx-light .dcx-confirm { background: #fff; color: #0f172a; }
+.dcx-shell.dcx-light .dcx-confirm-title { color: #0f172a; }
+.dcx-shell.dcx-light .dcx-edit-src { background: var(--bg2, #f1f5f9); color: #0f172a; }
+.dcx-shell.dcx-light .dcx-dot-pulse { background: #4f46e5; }
 </style>
