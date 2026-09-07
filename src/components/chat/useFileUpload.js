@@ -7,6 +7,7 @@
  */
 import { reactive } from 'vue'
 import { filesApi } from '@/api'
+import { getCachedUser, authHeaders } from '@/api/client'
 
 export const ALLOWED_MIMES = new Set([
   'application/pdf',
@@ -201,6 +202,36 @@ export function useFileUpload(toast) {
     schedulePoll(task, POLL_START_MS)
   }
 
+  /** 上传即入库（S2/S4）：parse 产物推送 student-api 切片向量化；静默进行，失败不阻断对话 */
+  function scheduleKnowledgeIngest(task, detail) {
+    try {
+      const asset = (detail.assets || []).find((a) => a.asset_type === 'markdown')
+      const content = (asset && asset.content) || ''
+      if (content.length < 80) return // 过短内容不值得入库；后端质量闸做最终判定
+      const user = getCachedUser()
+      if (!user || !user.id) return
+      fetch('/api/v1/kb/ingest-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          user_id: user.id,
+          title: task.name || '未命名资料',
+          content,
+          source_file_id: task.fileId,
+          purpose: 'textbook',
+        }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          task.ingestStatus = j ? j.status : 'error'
+          if (j && j.status === 'rejected') console.warn('[ingest] 已拒绝入库：', j.reason)
+        })
+        .catch(() => { /* 静默：入库失败不影响对话 */ })
+    } catch (e) {
+      /* 静默 */
+    }
+  }
+
   function schedulePoll(task, delay) {
     stopPoller(task.localId)
     const timer = setTimeout(async () => {
@@ -222,6 +253,7 @@ export function useFileUpload(toast) {
       if (d.status === 'parsed') {
         task.status = 'parsed'
         task.engine = d.parse_engine || ''
+        scheduleKnowledgeIngest(task, d) // 上传即入库（S2/S4 链路）：静默进行，不阻断发送
       } else if (d.status === 'failed') {
         task.status = 'failed'
         task.error = d.error || '解析失败'
