@@ -125,6 +125,17 @@
                 <h6>🎯 下一步推荐</h6>
                 <p>{{ recommend.reason || '建议通过练题中心针对训练，提升掌握度。' }}</p>
               </div>
+              <!-- S12 error_related：节点关联的学生真实错题（点击直达引导重解） -->
+              <div v-if="nodeErrors.total" class="prereq" style="margin-top:10px;">
+                <h6>📕 我在这个知识点的错题（{{ nodeErrors.total }}）</h6>
+                <div
+                  v-for="e in nodeErrors.items" :key="e.record_id"
+                  class="chain"
+                  style="cursor:pointer;padding:6px 8px;border-radius:8px;background:var(--brand-bg,#fff7e6);margin-top:6px;"
+                  :title="e.question_text"
+                  @click="redoFromGraph(e)"
+                >🎯 {{ e.question_text.slice(0, 40) }}{{ e.question_text.length > 40 ? '…' : '' }}</div>
+              </div>
               <div class="actions">
                 <button class="primary" @click="goRecommend">→ {{ recommend.action_label || '开始学习' }}{{ recommend.minutes ? `（约${recommend.minutes}min）` : '' }}</button>
                 <button @click="goPractice">直接练</button>
@@ -208,6 +219,7 @@ const detailLoading = ref(false)
 const detailError = ref('')
 const deps = ref(null)
 const recommend = ref({})
+const nodeErrors = ref({ total: 0, items: [] })
 
 const chainHtml = computed(() => {
   const chain = deps.value?.chain || []
@@ -271,15 +283,18 @@ async function selectNode(n, ch) {
   detailError.value = ''
   deps.value = null
   recommend.value = {}
+  nodeErrors.value = { total: 0, items: [] }
   try {
-    const [d, r] = await Promise.all([
+    const [d, r, errs] = await Promise.all([
       api.get(`/student/knowledge-graph/nodes/${encodeURIComponent(n.kp_code)}/deps`),
       api.get(`/student/knowledge-graph/nodes/${encodeURIComponent(n.kp_code)}/recommend`),
+      api.get(`/student/knowledge-graph/nodes/${encodeURIComponent(n.kp_code)}/errors`).catch(() => null),
     ])
     // 防止快速连点时的乱序覆盖
     if (selected.value?.kp_code !== n.kp_code) return
     deps.value = d
     recommend.value = r || {}
+    nodeErrors.value = errs || { total: 0, items: [] }  // 错题块 best-effort：旧后端无此端点时静默隐藏
   } catch (e) {
     if (selected.value?.kp_code !== n.kp_code) return
     detailError.value = e instanceof ApiError ? `节点详情加载失败：${e.message}` : '节点详情加载失败'
@@ -297,6 +312,12 @@ function goRecommend() {
 function goPractice() {
   const kp = selected.value?.kp_code
   router.push(kp ? '/practice?kp=' + encodeURIComponent(kp) : '/practice')
+}
+
+// S12 error_related：点击节点错题 → 引导重解深链（与错题本 redoWithSocratic 同款入口）
+function redoFromGraph(e) {
+  if (!e?.question_text) return
+  router.push('/dialog?explain=' + encodeURIComponent(e.question_text))
 }
 
 const viewMode = ref('tree')
