@@ -1,14 +1,17 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 编译时间线（TC-F04-04/05）：run_type=writing + SSE 进度轮询。
  * - 成功：PDF 预览（iframe）+ 日志 + 引擎版本 + 输入哈希。
  * - 失败：结构化错误（文件/行/命令）→ 编辑器定位；上次成功 PDF 不丢失（Artifact 不可变）。
  */
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { Loader2, FileText, CheckCircle2, AlertTriangle, TerminalSquare } from 'lucide-vue-next';
 import { useCompileRun } from '@features/writing/queries';
 import { compiledPdfUrl } from '@features/writing/api';
 import Boundary from '@shared/ui/Boundary.vue';
+
+const router = useRouter();
 
 const props = defineProps<{
   runId: string | null;
@@ -119,7 +122,10 @@ function stageClass(status: string): string {
       class="ok-msg"
     >
       <CheckCircle2 :size="14" />
-      编译成功。产物 PDF 与日志已生成（详见运行中心）。
+      编译成功。产物 PDF 与日志已生成（<a
+        class="runs-link"
+        @click.prevent="router.push({ name: 'runs' })"
+      >详见运行中心</a>）。
     </div>
 
     <div
@@ -336,4 +342,6 @@ function stageClass(status: string): string {
   font-weight: 700;
   cursor: pointer;
 }
-</style>
+
+.runs-link { color: var(--s16-primary, #6366f1); cursor: pointer; text-decoration: underline; }
+.runs-link:hover { opacity: 0.8; }</style>
