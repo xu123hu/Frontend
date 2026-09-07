@@ -1,0 +1,269 @@
+/**
+ * ailp 设计令牌 —— 科研端 S16 视觉基线
+ *
+ * 数据来源：《AI 对话首页.html》<style id="theme-vars">（第 12-99 行）+ 证据包 F 全表。
+ * 用途：全平台设计语言单轨统一（H17）。所有页面组件消费本文件变量，
+ * 禁止在组件内自创品牌色/圆角/阴影。
+ *
+ * 双轨制：--_portal 渐变入口页（首页/登录/新建项目/空态引导），
+ *         --_work 中性浅灰工作页（文献/写作/评审/教育研究/个人中心/运行中心）。
+ *         data-theme 由 router meta + ResearchLayout 注入 html 元素。
+ */
+
+:root {
+  /* ===== Primary Brand（Indigo 阶）===== */
+  --ailp-primary-50: #eef2ff;
+  --ailp-primary-100: #e0e7ff;
+  --ailp-primary-200: #c7d2fe;
+  --ailp-primary-300: #a5b4fc;
+  --ailp-primary-400: #818cf8;
+  --ailp-primary-500: #6366f1;
+  --ailp-primary-600: #4f46e5;
+  --ailp-primary-700: #4338ca;
+  --ailp-primary-800: #3730a3;
+  --ailp-primary-900: #312e81;
+
+  /* ===== Accent（teal/cyan，AI 光效）===== */
+  --ailp-accent-50: #ecfeff;
+  --ailp-accent-100: #cffafe;
+  --ailp-accent-200: #a5f3fc;
+  --ailp-accent-300: #67e8f9;
+  --ailp-accent-400: #22d3ee;
+  --ailp-accent-500: #06b6d4;
+  --ailp-accent-600: #0891b2;
+
+  /* ===== Neutrals（slate 阶）===== */
+  --ailp-gray-50: #f8fafc;
+  --ailp-gray-100: #f1f5f9;
+  --ailp-gray-200: #e2e8f0;
+  --ailp-gray-300: #cbd5e1;
+  --ailp-gray-400: #94a3b8;
+  --ailp-gray-500: #64748b;
+  --ailp-gray-600: #475569;
+  --ailp-gray-700: #334155;
+  --ailp-gray-800: #1e293b;
+  --ailp-gray-900: #0f172a;
+  --ailp-gray-950: #020617;
+
+  /* ===== Semantic（success/warning/error）===== */
+  --ailp-success-500: #10b981;
+  --ailp-success-600: #059669;
+  --ailp-warning-500: #f59e0b;
+  --ailp-warning-600: #d97706;
+  --ailp-error-500: #ef4444;
+  --ailp-error-600: #dc2626;
+
+  /* ===== Semantic aliases（light）===== */
+  --ailp-background: #f8fafc;
+  --ailp-foreground: #0f172a;
+  --ailp-card: #ffffff;
+  --ailp-card-foreground: #0f172a;
+  --ailp-popover: #ffffff;
+  --ailp-popover-foreground: #0f172a;
+  --ailp-primary: #4f46e5;
+  --ailp-primary-foreground: #ffffff;
+  --ailp-secondary: #f1f5f9;
+  --ailp-secondary-foreground: #0f172a;
+  --ailp-muted: #f1f5f9;
+  --ailp-muted-foreground: #64748b;
+  --ailp-accent: #06b6d4;
+  --ailp-accent-foreground: #ffffff;
+  --ailp-destructive: #ef4444;
+  --ailp-destructive-foreground: #ffffff;
+  --ailp-border: #e2e8f0;
+  --ailp-input: #e2e8f0;
+  --ailp-ring: #6366f1;
+
+  /* ===== Radius 阶 ===== */
+  --ailp-radius-sm: 6px;
+  --ailp-radius-md: 10px;
+  --ailp-radius-lg: 14px;
+  --ailp-radius-xl: 20px;
+  --ailp-radius-2xl: 28px;
+  --ailp-radius-full: 9999px;
+
+  /* ===== Shadow 阶 ===== */
+  --ailp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ailp-shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --ailp-shadow-xl: 0 20px 40px -10px rgba(15, 23, 42, 0.15);
+  --ailp-shadow-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+
+  /* ===== Typography ===== */
+  --ailp-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --ailp-font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas, 'Liberation Mono',
+    Menlo, monospace;
+  --ailp-font-math: 'Cambria Math', 'Latin Modern Math', 'STIX Two Math', Georgia, serif;
+}
+
+/* ===== 旧 token 语义重映射（tokens.css 兼容层 → ailp 单轨）===== */
+:root {
+  --app-bg: var(--ailp-background);
+  --subtle-bg: var(--ailp-gray-100);
+  --surface: var(--ailp-card);
+  --primary: var(--ailp-primary-600);
+  --primary-hover: var(--ailp-primary-700);
+  --primary-soft: var(--ailp-primary-50);
+  --text: var(--ailp-foreground);
+  --text-muted: var(--ailp-muted-foreground);
+  --text-weak: var(--ailp-gray-400);
+  --border: var(--ailp-border);
+  --success: var(--ailp-success-500);
+  --warning: var(--ailp-warning-500);
+  --danger: var(--ailp-error-500);
+  --info: var(--ailp-primary-500);
+  --success-bg: rgba(16, 185, 129, 0.1);
+  --warning-bg: rgba(245, 158, 11, 0.1);
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --info-bg: rgba(99, 102, 241, 0.08);
+  --bg: var(--app-bg);
+  --surface-2: var(--subtle-bg);
+  --surface-3: var(--primary-soft);
+  --ink: var(--text);
+  --ink-2: var(--text-muted);
+  --muted: var(--text-muted);
+  --line: var(--border);
+  --line-2: var(--border);
+  --accent: var(--ailp-accent-500);
+  --accent-2: var(--ailp-accent-50);
+  --focus: var(--primary);
+
+  --nav-expanded: 224px;
+  --nav-collapsed: 56px;
+  --header-height: 58px;
+  --r: var(--ailp-radius-md);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --shadow-sm: var(--ailp-shadow-sm);
+  --shadow: var(--ailp-shadow-md);
+  --shadow-md: var(--ailp-shadow-md);
+  --shadow-lg: var(--ailp-shadow-lg);
+  --shadow-xl: var(--ailp-shadow-xl);
+  --shadow-glow: var(--ailp-shadow-glow);
+
+  --font: var(--ailp-font-sans);
+  --mono: var(--ailp-font-mono);
+  --font-size-xs: 12px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 21px;
+  --font-size-3xl: 24px;
+  --font-size-hero: 34px;
+  --line-height: 1.6;
+}
+
+/* ===== 双轨背景：工作页中性浅灰（默认 portal 渐变在 Home/Login 内实现）===== */
+:root[data-theme='work'] {
+  --app-bg: var(--ailp-gray-50);
+  --bg: var(--ailp-gray-50);
+}
+:root[data-theme='portal'] {
+  --app-bg: var(--ailp-background);
+  --bg: var(--ailp-background);
+}
+
+/* ===== 特效基元（移植自参考 HTML）===== */
+.gradient-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ai-glow {
+  position: relative;
+}
+.ai-glow::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(6, 182, 212, 0.3));
+  filter: blur(12px);
+  opacity: 0.6;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.ai-bubble-gradient {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(6, 182, 212, 0.06) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.input-glow-wrapper {
+  position: relative;
+  border-radius: var(--ailp-radius-2xl);
+  padding: 2px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.4), rgba(6, 182, 212, 0.4), rgba(79, 70, 229, 0.4));
+  background-size: 200% 200%;
+  animation: ailp-shimmer 4s linear infinite;
+}
+.input-glow-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: calc(var(--ailp-radius-2xl) + 6px);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(6, 182, 212, 0.15));
+  filter: blur(16px);
+  z-index: -1;
+  animation: ailp-glow-pulse 3s ease-in-out infinite;
+}
+
+.floating-ai-btn {
+  position: relative;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%);
+  box-shadow: 0 8px 32px rgba(79, 70, 229, 0.4), 0 0 60px rgba(6, 182, 212, 0.2);
+}
+.floating-ai-btn::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(6, 182, 212, 0.5));
+  filter: blur(12px);
+  z-index: -1;
+  animation: ailp-glow-pulse 2.5s ease-in-out infinite;
+}
+
+.bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.quick-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.quick-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.15), 0 10px 20px -5px rgba(6, 182, 212, 0.1);
+}
+
+/* ===== 动画 ===== */
+@keyframes ailp-glow-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+@keyframes ailp-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes ailp-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes ailp-fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-float { animation: ailp-float 4s ease-in-out infinite; }
+.animate-glow-pulse { animation: ailp-glow-pulse 3s ease-in-out infinite; }
+.animate-fade-in-up { animation: ailp-fade-in-up 0.8s ease-out both; }

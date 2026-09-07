@@ -9,6 +9,7 @@ import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 import App from '../App.vue';
 import { router } from './router';
 import './styles/tokens.css';
+import './theme/ailp.css';
 
 async function bootstrap(): Promise<void> {
   // __USE_MOCK__ 为编译期常量（vite.config define）：生产构建折叠为 false，
@@ -53,3 +54,5 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap();
+
+

@@ -4,8 +4,21 @@ import AppHeader from '@widgets/Header/AppHeader.vue';
 import AssistantOrb from '@widgets/AssistantOrb/AssistantOrb.vue';
 import AgentDrawer from '@widgets/AgentDrawer/AgentDrawer.vue';
 import { useUiStore } from '@app/stores/ui';
+import { watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 const ui = useUiStore();
+const route = useRoute();
+
+// 双轨背景（H17）：路由 meta.theme 驱动 <html data-theme>。
+// portal=入口页渐变；work=工作页中性浅灰。
+watch(
+  () => (typeof route.meta.theme === 'string' ? route.meta.theme : 'work'),
+  (theme) => {
+    document.documentElement.dataset.theme = theme;
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -70,3 +83,7 @@ const ui = useUiStore();
   }
 }
 </style>
+
+
+
+

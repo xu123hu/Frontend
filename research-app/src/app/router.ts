@@ -19,12 +19,12 @@ const routes: readonly RouteRecordRaw[] = [
     path: '/research/login',
     name: 'login',
     component: () => import('@pages/research/Login.vue'),
-    meta: { layout: 'standalone', public: true },
+    meta: { layout: 'standalone', public: true, theme: 'portal' as const },
   },
   {
     path: '/research',
     component: ResearchLayout,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, theme: 'work' as const },
     children: [
       {
         path: '',
@@ -34,6 +34,7 @@ const routes: readonly RouteRecordRaw[] = [
         path: 'home',
         name: 'home',
         component: () => import('@pages/research/Home.vue'),
+        meta: { theme: 'portal' as const },
       },
       {
         path: 'projects',
@@ -125,3 +126,6 @@ router.beforeEach(async (to) => {
 });
 
 export default router;
+
+
+
