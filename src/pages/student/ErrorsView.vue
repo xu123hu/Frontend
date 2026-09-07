@@ -283,6 +283,7 @@ import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { butlerApi, filesApi, studentApi } from '@/api'
 import { openLightbox } from '@/utils/lightbox'
+import { setPageContext } from '@/composables/usePageContext'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import LatexText from '@/components/LatexText.vue'
@@ -526,6 +527,7 @@ async function openDetail(recordId, seq = 1) {
   diagLoading.value = true
   try {
     detail.value = await api.get(`/student/error-records/${recordId}/detail`)
+  setPageContext({ route: '/errors', title: '错题本', detail: `第 ${String(selectedSeq.value).padStart(2, '0')} 题：${(detail.value?.question_text || detail.value?.text || '').slice(0, 120)}` })
   } catch (e) {
     detail.value = null
     detailError.value = `详情加载失败：${e.message || '请稍后重试'}`

@@ -220,6 +220,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { butlerChatApi } from '@/api/tasks'
+import { contextPrefix } from '@/composables/usePageContext'
 import { newIdempotencyKey } from '@/api/idempotency'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
@@ -307,11 +308,12 @@ async function sendChat() {
   const msg = draft.value.trim()
   if (!msg || chatPending.value || !butlerAvailable.value) return
   messages.value.push({ role: 'user', text: msg })
+  const outgoing = contextPrefix() + msg  // S16：带页面上下文（在哪页问，AI 知道那页在看什么）
   draft.value = ''
   chatPending.value = true
   scrollChat()
   try {
-    const data = await butlerChatApi.chat(msg, makeRequestId())
+    const data = await butlerChatApi.chat(outgoing, makeRequestId())
     // 契约：data.envelope = { replies:[{kind:"text",text}], actions:[{type,label,task_id?,jump?}], run_id }
     const env = data?.envelope || data || {}
     const replies = (Array.isArray(env.replies) ? env.replies : [])

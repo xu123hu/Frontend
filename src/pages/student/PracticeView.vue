@@ -289,10 +289,11 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
+import { setPageContext, clearPageContext } from '@/composables/usePageContext'
 import { useAuthStore } from '@/stores/auth'
 import LatexText from '@/components/LatexText.vue'
 import DynamicFigureViewer from '@/components/DynamicFigureViewer.vue'
@@ -603,6 +604,12 @@ function nextQ() {
   markQStart()
 }
 function markQStart() { qStartAt = Date.now() }
+
+// S16：悬浮球上下文感知——练题页提问时 AI 知道当前题
+watch(() => (quizState.value === 'ready' ? q.value?.text : ''), (t) => {
+  if (t) setPageContext({ route: '/practice', title: '练题中心', detail: `第 ${qIndex.value + 1} 题：${t.slice(0, 140)}` })
+  else clearPageContext('/practice')
+}, { immediate: true })
 
 /* ==================== 训练总结 ==================== */
 const summaryState = ref('idle') // idle / loading / error / ready
