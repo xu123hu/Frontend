@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * PDF 阅读器（黄金链路二：证据定位 + 批注/笔记，TC-F02-08/09/12）。
  *
@@ -23,7 +23,9 @@ import {
   useDeleteAnnotation,
   useCreateNote,
 } from '@features/literature/queries';
-import { pdfUrl } from '@features/literature/api';
+import { pdfContentPath } from '@features/literature/api';
+import { getValidAccessToken } from '@features/auth/oidc-tokens';
+import { config } from '@app/config';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -80,7 +82,27 @@ async function renderPdf(): Promise<void> {
   pdfLoading.value = true;
   try {
     injectTextLayerStyle();
-    const doc = await pdfjsLib.getDocument({ url: pdfUrl(item.value.pdf_artifact_id), withCredentials: true }).promise;
+    const artifactId = item.value.pdf_artifact_id;
+    const pdfFetchUrl = `${config.apiBaseUrl}${pdfContentPath(artifactId)}`;
+    const token = await getValidAccessToken();
+    const fetchHeaders: Record<string, string> = {};
+    if (token) fetchHeaders.Authorization = `Bearer ${token}`;
+    let resp: Response;
+    try {
+      resp = await fetch(pdfFetchUrl, { headers: fetchHeaders });
+    } catch {
+      throw new Error('PDF 网络错误：无法连接服务器，请检查网络后重试');
+    }
+    if (!resp.ok) {
+      const kind = resp.status === 401 ? '未登录或会话过期，请重新登录'
+        : resp.status === 403 ? '无权限访问该文献'
+        : resp.status === 404 ? '文件不存在或已被删除'
+        : resp.status >= 500 ? '服务器错误，请稍后重试'
+        : `HTTP ${resp.status}`;
+      throw new Error(`PDF 加载失败：${kind}`);
+    }
+    const arrayBuffer = await resp.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     pdfDoc.value = doc;
     pageCount.value = doc.numPages;
     // 必须先结束 loading 让 .pages 容器挂载（v-else 分支），

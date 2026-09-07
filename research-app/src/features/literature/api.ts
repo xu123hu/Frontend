@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 文献域 API：CR-F2-01..08 契约草案 + M0 冻结 runs/SSE。
  *
  * - 集合/条目/批注/笔记/切分：CR-F2-02..06
@@ -313,7 +313,7 @@ export function createDocumentParseRun(uploadId: string, idempotencyKey?: string
   }).then((e) => e.data);
 }
 
-/** PDF 二进制地址（02 §6 真实实现应为签名 URL；草案为直接端点）。 */
-export function pdfUrl(artifactId: string): string {
-  return `/artifacts/${encodeURIComponent(artifactId)}/pdf`;
+/** PDF 内容端点路径（P0-1：Bearer 鉴权 + Range 支持）。 */
+export function pdfContentPath(artifactId: string): string {
+  return `/artifacts/${encodeURIComponent(artifactId)}/content`;
 }
