@@ -50,6 +50,7 @@
           <div v-else-if="currentActivity.kind === 'photo_submit'" class="h5-photo">
             <input type="file" accept="image/*" data-testid="h5-photo-input" :disabled="currentActivity.status !== 'collecting' || mySubmitted" @change="onPhoto" />
             <p class="h5-photo__tip">拍下你的解答过程上传（原图直存）</p>
+            <p v-if="photoNote" class="h5-photo__tip" style="color:#b45309">{{ photoNote }}</p>
           </div>
           <div v-if="mySubmitted" class="h5-receipt" data-testid="h5-receipt">✓ 已提交{{ duplicateHint ? '（重复提交已忽略）' : '' }}，等待老师公布</div>
           <template v-if="revealed">
@@ -86,6 +87,7 @@ const joined = ref(false)
 const token = ref('')
 const myAnswer = ref('')
 const duplicateHint = ref(false)
+const photoNote = ref('')
 const uploading = ref(false)
 
 const state = ref<StudentClassroomState | null>(null)
@@ -104,7 +106,7 @@ const questionBrief = computed(() => (currentActivity.value?.question_id ? state
 const stemHtml = computed(() => renderLatex(questionBrief.value?.stem_latex || '老师正在准备题目…'))
 const options = computed(() => questionBrief.value?.options || [])
 const revealed = computed(() => currentActivity.value?.status === 'revealed' || currentActivity.value?.status === 'completed')
-const currentAnswer = computed(() => questionBrief.value?.answer || '')
+const currentAnswer = computed(() => questionBrief.value?.answer || (currentActivity.value?.config as any)?.answer || '')
 const answeredCount = computed(() => currentActivity.value?.stats?.answered ?? 0)
 const mySubmitted = computed(() => !!currentActivity.value && !!state.value?.myAnsweredActivityIds.includes(currentActivity.value.activity_id))
 const myCorrect = computed(() => !!myAnswer.value && myAnswer.value === currentAnswer.value)
@@ -151,7 +153,7 @@ async function submit(answer: string) {
   if (!s || !act || act.status !== 'collecting' || mySubmitted.value) return
   myAnswer.value = answer
   try {
-    const r = await v3Api.classroom.submitResponse(s.sessionId, { activity_id: act.activity_id, answer }, { token: token.value })
+    const r = await v3Api.classroom.submitResponse(s.sessionId, { activity_id: act.activity_id, answer: { choice: answer } }, { token: token.value })
     duplicateHint.value = !!r.data.duplicate
   } catch (e: any) {
     duplicateHint.value = false
@@ -166,17 +168,10 @@ function onPhoto(ev: Event) {
   const act = currentActivity.value
   if (!s || !act || act.status !== 'collecting' || mySubmitted.value) return
   uploading.value = true
-  const reader = new FileReader()
-  reader.onload = async () => {
-    try {
-      // 原图直传（dataURL 作 image_key；真实部署走 presign PUT 直传 MinIO，M2-C 统一切换）
-      await v3Api.classroom.submitResponse(s.sessionId, { activity_id: act.activity_id, answer: 'photo', image_key: String(reader.result) }, { token: token.value })
-      myAnswer.value = 'photo'
-    } finally {
-      uploading.value = false
-    }
-  }
-  reader.readAsDataURL(file)
+  // 拍照投稿需对象存储直传（学生端 presign 通道未建，S16 审计：dataURL 超 image_key 列宽必 500）——
+  // 诚实提示而非把 base64 塞给后端炸会话
+  uploading.value = false
+  photoNote.value = '拍照投稿通道即将开放（需直传改造），本题请等待老师讲解'
 }
 
 onBeforeUnmount(() => { streamAbort?.(); streamAbort = null })

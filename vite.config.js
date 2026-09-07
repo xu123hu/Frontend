@@ -32,8 +32,9 @@ export default defineConfig({
   server: {
     // 双师课堂验收契约：主入口必须是 http://127.0.0.1:5176/dual
     // （显式绑定 IPv4，避免 localhost 解析成 ::1 导致 127.0.0.1 无法访问）
+    // PORT 环境变量优先（预览面板 autoPort 派发）；缺省 5176 保持验收契约
     host: '127.0.0.1',
-    port: 5176,
+    port: Number(process.env.PORT) || 5176,
     proxy: useRealApi
       ? {
           // 教师平台优先命中（键序即匹配序，前缀更长者在前）

@@ -196,7 +196,8 @@
         <div>· 最高频错因：<b>{{ summary.topWrong }}</b></div>
         <div v-if="summary.branchesUsed.length">· 分支使用：{{ summary.branchesUsed.join(' → ') }}</div>
         <div>· 课堂时长：约 {{ summary.durationMin }} 分钟</div>
-        <div style="display: flex; gap: 8px; margin-top: 8px">
+        <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center">
+          <button class="tv3-btn tv3-btn--sm tv3-btn--primary" data-testid="tv3-save-deck" :disabled="!!deckSaved" @click="saveDeck">{{ deckSaved ? '已存入课件 ✓' : '存入课件' }}</button>
           <button class="tv3-btn tv3-btn--sm tv3-btn--primary" @click="$router.push({ path: '/teacher-v3/insights' })">去学情洞察回流</button>
           <button class="tv3-btn tv3-btn--sm" @click="summaryShown = false">关闭</button>
         </div>
@@ -311,6 +312,21 @@ function suggestBranchLocal(rate: number): BranchCard[] {
   return [...cards].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
 }
 
+/* ---------- 存入课件（S16 审计补齐：后端真实端点 + 前端客户端方法均已就位） ---------- */
+const deckSaved = ref('')
+const lastSessionId = ref('')
+async function saveDeck() {
+  // endSession 收尾会清 state（teardown），存课件用独立会话锚点
+  if (!lastSessionId.value || deckSaved.value) return
+  try {
+    const r = await v3Api.classroom.saveToDeck(lastSessionId.value, { title: (sessionTopic.value || '课堂课件') })
+    deckSaved.value = r.data.deck_id
+    toastOf().success('已存入课件，可在资源中心查看')
+  } catch {
+    toastOf().error('存入课件失败：请重试')
+  }
+}
+
 onMounted(async () => {
   const [c, q] = await Promise.all([
     v3Api.catalog.classes().then((r) => r.data.items).catch(() => []),
@@ -318,6 +334,25 @@ onMounted(async () => {
   ])
   classes.value = c
   quizPool.value = q.filter((x) => x.q_type === 'choice').slice(0, 6)
+  // 刷新/重进恢复（S16 审计：此前刷新即丢会话）——本地只存 session_id 锚点，
+  // 状态全部从权威快照重建（G7：前端仅 projection）
+  try {
+    const saved = JSON.parse(localStorage.getItem('tv3_classroom_last_session') || 'null') as { session_id: string; topic?: string } | null
+    if (saved?.session_id && !state.value) {
+      const snap = await v3Api.classroom.snapshot(saved.session_id)
+      const snapSession = snap.data.session
+      if (snapSession && snapSession.status !== 'archived') {
+        state.value = teacherStateFromSnapshot(snap.data)
+        sessionTopic.value = saved.topic || ''
+        sessionStartedAt.value = Date.now()
+        lastSessionId.value = saved.session_id
+        subscribe(saved.session_id)
+        clockTimer = window.setInterval(() => { elapsedSec.value = Math.floor((Date.now() - sessionStartedAt.value) / 1000) }, 1000)
+      } else {
+        localStorage.removeItem('tv3_classroom_last_session')
+      }
+    }
+  } catch { /* 快照取不到就当无历史课堂 */ }
 })
 onBeforeUnmount(() => { clearTimers(); streamAbort?.(); streamAbort = null })
 function clearTimers() {
@@ -372,6 +407,8 @@ async function openSession() {
     summaryShown.value = false
     summary.value = null
     subscribe(s.session_id)
+    lastSessionId.value = s.session_id
+    try { localStorage.setItem('tv3_classroom_last_session', JSON.stringify({ session_id: s.session_id, topic: sessionTopic.value })) } catch { /* 隐私模式允许失败 */ }
     clockTimer = window.setInterval(() => { elapsedSec.value = Math.floor((Date.now() - sessionStartedAt.value) / 1000) }, 1000)
     toastOf().success(`已开课 · 课堂码 ${s.join_code}（学生 H5 输码加入）`)
   } catch {
@@ -385,17 +422,21 @@ async function endSession() {
   if (sessionStatus.value === 'collecting' && !window.confirm('正在收答中，确定直接下课？（未公布的作答将不保留）')) return
   try {
     await v3Api.classroom.endSession(s.session.session_id)
-    // 小结从权威快照取（避免 SSE 事件竞态）
+    // 小结从权威快照取（避免 SSE 事件竞态）；字段映射对齐后端真实聚合（accuracy/activities）
     const snap = await v3Api.classroom.snapshot(s.session.session_id)
     const st = (snap.data.summary?.stats || {}) as Record<string, any>
+    const acts = (st.activities || []) as any[]
+    const weak = acts.filter((a) => a.correct != null && a.responses && a.correct / a.responses < 0.6)
     summary.value = {
-      questions: Number(st.questions || 0),
-      avgCorrectRate: st.avg_correct_rate == null ? 0 : Number(st.avg_correct_rate),
-      topWrong: String(st.top_wrong || '—'),
+      questions: acts.length,
+      avgCorrectRate: st.accuracy == null ? 0 : Math.round(Number(st.accuracy) * 100),
+      topWrong: weak[0]
+        ? `第 ${acts.indexOf(weak[0]) + 1} 题（正确率 ${Math.round((weak[0].correct / weak[0].responses) * 100)}%）`
+        : '—',
       branchesUsed: [...branchesUsed.value],
-      durationMin: Number(st.duration_min || 1),
+      durationMin: Math.max(1, Math.round(elapsedSec.value / 60)),
     }
-    summaryShown.value = summary.value.questions > 0 || true
+    summaryShown.value = true
   } catch {
     toastOf().error('结课失败：请重试')
     return

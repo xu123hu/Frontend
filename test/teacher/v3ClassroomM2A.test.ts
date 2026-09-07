@@ -309,6 +309,8 @@ describe('ClassroomView · 服务端权威投影（G7）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     streamHandler = null
+    localStorage.clear()
+    sessionStorage.clear()
     vi.stubGlobal('confirm', () => true)
   })
 
@@ -426,7 +428,7 @@ describe('学生 H5 · 无账号加入与作答', () => {
     await flushPromises()
     await w.find('[data-testid="h5-opt-1"]').trigger('click')
     await flushPromises()
-    expect(v3Api.classroom.submitResponse).toHaveBeenCalledWith('cs-1', { activity_id: 'act-1', answer: 'B' }, { token: 'tok-1' })
+    expect(v3Api.classroom.submitResponse).toHaveBeenCalledWith('cs-1', { activity_id: 'act-1', answer: { choice: 'B' } }, { token: 'tok-1' })
     // 回执来自服务端投影（response_submitted 事件，participant_id===我）
     studentHandler!('event', { seq: 2, event_id: 'e2', event_type: 'response_submitted', payload: { activity_id: 'act-1', participant_id: 'p-me', activity: { activity_id: 'act-1', kind: 'question', question_id: CHOICE.id, ord: 1, status: 'collecting', stats: { answered: 1, my_submitted: true, distribution: { B: 1 } } } }, created_at: 'T' })
     await flushPromises()

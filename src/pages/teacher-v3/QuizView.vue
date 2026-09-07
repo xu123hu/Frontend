@@ -442,7 +442,7 @@ async function doPublish() {
   if (publishBlockers.value) return
   if (!window.confirm(`确认发布？\n· ${pubClasses.value.find((c) => c.class_id === pubForm.value.class_id)?.name || ''} · 截止 ${pubForm.value.deadline}\n· ${paperQuestions.value.length} 题 · 演示环境不会真实发送学生端`)) return
   try {
-    const r: any = await (v3Api as any).assignments.publish({
+    const r: any = await v3Api.grading.publish({
       title: `《${publishTitle.value}》课后作业`,
       class_id: pubForm.value.class_id,
       deadline: pubForm.value.deadline,

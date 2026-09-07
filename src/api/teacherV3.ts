@@ -348,6 +348,9 @@ export const v3Api = {
     /** 权威快照（重连恢复/首次进入） */
     snapshot: (id: string, signal?: AbortSignal) =>
       teacherGet<V3ClassroomSnapshot>(`/teacher-v3/classroom/sessions/${id}/snapshot`, undefined, signal),
+    /** 「存入课件」：课堂真实 deck 关联（L9 判定⑧；S16 审计补齐前端客户端方法） */
+    saveToDeck: (id: string, body: { title?: string }) =>
+      teacherPost<{ deck_id: string; title: string }>(`/teacher-v3/classroom/sessions/${id}/save-to-deck`, body),
     /** 教师 SSE（durable 重放 + live）：snapshot → event*；常驻通道，断线自动重连（Last-Event-ID 补拉） */
     stream: (id: string, onEvent: (event: string, data: any) => void, signal?: AbortSignal, opts?: V3SseOptions) =>
       v3Sse('GET', `/teacher-v3/classroom/sessions/${id}/stream`, undefined, onEvent, signal, { reconnect: true, ...opts }),

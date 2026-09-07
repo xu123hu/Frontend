@@ -412,7 +412,7 @@ async function simulateSubmissions() {
   if (!assignment.value) return
   if (!window.confirm('注入确定性演示作答（非真实学生数据）？演示用于核对批改确认面。')) return
   try {
-    await (v3Api as any).simulateSubmissions(assignment.value.id)
+    await v3Api.grading.simulateSubmissions(assignment.value.id)
     toastOf().success('演示作答已注入（数据标注为演示），请逐生终审')
     await openAssignment(assignment.value.id)
   } catch { toastOf().error('模拟提交失败（mock 未启动？）') }
