@@ -35,12 +35,16 @@
     </div>
 
     <div class="section-head">
-      <h2>薄弱环节 · {{ weakPoints.length ? weakPoints.length + ' 个待突破' : '画像生成中' }}</h2>
+      <h2>薄弱环节 · {{ weakPoints.length ? weakPoints.length + ' 个待突破' : (weakLoading ? '生成中' : '还没生成') }}</h2>
       <span class="more" @click="go('/graph')">→ 看完整雷达图</span>
     </div>
     <div v-if="weakLoading" class="state-tip">加载中…</div>
     <div v-else-if="weakError" class="state-tip">薄弱画像加载失败，稍后刷新重试</div>
-    <div v-else-if="!weakPoints.length" class="state-tip">先完成一次练习，生成你的薄弱画像</div>
+    <div v-else-if="!weakPoints.length" class="state-tip">
+      做题数据还不够，AI 暂时分析不出你的薄弱点——这是诚实的说法，不装。
+      先去练一组题，画像马上就有。
+      <div style="margin-top:10px;"><button class="more" style="border:1px solid var(--line);padding:7px 16px;border-radius:999px;cursor:pointer;font:inherit;font-size:12.5px;" @click="go('/practice')">→ 去练题中心</button></div>
+    </div>
     <div v-else style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;">
       <div v-for="w in weakPoints" :key="w.kp_code" class="weak-card" :class="cardCls(w.level)">
         <div class="head">
