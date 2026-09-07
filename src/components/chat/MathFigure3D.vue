@@ -49,6 +49,13 @@ const err = ref('')
 const gridOn = ref(true)
 
 let renderer = null
+
+// PHASE 5：课件导出用——截取当前 WebGL 帧（preserveDrawingBuffer 已开）
+defineExpose({
+  toDataURL: () => {
+    try { return renderer?.domElement?.toDataURL('image/png') || '' } catch { return '' }
+  },
+})
 let scene = null
 let camera = null
 let controls = null
@@ -414,7 +421,7 @@ function renderTick() {
 
 function initThree() {
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })  // PHASE 5：preserve 供导出 toDataURL 截图
   } catch (e) {
     err.value = `当前环境不支持 WebGL，无法渲染 3D 图形（${e?.message || ''}）`
     throw e

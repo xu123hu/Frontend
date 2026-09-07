@@ -1685,12 +1685,42 @@ async function regenSlide() {
 }
 
 /* ==================== 导出课件 / 导出报告 ==================== */
-function exportCourseware() {
+// PHASE 5：离屏挂载 MathFigure3D 渲染图形帧 → PNG dataURL（导出全页图形覆盖）
+async function captureFigure(figureSpec) {
+  const { createApp } = await import('vue')
+  const { default: Fig3D } = await import('@/components/chat/MathFigure3D.vue')
+  const host = document.createElement('div')
+  host.style.cssText = 'position:fixed;left:-9999px;top:0;width:860px;height:520px;background:#ffffff;'
+  document.body.appendChild(host)
+  const app = createApp(Fig3D, { figure: figureSpec, height: 500 })
+  try {
+    const inst = app.mount(host)
+    await new Promise((r) => setTimeout(r, 800))  // three.js init + 首帧
+    return inst?.toDataURL?.() || ''
+  } finally {
+    app.unmount()
+    host.remove()
+  }
+}
+async function exportCourseware() {
   const s = session.value
   if (!s?.slides?.length) return
+  // PHASE 5：导出前离屏渲染各页 geometry 图形为 PNG（three.js toDataURL，全页覆盖）
+  toast.info('正在渲染课件图形…')
+  const figureCaptures = new Map()
+  for (const sld of slidesSorted.value) {
+    for (let bi = 0; bi < (sld.blocks || []).length; bi++) {
+      const b = sld.blocks[bi]
+      if (b.kind !== 'geometry' || !b.figure) continue
+      try {
+        const u = await captureFigure(b.figure)
+        if (u) figureCaptures.set(`${sld.order}:${bi}`, u)
+      } catch { /* 单图失败保持占位文案 */ }
+    }
+  }
   const esc = (t) => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   const slideHtml = slidesSorted.value.map((sld) => {
-    const rows = (sld.blocks || []).map((b) => {
+    const rows = (sld.blocks || []).map((b, bIndex) => {
       if (b.kind === 'text') return `<p>${esc(b.text)}</p>`
       if (b.kind === 'theorem') return `<div class="thm"><b>${esc(b.title || '定理')}</b><p>${esc(b.body)}</p></div>`
       if (b.kind === 'latex') return `<div class="formula">$$${esc(b.latex)}$$</div>`
@@ -1704,7 +1734,12 @@ function exportCourseware() {
       }
       if (b.kind === 'note') return `<div class="note">💡 ${esc(b.text)}</div>`
       if (b.kind === 'plot2d') return `<div class="fig">📈 ${esc(b.caption || b.expr || '')}</div>`
-      if (b.kind === 'geometry') return `<div class="fig">🧊 ${esc(b.caption || '几何图形（交互版见课堂页面）')}</div>`
+      if (b.kind === 'geometry') {
+        const u = figureCaptures.get(`${sld.order}:${bIndex}`) || figureCaptures.get(`${sld.order}:any`)
+        return u
+          ? `<div class="fig"><img src="${u}" style="max-width:100%;border-radius:8px;" /></div>`
+          : `<div class="fig">🧊 ${esc(b.caption || '几何图形（交互版见课堂页面）')}</div>`
+      }
       return ''
     }).join('')
     return `<section><h2>第 ${sld.order} 页 · ${esc(sld.title)}</h2><p class="sub">${esc(sld.subtitle || '')}</p>${rows}</section>`
