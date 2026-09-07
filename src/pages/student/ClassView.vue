@@ -16,6 +16,13 @@
     <div v-else-if="!currentClass" class="empty-state">
       <div class="es-icon">🏫</div>
       <div class="es-text">你还没有加入班级，输入老师给的邀请码加入吧</div>
+      <div class="join-value">
+        <div class="jv-title">加入班级后，你可以：</div>
+        <div class="jv-item">📥 接收老师布置的作业和课堂任务（含截止提醒）</div>
+        <div class="jv-item">📄 查看老师分享的课件和复习资料</div>
+        <div class="jv-item">📊 看到自己的班级位置（仅自己可见，不公开）</div>
+        <div class="jv-item">❓ 作业做错自动进错题本，AI 帮你补漏</div>
+      </div>
       <div class="join-box">
         <input
           v-model.trim="inviteCode"
@@ -281,4 +288,10 @@ onMounted(async () => {
 .join-btn { padding: 8px 18px; border: none; border-radius: 8px; background: var(--brand); color: #fff; font-size: 13px; cursor: pointer; }
 .join-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .class-select { margin-left: 6px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
+
+/* S10 空态价值引导 */
+.join-value { margin-top: 16px; text-align: left; max-width: 380px; margin-left: auto; margin-right: auto;
+  background: var(--bg2, #f1f5f9); border-radius: 12px; padding: 14px 18px; }
+.jv-title { font-size: 12.5px; font-weight: 800; color: var(--ink2); margin-bottom: 8px; }
+.jv-item { font-size: 12.5px; color: var(--ink2); line-height: 2; }
 </style>

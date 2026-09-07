@@ -11,6 +11,7 @@
     <div class="sugg-grid">
       <button v-for="s in suggestions" :key="s.text" class="sugg-chip" @click="$emit('pick', s)">
         {{ s.text }}
+        <span v-if="s.rec" class="sugg-rec">个性化</span>
         <span v-if="s.skill" class="sugg-skill">{{ skillTag(s.skill) }}</span>
       </button>
     </div>
@@ -18,7 +19,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { api } from '@/api/client'
 import { skillByKey } from '@/config/skills'
 
 const props = defineProps({
@@ -32,7 +34,27 @@ const expanded = ref(false)
 watch(() => props.collapsed, (v) => { if (!v) expanded.value = false })
 
 // 建议卡：skill 命中的卡按对应技能做一次性覆盖（context.skills 下发，不改变点亮状态）
-const suggestions = [
+// S2（V2 文档）：前 3 个 chip 基于薄弱点动态生成（真实 weak-points 数据），无学情时保持常青建议
+const personalized = ref([])
+onMounted(async () => {
+  try {
+    const data = await api.get('/student/report/weak-points')
+    const items = data?.items || data || []
+    const name = (w) => w.kp_name || w.name || ''
+    const list = []
+    for (const w of items.slice(0, 2)) {
+      if (!name(w)) continue
+      list.push({ text: `出 3 道「${name(w)}」的变式题`, skill: 'quiz_gen', rec: true })
+    }
+    if (name(items[0])) {
+      list.push({ text: `引导我攻一下「${name(items[0])}」`, skill: 'socratic', rec: true })
+    }
+    personalized.value = list
+  } catch { /* 无学情/接口不可用：保持常青建议，不报错 */ }
+})
+const suggestions = computed(() => [...personalized.value, ...EVERGREEN])
+
+const EVERGREEN = [
   { text: '分析我的错题规律', skill: '' },
   { text: '出一道极限练习题', skill: 'quiz_gen' },
   { text: '引导我解一道二次函数题', skill: 'socratic' },
@@ -63,6 +85,10 @@ function skillTag(key) {
 .sugg-skill {
   font-size: 10px; padding: 0 var(--space-1); border-radius: var(--radius-full);
   background: var(--primary-subtle); color: var(--primary);
+}
+.sugg-rec {
+  font-size: 10px; padding: 0 var(--space-1); border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #eef2ff, #ecfeff); color: #4f46e5; font-weight: 700;
 }
 /* slim 收起条 */
 .sugg-slim {
