@@ -6,6 +6,15 @@
       @click="exitImmersive"
       title="退出沉浸模式"
     >← 退出沉浸</button>
+    <!-- S4 沉浸顶栏：题组名 + pips 进度 + 暂停（回页面进度保留） -->
+    <div v-if="quizState === 'ready' && showImmersive" class="imm-top">
+      <div class="imm-title">{{ group?.kp_name || '今日训练' }} · {{ questions.length }} 题</div>
+      <div class="imm-strip">
+        <span v-for="(qq, i) in questions" :key="i" class="pip" :class="{ done: sheetState[i], current: i === qIndex }"></span>
+      </div>
+      <span class="imm-timer">⏱ {{ usedTime }}</span>
+      <button class="imm-btn" @click="exitImmersive">⏸ 暂停（回页面，进度保留）</button>
+    </div>
     <div class="greeting">
       <div class="hello">今日训练 · <span style="color:var(--brand-deep);">{{ greetingTitle }}</span></div>
       <div class="sub" v-if="groupLoading">正在为你生成今日训练推荐…</div>
@@ -108,6 +117,12 @@
           </div>
         </div>
         <button class="start-btn" :disabled="starting" @click="start">{{ starting ? '出题中…' : '▶ 开始训练' }}</button>
+        <button
+          v-if="group && group.kp_code && weakList.length > 1"
+          class="switch-btn"
+          :disabled="groupLoading"
+          @click="rotateWeakKp"
+        >↻ 换个知识点练（下一个薄弱点）</button>
       </template>
     </div>
 
@@ -658,6 +673,9 @@ async function loadGroupWithCount(count, kpCode) {
     const params = { count }
     if (kpCode) params.kp_code = kpCode
     group.value = await api.get('/student/practice/group-recommend', params)
+    if (!weakList.value.length) {
+      try { weakList.value = await api.get('/student/report/weak-points') || [] } catch { weakList.value = [] }
+    }
   } catch (e) {
     groupError.value = e.message || '加载失败'
   } finally {
@@ -667,6 +685,7 @@ async function loadGroupWithCount(count, kpCode) {
 
 // 知识点切换：薄弱 Top5 列表 + 手动选其他
 const kpOptions = ref([])  // [{code, name, mastery, is_weak}]
+const weakList = ref([])
 const selectedKp = ref('')
 // om5：全知识点目录（题库有题的章节），支持任选特定知识点
 const kpCatalog = ref([])
@@ -708,6 +727,16 @@ function selectKp(kpCode) {
 const showImmersive = ref(true)
 function exitImmersive() { showImmersive.value = false }
 
+// S3：换知识点——薄弱列表轮换（真实下一个薄弱点，不是假刷新）
+const weakCycle = ref(0)
+async function rotateWeakKp() {
+  weakCycle.value += 1
+  const w = weakList.value[weakCycle.value % weakList.value.length]
+  if (!w) return
+  selectedKp.value = w.code || ''
+  await loadGroupWithCount(group.value?.count || 5, w.code || undefined)
+}
+
 const usedTime = ref('0:00')
 let secs = 0
 const timer = setInterval(() => {
@@ -741,24 +770,42 @@ onMounted(async () => {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
-  padding: var(--space-4) var(--space-5);
+  background: #f8f9fb;  /* S4：中性浅灰护眼底，非暖黄 */
+  padding: var(--space-4) var(--space-6);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
-.view.immersive > *:not(.practice-row):not(.immersive-exit) { display: none; }
+.view.immersive > *:not(.practice-row):not(.immersive-exit):not(.imm-top) { display: none; }
 .view.immersive .practice-row {
-  height: 100%;
-  align-items: center;
-  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);  /* S4：题目 75 / 答题卡 25 */
+  gap: 18px;
+  align-items: stretch;
+  justify-content: stretch;
 }
 .view.immersive .quiz-card {
-  max-width: 760px;
+  max-width: none;
   width: 100%;
-  min-height: 70vh;
+  min-height: 0;
+  overflow-y: auto;
   padding: var(--space-6) var(--space-8);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
 }
+.view.immersive .answer-sheet { align-self: start; position: sticky; top: 0; }
+/* 沉浸顶栏 */
+.imm-top { display: flex; align-items: center; gap: 16px; padding: 2px 4px 12px; }
+.imm-title { font-size: 14px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+.imm-strip { flex: 1; display: flex; gap: 4px; }
+.imm-strip .pip { flex: 1; height: 6px; border-radius: 99px; background: #e6e9f0; }
+.imm-strip .pip.done { background: var(--ok); }
+.imm-strip .pip.current { background: var(--brand); }
+.imm-timer { font-family: var(--font-num); font-weight: 800; font-size: 13px; color: var(--ink2); white-space: nowrap; }
+.imm-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); font: inherit; font-size: 12px; font-weight: 700; color: var(--ink2); cursor: pointer; white-space: nowrap; }
+.imm-btn:hover { border-color: var(--primary-border); color: var(--primary); }
 .view.immersive .q-text { font-size: 16px; line-height: 1.8; }
 .q-fig { margin: 10px 0; text-align: center; }
 .q-fig img { max-width: 100%; max-height: 260px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
@@ -772,6 +819,11 @@ onMounted(async () => {
   background: #fff; resize: vertical;
 }
 .text-answer-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 18%, transparent); }
+.switch-btn {
+  margin-top: 10px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--card); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink2); cursor: pointer;
+}
+.switch-btn:hover:not(:disabled) { border-color: var(--primary-border); color: var(--primary); }
 .text-answer-btn {
   align-self: flex-start; padding: 8px 20px;
   background: var(--brand); color: #fff; border: none; border-radius: 7px;

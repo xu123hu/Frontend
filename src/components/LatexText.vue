@@ -32,6 +32,10 @@ const BARE_TEX_REPLACEMENTS = [
   [/\\times\b/g, '×'],
   [/\\cdot\b/g, '·'],
   [/\\(?:left|right)\b/g, ''],
+  // S3（V2 文档）：老题库残留的间距/句点命令——直接转空白，不落成可见源码
+  [/\\qquad|\\quad/g, '  '],
+  [/\\;/g, ' '],
+  [/\\\./g, ''],
 ]
 
 function renderPlainText(value) {
