@@ -29,7 +29,7 @@ const label = computed(() => {
 <template>
   <button
     id="assistant-orb"
-    class="assistant-orb"
+    class="assistant-orb floating-ai-btn"
     :class="`status-${status}`"
     :data-status="status"
     :aria-label="`AI 管家 · ${label}`"
@@ -63,44 +63,18 @@ const label = computed(() => {
   border: 1px solid rgba(255, 255, 255, 0.65);
   border-radius: 50%;
   z-index: var(--z-orb);
-  background: radial-gradient(circle at 34% 28%, #8da5f6 0, #5272dc 36%, #2949b4 100%);
-  box-shadow: 0 8px 22px rgba(49, 87, 213, 0.28);
   color: #fff;
   display: grid;
   place-items: center;
   font-weight: 800;
   cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.assistant-orb::before {
-  content: '';
-  position: absolute;
-  inset: -6px;
-  border: 2px solid transparent;
-  border-radius: inherit;
-  pointer-events: none;
+.assistant-orb:hover {
+  transform: translateY(-3px);
 }
-.assistant-orb.status-running::before {
-  border-color: rgba(49, 87, 213, 0.35);
-  animation: orb-ring 1.8s ease-out infinite;
-}
-.assistant-orb.status-waiting {
-  box-shadow:
-    0 8px 22px rgba(242, 169, 59, 0.3),
-    0 0 0 3px rgba(242, 169, 59, 0.18);
-}
-.assistant-orb.status-failed {
-  box-shadow:
-    0 8px 22px rgba(214, 69, 69, 0.32),
-    0 0 0 3px rgba(214, 69, 69, 0.18);
-}
-.assistant-orb.status-complete {
-  box-shadow:
-    0 8px 22px rgba(37, 164, 111, 0.3),
-    0 0 0 3px rgba(37, 164, 111, 0.16);
-}
-.assistant-orb-label {
-  font-size: 14px;
-  letter-spacing: 0.04em;
+.assistant-orb:active {
+  transform: translateY(-1px);
 }
 .assistant-orb-badge {
   position: absolute;
@@ -109,29 +83,18 @@ const label = computed(() => {
   min-width: 20px;
   height: 20px;
   padding: 0 5px;
-  border: 2px solid var(--surface);
-  border-radius: 999px;
-  background: var(--warning);
-  color: #172b4d;
+  border: 2px solid var(--ailp-card, #fff);
+  border-radius: var(--ailp-radius-full, 9999px);
+  background: var(--ailp-warning-500, #f59e0b);
+  color: var(--ailp-gray-950, #020617);
   font-size: 10px;
   display: grid;
   place-items: center;
   font-weight: 700;
 }
-@keyframes orb-ring {
-  0% {
-    transform: scale(0.9);
-    opacity: 0.8;
-  }
-  75%,
-  100% {
-    transform: scale(1.18);
-    opacity: 0;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .assistant-orb.status-running::before {
-    animation: none;
+  .assistant-orb {
+    transition: none;
   }
 }
 </style>
