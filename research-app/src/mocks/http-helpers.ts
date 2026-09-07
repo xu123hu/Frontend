@@ -3,7 +3,7 @@
  * 认证（CR-F1）与文献（CR-F2）两组 handlers 共用，避免重复实现。
  */
 import { HttpResponse } from 'msw';
-import { findTenantBySession } from './db';
+import { findDemoSessionForOidc, findTenantBySession } from './db';
 import type { TenantRecord } from './db';
 
 export const SESSION_COOKIE = 'rsid';
@@ -33,7 +33,13 @@ export function readCookieHeader(request: Request): string {
 
 export function readSession(request: Request): { tenant: TenantRecord; userId: string } | null {
   const match = readCookieHeader(request).match(new RegExp(`${SESSION_COOKIE}=([^;]+)`));
-  return match ? findTenantBySession(decodeURIComponent(match[1])) : null;
+  if (match) return findTenantBySession(decodeURIComponent(match[1]));
+  // 统一身份（OIDC）混合模式：真实会话（Bearer）按已认证演示会话处理，
+  // 避免"已登录却被演示数据面判为未登录"的假错误（徽标仍标演示数据）。
+  if (request.headers.get('authorization')?.startsWith('Bearer ')) {
+    return findDemoSessionForOidc();
+  }
+  return null;
 }
 
 /**

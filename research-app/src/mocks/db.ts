@@ -205,6 +205,15 @@ export function findTenantBySession(sessionId: string): { tenant: TenantRecord; 
   return null;
 }
 
+/** 统一身份（OIDC）混合模式兜底：带 Bearer 的真实会话进入演示数据面。
+ *  页面徽标仍标识"演示数据"，本映射只解决混合模式接缝（真实会话 + 演示数据），
+ *  不伪造任何真实业务链路。 */
+export function findDemoSessionForOidc(): { tenant: TenantRecord; userId: string } | null {
+  const tenant = db.tenants.values().next().value;
+  if (!tenant) return null;
+  return { tenant, userId: tenant.accounts[0]?.user_id ?? '' };
+}
+
 /** 默认演示账户：无真实后端时给走查一个可预期入口（仅 mock）。 */
 export const DEMO_PHONE = '13800000001';
 export const DEMO_OTP = '888888';

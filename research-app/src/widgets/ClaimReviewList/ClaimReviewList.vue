@@ -7,10 +7,12 @@
 import { computed, reactive, ref } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-vue-next';
+import { apiRequest } from '@app/api/client';
+import { config } from '@app/config';
 import { reviewKeys, useCorrectClaim, useLean, useStartVerification, useVerification } from '@features/review/queries';
 import { CLAIM_SUPPORT_LABELS } from '@features/review/lean-overall';
 import { useRunEvents } from '@features/runs/use-run-events';
-import type { ReviewClaim, ReviewMode } from '@entities/review/types';
+import type { ReviewClaim, ReviewMode, VerificationLayer } from '@entities/review/types';
 import VerifyLayerList from '@widgets/VerifyLayerList/VerifyLayerList.vue';
 import LeanThreeStatesView from '@widgets/LeanThreeStates/LeanThreeStates.vue';
 
@@ -64,6 +66,89 @@ function saveCorrection(claim: ReviewClaim): void {
   void correctMutation.mutateAsync({ claimId: claim.id, correctedStatement: value }).then(() => {
     delete drafts[claim.id];
   });
+}
+
+// ---------- 真实验证引擎（统一身份模式：SymPy/mpmath/Z3 直连科研后端） ----------
+interface RealCheckLayer {
+  layer: string;
+  status: 'passed' | 'unverifiable' | 'counterexample' | 'formal_pending' | 'not_run';
+  contract_status: string;
+  method: string;
+  summary: string;
+  limitations: string[];
+  evidence: Record<string, unknown>;
+  counterexample: Record<string, unknown> | null;
+}
+interface RealCheckResponse {
+  engine: string;
+  layers: RealCheckLayer[];
+  verdict: { all_passed: boolean; has_counterexample: boolean; any_unverifiable: boolean; pending_formal: boolean };
+}
+
+const REAL_LAYER_CODE: Record<string, VerificationLayer['layer']> = {
+  L0_SYNTAX: 'L0',
+  L1_ASSUMPTION: 'L1',
+  L2_SYMBOLIC: 'L2',
+  L3_NUMERIC: 'L3',
+  L4_COUNTEREXAMPLE: 'L4',
+};
+const REAL_LAYER_LABELS: Record<string, string> = {
+  L0_SYNTAX: '语法解析',
+  L1_ASSUMPTION: '假设与定义域',
+  L2_SYMBOLIC: '符号等价',
+  L3_NUMERIC: '数值重算',
+  L4_COUNTEREXAMPLE: '反例搜索',
+};
+
+const realLayers = reactive<Record<string, VerificationLayer[] | undefined>>({});
+const realRunning = ref<string | null>(null);
+const realError = ref<string | null>(null);
+
+function mapRealStatus(status: RealCheckLayer['status']): VerificationLayer['status'] {
+  if (status === 'passed') return 'passed';
+  if (status === 'counterexample') return 'failed';
+  if (status === 'unverifiable' || status === 'formal_pending') return 'inconclusive';
+  return 'not_run';
+}
+
+function mapRealCounterexample(raw: Record<string, unknown>): VerificationLayer['counterexample'] {
+  if (!raw) return null;
+  const values = raw['values'];
+  const asString = (key: string): string => {
+    const value = raw[key];
+    return value === undefined || value === null ? '' : String(value);
+  };
+  return {
+    assignment: values !== undefined ? JSON.stringify(values) : asString('assignment'),
+    assumption_check: asString('premise_check') || asString('assumption_check'),
+    recompute: asString('recomputed') || asString('recompute') || asString('simplified_difference'),
+  };
+}
+
+/** 调用科研后端真实验证引擎（/verification/check），结果按五层独立显示。 */
+async function runRealCheck(claim: ReviewClaim): Promise<void> {
+  realRunning.value = claim.id;
+  realError.value = null;
+  try {
+    const result = await apiRequest<RealCheckResponse>('/verification/check', {
+      method: 'POST',
+      body: { expression: displayStatement(claim), assumptions: claim.assumptions },
+    }).then((e) => e.data);
+    realLayers[claim.id] = result.layers.map((item) => ({
+      layer: REAL_LAYER_CODE[item.layer] ?? 'L0',
+      label: REAL_LAYER_LABELS[item.layer] ?? item.layer,
+      method: item.method,
+      status: mapRealStatus(item.status),
+      summary: [item.summary, ...item.limitations.map((l) => `限制：${l}`)].filter(Boolean).join('；'),
+      tool_name: String(item.evidence['tool_name'] ?? 'research-verification'),
+      tool_version: String(item.evidence['tool_version'] ?? ''),
+      counterexample: mapRealCounterexample(item.counterexample ?? {}),
+    }));
+  } catch (err) {
+    realError.value = err instanceof Error ? err.message : '真实验证引擎调用失败。';
+  } finally {
+    realRunning.value = null;
+  }
 }
 </script>
 
@@ -172,11 +257,37 @@ function saveCorrection(claim: ReviewClaim): void {
         </div>
       </div>
 
-      <!-- 展开区：验证五层 + Lean 三状态 -->
+      <!-- 展开区：真实验证引擎 + 验证五层 + Lean 三状态 -->
       <div
         v-if="expandedId === claim.id"
         class="expand-body"
       >
+        <div
+          v-if="config.oidcEnabled"
+          class="real-engine"
+        >
+          <div class="action-row">
+            <button
+              class="btn small"
+              type="button"
+              :disabled="realRunning === claim.id"
+              @click="runRealCheck(claim)"
+            >
+              {{ realRunning === claim.id ? '真实引擎运行中…' : '运行真实验证引擎（SymPy/mpmath/Z3）' }}
+            </button>
+          </div>
+          <p
+            v-if="realError"
+            class="real-error"
+            role="alert"
+          >
+            {{ realError }}
+          </p>
+          <template v-if="realLayers[claim.id]">
+            <h4>真实引擎分层验证（SymPy/mpmath/Z3 直连科研后端，五能力独立）</h4>
+            <VerifyLayerList :layers="realLayers[claim.id] ?? []" />
+          </template>
+        </div>
         <div
           v-if="streaming && runningClaimId === claim.id"
           class="running-line"
@@ -357,6 +468,18 @@ textarea {
   margin: 0;
   font-size: var(--font-size-xs);
   color: var(--muted);
+}
+.real-engine {
+  display: grid;
+  gap: 8px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r);
+  padding: 10px;
+}
+.real-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--font-size-xs);
 }
 .running-line {
   display: flex;

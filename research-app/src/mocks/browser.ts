@@ -18,6 +18,7 @@ export async function startMockWorker(): Promise<void> {
       const path = new URL(request.url).pathname;
       if (!path.startsWith('/api/research/v1/')) return;
       if (path.endsWith('/steward/chat') || path.endsWith('/steward/status')) return;
+      if (path.endsWith('/users/me')) return; // 统一身份模式探测真实后端
       print.warning();
     },
     quiet: false,

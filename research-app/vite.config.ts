@@ -60,10 +60,23 @@ export default defineConfig(({ mode, command }) => {
       port: 5173,
       strictPort: true,
       proxy: {
-        '/api/research/v1': {
+        // 模块路由（steward/knowledge）在后端不带 /api/research/v1 前缀：剥前缀。
+        // 平台路由（projects/dashboard/users/me/runs/artifacts）与 verification
+        // 在后端保留 /api/research/v1 前缀：原样转发（identity）。
+        // 具体前缀必须排在通用前缀之前（对象键序即匹配序）。
+        '/api/research/v1/steward': {
           target: env.VITE_BACKEND_PROXY_TARGET || 'http://127.0.0.1:18010',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/research\/v1/, ''),
+        },
+        '/api/research/v1/knowledge': {
+          target: env.VITE_BACKEND_PROXY_TARGET || 'http://127.0.0.1:18010',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/research\/v1/, ''),
+        },
+        '/api/research/v1': {
+          target: env.VITE_BACKEND_PROXY_TARGET || 'http://127.0.0.1:18010',
+          changeOrigin: true,
         },
       },
     },

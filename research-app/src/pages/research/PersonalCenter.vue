@@ -93,7 +93,7 @@ onBeforeUnmount(() => {
           <div><dt>显示名</dt><dd>{{ session.account.value.display_name }}</dd></div>
           <div>
             <dt>手机号</dt><dd class="mono">
-              {{ session.account.value.phone_masked }}
+              {{ session.account.value.phone_masked || "—（统一身份账户）" }}
             </dd>
           </div>
           <div>

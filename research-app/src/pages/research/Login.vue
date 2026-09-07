@@ -10,6 +10,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useSession } from '@features/auth/use-session';
 import { ApiError } from '@app/api/client';
 import { config } from '@app/config';
+import { isOidcCallback } from '@features/auth/oidc';
 
 const route = useRoute();
 const router = useRouter();
@@ -24,15 +25,57 @@ const formError = ref<{ message: string; retryable: boolean } | null>(null);
 const otpCountdown = ref(0);
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
+/** 统一身份（OIDC）：回调处理中 / 发起跳转中 / 错误。 */
+const oidcProcessing = ref(false);
+const oidcError = ref<{ message: string; retryable: boolean } | null>(null);
+
 const redirectTarget = computed(() => {
   const target = route.query.redirect;
   return typeof target === 'string' && target.startsWith('/research') ? target : '/research/home';
 });
 
 onMounted(() => {
+  // 统一身份回调（?code&state）：换令牌 → 拉账户 → 回跳。
+  if (isOidcCallback(route.query as Record<string, unknown>)) {
+    void handleOidcCallback();
+    return;
+  }
   // 已认证由守卫跳转；此处仅负责探测降级横幅。
   void session.probeSession();
 });
+
+async function handleOidcCallback(): Promise<void> {
+  oidcProcessing.value = true;
+  oidcError.value = null;
+  try {
+    await session.completeOidc(route.query as Record<string, unknown>);
+    await router.replace(redirectTarget.value);
+  } catch (err) {
+    oidcError.value = {
+      message: err instanceof Error ? err.message : '统一身份登录失败，请重试。',
+      retryable: true,
+    };
+    // 清掉地址栏一次性 code/state，允许用户重新发起登录。
+    await router.replace({ name: 'login', query: route.query.redirect ? { redirect: route.query.redirect } : {} });
+  } finally {
+    oidcProcessing.value = false;
+  }
+}
+
+async function startOidcLogin(): Promise<void> {
+  oidcProcessing.value = true;
+  oidcError.value = null;
+  try {
+    await session.beginOidc(redirectTarget.value);
+    // 成功路径整页跳转 Keycloak，不会返回此处。
+  } catch (err) {
+    oidcProcessing.value = false;
+    oidcError.value = {
+      message: err instanceof Error ? err.message : '统一身份未配置，请联系管理员。',
+      retryable: false,
+    };
+  }
+}
 
 function startCountdown(seconds = 60): void {
   otpCountdown.value = seconds;
@@ -132,14 +175,47 @@ function backToPhone(): void {
         网络连接不可用或服务暂时无法访问，登录功能可能受限。
       </p>
       <p
-        v-if="config.useMock"
+        v-if="config.useMock && !config.oidcEnabled"
         class="mock-hint"
         role="note"
       >
         演示环境：账号 13800000001，验证码 888888。
       </p>
 
+      <div
+        v-if="config.oidcEnabled"
+        class="form"
+      >
+        <p class="muted">
+          本环境使用统一身份登录（Keycloak）。演示账号：alice / alice_dev_only。
+        </p>
+        <p
+          v-if="oidcError"
+          class="form-error"
+          role="alert"
+        >
+          <span>{{ oidcError.message }}</span>
+          <button
+            v-if="oidcError.retryable"
+            type="button"
+            class="retry"
+            @click="startOidcLogin"
+          >
+            重试
+          </button>
+        </p>
+        <button
+          class="btn primary"
+          type="button"
+          :disabled="oidcProcessing"
+          @click="startOidcLogin"
+        >
+          {{ oidcProcessing ? '正在跳转统一身份…' : '使用统一身份登录' }}
+        </button>
+      </div>
+
       <form
+        v-else
         class="form"
         novalidate
         @submit.prevent="step === 'phone' ? sendOtp() : submitLogin()"

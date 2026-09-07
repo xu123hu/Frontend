@@ -91,7 +91,9 @@ export async function beginOidcLogin(redirectTo = '/research/home'): Promise<voi
   const authorizeUrl = new URL(`${config.oidcIssuer}/protocol/openid-connect/auth`);
   authorizeUrl.searchParams.set('client_id', config.oidcClientId!);
   authorizeUrl.searchParams.set('response_type', 'code');
-  authorizeUrl.searchParams.set('scope', 'openid profile email');
+  // realm research 只定义了自定义 client scopes（tenant-id/research-api-audience/
+  // projects:*），内建 profile/email 未建——scope 收窄为 openid，账户信息走 /users/me。
+  authorizeUrl.searchParams.set('scope', 'openid');
   authorizeUrl.searchParams.set('redirect_uri', `${window.location.origin}/research/login`);
   authorizeUrl.searchParams.set('state', state);
   authorizeUrl.searchParams.set('nonce', nonce);

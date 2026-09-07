@@ -13,8 +13,10 @@ export interface Account {
   /** UUIDv7（02 §4）：所有租户数据携带 tenant_id */
   tenant_id: string;
   display_name: string;
-  /** 脱敏手机号，如 138****1234 */
-  phone_masked: string;
+  /** 脱敏手机号，如 138****1234。统一身份（OIDC）账户无手机号，可为空。 */
+  phone_masked?: string;
+  /** 统一身份（OIDC）账户邮箱（/users/me 或 id_token claims）。 */
+  email?: string;
   created_at: string;
 }
 

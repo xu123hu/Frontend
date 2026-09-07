@@ -115,7 +115,7 @@ async function signOut(): Promise<void> {
             v-if="account"
             class="menu-phone mono"
           >
-            {{ account.phone_masked }}
+            {{ account.phone_masked || account.display_name }}
           </p>
           <button
             type="button"

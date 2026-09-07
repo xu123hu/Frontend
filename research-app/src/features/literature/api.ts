@@ -8,6 +8,7 @@
  */
 import { apiRequest, apiUpload } from '@app/api/client';
 import type { ApiMeta, ApiSuccess } from '@app/api/client';
+import { config } from '@app/config';
 import type {
   LitAnnotation,
   LitChunk,
@@ -193,10 +194,75 @@ export interface SearchResult {
   partial: SearchPartial | null;
 }
 
+/** 真实三源发现引擎（/knowledge/search，K1 契约）的返回形状。 */
+interface KnowledgeSourceStatus {
+  source: string;
+  status: 'ok' | 'not_found' | 'unavailable' | 'rate_limited' | 'invalid_request';
+  items: Array<{
+    title: string;
+    creators: string[];
+    year: number | null;
+    doi: string | null;
+    identifiers: Array<{ scheme: string; value: string }>;
+    abstract: string | null;
+  }>;
+  error: string | null;
+}
+
 export async function searchLiterature(
   params: { q: string; sources?: string[]; simulateUnavailable?: string },
   signal?: AbortSignal,
 ): Promise<SearchResult> {
+  // 统一身份（真实后端）模式：调用真实三源发现引擎（OpenAlex/arXiv/CrossRef），
+  // 源级降级事实如实透出，不静默丢弃；演示模式继续走 MSW 契约草案。
+  if (config.oidcEnabled) {
+    const q = params.q.trim();
+    const kind = /^10\.\d{4,9}\//.test(q)
+      ? 'doi'
+      : /^\d{4}\.\d{4,5}(v\d+)?$/i.test(q)
+        ? 'arxiv'
+        : 'query';
+    const response = await apiRequest<{ sources: KnowledgeSourceStatus[] }>('/knowledge/search', {
+      method: 'POST',
+      body: { kind, value: q, limit: 10 },
+      signal,
+    }).then((e) => e.data);
+    const items: SearchHit[] = [];
+    const unavailableSources: string[] = [];
+    for (const sourceStatus of response.sources) {
+      const source = sourceStatus.source as SearchHit['source'];
+      if (sourceStatus.status !== 'ok' || sourceStatus.items.length === 0) {
+        if (sourceStatus.status !== 'not_found') unavailableSources.push(source);
+        continue;
+      }
+      for (const item of sourceStatus.items) {
+        const identifier = item.identifiers.find((i) => i.scheme === 'doi')
+          ?? item.identifiers.find((i) => i.scheme === 'arxiv')
+          ?? item.identifiers.find((i) => i.scheme === 'openalex');
+        items.push({
+          title: item.title,
+          authors: item.creators ?? [],
+          year: item.year ?? null,
+          venue: null,
+          source,
+          source_identifier: identifier
+            ? { scheme: identifier.scheme as SearchHit['source_identifier']['scheme'], value: identifier.value }
+            : { scheme: 'internal', value: item.title },
+          has_full_text: false,
+          rights_status: 'unknown',
+          version_status: 'unknown',
+          already_in_library: false,
+        });
+      }
+    }
+    return {
+      items,
+      next_cursor: null,
+      partial: unavailableSources.length
+        ? { unavailable_sources: unavailableSources, reason: '部分来源不可用或被限流，结果可能不完整。' }
+        : null,
+    };
+  }
   const envelope: ApiSuccess<{ items: SearchHit[]; next_cursor: string | null }> & { meta: ApiMeta } =
     await apiRequest(`/search/literature`, {
       query: {
