@@ -30,6 +30,7 @@ import WritingFileTree from '@widgets/WritingFileTree/WritingFileTree.vue';
 import DiffPanel from '@widgets/DiffPanel/DiffPanel.vue';
 import CitationInsertDialog from '@widgets/CitationInsertDialog/CitationInsertDialog.vue';
 import CompileTimeline from '@widgets/CompileTimeline/CompileTimeline.vue';
+import { quickCompile, type QuickCompileResult } from '@features/writing/api';
 import type { ManuscriptFile, AiSuggestion } from '@entities/writing/types';
 import { useStewardChat } from '@features/steward/queries';
 import type { StewardChatMessage } from '@features/steward/api';
@@ -176,6 +177,38 @@ async function startCompile(mockScenario?: 'success' | 'missing_resource' | 'uns
   } catch (err) {
     compileError.value = err instanceof Error ? err.message : '编译启动失败。';
   }
+}
+
+// ---------- 快速编译（同步 POST /knowledge/compile，直接返回 pdf_base64） ----------
+const quickCompileLoading = ref(false);
+const quickCompileError = ref<string | null>(null);
+const quickCompileResult = ref<QuickCompileResult | null>(null);
+
+async function runQuickCompile(): Promise<void> {
+  if (!selectedManuscriptId.value) return;
+  quickCompileLoading.value = true;
+  quickCompileError.value = null;
+  quickCompileResult.value = null;
+  try {
+    const files: Record<string, string> = {};
+    // 收集当前文稿文件
+    if (content.value) {
+      files['main.tex'] = content.value;
+    }
+    const result = await quickCompile(files, 'main.tex');
+    quickCompileResult.value = result;
+  } catch (err) {
+    quickCompileError.value = err instanceof Error ? err.message : '快速编译失败。';
+  } finally {
+    quickCompileLoading.value = false;
+  }
+}
+
+function quickCompilePdfDataUrl(): string | undefined {
+  if (quickCompileResult.value?.pdf_base64) {
+    return `data:application/pdf;base64,${quickCompileResult.value.pdf_base64}`;
+  }
+  return undefined;
 }
 
 // 编译错误定位（切换文件 + 聚焦行）
@@ -576,6 +609,98 @@ const acceptedDiffCount = computed(() => aiDiffItems.value.filter((d: AiDiffItem
             {{ compileError }}
           </p>
 
+          <!-- 快速编译（同步 POST /knowledge/compile，直接返回 pdf_base64） -->
+          <div class="quick-compile">
+            <div class="quick-compile-header">
+              <span class="section-label">快速编译</span>
+              <AppButton
+                type="button"
+                variant="primary"
+                size="sm"
+                :disabled="quickCompileLoading || !selectedManuscriptId"
+                @click="runQuickCompile"
+              >
+                <Loader2
+                  v-if="quickCompileLoading"
+                  :size="14"
+                  class="spin"
+                />
+                {{ quickCompileLoading ? "编译中…" : "快速编译" }}
+              </AppButton>
+            </div>
+            <p
+              v-if="quickCompileError"
+              class="mini-error"
+              role="alert"
+            >
+              {{ quickCompileError }}
+            </p>
+            <div
+              v-if="quickCompileResult"
+              class="quick-compile-result"
+            >
+              <div
+                class="compile-status"
+                :class="{ ok: quickCompileResult.ok, fail: !quickCompileResult.ok }"
+              >
+                <CheckCircle2
+                  v-if="quickCompileResult.ok"
+                  :size="14"
+                />
+                <XCircle
+                  v-else
+                  :size="14"
+                />
+                {{ quickCompileResult.ok ? "编译成功" : "编译失败" }}
+                <span class="engine">{{ quickCompileResult.engine }}</span>
+              </div>
+              <div
+                v-if="quickCompileResult.errors.length > 0"
+                class="compile-errors"
+              >
+                <p class="errors-title">
+                  编译错误（{{ quickCompileResult.errors.length }}）：
+                </p>
+                <ul>
+                  <li
+                    v-for="(err, idx) in quickCompileResult.errors"
+                    :key="idx"
+                    class="compile-error-item"
+                  >
+                    <span class="error-file">{{ err.file }}</span>
+                    <button
+                      v-if="err.line != null"
+                      type="button"
+                      class="error-line"
+                      @click="locateCompileError(err.file, err.line)"
+                    >
+                      行 {{ err.line }}
+                    </button>
+                    <span class="error-detail">{{ err.detail }}</span>
+                  </li>
+                </ul>
+              </div>
+              <div
+                v-if="quickCompilePdfDataUrl()"
+                class="pdf-preview"
+              >
+                <p class="pdf-label">
+                  编译产物 PDF 预览：
+                </p>
+                <iframe
+                  :src="quickCompilePdfDataUrl()"
+                  class="pdf-frame"
+                  title="编译 PDF 预览"
+                />
+              </div>
+              <p
+                v-else-if="quickCompileResult.ok && !quickCompileResult.pdf_base64"
+                class="mini-note"
+              >
+                编译成功但未返回 PDF（可能是引擎配置问题）。
+              </p>
+            </div>
+          </div>
           <CompileTimeline
             :run-id="activeRunId"
             :manuscript-id="selectedManuscriptId"
@@ -769,6 +894,27 @@ const acceptedDiffCount = computed(() => aiDiffItems.value.filter((d: AiDiffItem
   flex-wrap: wrap;
   gap: 8px;
 }
+.quick-compile { margin-bottom: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.quick-compile-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.section-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.quick-compile-result { margin-top: 10px; }
+.compile-status { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 6px; margin-bottom: 8px; }
+.compile-status.ok { background: #ecfdf5; color: #059669; }
+.compile-status.fail { background: #fef2f2; color: #dc2626; }
+.compile-status .engine { font-weight: 400; font-size: 11px; opacity: 0.7; margin-left: auto; }
+.compile-errors { margin-bottom: 10px; }
+.errors-title { font-size: 12px; font-weight: 600; color: #dc2626; margin: 0 0 4px; }
+.compile-errors ul { list-style: none; margin: 0; padding: 0; }
+.compile-error-item { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
+.error-file { font-family: monospace; color: #475569; }
+.error-line { background: none; border: none; color: #6366f1; cursor: pointer; font-size: 11px; text-decoration: underline; padding: 0; }
+.error-detail { color: #64748b; flex: 1; }
+.pdf-preview { margin-top: 10px; }
+.pdf-label { font-size: 12px; font-weight: 600; color: #475569; margin: 0 0 6px; }
+.pdf-frame { width: 100%; height: 400px; border: 1px solid var(--border); border-radius: 6px; }
+.mini-note { font-size: 11px; color: #94a3b8; margin: 6px 0 0; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .mini-error {
   margin: 0;
   color: var(--ailp-error-600);

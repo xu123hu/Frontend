@@ -116,3 +116,26 @@ export function fetchCompileRun(runId: string, signal?: AbortSignal): Promise<Co
 export function compiledPdfUrl(artifactId: string): string {
   return `/api/research/v1/artifacts/${encodeURIComponent(artifactId)}/content`;
 }
+
+/** 快速编译结果（同步 POST /knowledge/compile，1a73de7）。 */
+export interface QuickCompileError {
+  file: string;
+  line: number | null;
+  detail: string;
+}
+
+export interface QuickCompileResult {
+  ok: boolean;
+  engine: string;
+  log_text: string;
+  errors: QuickCompileError[];
+  pdf_base64: string | null;
+}
+
+/** 快速编译：同步调用 POST /knowledge/compile，直接返回 pdf_base64 和行级错误。 */
+export function quickCompile(files: Record<string, string>, entryPoint: string): Promise<QuickCompileResult> {
+  return apiRequest<QuickCompileResult>('/knowledge/compile', {
+    method: 'POST',
+    body: { files, entry_point: entryPoint },
+  }).then((e) => e.data);
+}
