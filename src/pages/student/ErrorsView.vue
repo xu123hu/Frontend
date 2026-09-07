@@ -101,6 +101,8 @@
     <!-- 视图切换 -->
     <div class="section-head">
       <h2>错题详情 · 第 {{ String(selectedSeq).padStart(2, '0') }} 题</h2>
+      <button v-if="detail" class="del-err" style="margin-right:10px;color:var(--err,#dc2626);background:transparent;border:none;cursor:pointer;font-size:12px;padding:4px 6px;border-radius:8px;" title="删除这道错题（移出错题本，不再复习）" @click="onDelClick">
+        {{ delConfirming ? '确认删除？再点一次' : '🗑 删除' }}</button>
       <div class="view-tabs" style="margin:0;">
         <button
           v-for="t in tabs" :key="t"
@@ -581,6 +583,32 @@ function switchSub(v) {
 function redo() {
   reviewing.value = true
   toast.info('已隐藏答案，请独立重做后选择结果 ⏱')
+}
+// S6 错题删除：两段式确认（防误触，兼容自动化）→ 软删端点 → 清详情 + 刷新到期/筛选两列表
+const delConfirming = ref(false)
+let _delTimer = null
+function onDelClick() {
+  if (!detail.value?.record_id) return
+  if (!delConfirming.value) {
+    delConfirming.value = true
+    clearTimeout(_delTimer)
+    _delTimer = setTimeout(() => { delConfirming.value = false }, 4000)
+    return
+  }
+  delConfirming.value = false
+  removeError()
+}
+async function removeError() {
+  if (!detail.value?.record_id) return
+  try {
+    await studentApi.deleteErrorRecord(detail.value.record_id)
+    toast.info('已删除错题')
+    detail.value = null
+    loadDue()
+    loadFilter()
+  } catch (e) {
+    toast.info('删除失败：' + (e?.message || '请稍后再试'))
+  }
 }
 // om5 修复轮 D2：错题 → 引导重解（深链 /dialog?explain=，DialogView 已有该入口处理）
 function redoWithSocratic() {

@@ -60,6 +60,8 @@ export const studentApi = {
   errorRecords: (params = {}) => api.get('/student/error-records', params),
   createErrorRecord: (payload) => api.post('/student/error-records', payload),
   reviewErrorRecord: (id, payload) => api.post(`/student/error-records/${id}/review`, payload),
+  // S6 错题删除（后端软删；越权 404 不泄露存在性）
+  deleteErrorRecord: (id) => api.del(`/student/error-records/${id}`),
   // 迭代15 L0-3：学习事件总线（判分上报 → 错题/学情/复习服务端统一分发）
   reportLearningEvent: (payload) => api.post('/student/learning-events', payload),
   // F3/F5 刷题作答
