@@ -25,15 +25,30 @@
         <strong style="font-size:14px;">📕 真题套卷 · 按年份（全真题，不掺 AI 题）</strong>
         <span style="font-size:12px;color:var(--ink3);" v-if="realLoading">加载中…</span>
       </div>
+      <!-- S9（V2 文档）：年份/卷别筛选器替代 40+ 按钮墙；题量诚实标注为"已收录" -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        <select v-model="filterYear" class="rp-select">
+          <option value="">全部年份</option>
+          <option v-for="y in rpYearOptions" :key="y" :value="y">{{ y }} 年</option>
+        </select>
+        <select v-model="filterVol" class="rp-select">
+          <option value="">全部卷别</option>
+          <option v-for="v in rpVolOptions" :key="v" :value="v">{{ v }}</option>
+        </select>
+        <span style="font-size:12px;color:var(--ink3);align-self:center;">{{ filteredPapers.length }} 套可组卷</span>
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button v-for="y in realYears" :key="y.year + y.vol" class="year-btn"
+        <button v-for="y in filteredPapers" :key="y.year + y.vol" class="year-btn"
                 :disabled="generatingYear !== 0"
                 @click="startRealPaper(y)">
-          {{ generatingYear === y.year + y.vol ? '组卷中…' : `${y.year} ${y.vol} · ${y.count} 题` }}
+          {{ generatingYear === y.year + y.vol ? '组卷中…' : `${y.year} ${y.vol} · 已收录 ${y.count} 题` }}
         </button>
         <span v-if="!realLoading && !realYears.length" style="font-size:12.5px;color:var(--ink3);">
           暂无可组卷年份（真题卷需题库该年份 ≥5 题）
         </span>
+      </div>
+      <div style="font-size:11.5px;color:var(--ink3);margin-top:8px;">
+        💡 "已收录 N 题" = 题库该卷真题数；组卷按原卷题号重组已收录真题，不掺 AI 补题。
       </div>
     </div>
 
@@ -65,7 +80,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
@@ -89,6 +104,19 @@ const filters = [
 
 // ===== 阶段5：真题套卷（按年份，全真题不掺 AI 题） =====
 const realYears = ref([])
+const filterYear = ref('')
+const filterVol = ref('')
+const rpYearOptions = computed(() => [...new Set(realYears.value.map((y) => y.year))].sort((a, b) => b - a))
+const rpVolOptions = computed(() => {
+  const pool = filterYear.value ? realYears.value.filter((y) => y.year === filterYear.value) : realYears.value
+  return [...new Set(pool.map((y) => y.vol))]
+})
+const filteredPapers = computed(() => realYears.value.filter((y) =>
+  (!filterYear.value || y.year === filterYear.value) && (!filterVol.value || y.vol === filterVol.value)
+))
+watch(filterYear, () => {
+  if (filterVol.value && !rpVolOptions.value.includes(filterVol.value)) filterVol.value = ''
+})
 const realLoading = ref(false)
 const generatingYear = ref(0)
 
@@ -214,4 +242,9 @@ onMounted(() => { load(); loadRealPapers() })
 }
 .year-btn:hover:not(:disabled) { border-color: var(--brand, #f59e0b); color: var(--brand-deep, #b45309); }
 .year-btn:disabled { opacity: 0.6; cursor: wait; }
+
+.rp-select {
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line, #e2e8f0);
+  background: var(--card, #fff); color: var(--ink, #0f172a); font: inherit; font-size: 12.5px;
+}
 </style>
