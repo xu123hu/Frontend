@@ -229,6 +229,8 @@ import type { V3ButlerAction, V3ButlerCard, V3ButlerContext, V3ButlerMessage } f
 type Msg = V3ButlerMessage & { thinking?: string; toolLines?: string[]; images?: string[] }
 
 const props = defineProps<{ open: boolean }>()
+
+defineExpose({ ask })
 const emit = defineEmits<{ (e: 'close'): void; (e: 'activity'): void }>()
 
 const route = useRoute()

@@ -547,6 +547,10 @@ function onButlerQuick(ev: Event) {
 }
 
 /* ---------- 数据加载 ---------- */
+const routeQ = new URLSearchParams(window.location.hash.split('?')[1] || '')
+if (routeQ.get('deck')) {
+  void nextTick(() => openDeck(routeQ.get('deck') as string))
+}
 onMounted(async () => {
   window.addEventListener('tv3-butler-insert', onButlerInsert as EventListener)
   window.addEventListener('tv3-butler-quick', onButlerQuick as EventListener)

@@ -183,7 +183,7 @@ async function loadToday() {
     today.value = r.data
   } catch (e) { loadError.value = true }
 }
-onMounted(loadToday)
+onMounted(() => { void loadToday(); void loadRecent() })
 
 const capabilityChips = [
   { key: 'prep', label: '备课教案', icon: BookOutline, path: '/teacher-v3/prep' },
@@ -223,15 +223,48 @@ const recentTabs = [
   { key: 'bank', label: '题库' },
 ]
 
-const recentItems = [
-  { title: '椭圆及其标准方程（第1课时）· 教案', classTag: '高二(5)班', typeTag: '新授课', typeTagBg: 'rgba(79, 70, 229, 0.08)', typeTagColor: '#4f46e5', time: '昨天', status: 'draft', statusLabel: '草稿', icon: BookOutline, iconBg: 'linear-gradient(135deg, #4f46e5, #7c3aed)' },
-  { title: '导数的几何意义 · 课件（12 页）', classTag: '高二(3)班', typeTag: '讲练结合', typeTagBg: 'rgba(6, 182, 212, 0.1)', typeTagColor: '#0891b2', time: '2天前', status: 'done', statusLabel: '已完成', icon: EaselOutline, iconBg: 'linear-gradient(135deg, #06b6d4, #0e7490)' },
-  { title: '圆锥曲线 · 题目入库 8 道', classTag: '含 2 道变式', typeTag: '知识点校对完成', typeTagBg: 'rgba(139, 92, 246, 0.1)', typeTagColor: '#7c3aed', time: '3天前', status: 'done', statusLabel: '已入库', icon: ScanOutline, iconBg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' },
-]
+/* S1 P0 修复：最近工作读真实 plans/decks（按更新时间合并，原为硬编码假数据） */
+const recentItems = ref<{ title: string; classTag: string; typeTag: string; typeTagBg: string; typeTagColor: string; time: string; status: string; statusLabel: string; icon: unknown; iconBg: string; deckId?: string; planId?: string }[]>([])
+
+function _relTime(iso: string | null): string {
+  if (!iso) return ''
+  const diff = (Date.now() - new Date(iso).getTime()) / 60000
+  if (diff < 60) return `${Math.max(1, Math.round(diff))} 分钟前`
+  if (diff < 1440) return `${Math.round(diff / 60)} 小时前`
+  return `${Math.round(diff / 1440)} 天前`
+}
+
+async function loadRecent() {
+  try {
+    const [plansR, decksR] = await Promise.all([v3Api.plans.list(), v3Api.decks.list()])
+    const items: typeof recentItems.value = []
+    for (const p of plansR.data.items || []) {
+      items.push({ title: `${p.topic} · 教案`, classTag: '', typeTag: p.confirmed ? '已定稿' : '草稿', typeTagBg: 'rgba(79, 70, 229, 0.08)', typeTagColor: '#4f46e5', time: _relTime(p.updated_at), status: p.confirmed ? 'done' : 'draft', statusLabel: p.confirmed ? '已定稿' : '草稿', icon: BookOutline, iconBg: 'linear-gradient(135deg, #4f46e5, #7c3aed)', planId: p.id })
+    }
+    for (const d of decksR.data.items || []) {
+      items.push({ title: `${d.title} · 课件（${d.slide_count} 页）`, classTag: d.class_name || '', typeTag: String(d.source) === 'AI' ? 'AI 生成' : String(d.source), typeTagBg: 'rgba(6, 182, 212, 0.1)', typeTagColor: '#0891b2', time: _relTime(d.updated_at), status: 'done', statusLabel: '编辑', icon: EaselOutline, iconBg: 'linear-gradient(135deg, #06b6d4, #0e7490)', deckId: d.id })
+    }
+    items.sort((a, b) => (b.time || '').localeCompare(a.time || ''))
+    recentItems.value = items.slice(0, 6)
+  } catch { /* 失败如实空列表（加载失败已有全局错误态） */ }
+}
+
+function openRecent(item: { deckId?: string; planId?: string }) {
+  if (item.deckId) void openDeckById(item.deckId)
+  else if (item.planId) window.location.hash = '/teacher-v3/prep'
+}
+
+async function openDeckById(id: string) {
+  /* 课件编辑器在课件工坊视图内：带 query 跳转，由 SlidesView 落地打开 */
+  window.location.hash = `/teacher-v3/slides?deck=${id}`
+}
 
 function onSend() {
-  if (!inputText.value.trim()) return
-  console.log('send:', inputText.value)
+  const text = inputText.value.trim()
+  if (!text) return
+  /* S1 P0 修复：大输入框真实调 AI 管家（事件桥 → ButlerPanel.ask，SSE 真模型） */
+  window.dispatchEvent(new CustomEvent('tv3-butler-ask', { detail: { message: text } }))
+  inputText.value = ''
 }
 
 function onChipClick(c: { key: string; path: string }) {

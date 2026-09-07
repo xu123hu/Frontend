@@ -69,7 +69,7 @@
       @ai="openButlerFromDock"
       @tool="onDockTool"
     />
-    <ButlerPanel :open="butlerOpen" @close="butlerOpen = false" @activity="onButlerActivity" />
+    <ButlerPanel ref="butlerRef" :open="butlerOpen" @close="butlerOpen = false" @activity="onButlerActivity" />
     <ResourceCompanionPanel :open="companion.open === 'resource'" @close="closeTool()" />
 
     <!-- 全局数学绘图工作台（复用 Slides 同一组件，不复制实现；插入经事件总线落回当前工作页） -->
@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import {
@@ -107,6 +107,15 @@ const tasks = ref<V3Task[]>([])
 let timer: number | undefined
 
 const butlerOpen = ref(false)
+const butlerRef = ref<InstanceType<typeof ButlerPanel> | null>(null)
+/** 工作页（如今日工作台大输入框）→ 直接把话递给管家（真 AI 调用，非装饰） */
+function onButlerAsk(ev: Event) {
+  const d = (ev as CustomEvent).detail as { message: string } | undefined
+  if (!d?.message?.trim()) return
+  if (companion.open) closeTool()
+  butlerOpen.value = true
+  void nextTick(() => butlerRef.value?.ask(d.message.trim()))
+}
 const butlerUnread = ref(0)
 watch(butlerOpen, (v) => { if (v) butlerUnread.value = 0 })
 function onButlerActivity() { if (!butlerOpen.value) butlerUnread.value += 1 }
@@ -243,11 +252,13 @@ onMounted(() => {
   timer = window.setInterval(refreshTasks, 3000)
   window.addEventListener('tv3-companion-inserted', onDrawHandled as EventListener)
   window.addEventListener('tv3-open-companion', onOpenCompanion as EventListener)
+  window.addEventListener('tv3-butler-ask', onButlerAsk as EventListener)
 })
 onBeforeUnmount(() => {
   if (timer) window.clearInterval(timer)
   window.removeEventListener('tv3-companion-inserted', onDrawHandled as EventListener)
   window.removeEventListener('tv3-open-companion', onOpenCompanion as EventListener)
+  window.removeEventListener('tv3-butler-ask', onButlerAsk as EventListener)
 })
 </script>
 
