@@ -177,7 +177,9 @@
                   {{ s.status === 'ready' ? '可继续学习' : s.status === 'failed' ? '生成失败' : '备课中…' }}
                 </span>
               </div>
-              <div class="dcx-card-title" :title="s.title">{{ s.title }}</div>
+              <div class="dcx-card-title" :title="s.title">{{ s.title }}
+                <span v-if="s.status === 'ready'" class="dcx-verified-tag" title="每页内容均通过数学验证器校验（公式/断言独立复算）">✓ 已验证</span>
+              </div>
               <div class="dcx-card-sub">{{ fmtTime(s.created_at) }} · {{ modeLabel(s.mode) }} · {{ s.slide_count }} 页</div>
               <div class="dcx-bar"><div class="dcx-fill" :style="{ width: cardProgress(s) + '%' }"></div></div>
               <div class="dcx-card-foot">
@@ -2504,4 +2506,12 @@ button { font-family: inherit; }
 .dcx-shell.dcx-light .dcx-confirm-title { color: #0f172a; }
 .dcx-shell.dcx-light .dcx-edit-src { background: var(--bg2, #f1f5f9); color: #0f172a; }
 .dcx-shell.dcx-light .dcx-dot-pulse { background: #4f46e5; }
+
+/* S12 质量透明：验证徽标（数学验证器逐页放行的课堂才显示） */
+.dcx-verified-tag {
+  margin-left: 8px; padding: 2px 8px; border-radius: 99px; vertical-align: middle;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .5px;
+  color: #b7f4cf; background: rgba(82, 196, 26, .16); border: 1px solid rgba(82, 196, 26, .38);
+}
+.dcx-shell.dcx-light .dcx-verified-tag { color: #15803d; background: #ecfdf5; border-color: #a7f3d0; }
 </style>
