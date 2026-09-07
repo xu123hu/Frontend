@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 评审域用例（vue-query）。
  * - 键层级：review → 资源（papers/paper/claims/verification/lean/revisions）。
  * - 修正/复核/验证启动成功后精确失效对应缓存。
@@ -7,7 +7,7 @@
 import { computed, unref, type MaybeRef, type MaybeRefOrGetter, toValue } from 'vue';
 import { useQuery, useMutation, useQueryClient, type UseQueryReturnType } from '@tanstack/vue-query';
 import { ApiError } from '@app/api/client';
-import {
+import { runLeanDirect,
   correctClaim,
   fetchClaims,
   fetchLean,
@@ -117,5 +117,15 @@ export function useStartVerification() {
       queryClient.invalidateQueries({ queryKey: reviewKeys.verification(variables.claimId) });
       queryClient.invalidateQueries({ queryKey: reviewKeys.lean(variables.claimId) });
     },
+  });
+}
+
+/** Lean 形式化验证直连 mutation（P0-3 真运行，POST /verification/lean）。
+ * 与 Temporal workflow 路径独立：同步执行 Lean build，返回四态结果。
+ * H9: 验证独立于生成模型。 */
+export function useRunLeanDirect() {
+  return useMutation({
+    mutationFn: ({ source, statement }: { source: string; statement?: string }) =>
+      runLeanDirect(source, statement),
   });
 }

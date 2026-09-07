@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 待审主张列表（公式/定理/前提，用户可修正 → HumanDecision 审计语义）。
  * - 作者模式：修正表述 + 发起分层验证（L0-L4）/ Lean（三状态）。
@@ -9,7 +9,7 @@ import { useQueryClient } from '@tanstack/vue-query';
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-vue-next';
 import { apiRequest } from '@app/api/client';
 import { config } from '@app/config';
-import { reviewKeys, useCorrectClaim, useLean, useStartVerification, useVerification } from '@features/review/queries';
+import { reviewKeys, useCorrectClaim, useLean, useRunLeanDirect, useStartVerification, useVerification } from '@features/review/queries';
 import { CLAIM_SUPPORT_LABELS } from '@features/review/lean-overall';
 import { useRunEvents } from '@features/runs/use-run-events';
 import type { ReviewClaim, ReviewMode, VerificationLayer } from '@entities/review/types';
@@ -25,6 +25,9 @@ const expandedId = ref<string | null>(null);
 const drafts = reactive<Record<string, string>>({});
 const correctMutation = useCorrectClaim(props.paperId);
 const startVerification = useStartVerification();
+const runLeanDirectMutation = useRunLeanDirect();
+const leanDirectResult = ref<{ status: string; kernel_state: string; translation_fidelity: string; build_log: string | null; error_message?: string } | null>(null);
+const leanDirectRunning = ref(false);
 
 const expandedClaimId = computed(() => expandedId.value);
 const verificationQuery = useVerification(expandedClaimId);
@@ -52,6 +55,28 @@ async function runCheck(claimId: string, method: 'layers' | 'lean'): Promise<voi
   }
 }
 
+
+async function runLeanDirectCheck(claim: ReviewClaim): Promise<void> {
+  const source = displayStatement(claim);
+  if (!source.trim()) return;
+  leanDirectRunning.value = true;
+  leanDirectResult.value = null;
+  expandedId.value = claim.id;
+  try {
+    const result = await runLeanDirectMutation.mutateAsync({ source, statement: source });
+    leanDirectResult.value = result;
+  } catch (err) {
+    leanDirectResult.value = {
+      status: 'error',
+      kernel_state: 'NOT_RUN',
+      translation_fidelity: 'NOT_RUN',
+      build_log: null,
+      error_message: err instanceof Error ? err.message : String(err),
+    };
+  } finally {
+    leanDirectRunning.value = false;
+  }
+}
 function toggleExpand(claimId: string): void {
   expandedId.value = expandedId.value === claimId ? null : claimId;
 }
@@ -275,6 +300,14 @@ async function runRealCheck(claim: ReviewClaim): Promise<void> {
             >
               {{ realRunning === claim.id ? '真实引擎运行中…' : '运行真实验证引擎（SymPy/mpmath/Z3）' }}
             </button>
+            <button
+              class="btn small"
+              type="button"
+              :disabled="leanDirectRunning"
+              @click="runLeanDirectCheck(claim)"
+            >
+              {{ leanDirectRunning ? 'Lean 运行中…' : '运行 Lean 形式化验证（直连）' }}
+            </button>
           </div>
           <p
             v-if="realError"
@@ -314,8 +347,30 @@ async function runRealCheck(claim: ReviewClaim): Promise<void> {
           <h4>Lean 三状态分项（翻译 / 内核 / 科研结论）</h4>
           <LeanThreeStatesView :lean="leanQuery.data.value" />
         </template>
+        <template v-if="leanDirectResult">
+          <h4>Lean 形式化验证结果（直连 POST /verification/lean）</h4>
+          <div class="lean-direct-result" :data-status="leanDirectResult.status">
+            <p class="lean-h9-note" role="note"><b>H9：形式化陈述已验证 ≠ 论文结论成立</b> — Lean 结果与 L0-L4 独立展示，永不合并为论文正确标志。</p>
+            <div class="lean-direct-states">
+              <div class="lean-state-item">
+                <span class="lean-state-label">内核状态 (kernel_state)</span>
+                <span class="lean-state-value" :class="'kernel-' + leanDirectResult.kernel_state.toLowerCase()">{{ leanDirectResult.kernel_state }}</span>
+              </div>
+              <div class="lean-state-item">
+                <span class="lean-state-label">翻译忠实度 (translation_fidelity)</span>
+                <span class="lean-state-value" :class="'fidelity-' + leanDirectResult.translation_fidelity.toLowerCase()">{{ leanDirectResult.translation_fidelity }}</span>
+              </div>
+              <div class="lean-state-item">
+                <span class="lean-state-label">运行状态 (status)</span>
+                <span class="lean-state-value">{{ leanDirectResult.status }}</span>
+              </div>
+            </div>
+            <pre v-if="leanDirectResult.build_log" class="lean-build-log">{{ leanDirectResult.build_log }}</pre>
+            <p v-if="leanDirectResult.error_message" class="lean-error" role="alert">错误：{{ leanDirectResult.error_message }}</p>
+          </div>
+        </template>
         <p
-          v-else
+          v-if="!leanQuery.data.value && !leanDirectResult"
           class="muted"
         >
           该主张未运行 Lean。
@@ -503,4 +558,65 @@ textarea {
   font-family: var(--mono);
   word-break: break-word;
 }
-</style>
+
+.lean-direct-result {
+  border: 1px solid var(--ailp-border, #e5e7eb);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 8px 0;
+  background: var(--ailp-bg-subtle, #f9fafb);
+}
+.lean-h9-note {
+  font-size: 13px;
+  color: var(--ailp-text-secondary, #6b7280);
+  margin: 0 0 12px 0;
+  padding: 8px 12px;
+  background: var(--ailp-accent-subtle, #fef3c7);
+  border-left: 3px solid var(--ailp-accent, #f59e0b);
+  border-radius: 4px;
+}
+.lean-direct-states {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.lean-state-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lean-state-label {
+  font-size: 12px;
+  color: var(--ailp-text-secondary, #6b7280);
+}
+.lean-state-value {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+.kernel-passed { background: #d1fae5; color: #065f46; }
+.kernel-failed { background: #fee2e2; color: #991b1b; }
+.kernel-timed_out { background: #fef3c7; color: #92400e; }
+.kernel-not_run { background: #f3f4f6; color: #6b7280; }
+.fidelity-confirmed { background: #d1fae5; color: #065f46; }
+.fidelity-partial { background: #fef3c7; color: #92400e; }
+.fidelity-diverged { background: #fee2e2; color: #991b1b; }
+.fidelity-not_run { background: #f3f4f6; color: #6b7280; }
+.lean-build-log {
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.lean-error {
+  color: #991b1b;
+  font-size: 13px;
+  margin: 8px 0 0 0;
+}</style>

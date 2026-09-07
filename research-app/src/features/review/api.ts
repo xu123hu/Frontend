@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 评审域 API（CR-F4-01..04 契约草案 + M0 冻结 runs）。
  *
  * - 评审批次/主张/修正：CR-F4-01（草案）
@@ -71,5 +71,28 @@ export function startVerificationRun(claimId: string, options: StartVerification
       input_artifact_ids: [claimId],
       ...(options.mockMethod ? { mock_method: options.mockMethod } : {}),
     },
+  }).then((e) => e.data);
+}
+
+/** Lean 形式化验证直连端点（P0-3 真运行，POST /verification/lean）。
+ * 与 Temporal workflow 路径独立：此端点同步执行 Lean build，返回四态结果。
+ * H9: 验证独立于生成模型，Lean 结果与 L0-L4 独立展示。 */
+export interface LeanDirectResult {
+  status: string;
+  run_id: string | null;
+  kernel_state: 'PASSED' | 'FAILED' | 'TIMED_OUT' | 'NOT_RUN';
+  translation_fidelity: 'CONFIRMED' | 'PARTIAL' | 'DIVERGED' | 'NOT_RUN';
+  cache_hit: boolean;
+  cache_key: string | null;
+  build_log: string | null;
+  error_type?: string;
+  error_message?: string;
+  honesty_note: string;
+}
+
+export function runLeanDirect(source: string, statement?: string): Promise<LeanDirectResult> {
+  return apiRequest<LeanDirectResult>('/verification/lean', {
+    method: 'POST',
+    body: { source, statement: statement ?? source },
   }).then((e) => e.data);
 }
