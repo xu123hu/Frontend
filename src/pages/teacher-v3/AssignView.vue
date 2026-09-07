@@ -449,18 +449,27 @@ async function genReview() {
       else if (event === 'slide') {
         reviewStage.value = `第 ${data.q_no} 题：正确率 ${Math.round(data.accuracy * 100)}%，主错因「${data.top_error}」`
         reviewProgress.value = Math.min(92, 10 + (data.index + 1) * 26)
+      } else if (event === 'error') {
+        /* 后端诚实失败（讲评链未接线/LLM 异常）——如实呈现，不假成功 */
+        reviewProgress.value = 0
+        reviewStage.value = data?.message || '讲评生成失败，请稍后重试'
+        toastOf().error(reviewStage.value)
       } else if (event === 'done') {
+        if (data?.finish_reason && data.finish_reason !== 'stop') {
+          reviewProgress.value = 0
+          reviewStage.value = data.finish_reason === 'not_implemented' || data.finish_reason === 'dependency_missing'
+            ? '讲评生成链路尚未接通（后端如实返回）——批改数据已保留'
+            : `讲评未完成（${data.finish_reason}），请重试`
+          return
+        }
         reviewProgress.value = 100
         reviewStage.value = '讲评课件已生成（见上方回执卡）'
         reviewDone.value = true
         reviewArtifact.value = { deck_id: data.deck_id, top_error: data.top_error, top_q: data.top_q }
         toastOf().success('讲评课件已生成：可从回执卡直接打开')
-        reviewProgress.value = 100
-        reviewDone.value = true
-        reviewStage.value = '完成'
       }
     })
-  } catch { reviewStage.value = '生成失败（mock 未启动）' }
+  } catch (e: any) { reviewStage.value = e?.message || '生成失败，请检查后端服务' }
 }
 
 function pushTierTask(tier: 'A' | 'B' | 'C') {

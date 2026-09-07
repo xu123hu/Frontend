@@ -152,10 +152,20 @@ async function recognize() {
       if (event === 'meta') stage.value = `已提交 ${data.strokes} 笔笔迹（${data.note || ''}）`
       else if (event === 'recognizing') stage.value = `${data.stage}…`
       else if (event === 'result') { resultLatex.value = cleanPlaceholder(String(data.latex || '')); confidence.value = Number(data.confidence) || 0 }
-      else if (event === 'done') stage.value = '识别完成，请在右侧审查'
+      else if (event === 'error') {
+        /* 后端诚实失败（识别 sidecar 未部署）——如实呈现，绝不返回猜测结果 */
+        stage.value = data?.message || '识别失败，请稍后重试或改用公式键盘'
+      }
+      else if (event === 'done') {
+        stage.value = data?.finish_reason && data.finish_reason !== 'stop'
+          ? data?.finish_reason === 'dependency_missing'
+            ? '识别服务未就绪（后端如实返回）——可改用语音公式或公式键盘'
+            : `识别未完成（${data.finish_reason}）`
+          : '识别完成，请在右侧审查'
+      }
     })
-  } catch {
-    stage.value = '识别失败（mock 服务未启动？用 VITE_USE_MOCK=1 npm run dev）'
+  } catch (e: any) {
+    stage.value = e?.message || '识别失败，请检查后端服务'
   } finally {
     recognizing.value = false
   }

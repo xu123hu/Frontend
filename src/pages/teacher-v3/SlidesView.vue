@@ -734,7 +734,21 @@ async function startGenerate() {
     else if (event === 'outline') { genStage.value = `生成大纲：${data.items?.join(' / ') || ''}`; genProgress.value = 38 }
     else if (event === 'slide') { genStage.value = data.note || `草稿页 ${data.index + 1}（未确认）`; genProgress.value = Math.min(86, 40 + data.index * Math.max(4, Math.floor(46 / Math.max(1, gateOutline.value.length)))) }
     else if (event === 'paginate') { genStage.value = `分页引擎：${data.note}`; genProgress.value = 90 }
+    else if (event === 'error') {
+      /* 后端诚实失败（识别链未部署/生成未实现/LLM 异常）——如实呈现，绝不假成功 */
+      genFailed.value = true
+      genProgress.value = 0
+      genStage.value = data?.message || '生成失败，请重试。你的大纲与选择都已保留。'
+    }
     else if (event === 'done') {
+      if (data?.finish_reason && data.finish_reason !== 'stop') {
+        genFailed.value = true
+        genProgress.value = 0
+        genStage.value = data.finish_reason === 'dependency_missing'
+          ? '依赖的推理服务未就绪，生成已中止（原图与选择已保留，可稍后重试）。'
+          : `生成未完成（${data.finish_reason}）。你的大纲与选择都已保留，可重试。`
+        return
+      }
       genProgress.value = 100
       genStage.value = '完成，正在打开编辑器…'
       window.setTimeout(() => openDeck(data.deck_id), 500)

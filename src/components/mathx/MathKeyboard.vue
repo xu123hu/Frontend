@@ -237,9 +237,17 @@ async function recognize() {
       if (event === 'meta') canvasStage.value = `已提交 ${data.strokes} 笔笔迹`
       else if (event === 'recognizing') canvasStage.value = `${data.stage}…`
       else if (event === 'result') { resultLatex.value = cleanPlaceholder(String(data.latex || '')); confidence.value = Number(data.confidence) || 0 }
-      else if (event === 'done') canvasStage.value = ''
+      else if (event === 'error') {
+        /* 后端诚实失败（识别 sidecar 未部署）——如实呈现，绝不返回猜测结果 */
+        canvasStage.value = data?.message || '识别失败，请改用公式键盘点按输入'
+      }
+      else if (event === 'done') {
+        canvasStage.value = data?.finish_reason && data.finish_reason !== 'stop'
+          ? data?.finish_reason === 'dependency_missing' ? '识别服务未就绪——请改用公式键盘' : `识别未完成（${data.finish_reason}）`
+          : ''
+      }
     })
-  } catch { canvasStage.value = '识别失败（mock 服务未启动？）' } finally { recognizing.value = false }
+  } catch (e: any) { canvasStage.value = e?.message || '识别失败，请检查后端服务' } finally { recognizing.value = false }
 }
 function insertResult() {
   const latex = cleanPlaceholder(resultLatex.value || '')
