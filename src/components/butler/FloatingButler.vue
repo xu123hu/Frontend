@@ -22,6 +22,9 @@
           <button type="button" :class="{ active: tab === 'notify' }" @click="tab = 'notify'">
             通知<span v-if="store.unread" class="fb-tab-badge">{{ badgeText }}</span>
           </button>
+          <button type="button" :class="{ active: tab === 'study' }" @click="openStudy">
+            学情
+          </button>
         </nav>
 
         <!-- a) 管家对话区 -->
@@ -134,6 +137,45 @@
         </div>
 
         <!-- c) 通知列表区 -->
+        <!-- d) 学情概览（V2 文档 §6：原右栏信息归悬浮球，点开看一眼 + AI 提醒） -->
+        <div v-show="tab === 'study'" class="fb-pane fb-pane-list">
+          <div class="fb-pane-head"><span>学习概览</span></div>
+          <div class="fb-scroll">
+            <div v-if="studyLoading" class="fb-empty">加载中…</div>
+            <div v-else-if="!studyPanel" class="fb-empty">学情数据加载失败，稍后再试</div>
+            <template v-else>
+              <div v-if="studyPanel.golden_window" style="background:linear-gradient(135deg,#fef3c7,#fde68a);padding:10px 12px;border-radius:10px;margin-bottom:10px;">
+                <div style="font-size:11px;font-weight:800;color:var(--warn-deep);">⏰ 今晚 {{ studyPanel.golden_window.start }} - {{ studyPanel.golden_window.end }}</div>
+                <div style="font-size:11.5px;color:var(--ink);margin-top:2px;">{{ studyPanel.golden_window.label || '黄金记忆窗口' }}</div>
+              </div>
+              <div v-if="(studyPanel.today_actions || []).length" style="margin-bottom:10px;">
+                <div style="font-size:11px;font-weight:800;color:var(--ink3);margin-bottom:6px;">📋 今日行动</div>
+                <div v-for="a in studyPanel.today_actions" :key="a.key"
+                     style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:12.5px;"
+                     @click="$router.push(a.route || actionRoute(a.key))">
+                  <span>{{ actionEmoji(a.key) }}</span><span style="flex:1;">{{ a.title }}</span>
+                  <span v-if="a.count" style="font-weight:800;color:var(--primary);">{{ a.count }}</span>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;margin-bottom:10px;">
+                <div style="flex:1;padding:8px;border:1px solid var(--line);border-radius:10px;text-align:center;">
+                  <div style="font-size:15px;font-weight:800;">{{ studyPanel.gaokao_countdown?.days ?? '--' }}</div>
+                  <div style="font-size:10.5px;color:var(--ink3);">距高考(天)</div>
+                </div>
+                <div style="flex:1;padding:8px;border:1px solid var(--line);border-radius:10px;text-align:center;">
+                  <div style="font-size:15px;font-weight:800;color:var(--ok-deep);">{{ studyPanel.week_brief?.streak_days ?? '--' }}</div>
+                  <div style="font-size:10.5px;color:var(--ink3);">连击(天)</div>
+                </div>
+                <div style="flex:1;padding:8px;border:1px solid var(--line);border-radius:10px;text-align:center;">
+                  <div style="font-size:15px;font-weight:800;">{{ studyPanel.week_brief?.score_delta ?? '--' }}</div>
+                  <div style="font-size:10.5px;color:var(--ink3);">本周提分</div>
+                </div>
+              </div>
+              <div v-if="studyPanel.encouragement" style="font-size:12px;color:var(--ink2);line-height:1.6;padding:2px 4px;">🌱 {{ studyPanel.encouragement }}</div>
+            </template>
+          </div>
+        </div>
+
         <div v-show="tab === 'notify'" class="fb-pane fb-pane-list">
           <div class="fb-pane-head">
             <span>站内通知<template v-if="store.unread"> · 未读 {{ store.unread }}</template></span>
@@ -197,7 +239,24 @@ const store = useTasksStore()
 /* ===== 面板/球 显隐 ===== */
 const rootRef = ref(null)
 const panelOpen = ref(false)
-const tab = ref('butler') // butler | tasks | notify
+const tab = ref('butler') // butler | tasks | notify | study
+// ===== 学情 tab（V2 文档 §6：原右栏信息收编悬浮球，点开即看 + 主动提醒宿主） =====
+const studyPanel = ref(null)
+const studyLoading = ref(false)
+async function openStudy() {
+  tab.value = 'study'
+  if (studyPanel.value || studyLoading.value) return
+  studyLoading.value = true
+  try {
+    studyPanel.value = await api.get('/student/growth/panel')
+  } catch { studyPanel.value = null } finally { studyLoading.value = false }
+}
+function actionEmoji(key) {
+  return ({ review_errors: '📕', variant: '🔁', challenge: '🎯', homework: '📋' }[key] || '•')
+}
+function actionRoute(key) {
+  return ({ review_errors: '/errors', variant: '/practice', challenge: '/practice', homework: '/tasks' }[key] || '/overview')
+}
 
 const badgeText = computed(() => (store.unread > 99 ? '99+' : String(store.unread)))
 

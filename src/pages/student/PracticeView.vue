@@ -79,8 +79,8 @@
         <button class="start-btn" @click="loadGroup">↻ 重新加载</button>
       </template>
       <!-- om5：考前冲刺模式显示高考结构卷说明（点开始直接组卷进限时作答） -->
-      <template v-else-if="mode === '考前冲刺'">
-        <div class="badge">🏁 考前冲刺 · 高考结构卷</div>
+      <template v-else-if="mode === '真题模考'">
+        <div class="badge">🏁 真题模考 · 高考结构卷</div>
         <h2>高考结构全真卷 · <b>8 选择 + 3 填空 + 5 解答</b></h2>
         <div class="meta-row">
           <div class="item">💯 <b>150</b> 分制</div>
@@ -89,12 +89,13 @@
           <div class="item">🤖 解答题 AI 批改 + 拍照上传</div>
         </div>
         <button class="start-btn" :disabled="starting" @click="start">
-          {{ starting ? '组卷中…' : '🏁 组卷并开始考试' }}
+          {{ starting ? '组卷中…' : '🏁 组卷并开始模考' }}
         </button>
       </template>
       <template v-else-if="group">
         <div class="badge">🎯 今日推荐 · {{ group.kp_code ? '薄弱 Top1' : '摸底训练' }}</div>
         <h2>{{ group.kp_name || '摸底训练' }} · <b>{{ group.count }} 题变式</b></h2>
+        <div v-if="group.reason" style="font-size:12.5px;color:var(--ink2);margin-top:6px;line-height:1.6;">💡 {{ group.reason }}<span v-if="group.mastery_now !== null && group.mastery_now !== undefined">（当前掌握度 {{ pct(group.mastery_now) }}%，练完预计 {{ pct(group.mastery_forecast) }}%）</span></div>
         <div class="meta-row">
           <div class="item">📍 <b>{{ group.count }}</b> 题</div>
           <div class="item">⏱ 约 <b>{{ group.est_minutes }}</b> 分钟</div>
@@ -296,8 +297,9 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToastStore()
 const auth = useAuthStore()
-const modes = ['15 分钟模式', '60 分钟模式', '考前冲刺']
-const mode = ref('15 分钟模式')
+// S3（V2 文档）：意义不明的时长 tab 精简为两个明确模式——题量由后端推荐决定，时长只作限时参考
+const modes = ['今日训练', '真题模考']
+const mode = ref('今日训练')
 const difficulty = ref('自适应 (推荐)')
 
 const DIFF_ZH = { easy: '易', medium: '中', hard: '难' }
@@ -638,15 +640,14 @@ function switchMode(m) {
     usedTime.value = '0:00'
     loadGroupWithCount(cfg.count)
   }
-  toast.info(m === '考前冲刺'
-    ? '已切换到考前冲刺：高考结构卷（8 选择 + 3 填空 + 5 解答 · 120 分钟）'
+  toast.info(m === '真题模考'
+    ? '已切换到真题模考：高考结构卷（8 选择 + 3 填空 + 5 解答 · 120 分钟）'
     : `已切换到${m}（${cfg.count} 题 · ${cfg.minutes} 分钟）`)
 }
 
 const MODE_CONFIG = {
-  '15 分钟模式': { count: 5, minutes: 15 },
-  '60 分钟模式': { count: 15, minutes: 60 },
-  '考前冲刺': { count: 10, minutes: 90 },
+  '今日训练': { count: 5, minutes: 15 },
+  '真题模考': { count: 16, minutes: 120 },
 }
 
 async function loadGroupWithCount(count, kpCode) {

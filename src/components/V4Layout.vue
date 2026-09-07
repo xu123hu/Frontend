@@ -133,68 +133,6 @@
       </router-view>
     </main>
 
-    <!-- ===== 右侧面板（v4 原样） ===== -->
-    <aside class="right-panel">
-      <template v-if="panelError">
-        <div class="heading">⏰ 今晚任务 · 黄金时段</div>
-        <div style="font-size:12px;color:var(--ink3);padding:10px 4px;">面板数据加载失败，请稍后刷新重试</div>
-      </template>
-      <template v-else-if="panelLoading">
-        <div class="heading">⏰ 今晚任务 · 黄金时段</div>
-        <div style="font-size:12px;color:var(--ink3);padding:10px 4px;">加载中…</div>
-      </template>
-      <template v-else-if="panel">
-        <div class="heading">⏰ 今晚任务 · 黄金时段</div>
-        <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);padding:11px 14px;border-radius:10px;border:1px solid var(--warn-border);margin-bottom:14px;">
-          <div style="font-size:11.5px;font-weight:800;color:var(--warn-deep);margin-bottom:3px;">{{ panel.golden_window?.start || '--' }} - {{ panel.golden_window?.end || '--' }}</div>
-          <div style="font-size:12px;line-height:1.5;color:var(--ink);">{{ panel.golden_window?.label || '黄金时段学习中' }}</div>
-        </div>
-
-        <div class="heading">📋 今日行动</div>
-        <div class="quick">
-          <div
-            v-for="a in panel.today_actions || []" :key="a.key"
-            class="quick-item" :style="a.count ? '' : 'opacity:.45;'"
-            @click="goAction(a)"
-          >
-            <div class="ic" :style="actionIconStyle(a.key)">{{ actionIcon(a.key) }}</div>
-            <div class="text">{{ a.title }}</div><div v-if="a.count" class="num">{{ a.count }}</div>
-          </div>
-          <div v-if="!(panel.today_actions || []).length" style="font-size:12px;color:var(--ink3);padding:6px 4px;">今日暂无行动安排</div>
-        </div>
-
-        <div class="heading">📊 本周速览</div>
-        <div class="quick">
-          <div class="quick-item" @click="info(independentRateTip)">
-            <div class="ic" style="background:var(--ok-bg);color:var(--ok-deep);">⚡</div>
-            <div class="text">独立解题率</div><div class="num">{{ independentRateText }}</div>
-          </div>
-          <div class="quick-item" @click="info(scoreDeltaTip)">
-            <div class="ic" style="background:var(--indigo-soft);color:var(--indigo);">📈</div>
-            <div class="text">本周提分</div><div class="num">{{ scoreDeltaText }}</div>
-          </div>
-          <div class="quick-item" @click="info(streakTip)">
-            <div class="ic" style="background:var(--peach-soft);color:var(--peach);">🔥</div>
-            <div class="text">连击天数</div><div class="num">{{ streakDays > 0 ? streakDays : '--' }}</div>
-          </div>
-        </div>
-
-        <div class="encourage">
-          <div class="em">🌱</div>
-          <div class="txt">{{ panel.encouragement || '继续保持，每天进步一点点。' }}</div>
-        </div>
-
-        <div class="heading">⚡ 考前倒计时</div>
-        <div style="text-align:center;padding:13px;background:linear-gradient(135deg,#fef2f2,#fee2e2);border-radius:10px;border:1px solid var(--err-border);">
-          <div style="font-family:var(--font-num);font-size:30px;font-weight:900;color:var(--err-deep);">{{ panel.gaokao_countdown?.days ?? '--' }}<span style="font-size:14px;color:var(--ink2);">天</span></div>
-          <div style="font-size:11.5px;color:var(--ink2);margin-top:2px;">距 {{ gaokaoYear }} 高考</div>
-          <button
-            style="margin-top:8px;padding:6px 12px;background:var(--err);color:#fff;border:none;border-radius:6px;font:inherit;font-size:11px;font-weight:700;cursor:pointer;"
-            @click="$router.push('/exam')"
-          >→ 去做真题</button>
-        </div>
-      </template>
-    </aside>
 
     <!-- AI 管家悬浮球：后台任务中心 + 站内通知（仅登录学生态显示） -->
     <FloatingButler v-if="auth.isLoggedIn" />

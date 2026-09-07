@@ -9,14 +9,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); line-
 /* ============ 三栏布局（顶部栏 60px + 左侧栏 + 主区 + 右侧栏） ============ */
 .layout {
   display: grid;
-  grid-template-columns: 240px 1fr 320px;
+  grid-template-columns: 240px 1fr;
   grid-template-rows: var(--topbar-h) 1fr;
   grid-template-areas:
-    "topbar topbar topbar"
-    "sidebar main right";
+    "topbar topbar"
+    "sidebar main";
   min-height: 100vh;
 }
-.layout.collapsed { grid-template-columns: 68px 1fr 320px; }
+.layout.collapsed { grid-template-columns: 68px 1fr; }
 .topbar { grid-area: topbar; position: sticky; top: 0; z-index: 50; background: var(--card); border-bottom: 1px solid var(--line); }
 .topbar-inner { display: flex; align-items: center; height: 100%; padding: 0 20px; gap: 16px; }
 .topbar .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px; color: var(--ink); flex-shrink: 0; }
