@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 项目详情 / 项目工作区入口（黄金链路一 TC-F01-06/08）。
  * - 数据：GET /projects/{id}（M4 v2.0）
@@ -69,6 +69,30 @@ const projectPaper = computed(() =>
 );
 const paperId = computed(() => projectPaper.value?.id ?? '');
 const claimsQuery = useClaims(paperId);
+
+// S3 风险排序：证据冲突 > 证据不足 > 未验证 > 部分支持 > 证据支持
+const RISK_ORDER: Record<string, number> = {
+  conflicting: 0,
+  insufficient_evidence: 1,
+  not_verified: 2,
+  partial: 3,
+  supported: 4,
+};
+const sortedClaims = computed(() => {
+  const claims = claimsQuery.data.value ?? [];
+  return [...claims].sort((a, b) => (RISK_ORDER[a.evidence_support] ?? 99) - (RISK_ORDER[b.evidence_support] ?? 99));
+});
+const claimStats = computed(() => {
+  const claims = claimsQuery.data.value ?? [];
+  return {
+    total: claims.length,
+    conflicting: claims.filter((c) => c.evidence_support === 'conflicting').length,
+    insufficient: claims.filter((c) => c.evidence_support === 'insufficient_evidence').length,
+    notVerified: claims.filter((c) => c.evidence_support === 'not_verified').length,
+    partial: claims.filter((c) => c.evidence_support === 'partial').length,
+    supported: claims.filter((c) => c.evidence_support === 'supported').length,
+  };
+});
 </script>
 
 <template>
@@ -122,7 +146,10 @@ const claimsQuery = useClaims(paperId);
             {{ project.research_question }}
           </p>
         </div>
-        <AppChip tone="primary" size="md">
+        <AppChip
+          tone="primary"
+          size="md"
+        >
           {{ STAGE_LABELS[project.stage] ?? project.stage }}
         </AppChip>
       </header>
@@ -162,7 +189,14 @@ const claimsQuery = useClaims(paperId);
 
         <!-- 假设（研究循环产出，标记 hypothesis 非结论） -->
         <div class="sub-block">
-          <h3>候选假设（AI 管家 · hypothesis）</h3>
+          <h3>
+            候选假设 <AppChip
+              tone="warning"
+              size="sm"
+            >
+              AI生成·待确认
+            </AppChip>
+          </h3>
           <ul
             v-if="latestPlan && latestPlan.hypotheses.length > 0"
             class="hyp-list"
@@ -189,11 +223,37 @@ const claimsQuery = useClaims(paperId);
           </p>
         </div>
 
-        <!-- 主张证据支持度 -->
+        <!-- 主张证据支持度（S3 风险排序） -->
         <div class="sub-block">
-          <h3>主张证据支持度</h3>
+          <h3>主张证据支持度 <span class="risk-sort-label">（风险排序）</span></h3>
+          <div
+            v-if="claimsQuery.data.value && claimsQuery.data.value.length > 0"
+            class="risk-summary"
+          >
+            <span
+              class="risk-item"
+              style="color:#ef4444"
+            >冲突 {{ claimStats.conflicting }}</span>
+            <span
+              class="risk-item"
+              style="color:#f59e0b"
+            >不足 {{ claimStats.insufficient }}</span>
+            <span
+              class="risk-item"
+              style="color:#64748b"
+            >未验 {{ claimStats.notVerified }}</span>
+            <span
+              class="risk-item"
+              style="color:#0ea5e9"
+            >部分 {{ claimStats.partial }}</span>
+            <span
+              class="risk-item"
+              style="color:#10b981"
+            >支持 {{ claimStats.supported }}</span>
+            <span class="risk-total">共 {{ claimStats.total }} 条</span>
+          </div>
           <template v-if="claimsQuery.data.value && claimsQuery.data.value.length > 0">
-            <EvidenceSupportList :claims="claimsQuery.data.value" />
+            <EvidenceSupportList :claims="sortedClaims" />
             <RouterLink
               v-if="projectPaper"
               class="panel-link"
@@ -393,4 +453,9 @@ const claimsQuery = useClaims(paperId);
 .mono {
   font-family: var(--mono);
 }
+
+.risk-sort-label { font-size: 12px; color: #64748b; font-weight: 400; }
+.risk-summary { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 8px 0 12px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; }
+.risk-item { font-size: 13px; font-weight: 600; }
+.risk-total { font-size: 12px; color: #64748b; margin-left: auto; }
 </style>
