@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 统一身份（OIDC）登录流：Authorization Code + PKCE（S256）。
  *
  * - 与后端身份体系的唯一会话契约：短期 access token（Bearer），后端
@@ -165,6 +165,16 @@ function pickClaim(claims: Record<string, unknown> | null, key: string): string 
  * 拉取统一身份账户：真实后端 GET /users/me（TokenVerifier → RLS →
  * platform.users 供应）+ id_token claims 补齐租户绑定。任一步失败向上抛。
  */
+
+/** H12: 显示名不得是UUID。若为UUID或空，回退"科研用户"占位。 */
+function safeDisplayName(name: string | undefined | null): string {
+  if (!name || name.trim().length === 0) return '科研用户';
+  const trimmed = name.trim();
+  // UUID v4/v7 模式：8-4-4-4-12 十六进制
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidPattern.test(trimmed)) return '科研用户';
+  return trimmed;
+}
 export async function fetchOidcAccount(): Promise<Account> {
   const me = await apiRequest<{
     id: string;
@@ -177,7 +187,7 @@ export async function fetchOidcAccount(): Promise<Account> {
   return {
     user_id: me.id,
     tenant_id: pickClaim(claims, 'tenant_id') ?? '',
-    display_name: me.display_name || pickClaim(claims, 'preferred_username') || me.subject,
+display_name: safeDisplayName(me.display_name || pickClaim(claims, 'preferred_username') || me.subject),
     email: email || undefined,
     created_at: new Date().toISOString(),
   };
