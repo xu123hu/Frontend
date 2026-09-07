@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+﻿import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import ResearchLayout from '@app/layouts/ResearchLayout.vue';
 import { useSessionStore } from '@app/stores/session';
 import { useSession } from '@features/auth/use-session';
@@ -68,6 +68,11 @@ const routes: readonly RouteRecordRaw[] = [
         name: 'writing-detail',
         component: () => import('@pages/research/Writing.vue'),
         props: true,
+      },
+      {
+        path: 'runs',
+        name: 'runs',
+        component: () => import('@pages/research/Runs.vue'),
       },
       {
         path: 'review',
