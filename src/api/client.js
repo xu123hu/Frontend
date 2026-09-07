@@ -54,7 +54,7 @@ function buildUrl(path, query) {
 async function requestRaw(method, path, { body, query, headers = {}, signal, idempotencyKey } = {}, retried = false) {
   const url = buildUrl(path, query)
   const h = { ...authHeaders(), ...headers }
-  if (body !== undefined) h['Content-Type'] = 'application/json'
+  if (body !== undefined && !(body instanceof FormData)) h['Content-Type'] = 'application/json'
   if (idempotencyKey) h['Idempotency-Key'] = idempotencyKey
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
     const csrf = getCsrfToken()
@@ -66,7 +66,7 @@ async function requestRaw(method, path, { body, query, headers = {}, signal, ide
     res = await fetch(url, {
       method,
       headers: h,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
       signal,
       credentials: 'include',
     })

@@ -8,6 +8,7 @@ const studentRoutes = [
   { path: '/dialog/:id?', component: () => import('@/pages/student/DialogView.vue'), meta: studentMeta('对话学习') },
   { path: '/practice', component: () => import('@/pages/student/PracticeView.vue'), meta: studentMeta('练题中心') },
   { path: '/errors', component: () => import('@/pages/student/ErrorsView.vue'), meta: studentMeta('错题本') },
+  { path: '/kb', component: () => import('@/pages/student/KnowledgeView.vue'), meta: studentMeta('知识库') },
   { path: '/report', component: () => import('@/pages/student/ReportView.vue'), meta: studentMeta('学情报告') },
   { path: '/graph', component: () => import('@/pages/student/GraphView.vue'), meta: studentMeta('知识图谱') },
   { path: '/exam', component: () => import('@/pages/student/ExamView.vue'), meta: studentMeta('模拟考试') },

@@ -183,6 +183,7 @@ const coreNav = [
   { key: 'dialog', icon: '💬', name: '对话学习', to: '/dialog', badge: '1' },
   { key: 'practice', icon: '🎯', name: '练题中心', to: '/practice', badge: '沉浸', badgeStyle: { background: 'var(--brand)' } },
   { key: 'errors', icon: '📕', name: '错题本', to: '/errors', badge: '3' },
+  { key: 'kb', icon: '📚', name: '知识库', to: '/kb' },
   { key: 'report', icon: '📈', name: '学情报告', to: '/report' },
   { key: 'graph', icon: '🧠', name: '知识图谱', to: '/graph' },
 ]
