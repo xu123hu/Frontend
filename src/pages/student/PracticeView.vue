@@ -211,35 +211,24 @@
           </div>
         </template>
       </div>
-      <div class="difficulty-pie">
-        <h4>📊 难度配比 · {{ liveMix.reduce((s, it) => s + (it.count || 0), 0) }} 题分布</h4>
-        <div v-if="mixLoading" class="pie-wrap" style="justify-content:center;color:var(--ink3);font-size:13px;">
-          配比加载中…
-        </div>
-        <div v-else-if="mixError" class="pie-wrap" style="justify-content:center;color:var(--ink3);font-size:13px;">
-          配比加载失败：{{ mixError }}
-        </div>
-        <div v-else-if="!pieTotal" class="pie-wrap" style="justify-content:center;color:var(--ink3);font-size:13px;">
-          暂无难度配比数据，开始训练后将按标准配比出题。
-        </div>
-        <div v-else class="pie-wrap">
-          <svg width="150" height="150" viewBox="0 0 150 150">
-            <path v-for="seg in pieSegments" :key="seg.level" :d="seg.path" :fill="seg.color" />
-            <circle cx="75" cy="75" r="38" fill="#ffffff"/>
-            <text x="75" y="73" font-size="22" font-weight="900" fill="#0f172a" text-anchor="middle" font-family="Inter">{{ pieTotal }}</text>
-            <text x="75" y="89" font-size="10" fill="#94a3b8" text-anchor="middle" font-weight="700">总题数</text>
-          </svg>
-          <div class="legend-pie">
-            <div class="item" v-for="seg in pieSegments" :key="seg.level">
-              <span class="swatch" :style="{ background: seg.color }"></span>
-              <span>{{ seg.label }}</span>
-              <b>{{ seg.count }}</b>
-            </div>
-            <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:11px;color:var(--ink2);line-height:1.5;">
-              💡 {{ mixExplanation }}
-            </div>
+<div class="difficulty-pie answer-sheet">
+        <h4>📋 答题卡 · {{ questions.length || '—' }} 题</h4>
+        <div v-if="!questions.length" class="sheet-empty">开始训练后，这里显示答题卡（可点题号回看已答题）。</div>
+        <template v-else>
+          <div class="sheet-grid">
+            <button
+              v-for="(qq, i) in questions" :key="i"
+              class="sheet-cell"
+              :class="{ cur: i === qIndex, done: sheetState[i], doneRight: sheetState[i] === 'right', doneWrong: sheetState[i] === 'wrong' }"
+              :disabled="i > qIndex"
+              @click="i < qIndex && jumpTo(i)"
+            >{{ i + 1 }}</button>
           </div>
-        </div>
+          <div class="sheet-meta">已答 {{ sheetDoneCount }} / {{ questions.length }} · 绿=对 红=错 · 点已答题号可回看</div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:11px;color:var(--ink2);line-height:1.5;">
+            📊 难度配比：{{ mixText }}<template v-if="mixExplanation"> · {{ mixExplanation }}</template>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -532,6 +521,7 @@ async function pick(oi) {
     })
     const r = (data.results || []).find((x) => x.item_no === item.item_no) || {}
     verdict.value = r.verdict === 'correct' ? 'correct' : 'wrong'
+    sheetState.value = { ...sheetState.value, [qIndex.value]: verdict.value === 'correct' ? 'right' : 'wrong' }
     qElapsed.value = Math.max(1, Math.round((Date.now() - qStartAt) / 1000))
     if (data.submission_id) loadSmartScore(data.submission_id)
   } catch (e) {
@@ -560,6 +550,7 @@ async function submitText() {
     })
     const r = (data.results || []).find((x) => x.item_no === item.item_no) || {}
     verdict.value = r.verdict === 'correct' ? 'correct' : 'wrong'
+    sheetState.value = { ...sheetState.value, [qIndex.value]: verdict.value === 'correct' ? 'right' : 'wrong' }
     qElapsed.value = Math.max(1, Math.round((Date.now() - qStartAt) / 1000))
     if (data.submission_id) loadSmartScore(data.submission_id)
   } catch (e) {
@@ -579,6 +570,16 @@ async function loadSmartScore(submissionId) {
   }
 }
 
+// S4（V2 文档）：答题卡状态（环形图删除——一个标签说得清的事不用大图表）
+const sheetState = ref({})
+const sheetDoneCount = computed(() => Object.keys(sheetState.value).length)
+function jumpTo(i) {
+  qIndex.value = i
+  chosen.value = -1
+  textAnswer.value = ''
+  verdict.value = null
+  markQStart()
+}
 function nextQ() {
   qIndex.value++
   chosen.value = -1
@@ -785,4 +786,18 @@ onMounted(async () => {
   cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
 }
 .immersive-exit:hover { background: rgba(15, 23, 42, 1); }
+
+/* S4 答题卡（替代难度环形图） */
+.answer-sheet .sheet-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px; }
+.sheet-cell {
+  height: 34px; border-radius: 9px; border: 1px solid var(--line); background: var(--card);
+  font: inherit; font-size: 13px; font-weight: 700; color: var(--ink2); cursor: default;
+}
+.sheet-cell.doneRight { background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok-deep); }
+.sheet-cell.doneWrong { background: var(--err-bg); border-color: var(--err-border); color: var(--err-deep); }
+.sheet-cell.cur { border: 2px solid var(--primary); color: var(--primary); background: var(--primary-subtle); }
+.sheet-cell:not(:disabled):not(.cur) { cursor: pointer; }
+.sheet-cell:disabled { opacity: .45; }
+.sheet-empty { padding: 18px 0; text-align: center; color: var(--ink3); font-size: 12.5px; }
+.sheet-meta { font-size: 11px; color: var(--ink3); }
 </style>
