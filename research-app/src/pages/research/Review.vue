@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 评审页（06 §7 步骤 1-7，F4 完成 F0 占位）。
  * - 无 paperId：评审批次列表（进入工作区入口）。
@@ -25,6 +25,37 @@ const VERDICT_LABELS: Record<string, string> = {
   accepted: '已接受',
   rejected: '已拒绝',
 };
+
+
+// S10 评审UI：顶部结论摘要 + 风险排序
+const RISK_ORDER: Record<string, number> = {
+  rejected: 0,
+  needs_revision: 1,
+  in_review: 2,
+  accepted: 3,
+};
+const paperStats = computed(() => {
+  const papers = papersQuery.data.value ?? [];
+  return {
+    total: papers.length,
+    in_review: papers.filter((p) => p.verdict === 'in_review').length,
+    needs_revision: papers.filter((p) => p.verdict === 'needs_revision').length,
+    accepted: papers.filter((p) => p.verdict === 'accepted').length,
+    rejected: papers.filter((p) => p.verdict === 'rejected').length,
+  };
+});
+const sortedPapers = computed(() => {
+  const papers = papersQuery.data.value ?? [];
+  return [...papers].sort((a, b) => (RISK_ORDER[a.verdict] ?? 99) - (RISK_ORDER[b.verdict] ?? 99));
+});
+const overallRating = computed(() => {
+  const s = paperStats.value;
+  if (s.rejected > 0) return { label: '有拒稿风险', color: '#ef4444' };
+  if (s.needs_revision > 0) return { label: '需修订', color: '#f59e0b' };
+  if (s.in_review > 0) return { label: '评审中', color: '#6366f1' };
+  if (s.accepted > 0) return { label: '全部通过', color: '#10b981' };
+  return { label: '无数据', color: '#64748b' };
+});
 
 function setMode(next: 'author' | 'reviewer'): void {
   if (next === mode.value) return;
@@ -68,6 +99,55 @@ function setMode(next: 'author' | 'reviewer'): void {
       </div>
     </header>
 
+    <!-- S10 顶部结论摘要 -->
+    <AppCard
+      v-if="papersQuery.data.value && papersQuery.data.value.length > 0"
+      class="summary-bar"
+    >
+      <div class="summary-header">
+        <span class="summary-title">结论摘要</span>
+        <AppChip :style="{ color: overallRating.color, borderColor: overallRating.color }">
+          {{ overallRating.label }}
+        </AppChip>
+      </div>
+      <div class="summary-stats">
+        <div class="stat-item">
+          <span class="stat-num">{{ paperStats.total }}</span>
+          <span class="stat-label">总批次</span>
+        </div>
+        <div
+          class="stat-item"
+          style="color:#6366f1"
+        >
+          <span class="stat-num">{{ paperStats.in_review }}</span>
+          <span class="stat-label">评审中</span>
+        </div>
+        <div
+          class="stat-item"
+          style="color:#f59e0b"
+        >
+          <span class="stat-num">{{ paperStats.needs_revision }}</span>
+          <span class="stat-label">需修订</span>
+        </div>
+        <div
+          class="stat-item"
+          style="color:#10b981"
+        >
+          <span class="stat-num">{{ paperStats.accepted }}</span>
+          <span class="stat-label">已接受</span>
+        </div>
+        <div
+          class="stat-item"
+          style="color:#ef4444"
+        >
+          <span class="stat-num">{{ paperStats.rejected }}</span>
+          <span class="stat-label">已拒绝</span>
+        </div>
+      </div>
+      <p class="summary-note">
+        风险排序：已拒绝 > 需修订 > 评审中 > 已接受
+      </p>
+    </AppCard>
     <!-- 批次列表（无 paperId） -->
     <template v-if="!paperId">
       <Skeleton
@@ -85,7 +165,7 @@ function setMode(next: 'author' | 'reviewer'): void {
         aria-label="评审批次列表"
       >
         <li
-          v-for="paper in papersQuery.data.value"
+          v-for="paper in sortedPapers"
           :key="paper.id"
           class="paper-card"
         >
@@ -206,4 +286,13 @@ function setMode(next: 'author' | 'reviewer'): void {
 .verdict[data-verdict='needs_revision'] { border-color: #ead29e; color: var(--warning); background: var(--warning-bg); }
 .verdict[data-verdict='accepted'] { border-color: #bfdfd0; color: var(--success); background: var(--success-bg); }
 .verdict[data-verdict='rejected'] { border-color: #e6c0bc; color: var(--danger); background: var(--danger-bg); }
+
+.summary-bar { margin-bottom: 20px; padding: 16px 20px; }
+.summary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.summary-title { font-size: 16px; font-weight: 600; color: var(--s16-text, #0f172a); }
+.summary-stats { display: flex; gap: 24px; margin-bottom: 8px; }
+.stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.stat-num { font-size: 24px; font-weight: 700; }
+.stat-label { font-size: 12px; color: var(--s16-text-secondary, #64748b); }
+.summary-note { margin: 0; font-size: 12px; color: var(--s16-text-secondary, #64748b); }
 </style>
