@@ -303,7 +303,7 @@ const filtered = computed(() =>
 )
 const paperQuestions = computed(() => paper.value.map((id) => questions.value.find((q) => q.id === id)!).filter(Boolean))
 
-const diffLabel = (d: string) => ({ easy: '容易', medium: '中等', hard: '较难' } as Record<string, string>)[d] || d
+const diffLabel = (d: string) => ({ easy: '容易', medium: '中等', hard: '较难' } as Record<string, string>)[d] || (d ? d : '未定级')
 
 /** 图片题的题干文字是说明性 caption，不送 KaTeX（避免中文进 math mode 的告警） */
 function stemOf(q: V3QuizQuestion): string {

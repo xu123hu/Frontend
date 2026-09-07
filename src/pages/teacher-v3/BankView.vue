@@ -379,7 +379,7 @@ const filtered = computed(() =>
   }),
 )
 
-const diffLabel = (d: string) => ({ easy: '容易', medium: '中等', hard: '较难' } as Record<string, string>)[d] || d
+const diffLabel = (d: string) => ({ easy: '容易', medium: '中等', hard: '较难' } as Record<string, string>)[d] || (d ? d : '未定级')
 const typeLabel = (t: string) => ({ choice: '选择', fill: '填空', solve: '解答', image: '图片' } as Record<string, string>)[t] || t
 
 function stemOf(q: V3QuizQuestion): string {

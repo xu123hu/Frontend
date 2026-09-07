@@ -21,7 +21,7 @@
         <div class="poc-success__icon">✓</div>
         <h2>教案大纲已生成 🎉</h2>
         <p class="poc-success__line">{{ chain.brief?.topic }} · {{ chain.brief?.courseType }} · {{ outline?.total_minutes || chain.brief?.duration }}分钟</p>
-        <p class="poc-success__eta">⚡ AI 用了 <b>12 秒</b> 生成这份初稿（演示计时）</p>
+        <p class="poc-success__eta">⚡ 本大纲由 AI 基于课题与课标约束真实生成——每一处都可改，定稿前请逐环节核对</p>
       </div>
 
       <!-- 大纲预览卡 -->
@@ -227,7 +227,9 @@ async function reoutline(extra: string[]) {
     const merged: PrepRichOutline = { ...d, notes: d.notes || [] }
     chain.outline = merged
     adjustNotes.value = (d.notes || []).filter((n) => n.startsWith('已按') || n.includes('词表'))
-  } catch { toast.error('重排失败（mock 未启动？）') }
+  } catch (e: any) {
+    toast.error(e?.message ? `重排失败：${e.message}` : '重排失败，请稍后重试')
+  }
 }
 function adjust(text: string) {
   const t = text.trim()
@@ -256,8 +258,8 @@ async function continueEdit() {
       }, undefined).finished.catch(reject)
     })
     enterEditor(planId)
-  } catch {
-    toast.error('完整教案生成失败（mock 未启动？）——大纲仍保留，可重试')
+  } catch (e: any) {
+    toast.error(e?.message ? `完整教案生成失败：${e.message}——大纲仍保留，可重试` : '完整教案生成失败——大纲仍保留，可重试')
   } finally { entering.value = false }
 }
 </script>

@@ -120,7 +120,16 @@
     </main>
 
     <!-- 底部操作栏 -->
-    <footer class="pup-foot">
+    <footer class="pup-foot pup-foot--col">
+      <div class="pup-topic-row">
+        <label class="pup-topic__label">本课课题（AI 生成大纲的依据，必填）</label>
+        <input
+          class="pup-topic__input"
+          :value="topic"
+          placeholder="例如：椭圆及其标准方程（第 1 课时）——不要用文件名"
+          @input="onTopicInput(($event.target as HTMLInputElement).value)"
+        />
+      </div>
       <div class="pup-foot__left">
         <span>使用方式：</span>
         <div class="pup-foot__toggle">
@@ -154,13 +163,19 @@ const parsed = ref<ParsedUpload | null>(null)
 const tab = ref<'structure' | 'knowledge' | 'examples'>('structure')
 const parseKey = ref(0)
 
-const topic = computed(() => (fileNames.value[0] || '未命名备课').replace(/\.(pdf|docx?|pptx?|txt|png)$/i, '').slice(0, 18))
+const topic = ref('')
+const topicTouched = ref(false)
+function onTopicInput(v: string) { topic.value = v; topicTouched.value = true }
+function _defaultTopic() { return (fileNames.value[0] || '未命名备课').replace(/\.(pdf|docx?|pptx?|txt|png|jpeg|jpg)$/i, '').slice(0, 30) }
+// 课题默认取文件名但必须可编辑——文件名（尤其照片 IMG_xxxx）不是课题，AI 需要真实课题才能生成非模板大纲
+function ensureTopic() { if (!topicTouched.value || !topic.value.trim()) topic.value = _defaultTopic() }
 
 function onFiles(ev: Event) {
   const files = (ev.target as HTMLInputElement).files
   if (!files?.length) return
   fileNames.value = [...files].slice(0, 4).map((f) => f.name)
   parsed.value = buildParsedUpload(fileNames.value)
+  if (!topicTouched.value) topic.value = _defaultTopic()
   toast.info('原型不解析文件内容：解析结果为确定性演示样例（含演示置信度标注）')
 }
 function reparse() {
@@ -174,9 +189,14 @@ function useAsTemplate() {
   toast.info('「提炼为我的模板」复用资源中心 V3.1 通道：plan-templates/extract（原型此处提示入口）')
 }
 function go() {
+  ensureTopic()
+  if (!topic.value.trim() || topic.value.trim() === '未命名备课') {
+    toast.error('请先填写本课课题——文件名不是课题，AI 需要真实课题才能生成不套模板的大纲')
+    return
+  }
   startBrief({
     source: 'upload',
-    topic: topic.value,
+    topic: topic.value.trim(),
     requirements: [`以下列上传材料为主要参考：${fileNames.value.join('、')}`],
     materials: fileNames.value.map((n) => ({ name: n, size: '已解析' })),
   })
@@ -186,6 +206,11 @@ function go() {
 
 <style scoped>
 .pup { padding-bottom: 90px; }
+.pup-foot--col { flex-direction: column; align-items: stretch; gap: 10px; }
+.pup-topic-row { display: flex; align-items: center; gap: 12px; }
+.pup-topic__label { font-size: 13px; font-weight: 600; color: var(--ailp-gray-700); white-space: nowrap; }
+.pup-topic__input { flex: 1; height: 38px; padding: 0 14px; border: 1px solid var(--ailp-gray-200); border-radius: 10px; font-size: 14px; outline: none; background: #fff; }
+.pup-topic__input:focus { border-color: var(--ailp-primary-500); box-shadow: 0 0 0 3px rgba(79, 70, 229, .08); }
 .pup-head { position: relative; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; border-bottom: 1px solid var(--ailp-gray-200); background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(6px); }
 .pup-head__left { display: flex; align-items: center; gap: 12px; }
 .pup-head__div { width: 1px; height: 22px; background: var(--ailp-gray-200); }
