@@ -197,6 +197,15 @@ const aiLoading = ref(false);
 const aiError = ref<string | null>(null);
 const aiResult = ref<string | null>(null);
 const aiKind = ref<string | null>(null);
+// H8: AI修改必须走diff，不直接覆盖用户文稿
+interface AiDiffItem {
+  id: number;
+  original: string;
+  suggested: string;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+const aiDiffItems = ref<AiDiffItem[]>([]);
+let diffIdCounter = 0;
 
 const AI_PROMPTS: Record<string, string> = {
   polish: '你是学术写作润色助手。请润色以下LaTeX文本，保持学术严谨性，改善表达流畅度，不改变原意。只输出润色后的LaTeX文本。',
@@ -213,16 +222,57 @@ async function runAiAction(kind: string): Promise<void> {
   try {
     const response = await stewardChat.mutateAsync({ messages, reasoningPolicyId: 'standard' });
     aiResult.value = response.content;
+    // H8: 解析为diff逐项，不直接覆盖
+    aiDiffItems.value = parseAiToDiff(kind, text, response.content);
   } catch (err) {
     aiError.value = err instanceof Error ? 'AI调用失败：' + err.message : 'AI调用失败，请稍后重试。';
   } finally { aiLoading.value = false; }
 }
 
-function applyAiResult(): void {
-  if (!aiResult.value) return;
-  editorRef.value?.insertAtCursor(aiResult.value);
+
+// H8: diff逐项接受/拒绝
+function parseAiToDiff(kind: string, originalText: string, aiOutput: string): AiDiffItem[] {
+  const items: AiDiffItem[] = [];
+  if (kind === 'polish' || kind === 'continue') {
+    items.push({ id: ++diffIdCounter, original: originalText, suggested: aiOutput, status: 'pending' });
+  } else {
+    const lines2 = aiOutput.split('\n').filter((l: string) => l.trim().length > 0);
+    for (const line of lines2) {
+      const cleaned = line.replace(/^\d+[.)、]\s*/, '').trim();
+      if (cleaned.length > 0) {
+        items.push({ id: ++diffIdCounter, original: originalText.slice(0, 80) + (originalText.length > 80 ? '…' : ''), suggested: cleaned, status: 'pending' });
+      }
+    }
+    if (items.length === 0) { items.push({ id: ++diffIdCounter, original: originalText, suggested: aiOutput, status: 'pending' }); }
+  }
+  return items;
+}
+
+function acceptDiffItem(id: number): void {
+  const item = aiDiffItems.value.find((d: AiDiffItem) => d.id === id);
+  if (item) item.status = 'accepted';
+}
+
+function rejectDiffItem(id: number): void {
+  const item = aiDiffItems.value.find((d: AiDiffItem) => d.id === id);
+  if (item) item.status = 'rejected';
+}
+
+function applyAcceptedDiffs(): void {
+  const accepted = aiDiffItems.value.filter((d: AiDiffItem) => d.status === 'accepted');
+  if (accepted.length === 0) return;
+  const textToInsert = accepted.map((d: AiDiffItem) => d.suggested).join('\n\n');
+  editorRef.value?.insertAtCursor(textToInsert);
+  aiDiffItems.value = [];
   aiResult.value = null;
 }
+
+function clearAiDiff(): void {
+  aiDiffItems.value = [];
+  aiResult.value = null;
+}
+
+const acceptedDiffCount = computed(() => aiDiffItems.value.filter((d: AiDiffItem) => d.status === 'accepted').length);
 </script>
 
 <template>
@@ -441,96 +491,157 @@ function applyAiResult(): void {
           >
             {{ aiError }}
           </div>
+          <!-- H8: AI修改diff逐项接受/拒绝，不直接覆盖 -->
           <div
-            v-if="aiResult"
-            class="ai-result"
+            v-if="aiDiffItems.length > 0"
+            class="ai-diff-panel"
           >
-            <div class="ai-result-head">
-              <span>AI {{ aiKind }} 结果</span>
+            <div class="ai-diff-head">
+              <span>AI {{ aiKind }} 修订（逐项接受）</span>
+              <span class="ai-diff-count">已接受 {{ acceptedDiffCount }}/{{ aiDiffItems.length }}</span>
+            </div>
+            <div class="ai-diff-list">
+              <div
+                v-for="item in aiDiffItems"
+                :key="item.id"
+                class="ai-diff-item"
+                :class="{ accepted: item.status === 'accepted', rejected: item.status === 'rejected' }"
+              >
+                <div class="diff-original">
+                  <span class="diff-label">原文</span><pre class="diff-text">{{ item.original }}</pre>
+                </div>
+                <div class="diff-arrow">
+                  →
+                </div>
+                <div class="diff-suggested">
+                  <span class="diff-label">AI建议</span><pre class="diff-text">{{ item.suggested }}</pre>
+                </div>
+                <div class="diff-actions">
+                  <AppButton
+                    v-if="item.status === 'pending'"
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    @click="acceptDiffItem(item.id)"
+                  >
+                    接受
+                  </AppButton>
+                  <AppButton
+                    v-if="item.status === 'pending'"
+                    type="button"
+                    size="sm"
+                    variant="danger"
+                    @click="rejectDiffItem(item.id)"
+                  >
+                    拒绝
+                  </AppButton>
+                  <span
+                    v-if="item.status === 'accepted'"
+                    class="diff-status accepted"
+                  >✓ 已接受</span>
+                  <span
+                    v-if="item.status === 'rejected'"
+                    class="diff-status rejected"
+                  >✗ 已拒绝</span>
+                </div>
+              </div>
+            </div>
+            <div class="ai-diff-footer">
               <AppButton
                 type="button"
                 size="sm"
-                @click="applyAiResult"
+                :disabled="acceptedDiffCount === 0"
+                @click="applyAcceptedDiffs"
               >
-                应用到文档
+                应用已接受项（{{ acceptedDiffCount }}）
+              </AppButton>
+              <AppButton
+                type="button"
+                size="sm"
+                variant="secondary"
+                @click="clearAiDiff"
+              >
+                清除
               </AppButton>
             </div>
-            <pre class="ai-result-text">{{ aiResult }}</pre>
+            <p class="ai-honesty-note">
+              H8：AI修改不直接覆盖文稿，需逐项确认后应用。
+            </p>
           </div>
-        </div>
-        <p
-          v-if="compileError"
-          class="mini-error"
-          role="alert"
-        >
-          {{ compileError }}
-        </p>
-
-        <CompileTimeline
-          :run-id="activeRunId"
-          :manuscript-id="selectedManuscriptId"
-          @locate="locateCompileError"
-        />
-
-        <details
-          v-if="activeRunId"
-          class="drill"
-        >
-          <summary>演练：编译失败场景</summary>
-          <div class="drill-actions">
-            <AppButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              @click="startCompile('missing_resource')"
-            >
-              缺失资源
-            </AppButton>
-            <AppButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              @click="startCompile('unsafe_command')"
-            >
-              不安全命令
-            </AppButton>
-          </div>
-        </details>
-
-        <div
-          v-if="auditOpen"
-          class="audit"
-        >
-          <p class="audit-title">
-            证据检查（无证据句）
+          <p
+            v-if="compileError"
+            class="mini-error"
+            role="alert"
+          >
+            {{ compileError }}
           </p>
-          <p class="audit-hint">
-            以下句子暂无可追溯证据，可选择“补充证据”或降低表述强度。
-          </p>
-          <ul class="audit-list">
-            <li
-              v-for="s in ['未来工作将引入稳健标准误与更细粒度协变量']"
-              :key="s"
-            >
-              <span>「{{ s }}」</span>
+
+          <CompileTimeline
+            :run-id="activeRunId"
+            :manuscript-id="selectedManuscriptId"
+            @locate="locateCompileError"
+          />
+
+          <details
+            v-if="activeRunId"
+            class="drill"
+          >
+            <summary>演练：编译失败场景</summary>
+            <div class="drill-actions">
               <AppButton
                 type="button"
                 variant="secondary"
                 size="sm"
+                @click="startCompile('missing_resource')"
               >
-                请求补证
+                缺失资源
               </AppButton>
-            </li>
-          </ul>
-        </div>
+              <AppButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                @click="startCompile('unsafe_command')"
+              >
+                不安全命令
+              </AppButton>
+            </div>
+          </details>
 
-        <DiffPanel
-          :suggestions="suggestions"
-          :pending="decideMutation.isPending.value"
-          :error="diffError ?? suggestionsQuery.error.value?.message ?? null"
-          @decide="decide"
-          @locate="locateSuggestion"
-        />
+          <div
+            v-if="auditOpen"
+            class="audit"
+          >
+            <p class="audit-title">
+              证据检查（无证据句）
+            </p>
+            <p class="audit-hint">
+              以下句子暂无可追溯证据，可选择“补充证据”或降低表述强度。
+            </p>
+            <ul class="audit-list">
+              <li
+                v-for="s in ['未来工作将引入稳健标准误与更细粒度协变量']"
+                :key="s"
+              >
+                <span>「{{ s }}」</span>
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                >
+                  请求补证
+                </AppButton>
+              </li>
+            </ul>
+          </div>
+
+          <DiffPanel
+            :suggestions="suggestions"
+            :pending="decideMutation.isPending.value"
+            :error="diffError ?? suggestionsQuery.error.value?.message ?? null"
+            @decide="decide"
+            @locate="locateSuggestion"
+          />
+        </div>
       </AppCard>
     </div>
 
@@ -732,4 +843,22 @@ function applyAiResult(): void {
 .ai-result { margin-top: 12px; padding: 10px; background: var(--s16-bg-subtle, #f8fafc); border-radius: 8px; border: 1px solid var(--s16-border, #e2e8f0); }
 .ai-result-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
 .ai-result-text { font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto; margin: 0; }
+
+.ai-diff-panel { margin-top: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+.ai-diff-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 600; font-size: 13px; }
+.ai-diff-count { font-size: 12px; color: #64748b; font-weight: 400; }
+.ai-diff-list { display: flex; flex-direction: column; gap: 10px; }
+.ai-diff-item { padding: 10px; background: white; border-radius: 6px; border: 1px solid #e2e8f0; }
+.ai-diff-item.accepted { border-color: #10b981; background: #f0fdf4; }
+.ai-diff-item.rejected { border-color: #ef4444; background: #fef2f2; opacity: 0.6; }
+.diff-original, .diff-suggested { margin-bottom: 6px; }
+.diff-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; }
+.diff-text { margin: 4px 0 0; padding: 6px 8px; background: #f1f5f9; border-radius: 4px; font-size: 12px; white-space: pre-wrap; word-break: break-all; max-height: 80px; overflow-y: auto; }
+.diff-arrow { text-align: center; color: #94a3b8; font-size: 14px; margin: 2px 0; }
+.diff-actions { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.diff-status { font-size: 12px; font-weight: 600; }
+.diff-status.accepted { color: #10b981; }
+.diff-status.rejected { color: #ef4444; }
+.ai-diff-footer { display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; }
+.ai-honesty-note { font-size: 11px; color: #94a3b8; margin: 8px 0 0; font-style: italic; }
 </style>
