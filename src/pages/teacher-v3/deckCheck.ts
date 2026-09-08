@@ -112,7 +112,7 @@ export function applyFix(deck: V3Deck, issue: CheckIssue): 'applied' | 'unsuppor
       layout: 'derivation',
       anchor_bar: `接上页 · ${slideTitle(s)}（续）`,
       elements: [
-        { id: `e-split-t-${Date.now()}`, type: 'text', left: 70, top: 52, width: 640, height: 50, z: 1, html: `${slideTitle(s)}（续）`, font_size: 28, bold: true, color: '#0a3568' },
+        { id: `e-split-t-${Date.now()}`, type: 'text', left: 70, top: 52, width: 640, height: 50, z: 1, html: `${slideTitle(s)}（续）`, font_size: 28, bold: true, color: '#3730a3' },
         ...moving.map((e) => ({ ...e, top: Math.max(130, (e.top % 500) + 60) })),
         { id: `e-split-p-${Date.now()}`, type: 'pageNo', left: 1180, top: 680, width: 60, height: 30, z: 1, no: issue.slideIndex + 2 },
       ],

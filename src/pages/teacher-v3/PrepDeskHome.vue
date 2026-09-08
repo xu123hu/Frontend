@@ -153,7 +153,7 @@ const nextTask = computed(() => {
 .tv3-dh__card {
   display: flex; flex-direction: column; gap: 8px;
   background: var(--tv3-card, #fff); border: 1px solid var(--tv3-line); border-radius: 14px;
-  border-top: 3px solid var(--tv3-primary, #0f4787);
+  border-top: 3px solid var(--tv3-primary, #4f46e5);
   padding: 14px 16px; min-height: 236px;
 }
 .tv3-dh__card-kicker { font-size: 11px; color: var(--tv3-ink3); display: flex; align-items: center; gap: 6px; }
@@ -162,7 +162,7 @@ const nextTask = computed(() => {
 .tv3-dh__card-next { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; background: var(--tv3-bg2, #f4f6fa); border-radius: 10px; }
 .tv3-dh__next-line { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--tv3-ink2); line-height: 1.6; }
 .tv3-dh__next-line--minor { color: var(--tv3-ink3); font-size: 11.5px; }
-.tv3-dh__next-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--tv3-primary, #0f4787); flex-shrink: 0; transform: translateY(-2px); }
+.tv3-dh__next-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--tv3-primary, #4f46e5); flex-shrink: 0; transform: translateY(-2px); }
 .tv3-dh__next-dot--minor { background: var(--tv3-ink4, #9aa5b5); }
 .tv3-dh__next-sub { color: var(--tv3-ink3); font-size: 11px; }
 .tv3-dh__card-cta { width: 100%; justify-content: center; }

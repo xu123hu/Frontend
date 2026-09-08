@@ -113,7 +113,7 @@ function buildBoard() {
     })
     bindEvaluator()
     board.create('functiongraph', [(x: number) => evaluator(x), x0, x1], {
-      strokeColor: '#0f4787', strokeWidth: 3, highlight: false,
+      strokeColor: '#4f46e5', strokeWidth: 3, highlight: false,
     })
     board.update()
   } catch { /* 渲染失败静默 */ }

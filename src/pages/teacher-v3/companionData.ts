@@ -77,7 +77,7 @@ const POOL: CompanionCandidate[] = [
     title: '正方体截面示意（可重开构造）',
     source: '我的图形库 · 含结构化构造记录', why: '板书立体截面时先让学生猜形状再展示验证，与你当前例题题型匹配', minutes: 3,
     becomes: '插入为图形素材 / 绘图台继续编辑', intents: ['板书素材', '动态演示'],
-    figure: { kind: 'free', thumb: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80"><polygon points="38,60 72,60 72,26 38,26" fill="none" stroke="#c3cad6"/><polygon points="55,43 89,43 89,9 55,9" fill="none" stroke="#0f4787"/><polygon points="46,52 82,35 65,17 33,34" fill="rgba(201,151,53,0.18)" stroke="#c99735"/></svg>', records: [{ id: 'r1', kind: 'preset', preset_id: 'solid/cube-section', params: { t1: 0.5, t2: 0.55, t3: 0.45 }, color: '#0f4787', width: 1.6 }] },
+    figure: { kind: 'free', thumb: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80"><polygon points="38,60 72,60 72,26 38,26" fill="none" stroke="#c3cad6"/><polygon points="55,43 89,43 89,9 55,9" fill="none" stroke="#4f46e5"/><polygon points="46,52 82,35 65,17 33,34" fill="rgba(6,182,212,0.18)" stroke="#0891b2"/></svg>', records: [{ id: 'r1', kind: 'preset', preset_id: 'solid/cube-section', params: { t1: 0.5, t2: 0.55, t3: 0.45 }, color: '#4f46e5', width: 1.6 }] },
   },
   {
     id: 'c-mine-q-1', kind: 'question', layer: 'mine',

@@ -466,7 +466,7 @@ let sseCtrl: { abort: () => void } | null = null
 const templates = ref<{ id: string; name: string; style: string; swatch: { bg: string; primary: string; accent: string; light: boolean }; page_kinds: string[]; recommended_for: string }[]>([])
 /* V3.3：模板兜底——即使接口加载失败也始终渲染多套主题，杜绝「只有一档/空白」 */
 const DECK_TEMPLATE_FALLBACK: typeof templates.value = [
-  { id: 'tpl-academic-blue', name: '学术蓝·严谨版', style: 'academic', swatch: { bg: '#0f4787', primary: '#0f4787', accent: '#c99735', light: true }, page_kinds: ['cover', 'definition', 'derivation', 'example', 'summary'], recommended_for: '新授课·概念课' },
+  { id: 'tpl-academic-blue', name: '学术蓝·严谨版', style: 'academic', swatch: { bg: '#4f46e5', primary: '#4f46e5', accent: '#0891b2', light: true }, page_kinds: ['cover', 'definition', 'derivation', 'example', 'summary'], recommended_for: '新授课·概念课' },
   { id: 'tpl-chalkboard', name: '黑板绿·手写感', style: 'chalkboard', swatch: { bg: '#1e3a2f', primary: '#2d5546', accent: '#e8c56a', light: false }, page_kinds: ['cover', 'derivation', 'example', 'keypoints'], recommended_for: '推导课·习题课' },
   { id: 'tpl-geometric', name: '几何灰·图纸感', style: 'geometric', swatch: { bg: '#eceff4', primary: '#37474f', accent: '#e65100', light: true }, page_kinds: ['cover', 'definition', 'variation', 'blank'], recommended_for: '立体几何·图形密集课' },
   { id: 'tpl-classic-navy', name: '经典藏青·正式', style: 'classic', swatch: { bg: '#12264d', primary: '#c2a75a', accent: '#e3c877', light: false }, page_kinds: ['cover', 'review', 'summary'], recommended_for: '公开课·示范课' },
@@ -474,18 +474,18 @@ const DECK_TEMPLATE_FALLBACK: typeof templates.value = [
 ]
 
 const scopeCards = [
-  { value: 'stem', name: '仅题干', swatch: { bg: '#ffffff', primary: '#0f4787', accent: '#c99735', light: true }, fit: '课堂即讲即用', note: '只识别题目，解答教师现场写' },
-  { value: 'stem+solution', name: '题干 + 解答', swatch: { bg: '#ffffff', primary: '#0f4787', accent: '#c99735', light: true }, fit: '例题精讲', note: '完整解答步骤，自动分页' },
-  { value: 'stem+keypoints', name: '题干 + 关键步骤', swatch: { bg: '#ffffff', primary: '#0f4787', accent: '#c99735', light: true }, fit: '作业讲评', note: '只保留关键步骤，留白给学生' },
+  { value: 'stem', name: '仅题干', swatch: { bg: '#ffffff', primary: '#4f46e5', accent: '#0891b2', light: true }, fit: '课堂即讲即用', note: '只识别题目，解答教师现场写' },
+  { value: 'stem+solution', name: '题干 + 解答', swatch: { bg: '#ffffff', primary: '#4f46e5', accent: '#0891b2', light: true }, fit: '例题精讲', note: '完整解答步骤，自动分页' },
+  { value: 'stem+keypoints', name: '题干 + 关键步骤', swatch: { bg: '#ffffff', primary: '#4f46e5', accent: '#0891b2', light: true }, fit: '作业讲评', note: '只保留关键步骤，留白给学生' },
 ] as const
 const modeCards = [
   { value: 'blank-board', name: '板书留白', swatch: { bg: '#1e3a2f', primary: '#2d5546', accent: '#e8c56a', light: false }, fit: '推导课', note: '只出结构与题干，过程课堂生成' },
-  { value: 'full-solution', name: '完整解答', swatch: { bg: '#0a3568', primary: '#0f4787', accent: '#c99735', light: true }, fit: '自学/复习', note: '解答完整呈现，逐页展开' },
+  { value: 'full-solution', name: '完整解答', swatch: { bg: '#3730a3', primary: '#4f46e5', accent: '#0891b2', light: true }, fit: '自学/复习', note: '解答完整呈现，逐页展开' },
   { value: 'keypoints', name: '要点提炼', swatch: { bg: '#f4f4f2', primary: '#37474f', accent: '#e65100', light: true }, fit: '讲评课', note: '错因+关键步骤卡片' },
 ] as const
 const fontCards = [
   { value: 'compact', px: 18, name: '紧凑档', swatch: { bg: '#ffffff', primary: '#37474f', accent: '#0e9488', light: true }, note: '信息密度高，教室后排慎用' },
-  { value: 'standard', px: 22, name: '标准档', swatch: { bg: '#ffffff', primary: '#0f4787', accent: '#c99735', light: true }, note: '推荐：一般教室' },
+  { value: 'standard', px: 22, name: '标准档', swatch: { bg: '#ffffff', primary: '#4f46e5', accent: '#0891b2', light: true }, note: '推荐：一般教室' },
   { value: 'large', px: 26, name: '大字号', swatch: { bg: '#ffffff', primary: '#b45309', accent: '#dc2646', light: true }, note: '阶梯教室 / 视力关注班级' },
 ] as const
 
@@ -826,7 +826,7 @@ function addSlide() {
     id: `sl-${Date.now()}`,
     layout: 'blank',
     elements: [
-      { id: `e${Date.now()}`, type: 'text', left: 70, top: 52, width: 600, height: 50, z: 1, html: '新页标题', font_size: 28, bold: true, color: '#0a3568' },
+      { id: `e${Date.now()}`, type: 'text', left: 70, top: 52, width: 600, height: 50, z: 1, html: '新页标题', font_size: 28, bold: true, color: '#3730a3' },
       { id: `p${Date.now()}`, type: 'pageNo', left: 1180, top: 680, width: 60, height: 30, z: 1, no: deck.value.slides.length + 1 },
     ],
   }
@@ -927,7 +927,7 @@ function onCompanionInsert(ev: Event) {
     const sid = Date.now()
     currentSlide.value.elements.push({
       id: `ecf-${sid}`, type: 'text', left: 300, top: 150, width: 560, height: 300, z: 5,
-      html: `${figShot.thumb}<br><span style="color:#8a6d1d;font-size:13px">图形素材 · 来源：${c.source} · 「在数学绘图中继续编辑」可改构造</span>`,
+      html: `${figShot.thumb}<br><span style="color:#0e7490;font-size:13px">图形素材 · 来源：${c.source} · 「在数学绘图中继续编辑」可改构造</span>`,
       font_size: 15, teacher_confirmed: false,
     } as V3Element)
     lastLocateFn = locate
@@ -939,9 +939,9 @@ function onCompanionInsert(ev: Event) {
     const c = d.candidate
     let html = ''
     if (c.kind === 'video' && c.video) {
-      html = `<b>▶ 外部视频引用</b> ${c.title}<br>来源：${c.source} · ${c.video.start}–${c.video.end}（官方站外播放器）<br>播放前问：${c.video.pre}<br>播放后问：${c.video.post}<br><span style="color:#8a6d1d;font-size:13px">外部引用 · 不下载不转存 · 课堂播放依赖网络，建议备好 Plan B</span>`
+      html = `<b>▶ 外部视频引用</b> ${c.title}<br>来源：${c.source} · ${c.video.start}–${c.video.end}（官方站外播放器）<br>播放前问：${c.video.pre}<br>播放后问：${c.video.post}<br><span style="color:#0e7490;font-size:13px">外部引用 · 不下载不转存 · 课堂播放依赖网络，建议备好 Plan B</span>`
     } else if (c.kind === 'link') {
-      html = `<b>引用来源</b> ${c.title}<br>来源：${c.source}<br><span style="color:#8a6d1d;font-size:13px">${c.note || ''}</span>`
+      html = `<b>引用来源</b> ${c.title}<br>来源：${c.source}<br><span style="color:#0e7490;font-size:13px">${c.note || ''}</span>`
     } else {
       html = `<b>取用片段</b> ${c.title}<br>来源：${c.source}<br>${c.preview?.latex ? renderLatex(c.preview.latex) : ''}`
     }
@@ -1170,7 +1170,7 @@ onBeforeUnmount(() => {
   background: #fff; border: 1px solid var(--tv3-line); border-radius: 12px; padding: 12px 14px; cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.tv3-quick:hover { border-color: var(--tv3-gold); box-shadow: 0 4px 14px rgba(201, 151, 53, 0.12); }
+.tv3-quick:hover { border-color: var(--tv3-gold); box-shadow: 0 4px 14px rgba(6, 182, 212, 0.12); }
 .tv3-quick__icon { font-size: 18px; }
 .tv3-quick__name { font-size: 13.5px; font-weight: 700; color: var(--tv3-ink); }
 .tv3-quick__note { font-size: 11.5px; color: var(--tv3-ink3); }
@@ -1180,12 +1180,12 @@ onBeforeUnmount(() => {
   flex-shrink: 0; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
   border: 1px solid var(--tv3-line); color: var(--tv3-ink3); background: #fff; min-width: 34px; text-align: center;
 }
-.tv3-gate__kind[data-kind='cover'] { color: #0a3568; border-color: #0a3568; }
-.tv3-gate__kind[data-kind='definition'] { color: #0f4787; border-color: #9dc3ea; background: #eef4fb; }
+.tv3-gate__kind[data-kind='cover'] { color: #3730a3; border-color: #3730a3; }
+.tv3-gate__kind[data-kind='definition'] { color: #4f46e5; border-color: #a5b4fc; background: #eef4fb; }
 .tv3-gate__kind[data-kind='derivation'] { color: #6d28d9; border-color: #d8c9f5; background: #f6f2fd; }
 .tv3-gate__kind[data-kind='example'] { color: #b45309; border-color: #ecd3a1; background: #fdf6e8; }
 .tv3-gate__kind[data-kind='variation'] { color: #0e9488; border-color: #9fd8d2; background: #eefaf8; }
-.tv3-gate__kind[data-kind='summary'] { color: #0a3568; border-color: #c9d7f2; background: #f2f6fc; }
+.tv3-gate__kind[data-kind='summary'] { color: #3730a3; border-color: #c9d7f2; background: #f2f6fc; }
 .tv3-gate__kind[data-kind='review'] { color: #b1382c; border-color: #eec7c2; background: #fdf1ef; }
 
 /* ===== C1.1 大纲门要求回应单 + 调整指令 ===== */
@@ -1199,7 +1199,7 @@ onBeforeUnmount(() => {
 
 /* ===== C1 教案直通材料横幅 ===== */
 .tv3-brief__docnote {
-  font-size: 12px; color: #8a6d1d; background: var(--tv3-gold-soft, #fdf8ec); border: 1px solid #ecd3a1;
+  font-size: 12px; color: #0e7490; background: var(--tv3-gold-soft, #fdf8ec); border: 1px solid #ecd3a1;
   border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; line-height: 1.6;
 }
 .tv3-newgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }

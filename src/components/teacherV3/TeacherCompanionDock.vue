@@ -273,7 +273,7 @@ onBeforeUnmount(() => {
               background .2s ease;
 }
 .ck-item:focus-visible {
-  outline: 2px solid var(--tv3-gold, #c99735);
+  outline: 2px solid var(--tv3-gold, #0891b2);
   outline-offset: 3px;
 }
 
@@ -284,19 +284,19 @@ onBeforeUnmount(() => {
 .ck-item--ai {
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, #0f4787 0%, #1a5aa8 50%, #0f4787 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #1a5aa8 50%, #4f46e5 100%);
   color: #fff;
   box-shadow:
-    0 8px 28px rgba(15, 71, 135, 0.42),
-    0 2px 8px rgba(15, 71, 135, 0.25),
+    0 8px 28px rgba(79, 70, 229, 0.42),
+    0 2px 8px rgba(79, 70, 229, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
   overflow: visible;
 }
 .ck-item--ai:hover {
   transform: translateY(-3px) scale(1.06);
   box-shadow:
-    0 14px 38px rgba(15, 71, 135, 0.52),
-    0 4px 14px rgba(15, 71, 135, 0.3),
+    0 14px 38px rgba(79, 70, 229, 0.52),
+    0 4px 14px rgba(79, 70, 229, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 .ck-item--ai:active {
@@ -305,7 +305,7 @@ onBeforeUnmount(() => {
 .ck-item--ai.ck-item--active {
   transform: scale(0.94);
   box-shadow:
-    0 4px 14px rgba(15, 71, 135, 0.35),
+    0 4px 14px rgba(79, 70, 229, 0.35),
     inset 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
@@ -314,7 +314,7 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: -8px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(15, 71, 135, 0.35) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.35) 0%, transparent 70%);
   opacity: 0;
   pointer-events: none;
   animation: ck-halo-breathe 4s ease-in-out infinite;
@@ -359,7 +359,7 @@ onBeforeUnmount(() => {
   right: 10px;
   font-size: 9.5px;
   font-weight: 800;
-  background: linear-gradient(135deg, #e0b458, #c99735);
+  background: linear-gradient(135deg, #e0b458, #0891b2);
   color: #1c2b1a;
   border-radius: 999px;
   padding: 1.5px 6px;
@@ -407,10 +407,10 @@ onBeforeUnmount(() => {
   transform: translateY(-2px);
   width: 140px;
   border-radius: 999px;
-  border-color: var(--tv3-gold, #c99735);
+  border-color: var(--tv3-gold, #0891b2);
   box-shadow:
-    0 8px 24px rgba(201, 151, 53, 0.2),
-    0 2px 8px rgba(201, 151, 53, 0.12);
+    0 8px 24px rgba(6, 182, 212, 0.2),
+    0 2px 8px rgba(6, 182, 212, 0.12);
 }
 .ck-item--sm:active {
   transform: translateY(0);
@@ -442,14 +442,14 @@ onBeforeUnmount(() => {
 
 /* 资源球专属配色 */
 .ck-item--resource:hover {
-  border-color: var(--tv3-navy, #0f4787);
+  border-color: var(--tv3-navy, #4f46e5);
   background: linear-gradient(135deg, #fff, #f0f6fd);
   box-shadow:
-    0 8px 24px rgba(15, 71, 135, 0.18),
-    0 2px 8px rgba(15, 71, 135, 0.1);
+    0 8px 24px rgba(79, 70, 229, 0.18),
+    0 2px 8px rgba(79, 70, 229, 0.1);
 }
 .ck-item--resource:hover .ck-item__name {
-  color: var(--tv3-navy, #0f4787);
+  color: var(--tv3-navy, #4f46e5);
 }
 
 /* 绘图球专属配色 */
@@ -473,7 +473,7 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 .ck-item--ghost:hover {
-  background: var(--tv3-navy, #0f4787);
+  background: var(--tv3-navy, #4f46e5);
   transform: scale(1.08);
 }
 

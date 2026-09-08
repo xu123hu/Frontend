@@ -104,7 +104,7 @@
                     <div
                       v-for="(card, bi) in branchCards" :key="card.kind"
                       class="tv3-prep__diffitem" style="padding: 8px 10px"
-                      :style="bi === 0 ? { borderColor: 'var(--tv3-gold, #c99735)', background: 'var(--tv3-gold-soft, #fdf6e3)' } : {}"
+                      :style="bi === 0 ? { borderColor: 'var(--tv3-gold, #0891b2)', background: 'var(--tv3-gold-soft, #fdf6e3)' } : {}"
                       :data-testid="`tv3-branch-${card.kind}`"
                     >
                       <div style="display: flex; gap: 5px; align-items: center">

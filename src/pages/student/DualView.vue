@@ -331,6 +331,15 @@
 
       <!-- 中：幻灯片舞台 + 讲稿 + 播控 -->
       <main class="dcx-center">
+        <!-- S11：窄屏横向页码条（侧栏大纲在窄屏隐藏，页码条保证课件立即全宽可见） -->
+        <div v-if="session.outlines?.length" class="dcx-o-strip">
+          <button
+            v-for="(o, i) in session.outlines" :key="'s' + i"
+            class="dcx-o-chip" :class="{ active: i === curIndex, done: pageStatus(i) === 'done' }"
+            :title="o.title"
+            @click="pageStatus(i) === 'done' || i === curIndex ? jumpTo(i) : toast.info('这一页还在备课中，稍等片刻')"
+          >{{ i + 1 }}</button>
+        </div>
         <div v-if="session.status === 'failed'" class="dcx-state err">
           <b>课堂生成失败</b>
           <p>{{ friendlyError(session.error) }}</p>
@@ -2456,8 +2465,19 @@ button { font-family: inherit; }
   .dcx-right { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
   .dcx-alt-entries { grid-template-columns: 1fr; }
 }
+.dcx-o-strip { display: none; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; }
+.dcx-o-chip {
+  min-width: 34px; height: 34px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(255, 255, 255, .05); color: #cdd3ea; font: inherit; font-size: 13px; font-weight: 800;
+  cursor: pointer; flex: 0 0 auto;
+}
+.dcx-o-chip.active { background: linear-gradient(135deg, #722ed1, #a78bfa); border-color: transparent; color: #fff; }
+.dcx-o-chip.done { border-color: rgba(82, 196, 26, .5); color: #b7f4cf; }
+
 @media (max-width: 900px) {
   .dcx-body { grid-template-columns: 1fr; overflow-y: auto; }
+  .dcx-left { display: none; }          /* 侧栏大纲收成横向页码条（课件立即全宽，不再被挤丢） */
+  .dcx-o-strip { display: flex; }
   .dcx-right { grid-template-columns: 1fr; }
   .dcx-lgrid { grid-template-columns: 1fr; }
   .dcx-course-name { max-width: 150px; }

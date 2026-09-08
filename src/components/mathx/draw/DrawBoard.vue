@@ -268,7 +268,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 }
 .mxd-board__title { font-size: 15.5px; font-weight: 800; color: var(--tv3-ink); white-space: nowrap; }
 .mxd-board__ctx {
-  font-size: 11.5px; color: #8a6d1d; background: var(--tv3-gold-soft, #fdf8ec);
+  font-size: 11.5px; color: #0e7490; background: var(--tv3-gold-soft, #fdf8ec);
   border: 1px solid #ecd3a1; border-radius: 999px; padding: 3px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%;
 }
 .mxd-board__note { font-size: 11.5px; color: var(--tv3-ink3); }

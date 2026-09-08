@@ -38,7 +38,7 @@
       <div class="tv3-card__body" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px">
         <VisualChoiceCard
           v-for="t in lessonTemplates" :key="t.id"
-          kind="lesson" :sections="t.sections" :swatch="t.source === 'teacher_upload' ? { bg: '#fdf8ee', primary: '#8a6d1d', accent: '#c99735', light: true } : { bg: '#fff', primary: '#0f4787', accent: '#c99735', light: true }"
+          kind="lesson" :sections="t.sections" :swatch="t.source === 'teacher_upload' ? { bg: '#eef2ff', primary: '#0e7490', accent: '#0891b2', light: true } : { bg: '#fff', primary: '#4f46e5', accent: '#0891b2', light: true }"
           :name="t.name" :fit="t.recommended_for" :note="t.source === 'teacher_upload' ? `${t.name} · 体检 ${t.quality_report?.score} 分` : t.style_tag"
         />
       </div>
@@ -136,7 +136,7 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px">
           <VisualChoiceCard
             v-for="t in lessonTemplates" :key="t.id"
-            kind="lesson" :sections="t.sections" :swatch="t.source === 'teacher_upload' ? { bg: '#fdf8ee', primary: '#8a6d1d', accent: '#c99735', light: true } : { bg: '#fff', primary: '#0f4787', accent: '#c99735', light: true }"
+            kind="lesson" :sections="t.sections" :swatch="t.source === 'teacher_upload' ? { bg: '#eef2ff', primary: '#0e7490', accent: '#0891b2', light: true } : { bg: '#fff', primary: '#4f46e5', accent: '#0891b2', light: true }"
             :selected="form.template_id === t.id" :name="t.name" :fit="t.recommended_for"
             :testid="`tv3-ltpl-${t.id}`" @select="form.template_id = t.id"
           />
@@ -940,7 +940,7 @@ async function doPush() {
 .tv3-prep__orow-min { width: 62px; text-align: center; }
 .tv3-prep__orow-goal { flex: 1; min-width: 260px; font-size: 12px; }
 .tv3-prep__orow-ex {
-  flex-basis: 100%; font-size: 11.5px; color: var(--tv3-gold-deep, #8a6d1d);
+  flex-basis: 100%; font-size: 11.5px; color: var(--tv3-gold-deep, #0e7490);
   background: var(--tv3-gold-soft); border-radius: 8px; padding: 4px 10px;
 }
 .tv3-prep__notes {
@@ -949,7 +949,7 @@ async function doPush() {
 }
 .tv3-prep__upload {
   margin: 10px 14px 14px; padding: 12px 14px; border-radius: 12px;
-  background: var(--tv3-gold-soft); border: 1px dashed var(--tv3-gold, #c99735);
+  background: var(--tv3-gold-soft); border: 1px dashed var(--tv3-gold, #0891b2);
   display: flex; flex-direction: column; gap: 10px;
 }
 .tv3-prep__reports { display: flex; flex-direction: column; gap: 6px; }
@@ -960,7 +960,7 @@ async function doPush() {
 .tv3-prep__report.is-rec { border-color: var(--tv3-teal-border, #0e9488); box-shadow: 0 0 0 1px var(--tv3-teal-border, #0e9488); }
 .tv3-prep__photo {
   grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 8px 12px;
-  border-radius: 10px; background: var(--tv3-bg2); border: 1px dashed var(--tv3-gold, #c99735);
+  border-radius: 10px; background: var(--tv3-bg2); border: 1px dashed var(--tv3-gold, #0891b2);
 }
 .tv3-prep__photo-thumb { max-height: 64px; max-width: 120px; border-radius: 6px; border: 1px solid var(--tv3-line); }
 .tv3-prep__photo-meta { display: flex; flex-direction: column; align-items: flex-start; }
@@ -970,7 +970,7 @@ async function doPush() {
   min-width: 220px; min-height: 120px; border: 1px dashed var(--tv3-line); border-radius: 10px;
   cursor: pointer; padding: 8px;
 }
-.tv3-range { width: 100%; accent-color: var(--tv3-gold, #c99735); }
+.tv3-range { width: 100%; accent-color: var(--tv3-gold, #0891b2); }
 .tv3-push__panel--photo { width: 720px; }
 .tv3-push {
   position: fixed; inset: 0; z-index: 120; background: rgba(10, 30, 58, 0.45);

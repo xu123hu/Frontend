@@ -171,18 +171,18 @@ onMounted(async () => {
 <style scoped>
 .tv3-brief {
   background: #fff; border: 1.5px solid var(--tv3-ai-border, #c9d7f2); border-radius: var(--tv3-radius-lg, 16px);
-  box-shadow: 0 10px 30px rgba(15, 71, 135, 0.08); padding: 16px 18px 12px; margin-bottom: 14px;
+  box-shadow: 0 10px 30px rgba(79, 70, 229, 0.08); padding: 16px 18px 12px; margin-bottom: 14px;
 }
 .tv3-brief__head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
 .tv3-brief__slogan { font-size: 12.5px; color: var(--tv3-ink2); }
-.tv3-brief__slogan b { color: var(--tv3-primary, #0f4787); }
+.tv3-brief__slogan b { color: var(--tv3-primary, #4f46e5); }
 .tv3-brief__input {
   width: 100%; box-sizing: border-box; resize: vertical; min-height: 56px;
   border: 1.5px solid var(--tv3-line); border-radius: 12px; padding: 10px 12px;
   font-size: 13.5px; line-height: 1.6; font-family: inherit; color: var(--tv3-ink); outline: none;
   background: #fbfcfe;
 }
-.tv3-brief__input:focus { border-color: var(--tv3-primary, #0f4787); background: #fff; }
+.tv3-brief__input:focus { border-color: var(--tv3-primary, #4f46e5); background: #fff; }
 .tv3-brief__slots { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .tv3-brief__slot {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -198,7 +198,7 @@ onMounted(async () => {
   border: 1px solid var(--tv3-line); background: #fff; border-radius: 999px; padding: 3px 12px;
   font-size: 12px; cursor: pointer; color: var(--tv3-ink2);
 }
-.tv3-brief__type.is-on { border-color: var(--tv3-primary, #0f4787); background: rgba(15, 71, 135, 0.08); color: var(--tv3-primary, #0f4787); font-weight: 700; }
+.tv3-brief__type.is-on { border-color: var(--tv3-primary, #4f46e5); background: rgba(79, 70, 229, 0.08); color: var(--tv3-primary, #4f46e5); font-weight: 700; }
 .tv3-brief__tpls { display: flex; gap: 6px; flex-wrap: wrap; }
 .tv3-brief__tpl {
   display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--tv3-line); background: #fff;

@@ -808,10 +808,10 @@ onBeforeUnmount(() => {
 }
 .rc-intent.is-on {
   border-color: var(--tv3-navy);
-  background: linear-gradient(135deg, #0f4787, #1a5aa8);
+  background: linear-gradient(135deg, #4f46e5, #1a5aa8);
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 3px 10px rgba(15, 71, 135, 0.25);
+  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.25);
 }
 .rc-intent__icon {
   font-size: 13px;
@@ -849,7 +849,7 @@ onBeforeUnmount(() => {
 .rc-search__input:focus {
   border-color: var(--tv3-navy);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(15, 71, 135, 0.08);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
 }
 .rc-search__clear {
   position: absolute;
@@ -903,7 +903,7 @@ onBeforeUnmount(() => {
   background: linear-gradient(180deg, var(--tv3-gold-soft), #fff);
   color: var(--tv3-ink);
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(201, 151, 53, 0.12);
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.12);
 }
 .rc-tab__label {
   font-size: 11.5px;
@@ -1005,7 +1005,7 @@ onBeforeUnmount(() => {
 }
 .rc-card:hover {
   border-color: var(--tv3-primary-border);
-  box-shadow: 0 4px 16px rgba(15, 71, 135, 0.1);
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.1);
   transform: translateY(-1px);
 }
 .rc-card__head {
@@ -1029,8 +1029,8 @@ onBeforeUnmount(() => {
   padding: 1px 6px;
 }
 .rc-kind[data-kind='question'] {
-  color: #0f4787;
-  border-color: #9dc3ea;
+  color: #4f46e5;
+  border-color: #a5b4fc;
   background: #eef4fb;
 }
 .rc-kind[data-kind='video'] {
@@ -1110,7 +1110,7 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 6px;
   font-size: 11px;
-  color: #8a6d1d;
+  color: #0e7490;
   background: var(--tv3-gold-soft, #fdf8ec);
   border-radius: 8px;
   padding: 6px 10px;
@@ -1516,16 +1516,16 @@ onBeforeUnmount(() => {
   border-color: var(--tv3-line);
 }
 .rc-btn--primary {
-  background: linear-gradient(135deg, #0f4787, #1a5aa8);
-  border-color: #0f4787;
+  background: linear-gradient(135deg, #4f46e5, #1a5aa8);
+  border-color: #4f46e5;
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(15, 71, 135, 0.2);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
 }
 .rc-btn--primary:hover {
-  background: linear-gradient(135deg, #1a5aa8, #0f4787);
+  background: linear-gradient(135deg, #1a5aa8, #4f46e5);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(15, 71, 135, 0.3);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
   transform: translateY(-1px);
 }
 .rc-btn--primary:active {

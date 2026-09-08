@@ -706,11 +706,11 @@ watch(() => props.visible, (v) => {
 @keyframes aip-pulse {
   0%, 100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 rgba(15, 71, 135, 0.5);
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.5);
   }
   50% {
     opacity: 0.7;
-    box-shadow: 0 0 0 6px rgba(15, 71, 135, 0);
+    box-shadow: 0 0 0 6px rgba(79, 70, 229, 0);
   }
 }
 
@@ -1020,7 +1020,7 @@ watch(() => props.visible, (v) => {
   border-radius: 999px;
   background: linear-gradient(90deg, var(--tv3-gold), var(--tv3-gold-deep));
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 4px rgba(201, 151, 53, 0.3);
+  box-shadow: 0 1px 4px rgba(6, 182, 212, 0.3);
   position: relative;
   overflow: hidden;
 }
@@ -1222,11 +1222,11 @@ watch(() => props.visible, (v) => {
   border-color: var(--tv3-gold);
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(201, 151, 53, 0.25);
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.25);
 }
 
 .aip-btn--primary:hover {
-  box-shadow: 0 4px 14px rgba(201, 151, 53, 0.35);
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
   color: #fff;
 }
 

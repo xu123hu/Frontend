@@ -496,7 +496,7 @@ function readFile(f: File) {
     .catch(() => { dragHint.value = '上传失败，请重选图片' })
 }
 function useSample() {
-  scanSrc.value = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="180" height="80"><rect x="2" y="2" width="176" height="76" fill="#fbfaf6" stroke="#0f4787"/><text x="10" y="24" font-size="13" fill="#0f4787">过椭圆 x²/4+y²/3=1 右焦点 F 作倾斜角 60° 的直线 l，</text><text x="10" y="46" font-size="13" fill="#0f4787">交椭圆于 A、B，求 |AB|。</text><polygon points="120,60 150,60 160,72 130,72" fill="#dbe7f5" stroke="#c97"/></svg>'
+  scanSrc.value = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="180" height="80"><rect x="2" y="2" width="176" height="76" fill="#f8fafc" stroke="#4f46e5"/><text x="10" y="24" font-size="13" fill="#4f46e5">过椭圆 x²/4+y²/3=1 右焦点 F 作倾斜角 60° 的直线 l，</text><text x="10" y="46" font-size="13" fill="#4f46e5">交椭圆于 A、B，求 |AB|。</text><polygon points="120,60 150,60 160,72 130,72" fill="#e0e7ff" stroke="#c97"/></svg>'
   dragHint.value = '已载入示例原图'
 }
 async function doScanImport() {
@@ -571,7 +571,7 @@ async function runSuggest() {
   position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%;
   border: none; cursor: pointer; background: var(--tv3-rose, #e5484d); color: #fff; font-size: 11px;
   line-height: 1; display: grid; place-items: center; opacity: 0;
-  box-shadow: 0 1px 3px rgba(10, 53, 104, .18); transition: opacity .12s ease;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, .18); transition: opacity .12s ease;
 }
 .tv3-paper__q:hover .tv3-paper__del { opacity: 1; }
 .tv3-paper__qhead { display: flex; gap: 6px; font-size: 13.5px; }

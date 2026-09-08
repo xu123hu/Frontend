@@ -301,7 +301,7 @@ const _toastStore = useToastStore()
 function toastOf() { return _toastStore }
 let sseCtrl: { abort: () => void } | null = null
 
-const ERR_COLORS = ['#dc2646', '#b45309', '#7c3aed', '#0e9488', '#64748b', '#0f4787']
+const ERR_COLORS = ['#dc2646', '#b45309', '#7c3aed', '#0e9488', '#64748b', '#4f46e5']
 const PHOTO_BASE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 160"><rect width="300" height="160" fill="#fdfaf2"/>` +
   `<text x="16" y="30" font-family="KaiTi,serif" font-size="14" fill="#3a352c">解：f'(x)=3x²−6x=3x(x−2)</text>` +
@@ -490,10 +490,10 @@ function pushTierTask(tier: 'A' | 'B' | 'C') {
 .tv3-cluster__sample { display: flex; gap: 14px; padding: 10px; background: #fff; border: 1px solid var(--tv3-line2); border-radius: 10px; }
 .tv3-sample__photo { position: relative; width: 260px; flex-shrink: 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--tv3-gold-border); background: #fffdf6; }
 .tv3-sample__photo img { width: 100%; display: block; }
-.tv3-sample__region { position: absolute; border: 2px solid var(--tv3-gold); border-radius: 4px; box-shadow: 0 0 0 200px rgba(201, 151, 53, 0.08); pointer-events: none; }
+.tv3-sample__region { position: absolute; border: 2px solid var(--tv3-gold); border-radius: 4px; box-shadow: 0 0 0 200px rgba(6, 182, 212, 0.08); pointer-events: none; }
 .tv3-sample__name {
   position: absolute; left: 6px; top: 6px; font-size: 11px; font-weight: 700;
-  background: rgba(10, 53, 104, 0.82); color: #fff; border-radius: 6px; padding: 1px 8px;
+  background: rgba(79, 70, 229, 0.82); color: #fff; border-radius: 6px; padding: 1px 8px;
 }
 .tv3-sample__steps { flex: 1; min-width: 0; }
 .tv3-sample__step { display: flex; align-items: center; gap: 8px; padding: 4px 0; }

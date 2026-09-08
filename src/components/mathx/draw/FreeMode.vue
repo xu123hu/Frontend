@@ -218,7 +218,7 @@ const TOOLS: { id: Tool; icon: string; label: string; tip: string }[] = [
   { id: 'point', icon: '·', label: '点', tip: '点击画布放置点' },
   { id: 'text', icon: 'T', label: '文字', tip: '点击位置输入标注；双击已有文字可修改' },
 ]
-const COLORS = ['#0f4787', '#c99735', '#dc2646', '#0e9488', '#4a5568']
+const COLORS = ['#4f46e5', '#0891b2', '#dc2646', '#0e9488', '#4a5568']
 const WIDTHS = [
   { v: 2, label: '细', tip: '细线' },
   { v: 3, label: '中', tip: '中线' },
@@ -234,7 +234,7 @@ const SOLID_CHIP_IDS = [
 ]
 
 const tool = ref<Tool>('pen')
-const color = ref('#0f4787')
+const color = ref('#4f46e5')
 const penW = ref(3)
 const records = ref<V3DrawRecord[]>([...props.initialRecords])
 const selectedRecId = ref<string | null>(null)
@@ -391,8 +391,8 @@ function drawSelBox() {
     [x0 - pad, y1 + pad], [x1 + pad, y1 + pad], [x1 + pad, y0 - pad], [x0 - pad, y0 - pad],
   ]
   selBoxEls.push(board.create('polygon', corners, {
-    strokeColor: '#c99735', strokeWidth: 1.6, dash: 2,
-    fillColor: 'rgba(201,151,53,0.05)', fillOpacity: 1,
+    strokeColor: '#0891b2', strokeWidth: 1.6, dash: 2,
+    fillColor: 'rgba(6,182,212,0.05)', fillOpacity: 1,
     vertices: { visible: false }, highlight: false, fixed: true,
   }))
 }
@@ -535,7 +535,7 @@ function updatePolyPreview() {
     [...polyPts.value.map((p) => p[1]), polyPts.value[0][1]],
   ], { strokeColor: color.value, strokeWidth: penW.value, dash: 2, highlight: false, fixed: true }))
   for (const p of polyPts.value) {
-    polyPreviewEls.push(board.create('point', p, { size: 2, name: '', fillColor: '#c99735', strokeColor: '#c99735', fixed: true, highlight: false }))
+    polyPreviewEls.push(board.create('point', p, { size: 2, name: '', fillColor: '#0891b2', strokeColor: '#0891b2', fixed: true, highlight: false }))
   }
   board.update()
 }

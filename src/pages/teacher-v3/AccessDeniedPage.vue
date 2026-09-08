@@ -52,7 +52,7 @@ function relogin() {
   border-radius: 16px;
   padding: 40px 36px;
   text-align: center;
-  box-shadow: 0 8px 32px rgba(15, 71, 135, 0.08);
+  box-shadow: 0 8px 32px rgba(79, 70, 229, 0.08);
 }
 .tv3-denied__icon { font-size: 44px; margin-bottom: 14px; }
 .tv3-denied__title {
@@ -89,10 +89,10 @@ function relogin() {
   cursor: pointer;
   transition: all .15s ease;
 }
-.tv3-denied__btn:hover { border-color: #9dc3ea; color: #0f4787; }
+.tv3-denied__btn:hover { border-color: #a5b4fc; color: #4f46e5; }
 .tv3-denied__btn--primary {
-  background: linear-gradient(135deg, #0f4787, #1663b0);
-  border-color: #0f4787;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  border-color: #4f46e5;
   color: #fff;
   font-weight: 600;
 }

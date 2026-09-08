@@ -195,7 +195,7 @@ function fxSvg(elx: Extract<V3Element, { type: 'functionPlot' }>): string {
   const axisY = `<line x1="${xv(0)}" y1="0" x2="${xv(0)}" y2="${H}" stroke="#c3cad6" stroke-width="1"/>`
   const exprTex = renderLatex(elx.expr.replace(/^y\s*=/, 'y='), false)
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:100%">${axisX}${axisY}` +
-    `<path d="${d}" fill="none" stroke="#0f4787" stroke-width="2.4"/>` +
+    `<path d="${d}" fill="none" stroke="#4f46e5" stroke-width="2.4"/>` +
     `<text x="12" y="22" font-size="26" fill="#16233b" font-family="Cambria Math,Georgia,serif">${exprTex.replace(/<[^>]+>/g, (m) => m.includes('katex') ? '' : m) || elx.expr}</text></svg>`
 }
 
@@ -253,7 +253,7 @@ function onDrop(ev: DragEvent) {
 <style scoped>
 .v3sc {
   position: relative; background: #fff; border-radius: 6px; overflow: hidden;
-  box-shadow: 0 2px 10px rgba(10, 53, 104, 0.08); flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.08); flex-shrink: 0;
 }
 .v3sc--editable { cursor: default; }
 .v3sc__el { position: absolute; }

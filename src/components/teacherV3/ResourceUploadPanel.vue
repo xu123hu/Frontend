@@ -737,7 +737,7 @@ onBeforeUnmount(() => {
   background: var(--tv3-card, #fff);
   border: 1px solid var(--tv3-line, #e3e8f0);
   border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(10, 53, 104, 0.18);
+  box-shadow: 0 12px 40px rgba(79, 70, 229, 0.18);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -780,7 +780,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   padding: 12px 14px;
   border-bottom: 1px solid var(--tv3-line, #e3e8f0);
-  background: linear-gradient(135deg, var(--tv3-navy, #0a3568) 0%, var(--tv3-navy-mid, #0f4787) 100%);
+  background: linear-gradient(135deg, var(--tv3-navy, #3730a3) 0%, var(--tv3-navy-mid, #4f46e5) 100%);
   color: #fff;
   flex-shrink: 0;
 }
@@ -796,10 +796,10 @@ onBeforeUnmount(() => {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: rgba(201, 151, 53, 0.25);
+  background: rgba(6, 182, 212, 0.25);
   display: grid;
   place-items: center;
-  color: var(--tv3-gold, #c99735);
+  color: var(--tv3-gold, #0891b2);
   flex-shrink: 0;
 }
 
@@ -907,23 +907,23 @@ onBeforeUnmount(() => {
 }
 
 .rup-dropzone:hover {
-  border-color: var(--tv3-primary, #0f4787);
+  border-color: var(--tv3-primary, #4f46e5);
   background: var(--tv3-primary-soft, #eaf1fb);
 }
 
 .rup-dropzone.is-dragover {
-  border-color: var(--tv3-gold, #c99735);
-  background: var(--tv3-gold-soft, #fbf3de);
+  border-color: var(--tv3-gold, #0891b2);
+  background: var(--tv3-gold-soft, #cffafe);
   border-style: solid;
 }
 
 .rup-dropzone.is-dragover .rup-dropzone__icon {
   transform: scale(1.15);
-  color: var(--tv3-gold, #c99735);
+  color: var(--tv3-gold, #0891b2);
 }
 
 .rup-dropzone__icon {
-  color: var(--tv3-primary, #0f4787);
+  color: var(--tv3-primary, #4f46e5);
   margin-bottom: 10px;
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
 }
@@ -948,18 +948,18 @@ onBeforeUnmount(() => {
   padding: 7px 18px;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--tv3-gold, #c99735), var(--tv3-gold-deep, #a87b24));
+  background: linear-gradient(135deg, var(--tv3-gold, #0891b2), var(--tv3-gold-deep, #0e7490));
   color: #fff;
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(201, 151, 53, 0.3);
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
   transition: all 0.15s ease;
 }
 
 .rup-dropzone__btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(201, 151, 53, 0.4);
+  box-shadow: 0 6px 18px rgba(6, 182, 212, 0.4);
 }
 
 .rup-dropzone__btn:active {
@@ -1001,7 +1001,7 @@ onBeforeUnmount(() => {
 
 .rup-formats__link {
   font-size: 11px;
-  color: var(--tv3-primary, #0f4787);
+  color: var(--tv3-primary, #4f46e5);
   text-decoration: none;
 }
 
@@ -1130,8 +1130,8 @@ onBeforeUnmount(() => {
 }
 
 .rup-tasks__ctrl:hover:not(:disabled) {
-  border-color: var(--tv3-primary, #0f4787);
-  color: var(--tv3-primary, #0f4787);
+  border-color: var(--tv3-primary, #4f46e5);
+  color: var(--tv3-primary, #4f46e5);
 }
 
 .rup-tasks__ctrl:disabled {
@@ -1168,7 +1168,7 @@ onBeforeUnmount(() => {
 
 .rup-total__percent {
   font-weight: 700;
-  color: var(--tv3-primary, #0f4787);
+  color: var(--tv3-primary, #4f46e5);
 }
 
 .rup-total__eta {
@@ -1184,12 +1184,12 @@ onBeforeUnmount(() => {
 .rup-progress__bar {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--tv3-primary, #0f4787), #3b74cf);
+  background: linear-gradient(90deg, var(--tv3-primary, #4f46e5), #3b74cf);
   transition: width 0.3s ease;
 }
 
 .rup-progress__bar.is-gold {
-  background: linear-gradient(90deg, var(--tv3-gold, #c99735), #e5c05a);
+  background: linear-gradient(90deg, var(--tv3-gold, #0891b2), #e5c05a);
 }
 
 /* ========== 完成横幅 ========== */
@@ -1198,7 +1198,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: var(--tv3-gold-soft, #fbf3de);
+  background: var(--tv3-gold-soft, #cffafe);
   border-bottom: 1px solid var(--tv3-gold-border, #ecd9a8);
   font-size: 12px;
 }
@@ -1210,7 +1210,7 @@ onBeforeUnmount(() => {
 
 .rup-complete-banner__text {
   flex: 1;
-  color: var(--tv3-gold-deep, #a87b24);
+  color: var(--tv3-gold-deep, #0e7490);
 }
 
 .rup-complete-banner__text b {
@@ -1219,7 +1219,7 @@ onBeforeUnmount(() => {
 }
 
 .rup-complete-banner__link {
-  color: var(--tv3-gold-deep, #a87b24);
+  color: var(--tv3-gold-deep, #0e7490);
   font-weight: 600;
   text-decoration: none;
   font-size: 11.5px;
@@ -1319,16 +1319,16 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 
-.rup-file.is-uploading .rup-file__status-text { color: var(--tv3-primary, #0f4787); }
+.rup-file.is-uploading .rup-file__status-text { color: var(--tv3-primary, #4f46e5); }
 .rup-file.is-paused .rup-file__status-text { color: var(--tv3-slate, #64748b); }
 .rup-file.is-parsing .rup-file__status-text,
-.rup-file.is-uploaded .rup-file__status-text { color: var(--tv3-gold-deep, #a87b24); }
+.rup-file.is-uploaded .rup-file__status-text { color: var(--tv3-gold-deep, #0e7490); }
 .rup-file.is-done .rup-file__status-text { color: var(--tv3-teal, #0e9488); }
 .rup-file.is-failed .rup-file__status-text { color: var(--tv3-rose, #dc2646); }
 .rup-file.is-pending .rup-file__status-text { color: var(--tv3-ink3, #8b95a7); }
 
 .rup-file__speed {
-  color: var(--tv3-primary, #0f4787);
+  color: var(--tv3-primary, #4f46e5);
   font-weight: 500;
 }
 
@@ -1390,18 +1390,18 @@ onBeforeUnmount(() => {
 }
 
 .rup-file__op:hover {
-  border-color: var(--tv3-primary, #0f4787);
-  color: var(--tv3-primary, #0f4787);
+  border-color: var(--tv3-primary, #4f46e5);
+  color: var(--tv3-primary, #4f46e5);
 }
 
 .rup-file__op--primary {
-  border-color: var(--tv3-primary, #0f4787);
+  border-color: var(--tv3-primary, #4f46e5);
   background: var(--tv3-primary-soft, #eaf1fb);
-  color: var(--tv3-primary, #0f4787);
+  color: var(--tv3-primary, #4f46e5);
 }
 
 .rup-file__op--primary:hover {
-  background: var(--tv3-primary, #0f4787);
+  background: var(--tv3-primary, #4f46e5);
   color: #fff;
 }
 
@@ -1425,7 +1425,7 @@ onBeforeUnmount(() => {
   height: 24px;
   display: grid;
   place-items: center;
-  color: var(--tv3-gold, #c99735);
+  color: var(--tv3-gold, #0891b2);
   animation: rup-spin 3s linear infinite;
 }
 
@@ -1446,7 +1446,7 @@ onBeforeUnmount(() => {
 .rup-confirm-mask {
   position: absolute;
   inset: 0;
-  background: rgba(10, 53, 104, 0.4);
+  background: rgba(79, 70, 229, 0.4);
   display: grid;
   place-items: center;
   z-index: 10;
@@ -1458,7 +1458,7 @@ onBeforeUnmount(() => {
   background: var(--tv3-card, #fff);
   border-radius: 12px;
   padding: 18px;
-  box-shadow: 0 16px 48px rgba(10, 53, 104, 0.25);
+  box-shadow: 0 16px 48px rgba(79, 70, 229, 0.25);
 }
 
 .rup-confirm__title {

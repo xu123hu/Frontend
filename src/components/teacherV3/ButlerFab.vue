@@ -26,19 +26,19 @@ defineEmits<{ (e: 'toggle'): void }>()
 .tv3-butler-fab {
   position: fixed; right: 22px; bottom: 26px; z-index: 900;
   width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
-  background: linear-gradient(135deg, #0f4787, #123a6d);
+  background: linear-gradient(135deg, #4f46e5, #123a6d);
   color: #fff; display: grid; place-items: center; gap: 0;
-  box-shadow: 0 8px 24px rgba(15, 71, 135, 0.38);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.38);
   transition: transform .18s ease, box-shadow .18s ease;
   padding: 0;
 }
-.tv3-butler-fab:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 12px 30px rgba(15, 71, 135, 0.46); }
+.tv3-butler-fab:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 12px 30px rgba(79, 70, 229, 0.46); }
 .tv3-butler-fab__badge {
   font-family: Cambria Math, Georgia, serif; font-size: 26px; line-height: 1; font-weight: 600;
 }
 .tv3-butler-fab__label {
   position: absolute; bottom: 9px; right: 9px; font-size: 9px; font-weight: 700;
-  background: var(--tv3-gold, #c99735); color: #1c2b1a; border-radius: 999px; padding: 1px 5px; line-height: 1.3;
+  background: var(--tv3-gold, #0891b2); color: #1c2b1a; border-radius: 999px; padding: 1px 5px; line-height: 1.3;
 }
 .tv3-butler-fab__dot {
   position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; border-radius: 999px;
