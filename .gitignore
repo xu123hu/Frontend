@@ -38,3 +38,4 @@ research-repos/
 .learnings/
 public/math_q_*.png
 public/solution_hand.png
+.playwright-cli/
