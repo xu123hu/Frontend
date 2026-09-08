@@ -69,7 +69,7 @@ const statusColor = (s) => ({ ok: 'ok', auth: 'warn', error: 'err', down: 'err',
 const endpoints = computed(() => [
   { key: 'student', name: '学生端', sub: '对话 · 练题 · 错题复习', icon: '✎', href: '/dialog', allow: can('student'), statusKey: 'student', statusText: can('student') ? statusLabel(health.value.student) : '未授权', color: statusColor(health.value.student) },
   { key: 'teacher', name: '教师端', sub: '备课 · 课件 · 课堂 · 学情', icon: '§', href: '/teacher-v3/today', allow: can('teacher'), statusKey: 'teacher', statusText: can('teacher') ? statusLabel(health.value.teacher) : '未授权', color: statusColor(health.value.teacher) },
-  { key: 'research', name: '科研端', sub: '项目 · 文献 · 验证 · 写作', icon: 'ƒ', href: '/hub/research', allow: true, statusKey: 'research', statusText: '独立身份', color: 'mute', iso: true },
+  { key: 'research', name: '科研端', sub: '项目 · 文献 · 验证 · 写作', icon: 'ƒ', href: '/research-app/', allow: true, statusKey: 'research', statusText: '同源已接入', color: 'ok', mount: true },
   { key: 'admin', name: '管理后台', sub: '用户 · 任务 · 模型 · 数据', icon: '▤', href: '/admin/overview', allow: can('admin'), statusKey: 'platform', statusText: can('admin') ? `平台 ${statusLabel(health.value.platform)}` : '未授权', color: can('admin') ? statusColor(health.value.platform) : 'mute' },
 ])
 
@@ -86,7 +86,7 @@ async function onSwitchRole(role) {
 }
 
 function onGo(e) {
-  if (e.iso) return // 科研端走独立入口
+  if (e.mount) { location.assign(e.href); return }
   if (!e.allow) { errorMsg.value = `当前账号尚未获得「${e.name}」权限，请到个人中心申请身份认证。`; return }
   // 管理后台等要求 active 角色一致：先切身份再进入（独立审查/第0关：权限必须真实）
   if (e.key === 'admin' && activeRole.value !== 'admin') {
@@ -156,7 +156,7 @@ onMounted(() => {
           </div>
           <h2 class="hub-card__title">{{ e.name }}</h2>
           <p class="hub-card__sub">{{ e.sub }}</p>
-          <div v-if="e.iso" class="hub-card__iso">独立 OIDC 身份 · 见科研端说明</div>
+          <div v-if="e.mount" class="hub-card__iso">与主平台同源 · 已接入统一入口</div>
           <div v-else-if="!e.allow" class="hub-card__iso">当前账号未授权该端</div>
           <span class="hub-card__go">进入 →</span>
         </article>
@@ -190,7 +190,7 @@ onMounted(() => {
 
         <div class="hub-row">
           <span class="hub-row__label">科研运行中心（独立身份）</span>
-          <button class="hub-btn hub-btn--quiet" type="button" @click="router.push('/hub/research')">打开展示 →</button>
+          <button class="hub-btn hub-btn--quiet" type="button" @click="location.assign('/research-app/')">打开展示 →</button>
         </div>
 
         <div v-if="can('admin')" class="hub-row">
