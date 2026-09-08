@@ -94,4 +94,7 @@ function statusZh(s) {
 .de-r-dot.failed { background: var(--err, #dc2626); }
 .de-r-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink, #0f172a); }
 .de-r-meta { color: var(--ink3, #94a3b8); font-size: 12px; }
+
+/* 容器页：隐藏子页面的内部 greeting（容器已提供页头上下文） */
+:deep(.view > .greeting) { display: none; }
 </style>

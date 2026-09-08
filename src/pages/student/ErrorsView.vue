@@ -1,14 +1,23 @@
 <template>
   <div class="view">
-    <div class="greeting">
-      <div class="hello">{{ nickname }}的错题本 · {{ totalErrors }} 道 · <span style="color:var(--warn-deep);">{{ dueTotal }} 道</span> 今天到期</div>
-      <div class="sub">快忘的题自动排最前面提醒你复习；还没到期的不用刷——过早复习是浪费时间。</div>
-    </div>
-
-
-<!-- 错题闪卡复习（OpenTutor 同款：3D 翻牌 + 四档评分，沉浸式浮层） -->
-    <div v-if="!flashcardMode && (listTotal > 0 || dueTotal > 0)" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="secondary" @click="flashcardMode = true">🎴 错题闪卡复习<template v-if="dueTotal > 0"> · 今日 {{ dueTotal }} 张到期</template></button>
+    <!-- S5 v3：竞品式错题本头部（统计三卡 + 主操作行） -->
+    <div class="err-stats">
+      <div class="es-card">
+        <div class="es-num">{{ totalErrors }}</div>
+        <div class="es-lbl">全部错题</div>
+      </div>
+      <div class="es-card warn">
+        <div class="es-num">{{ dueTotal }}</div>
+        <div class="es-lbl">今天该复习</div>
+      </div>
+      <div class="es-card ok">
+        <div class="es-num">{{ masteredCount }}</div>
+        <div class="es-lbl">记得较牢</div>
+      </div>
+      <div class="es-ops">
+        <button class="es-primary" @click="manualOpen = true">📷 拍错题入本</button>
+        <button v-if="!flashcardMode && (listTotal > 0 || dueTotal > 0)" class="es-ghost" @click="flashcardMode = true">🎴 闪卡复习<template v-if="dueTotal > 0"> · {{ dueTotal }} 张到期</template></button>
+      </div>
     </div>
 
     <FlashcardReview v-if="flashcardMode" @close="onFcClose" />
@@ -118,9 +127,12 @@
             <div v-if="(detail.image && detail.image.length) || photoUrl" class="q-fig">
               <DynamicFigureViewer :items="figItems" :label="'题目配图'" :height="300" />
             </div>
-            <button v-if="detail" class="secondary" style="margin-top:10px;display:block;" @click="genDynamicFigure" :disabled="figBusy">
-              {{ figBusy ? '⏳ AI 生成动态图形中…' : (hasGgb ? '🔄 重新生成动态图形' : '🔍 生成动态图形（可拖动/旋转/缩放）') }}
-            </button>
+            <template v-if="detail && figureEligible">
+              <button class="secondary" style="margin-top:10px;display:block;" @click="genDynamicFigure" :disabled="figBusy">
+                {{ figBusy ? '⏳ AI 生成动态图形中…' : (hasGgb ? '🔄 重新生成动态图形' : '🔍 生成动态图形（可拖动/旋转/缩放）') }}
+              </button>
+              <div v-if="figFailNote" style="font-size:11.5px;color:var(--warn-deep,#92400e);margin-top:6px;">⚠ {{ figFailNote }}</div>
+            </template>
             <h5>正解
               <span v-if="detailFullLoading" class="text-muted text-xs" style="font-weight:400;">(正解加载中…)</span>
               <span v-else-if="detailFull?.cached" class="text-muted text-xs" style="font-weight:400;">(已缓存，秒开)</span>
@@ -325,6 +337,18 @@ const listLoading = ref(true)
 const listError = ref('')
 const totalErrors = ref(0)
 const kpOptions = ref([])
+// S5 v3：统计三卡数据
+const masteredCount = computed(() => {
+  // 记得较牢 = 当前列表中记忆保持率 ≥90% 的题（诚实口径：只数当前可见数据）
+  try {
+    return (listItems.value || []).filter((r) => (r.retrievability ?? 0) >= 0.9).length
+  } catch { return 0 }
+})
+// 动态演示门控：仅函数/立体几何/圆锥曲线类题显示按钮（其余题型没有可动画化的图形对象）
+const figureEligible = computed(() => {
+  const s = `${detail.value?.question_text || ''}${detail.value?.kp_code || ''}`
+  return /函数|导数|椭圆|双曲线|抛物线|圆锥|几何|三角形|棱|圆|抛物|单调|极值|切线|轨迹/.test(s)
+})
 // B5（V2 文档）：题库父码→中文名（存量父码错题在 knowledge_points 无行，前端映射）
 const KP_ZH = { analytic: '解析几何', derivative: '导数与单调性', function: '函数', trig: '三角函数',
   sequence: '数列', probability: '概率统计', geometry: '立体几何', exponential: '指数对数',
@@ -344,17 +368,22 @@ const figItems = computed(() => {
 const hasGgb = computed(() =>
   Array.isArray(detail.value?.image) && detail.value.image.some((e) => e && typeof e === 'object' && e.type === 'ggb')
 )
+const figFailNote = ref('')
 async function genDynamicFigure() {
   if (!detail.value || figBusy.value) return
+  figFailNote.value = ''
   figBusy.value = true
   try {
     const data = await api.post(`/student/error-records/${detail.value.record_id}/figure`)
     if (data?.ggb) {
       toast.success(data.generated ? '动态图形已生成，可拖动/旋转/缩放 🎉' : '已展示动态图形')
       await openDetail(detail.value.record_id, selectedSeq.value)
+    } else {
+      // S5 v3：生成不出时的降级说明（不静默、不用假图凑数）
+      figFailNote.value = '这道题暂时生成不出可交互图形（AI 未能从题面构造出可靠的图形对象）——原题图与解析不受影响，可继续复习'
     }
   } catch (e) {
-    toast.error(`动态图形生成失败：${e?.message || '请稍后重试'}（可继续用静态图复习）`)
+    figFailNote.value = `动态图形生成失败（${e?.message || 'AI 通道波动'}）——原题图与解析不受影响，稍后可再试`
   } finally {
     figBusy.value = false
   }
@@ -812,4 +841,28 @@ onMounted(() => {
 .errors-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
 @media (max-width: 1100px) { .errors-split { grid-template-columns: 1fr; } }
 .errors-right { position: sticky; top: calc(var(--topbar-h, 60px) + 12px); max-height: calc(100vh - var(--topbar-h, 60px) - 24px); overflow-y: auto; }
+
+/* S5 v3：统计三卡 + 主操作行 */
+.err-stats { display: flex; gap: 12px; align-items: stretch; margin-bottom: 14px; flex-wrap: wrap; }
+.es-card {
+  min-width: 118px; padding: 12px 18px; background: var(--card, #fff);
+  border: 1px solid var(--line, #e2e8f0); border-radius: 14px; text-align: center;
+}
+.es-card.warn { border-color: var(--warn-border, #fde68a); background: #fffbeb; }
+.es-card.ok { border-color: var(--ok-border, #a7f3d0); background: #ecfdf5; }
+.es-num { font-size: 24px; font-weight: 900; font-family: var(--font-num, Inter); color: var(--ink, #0f172a); }
+.es-card.warn .es-num { color: var(--warn-deep, #92400e); }
+.es-card.ok .es-num { color: var(--ok-deep, #047857); }
+.es-lbl { font-size: 11.5px; color: var(--ink3, #94a3b8); font-weight: 700; margin-top: 2px; }
+.es-ops { margin-left: auto; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+.es-primary {
+  padding: 10px 22px; border-radius: 12px; border: none; cursor: pointer;
+  background: var(--gradient-brand, linear-gradient(135deg, #4f46e5, #06b6d4)); color: #fff;
+  font: inherit; font-size: 13.5px; font-weight: 800;
+}
+.es-ghost {
+  padding: 9px 18px; border-radius: 12px; border: 1px solid var(--line, #e2e8f0);
+  background: var(--card, #fff); font: inherit; font-size: 12.5px; font-weight: 700; color: var(--ink2, #475569); cursor: pointer;
+}
+.es-ghost:hover { border-color: var(--primary-border, #c7d2fe); color: var(--primary, #4f46e5); }
 </style>

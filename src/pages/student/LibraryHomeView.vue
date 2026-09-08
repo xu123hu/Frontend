@@ -40,4 +40,7 @@ watch(() => route.query.tab, (t) => { if (valid.includes(t)) tab.value = t })
   transition: all .18s ease;
 }
 .lib-tabs button.active { background: var(--primary-subtle); border-color: var(--primary-border); color: var(--primary); }
+
+/* 容器页：隐藏子页面的内部 greeting（容器已提供页头上下文） */
+:deep(.view > .greeting) { display: none; }
 </style>

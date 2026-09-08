@@ -77,6 +77,7 @@
           <option>易 30% / 中 50% / 难 20%</option>
           <option>只做易题 (焦虑友好)</option>
         </select>
+        <button class="start-btn" style="margin-left:auto;padding:8px 20px;" :disabled="starting" @click="start">{{ starting ? '出题中…' : '▶ 开始训练' }}</button>
       </div>
     </div>
 
