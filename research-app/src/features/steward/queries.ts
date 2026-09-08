@@ -7,7 +7,8 @@
 import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 import { useQuery, useMutation, useQueryClient, type UseQueryReturnType } from '@tanstack/vue-query';
 import { ApiError } from '@app/api/client';
-import { decideApproval, fetchApprovals, fetchCycleResult, fetchStewardPlan, fetchStewardPlans, sendStewardChat, startResearchCycle } from './api';
+import { decideApproval, decideHypothesis, fetchApprovals, fetchCycleResult, fetchProjectHypotheses, fetchStewardPlan, fetchStewardPlans, generateProjectHypotheses, sendStewardChat, startResearchCycle } from './api';
+import type { StewardHypothesis } from './api';
 import type { StewardChatMessage, StewardChatResponse } from './api';
 import type { ApprovalView, ResearchCycleResult, StewardPlan } from '@entities/steward/types';
 
@@ -17,6 +18,7 @@ export const stewardKeys = {
   plan: (runId: string) => [...stewardKeys.all, 'plan', runId] as const,
   approvals: () => [...stewardKeys.all, 'approvals'] as const,
   cycleResult: (runId: string) => [...stewardKeys.all, 'cycle-result', runId] as const,
+  hypotheses: (projectId: string) => [...stewardKeys.all, 'hypotheses', projectId] as const,
 };
 
 export function useStewardPlans(): UseQueryReturnType<StewardPlan[], Error> {
@@ -98,5 +100,41 @@ export function useStartResearchCycle() {
 export function useStewardChat() {
   return useMutation<StewardChatResponse, Error, { messages: StewardChatMessage[]; reasoningPolicyId?: StewardChatResponse['reasoning_policy_id'] }>({
     mutationFn: ({ messages, reasoningPolicyId }) => sendStewardChat(messages, reasoningPolicyId ?? 'standard'),
+  });
+}
+
+
+/** 真存储的候选假设（S3 假设证据链的数据源；live 后端提供，MSW 演示模式 404 → 错误态诚实显示）。 */
+export function useProjectHypotheses(projectId: MaybeRefOrGetter<string>): UseQueryReturnType<StewardHypothesis[], Error> {
+  return useQuery({
+    queryKey: computed(() => stewardKeys.hypotheses(toValue(projectId) || '__none__')),
+    queryFn: ({ signal }) => {
+      const id = toValue(projectId);
+      return id ? fetchProjectHypotheses(id, signal) : Promise.resolve<StewardHypothesis[]>([]);
+    },
+    enabled: computed(() => !!toValue(projectId)),
+  });
+}
+
+/** AI 生成候选假设：真模型调用（讯飞 Spark），产出入库并失效列表。 */
+export function useGenerateHypotheses() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: string) => generateProjectHypotheses(projectId),
+    onSuccess: (_data, projectId) => {
+      void queryClient.invalidateQueries({ queryKey: stewardKeys.hypotheses(projectId) });
+    },
+  });
+}
+
+/** 人工确认/驳回候选假设（AI 产出必须经人工确认，不直接生效）。 */
+export function useDecideHypothesis() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ hypothesisId, approved }: { hypothesisId: string; approved: boolean }) =>
+      decideHypothesis(hypothesisId, approved),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [...stewardKeys.all, 'hypotheses'] });
+    },
   });
 }

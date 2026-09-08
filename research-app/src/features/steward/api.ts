@@ -71,3 +71,36 @@ export function startResearchCycle(researchQuestion: string): Promise<RunAccepte
     body: { run_type: 'research_cycle', reasoning_policy_id: 'rigorous', research_question: researchQuestion },
   }).then((e) => e.data);
 }
+
+/** 真存储的候选假设（platform.hypotheses；live 由 /steward/projects/:id/hypotheses 提供）。 */
+export interface StewardHypothesis {
+  id: string;
+  statement: string;
+  status: string;
+  source: string;
+  rationale?: string;
+  confirmed: boolean | null;
+  created_at?: string;
+}
+
+export function fetchProjectHypotheses(projectId: string, signal?: AbortSignal): Promise<StewardHypothesis[]> {
+  return apiRequest<{ items: StewardHypothesis[] }>(
+    `/steward/projects/${encodeURIComponent(projectId)}/hypotheses`,
+    { signal },
+  ).then((e) => e.data.items);
+}
+
+/** AI 生成候选假设：真模型调用 + 落库，产出为提案（待人工确认，不直接生效）。 */
+export function generateProjectHypotheses(projectId: string): Promise<{ items: StewardHypothesis[] }> {
+  return apiRequest<{ items: StewardHypothesis[] }>(
+    `/steward/projects/${encodeURIComponent(projectId)}/hypotheses/generate`,
+    { method: 'POST', body: {} },
+  ).then((e) => e.data);
+}
+
+export function decideHypothesis(hypothesisId: string, approved: boolean): Promise<StewardHypothesis> {
+  return apiRequest<StewardHypothesis>(
+    `/steward/hypotheses/${encodeURIComponent(hypothesisId)}/decide`,
+    { method: 'POST', body: { approved } },
+  ).then((e) => e.data);
+}
