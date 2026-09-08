@@ -321,7 +321,10 @@ function onDrop(e) {
   dragOver.value = false
   if (chat.streaming.value) return
   const files = [...(e.dataTransfer?.files || [])]
-  if (files.length) upload.addFiles(files, { purpose: 'chat_attachment' })
+  if (files.length) {
+    const hasImg = files.some((f) => /^image\//.test(f.type || ''))
+    upload.addFiles(files, { purpose: hasImg ? 'question_photo' : 'chat_attachment' })
+  }
 }
 
 /* ===== 发送 ===== */
@@ -333,7 +336,10 @@ function onSend(text) {
       localUrl: t?.file && a.kind === 'image' ? URL.createObjectURL(t.file) : '',
     }
   })
-  chat.doSend(text, { attachments: atts, displayText: text, skillKeys: [...skillStore.activeKeys] })
+  const attachmentTexts = atts
+    .map((a) => (upload.tasks || []).find((t) => t.fileId === a.file_id)?.ocrText || '')
+    .filter(Boolean)
+  chat.doSend(text, { attachments: atts, attachmentTexts, displayText: text, skillKeys: [...skillStore.activeKeys] })
   if (atts.length) upload.clearSent()
 }
 

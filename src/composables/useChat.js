@@ -323,6 +323,7 @@ export function useChat({
   /* ===== 发送与 SSE ===== */
   async function doSend(text, {
     attachments = [],
+    attachmentTexts = [],
     clientMsgId = '',
     tutorAction = '',
     replaceKey = '',
@@ -365,6 +366,7 @@ export function useChat({
         ...(skillIds.length ? { skills: skillIds } : {}),
         ...(sendThinking ? { thinking: thinkingOn.value } : {}),
         ...(optedIn ? { web_search_opt_in: true } : {}),
+        ...(attachmentTexts.length ? { attachment_texts: attachmentTexts } : {}),
       },
       ...(activeConvId.value ? { conversation_id: activeConvId.value } : {}),
       ...(attachments.length ? { attachments: attachments.map(({ file_id, kind }) => ({ file_id, kind })) } : {}),

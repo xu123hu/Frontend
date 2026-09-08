@@ -253,6 +253,17 @@ export function useFileUpload(toast) {
       if (d.status === 'parsed') {
         task.status = 'parsed'
         task.engine = d.parse_engine || ''
+        // P0（用户实测）：把解析文本带回给对话发送链——图片题的识别内容必须到模型手里
+        try {
+          const assets = d.assets || []
+          task.ocrText = assets
+            .filter((a) => a.asset_type === 'markdown' || a.asset_type === 'text')
+            .sort((x, y) => (x.page_no || 0) - (y.page_no || 0))
+            .map((a) => a.content || '')
+            .join('
+')
+            .trim()
+        } catch { task.ocrText = '' }
         scheduleKnowledgeIngest(task, d) // 上传即入库（S2/S4 链路）：静默进行，不阻断发送
       } else if (d.status === 'failed') {
         task.status = 'failed'
