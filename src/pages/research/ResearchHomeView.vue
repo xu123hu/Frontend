@@ -18,6 +18,22 @@
         <span>↗ 上传即解析入知识库</span><i>·</i>
         <span>⌗ AI 回答带页码与来源</span>
       </div>
+
+      <!-- 提问即解答：首页内联 AI 问答 -->
+      <div v-if="ask.open" class="re-ask-card" data-testid="rs-home-ask">
+        <div class="re-ask-q">Q：{{ ask.question }}</div>
+        <p :class="{ 're-ai-cursor': ask.streaming }">{{ ask.answer || (ask.streaming ? '正在结合知识库作答…' : '') }}</p>
+        <div v-if="ask.sources.length" class="re-source-proof">
+          <strong>回答依据（知识库 / 联网候选）</strong>
+          <div v-for="(s, i) in ask.sources" :key="i">{{ s.cite }} · 《{{ s.title }}》{{ s.method ? ' · 检索:' + s.method : '' }}</div>
+        </div>
+        <div v-if="ask.error" class="re-error" style="margin-top:8px">{{ ask.error }}</div>
+        <div class="re-ask-actions">
+          <button class="re-btn sm" :disabled="ask.streaming" @click="streamAsk(ask.question)">重新提问</button>
+          <button class="re-btn sm" data-testid="rs-ask-search" :disabled="ask.streaming" @click="searchInLibrary(ask.question)">在文献库中搜索「{{ (ask.question||'').slice(0,14) }}{{ (ask.question||'').length>14?'…':'' }}」</button>
+          <button v-if="ask.streaming" class="re-btn sm" @click="abortAsk()">停止</button>
+        </div>
+      </div>
     </div>
 
     <div class="re-shortcuts">
@@ -101,15 +117,20 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useResearchStore } from '@/stores/research'
+import { researchAiApi } from '@/api/researchEnd'
 
 const router = useRouter()
 const auth = useAuthStore()
 const rstore = useResearchStore()
 const promptText = ref('')
+
+// 首页内联 AI 问答（输入问题即解答，知识库引用回源）
+const ask = reactive({ open: false, question: '', answer: '', sources: [], streaming: false, error: '' })
+let askStream = null
 
 const summary = computed(() => rstore.summary)
 const loading = computed(() => !rstore.summaryLoaded)
@@ -154,14 +175,44 @@ function openPaper(p) { router.push(`/research/reader/${p.id}`) }
 
 function onPromptSubmit() {
   const v = promptText.value.trim()
-  if (!v) { router.push('/research/library'); return }
+  if (!v) return
   if (/^10\.\d{4,9}\//.test(v) || /^https?:\/\//i.test(v)) { router.push('/research/import'); return }
-  router.push({ path: '/research/library', query: { q: v } })
+  // 普通问题 → 首页内联 AI 解答（不会再跳去搜索）
+  streamAsk(v)
+  promptText.value = ''
 }
+
+function streamAsk(q) {
+  abortAsk()
+  ask.open = true
+  ask.question = q
+  ask.answer = ''
+  ask.sources = []
+  ask.error = ''
+  ask.streaming = true
+  askStream = researchAiApi.chat({ message: q, context: {}, history: [] }, {
+    onEvent: (ev, data) => {
+      if (ev === 'source') ask.sources.push(data)
+      else if (ev === 'token') ask.answer += data.text
+      else if (ev === 'done') ask.streaming = false
+      else if (ev === 'error') { ask.streaming = false; ask.error = data.message || 'AI 不可用' }
+    },
+  })
+  askStream.finished.catch(() => { if (ask.streaming) { ask.streaming = false } })
+}
+function abortAsk() { if (askStream) { try { askStream.abort() } catch { } } askStream = null }
+function searchInLibrary(q) { router.push({ path: '/research/library', query: { q } }) }
 
 onMounted(() => rstore.fetchSummary())
 </script>
 
 <style scoped>
 .re-link { color: #405de4; font-size: 12px; cursor: pointer; }
+.re-ask-card {
+  max-width: 760px; margin: 18px auto 0; background: #fff; border: 1px solid var(--re-line, #dfe8f4);
+  border-radius: 16px; padding: 16px 18px; text-align: left; box-shadow: var(--re-shadow, 0 8px 24px #9fb9d515);
+}
+.re-ask-q { font-size: 13px; font-weight: 600; color: var(--re-ink, #0d1830); margin-bottom: 8px; }
+.re-ask-card p { font-size: 13px; line-height: 1.75; color: #33415c; margin: 0; white-space: pre-wrap; word-break: break-word; }
+.re-ask-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 </style>
