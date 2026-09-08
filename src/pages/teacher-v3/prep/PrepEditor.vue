@@ -104,6 +104,12 @@
                     <div v-if="s.goal" class="ped-step__kv"><small>环节目标</small><p v-html="renderRich(s.goal)" /></div>
                     <div v-if="s.teacher" class="ped-step__kv"><small>教师活动</small><p v-html="renderRich(s.teacher)" /></div>
                     <div v-if="s.student" class="ped-step__kv"><small>学生活动</small><p v-html="renderRich(s.student)" /></div>
+                    <div v-if="retrievalOf(s.id).key_points?.length" class="ped-retrieval">
+                      <div class="ped-retrieval__tag">📚 本环节检索要点 · 资料依据</div>
+                      <p v-for="(kp, ki) in retrievalOf(s.id).key_points" :key="ki" class="ped-retrieval__kp" v-html="renderRich(kp)" />
+                      <p v-if="retrievalOf(s.id).formula_hint" class="ped-retrieval__hint">公式提示：<span v-html="renderRich(retrievalOf(s.id).formula_hint as string)" /></p>
+                      <p v-if="retrievalOf(s.id).source_note" class="ped-retrieval__src">{{ retrievalOf(s.id).source_note }}</p>
+                    </div>
                   </template>
                   <!-- P2：环节预配资源（题目=题库匹配 / 公式·图形=演示） -->
                   <div v-if="resOf(s.id).questions.length || resOf(s.id).formulas.length || resOf(s.id).figure" class="poc-res">
@@ -277,6 +283,12 @@ const sections = computed<{ id: string; name: string; minutes: number; goal: str
   }
   return (chain.outline?.sections || []).map((s) => ({ id: s.id, name: s.name, minutes: s.minutes, goal: s.goal, teacher_activity: '', student_activity: '' }))
 })
+
+/** 检索要点透出（独立审查 #4）：本环节的资料检索要点/公式提示/溯源 */
+function retrievalOf(id: string) {
+  const found = plan.value?.sections?.find((s: any) => s.id === id)
+  return (found?.retrieval || {}) as { key_points?: string[]; formula_hint?: string; source_note?: string }
+}
 const totalMinutes = computed(() => sections.value.reduce((a, s) => a + s.minutes, 0) || chain.outline?.total_minutes || 45)
 const blackboardSrc = computed(() => chain.outline?.blackboard || { main: ['板书设计待生成'], side: ['例题演板'] })
 const homeworkSrc = computed(() => chain.outline?.homework || [{ tier: 'basic', label: '基础题（必做）', items: ['待生成'], minutes: '预计 10 分钟' } as never])
@@ -535,4 +547,10 @@ onMounted(async () => {
 .ped-input { display: flex; align-items: center; gap: 8px; margin: 0 14px 14px; padding: 7px 9px; border: 1px solid var(--ailp-gray-200); border-radius: 12px; background: rgba(248, 250, 252, 0.7); }
 .ped-input input { flex: 1; border: none; outline: none; background: none; font-size: 12px; }
 .ped-input__send { width: 30px; height: 30px; border-radius: 9px; border: none; color: #fff; cursor: pointer; background: linear-gradient(135deg, var(--ailp-primary-500), var(--ailp-accent-500)); font-size: 12px; }
+/* 检索要点透出（独立审查 #4）：资料依据可视化 */
+.ped-retrieval { margin-top: 10px; border: 1px dashed var(--ailp-primary-200); background: var(--ailp-primary-50); border-radius: 9px; padding: 9px 12px; }
+.ped-retrieval__tag { font-size: 11px; font-weight: 600; color: var(--ailp-primary-600); margin-bottom: 6px; }
+.ped-retrieval__kp { margin: 3px 0; font-size: 13px; color: var(--ailp-gray-800); }
+.ped-retrieval__hint { margin: 5px 0 2px; font-size: 12px; color: var(--ailp-accent-600); }
+.ped-retrieval__src { margin: 2px 0 0; font-size: 11px; color: var(--ailp-gray-500); }
 </style>

@@ -321,6 +321,12 @@ export interface V3PlanSection {
     src: string
     filled?: boolean
   }
+  /** 检索要点透出（独立审查 #4）：资料检索的本课要点/公式提示/溯源，未检索为 undefined */
+  retrieval?: {
+    key_points?: string[]
+    formula_hint?: string
+    source_note?: string
+  }
 }
 
 export interface V3LessonPlan {
