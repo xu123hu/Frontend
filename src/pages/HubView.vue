@@ -88,7 +88,21 @@ async function onSwitchRole(role) {
 function onGo(e) {
   if (e.iso) return // 科研端走独立入口
   if (!e.allow) { errorMsg.value = `当前账号尚未获得「${e.name}」权限，请到个人中心申请身份认证。`; return }
+  // 管理后台等要求 active 角色一致：先切身份再进入（独立审查/第0关：权限必须真实）
+  if (e.key === 'admin' && activeRole.value !== 'admin') {
+    switchRoleAndGo('admin', '/admin/overview')
+    return
+  }
   router.push(e.href)
+}
+
+async function switchRoleAndGo(role, path) {
+  try {
+    await auth.switchRole(role)
+    router.push(path)
+  } catch (err) {
+    errorMsg.value = '切换身份失败：' + (err?.message || '未知错误')
+  }
 }
 
 function onLogout() {
