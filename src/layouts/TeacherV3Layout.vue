@@ -47,6 +47,9 @@
             </div>
           </div>
         </div>
+        <button class="tv3-btn tv3-btn--sm tv3-hub-entry" type="button" data-testid="tv3-hub-entry" @click="router.push('/hub')">
+          统一入口
+        </button>
         <div class="tv3-teacher-chip">
           <div class="tv3-teacher-chip__avatar">{{ teacherInitial }}</div>
           <div class="tv3-teacher-chip__meta">
@@ -85,7 +88,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import {
   BookOutline, ClipboardOutline, EaselOutline,
@@ -102,6 +105,7 @@ import type { V3DrawInsert } from '@/components/mathx/draw/drawCore'
 import type { V3Task } from '@/types/teacherV3'
 
 const route = useRoute()
+const router = useRouter()
 const taskOpen = ref(false)
 const tasks = ref<V3Task[]>([])
 let timer: number | undefined

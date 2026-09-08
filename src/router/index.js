@@ -35,6 +35,9 @@ const routes = [
   { path: '/onboarding/student', component: () => import('@/pages/StudentOnboarding.vue'), meta: { authFlow: true } },
   { path: '/identity/apply', component: () => import('@/pages/RoleApplication.vue'), meta: { authFlow: true } },
   { path: '/identity/pending', component: () => import('@/pages/PendingReview.vue'), meta: { authFlow: true } },
+  // 统一工作入口（三端汇聚；科研端为独立身份体系，见 /hub/research 说明）
+  { path: '/hub', name: 'hub', component: () => import('@/pages/HubView.vue'), meta: { authFlow: true, title: '统一工作入口' } },
+  { path: '/hub/research', name: 'hub-research', component: () => import('@/pages/research/ResearchWorkspace.vue'), meta: { authFlow: true, title: '科研端入口' } },
   { path: '/account/security', component: () => import('@/pages/AccountSecurity.vue'), meta: { authFlow: true } },
   { path: '/admin/identity/applications', component: () => import('@/pages/admin/AdminIdentityReview.vue'), meta: { authFlow: true, admin: true, requiresRole: 'admin' } },
   { path: '/research', component: () => import('@/pages/research/ResearchWorkspace.vue'), meta: { authFlow: true, research: true, requiresRole: 'researcher' } },

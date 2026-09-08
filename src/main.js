@@ -7,6 +7,7 @@ import { resolveMockStartupIdentity, resolveMockUser } from './config/mockIdenti
 import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/github-dark.css'
 import './styles/tokens.css'
+import './styles/editorial.css'
 import './styles/base.css'
 import './styles/v4.css'
 import './styles/teacher-v3.css'

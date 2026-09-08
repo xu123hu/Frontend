@@ -26,6 +26,7 @@
             title="切换到教师端"
             @click="switchToTeacher"
           >教师端</button>
+          <button class="topbar-btn topbar-btn--hub" type="button" title="统一工作入口" @click="router.push('/hub')">统一入口</button>
           <router-link to="/profile" class="user-chip" title="点击进入个人中心">
             <div class="avatar">{{ avatarChar }}</div>
             <div class="text">
