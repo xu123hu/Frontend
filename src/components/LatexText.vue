@@ -39,7 +39,8 @@ const BARE_TEX_REPLACEMENTS = [
 ]
 
 function renderPlainText(value) {
-  let result = escapeHtml(value)
+  // S11：课堂分层练习等场景用 \( \) 定界——归一为可读形式（先转 $..$ 走 KaTeX 的链路不需要，此管线直接剥壳）
+  let result = escapeHtml(String(value || '').replace(/\\\((.+?)\\\)/g, '$1'))
   for (const [pattern, replacement] of BARE_TEX_REPLACEMENTS) result = result.replace(pattern, replacement)
   // Keep a malformed or uncommon command readable without exposing source syntax.
   return result.replace(/\\([A-Za-z]+)/g, '$1')

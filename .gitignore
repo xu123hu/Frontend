@@ -36,3 +36,5 @@ research-repos/
 
 # agent self-learning notes (not product source)
 .learnings/
+public/math_q_*.png
+public/solution_hand.png
