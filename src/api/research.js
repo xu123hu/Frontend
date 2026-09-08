@@ -1,25 +1,15 @@
 /**
  * 科研端 API 模块
- * 后端不可用时自动降级到本地 mock 数据
+ * 诚实原则（2026-09-08 独立审查 #5）：不再静默降级到本地 mock。
+ * 科研端真实实现位于独立应用（:5173），统一入口见 /hub/research。
+ * 旧 /research/* 页面已收敛为入口重定向；此模块保留给既有调用方，失败即抛出，
+ * 由页面呈现真实错误态，绝不回填假数据冒充科研成果。
  */
 import { api } from './client'
-import { researchMock } from '@/mock/researchData'
 
-// Mock 降级辅助函数：后端任何异常（404/500/网络错误/解析失败）都返回 mock 数据
-async function safeCall(fetcher, mockFn, mockDelay = 300) {
-  try {
-    return await fetcher()
-  } catch (e) {
-    // 开发环境：后端不可用时静默降级到 mock
-    // 错误码匹配：404（接口不存在）、5xx（服务端错误）、0/空（网络失败）
-    const status = e?.status || e?.code
-    const shouldFallback = !status || status === 404 || status >= 500 || e?.message?.includes('解析')
-    if (shouldFallback) {
-      await new Promise(r => setTimeout(r, mockDelay))
-      return mockFn()
-    }
-    throw e
-  }
+// 失败透传：任何后端异常（404/500/网络错误）直接抛出，由调用方处理；不返回 mock
+async function safeCall(fetcher) {
+  return await fetcher()
 }
 
 /* ===== 项目管理 /api/research/projects ===== */

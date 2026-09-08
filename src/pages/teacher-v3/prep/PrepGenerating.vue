@@ -31,6 +31,11 @@
             </div>
           </div>
           <div class="pgn-eta">⏱ 预计还需 <b>{{ remaining }}</b> 秒（演示计时）</div>
+          <div v-if="errorMsg" class="pgn-error" role="alert">
+            <p>{{ errorMsg }}</p>
+            <button type="button" class="ailp-btn-primary" @click="retry">重新生成</button>
+            <button type="button" class="ailp-btn-ghost" @click="$router.back()">返回修改备课信息</button>
+          </div>
         </div>
       </div>
     </div>
@@ -58,15 +63,19 @@ const STEPS = [
 ]
 const current = ref(0)
 const remaining = ref(10)
+const errorMsg = ref('')
 let timer: number | undefined
 let etaTimer: number | undefined
 let done = false
+let reqPromise: Promise<any> | null = null
 
 const stepCls = (i: number) => (i < current.value ? 'completed' : i === current.value ? 'current' : 'pending')
 
-onMounted(async () => {
-  /* 真实请求与演示进度并行：outline 返回后随进度走完进入确认页 */
-  const req = (async () => {
+/** 调用真实大纲接口；失败/空结果如实报错，绝不回填空演示大纲冒充成功（独立审查 #2c） */
+function runOutline(): Promise<any> {
+  errorMsg.value = ''
+  if (reqPromise) return reqPromise
+  reqPromise = (async () => {
     try {
       const r = await v3Api.generation.planOutline({
         topic: chain.brief?.topic || '未命名备课',
@@ -80,30 +89,37 @@ onMounted(async () => {
         extra_requirements: chain.brief?.requirements.join('；'),
         example_source: 'bank',
       } as any)
-      return r.data
+      const data = r.data
+      if (!data || !Array.isArray(data.sections) || data.sections.length === 0) {
+        errorMsg.value = '教案大纲生成失败，请重试或返回修改备课信息。'
+        return null
+      }
+      setOutline({
+        topic: data.topic, duration: data.duration, sections: data.sections as any, total_minutes: data.total_minutes,
+        notes: data.notes || [], objectives: data.objectives, keypoints: data.keypoints,
+        blackboard: data.blackboard, homework: data.homework,
+      })
+      return data
     } catch {
+      errorMsg.value = '教案大纲生成失败，请重试或返回修改备课信息。'
       return null
     }
   })()
+  return reqPromise
+}
 
+function retry() {
+  reqPromise = null
+  errorMsg.value = ''
+  current.value = 0
+  remaining.value = 10
+  runOutline()
+}
+
+onMounted(() => {
+  runOutline()
   timer = window.setInterval(() => {
     if (current.value < STEPS.length - 1) current.value += 1
-    else if (!done) {
-      done = true
-      window.clearInterval(timer)
-      window.clearInterval(etaTimer)
-      void req.then((data) => {
-        const d = (data || {
-          topic: chain.brief?.topic, duration: chain.brief?.duration || 45, total_minutes: 45,
-          sections: [], notes: ['mock 未启动：已回退演示大纲'],
-        }) as any
-        setOutline({
-          topic: d.topic, duration: d.duration, sections: d.sections || [], total_minutes: d.total_minutes,
-          notes: d.notes || [], objectives: d.objectives, keypoints: d.keypoints,
-          blackboard: d.blackboard, homework: d.homework,
-        })
-      })
-    }
   }, 1100)
   etaTimer = window.setInterval(() => { if (remaining.value > 0) remaining.value -= 1 }, 1000)
 })
@@ -144,4 +160,8 @@ void computed
 .pgn-step__bar i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent); background-size: 200% 100%; animation: ailp-shimmer 1.8s linear infinite; }
 .pgn-eta { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--ailp-gray-200); text-align: center; font-size: 12.5px; color: var(--ailp-gray-500); }
 .pgn-eta b { color: var(--ailp-primary-600); }
+.pgn-error { margin-top: 14px; padding: 12px 14px; border: 1px solid #f3c4b9; background: #fdf0ec; border-radius: 8px; }
+.pgn-error p { margin: 0 0 10px; color: #9c3a28; font-size: 13px; }
+.pgn-error .ailp-btn-ghost { margin-left: 10px; border: 1px solid #d4d4d8; background: #fff; color: #333; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.pgn-error .ailp-btn-primary { cursor: pointer; font-size: 13px; }
 </style>

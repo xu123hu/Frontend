@@ -162,3 +162,13 @@ body {
   justify-content: center; border-radius: 50%; background: rgba(255,255,255,.15);
 }
 .md-lightbox .lb-close:hover { background: rgba(255,255,255,.3); }
+
+/* === 数学长公式横向溢出兜底（独立审查 六·1）：KaTeX display 公式可横向滚动，不被右缘裁掉 === */
+.md-body .katex-display,
+.md-body .katex { max-width: 100%; }
+.md-body .katex-display,
+.md-body .katex-display > .katex { overflow-x: auto; overflow-y: hidden; }
+.md-body .katex-display { padding: 2px 0 2px 0; }
+@media (min-width: 769px) {
+  .md-body .katex-display { white-space: normal; }
+}
