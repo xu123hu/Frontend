@@ -1,7 +1,18 @@
 ﻿import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import ResearchLayout from '@app/layouts/ResearchLayout.vue';
+import { config } from '@app/config';
 import { useSessionStore } from '@app/stores/session';
 import { useSession } from '@features/auth/use-session';
+
+/** 三端统一登录：把科研路由深链转成带 base 的完整浏览器路径（平台登录后直达）。 */
+function platformLoginUrl(redirect?: string): string {
+  const url = new URL('/login', window.location.origin);
+  if (redirect && redirect.startsWith('/research')) {
+    const withBase = `${import.meta.env.BASE_URL}research${redirect.replace(/^\/research/, '')}`;
+    url.searchParams.set('redirect', withBase);
+  }
+  return url.toString();
+}
 
 /**
  * 路由表严格对应提示词"六个一级入口" + 登录 + 个人中心 + NotFound。
@@ -114,18 +125,25 @@ export const router = createRouter({
 
 router.beforeEach(async (to) => {
   const session = useSessionStore();
-  if (to.meta.public) {
-    // 已认证访问登录页 → 回首页（TC-F01-01 反向）
-    if (session.isAuthenticated) return { name: 'home' };
-    return true;
-  }
+  // 三端统一平台登录（真实部署）：未认证访问科研深链 → 整页直达平台 /login，
+  // 不再经过科研自己的登录过渡页。
+  const platformDeploy = config.identityMode === 'platform' && !config.useMock;
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     if (session.status === 'probing') {
       await useSession().probeSession();
     }
     if (!session.isAuthenticated) {
+      if (platformDeploy) {
+        window.location.assign(platformLoginUrl(to.fullPath));
+        return false;
+      }
       return { name: 'login', query: { redirect: to.fullPath } };
     }
+  }
+  if (to.meta.public) {
+    // 已认证访问登录页 → 回首页（TC-F01-01 反向）
+    if (session.isAuthenticated) return { name: 'home' };
+    return true;
   }
   return true;
 });

@@ -43,6 +43,11 @@ onMounted(() => {
   }
   // 已认证由守卫跳转；此处仅负责探测降级横幅。
   void session.probeSession();
+
+  // 三端统一平台登录（真实部署）：本页不再展示登录 UI，直接整页转发平台登录页。
+  if (config.identityMode === 'platform' && !config.useMock) {
+    goPlatformLogin();
+  }
 });
 
 // 平台统一登录完成回跳：平台登录页在当前页设置了会话 cookie，探测结束后自动进入工作台。
