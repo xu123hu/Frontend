@@ -67,7 +67,8 @@ const auth = useAuthStore()
 const toast = useToastStore()
 const uid = computed(() => auth.user?.id || auth.user?.user_id || '')
 
-const tab = ref('textbook') // textbook | questions（题库列表 v1 复用同文档源，purpose=questions 分轨）
+const props = defineProps({ initialTab: { type: String, default: 'textbook' } })
+const tab = ref(props.initialTab === 'questions' ? 'questions' : 'textbook') // textbook | questions
 const docs = ref([])
 const loading = ref(false)
 const loadError = ref('')

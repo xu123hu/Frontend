@@ -47,8 +47,9 @@
         </button>
       </div>
 
+      <!-- 第二轮布局重构：导航 13→6（V2 文档 §6 强制） -->
       <div
-        v-for="item in coreNav" :key="item.key"
+        v-for="item in mainNav" :key="item.key"
         class="nav-item" :class="{ active: isActive(item) }" :data-tip="item.name"
         @click="go(item)"
       >
@@ -58,34 +59,6 @@
         <span v-else-if="item.new" class="new">{{ item.new }}</span>
       </div>
 
-      <h4>考试 & 班级</h4>
-      <div
-        v-for="item in examNav" :key="item.key"
-        class="nav-item" :class="{ active: isActive(item) }" :data-tip="item.name"
-        @click="go(item)"
-      >
-        <span class="icon">{{ item.icon }}</span>
-        <span class="txt">{{ item.name }}</span>
-        <span v-if="item.badge" class="badge" :style="item.badgeStyle">{{ item.badge }}</span>
-        <span v-else-if="item.new" class="new">{{ item.new }}</span>
-      </div>
-
-      <div class="group-toggle" :class="{ collapsed: !labOpen }" data-tip="实验室" @click="toggleLab">
-        <span class="arr">▼</span><span>实验室</span>
-        <span style="margin-left:auto;font-size:10px;background:var(--bg2);padding:1px 6px;border-radius:99px;">{{ labNavVisible.length }}</span>
-      </div>
-      <template v-if="labOpen">
-        <div
-          v-for="item in labNavVisible" :key="item.key"
-          class="nav-item" :class="{ active: isActive(item) }" :data-tip="item.name"
-          @click="go(item)"
-        >
-          <span class="icon">{{ item.icon }}</span>
-          <span class="txt">{{ item.name }}</span>
-          <span v-if="item.new" class="new">{{ item.new }}</span>
-          <span v-else-if="item.unconfigured" style="margin-left:auto;font-size:9.5px;color:var(--ink3);">未配置</span>
-        </div>
-      </template>
 
       <!-- ===== 下半区：对话历史（仅在 /dialog 路由显示 + 折叠时隐藏） ===== -->
       <div v-if="!collapsed && isDialogRoute" v-show="!collapsed && isDialogRoute" class="sb-convs">
@@ -104,24 +77,6 @@
         />
       </div>
 
-      <div class="progress-card">
-        <div class="lbl">本周综合分</div>
-        <template v-if="overviewError">
-          <div class="val" style="font-size:14px;color:var(--ink3);">加载失败</div>
-          <div class="sub">学情数据暂时不可用</div>
-        </template>
-        <template v-else-if="!overview">
-          <div class="val" style="font-size:14px;color:var(--ink3);">加载中…</div>
-        </template>
-        <template v-else-if="!overview.composite_score">
-          <div class="val">--</div>
-          <div class="sub">完成首次测评后生成综合分</div>
-        </template>
-        <template v-else>
-          <div class="val">{{ overview.score_delta_week >= 0 ? '+' : '' }}{{ overview.score_delta_week }}<span style="font-size:13px;color:var(--ink2);">分</span></div>
-          <div class="sub">从 {{ overview.last_week_score }} → {{ overview.composite_score }}<br/>距期末目标 {{ overview.target_score }} 还差 <b>{{ Math.max(overview.target_score - overview.composite_score, 0) }} 分</b></div>
-        </template>
-      </div>
     </aside>
 
     <!-- ===== 主内容区（折叠时自动占满剩余宽度） ===== -->
@@ -178,35 +133,15 @@ function toggleLab() {
   localStorage.setItem('ma_lab_open', labOpen.value ? '1' : '0')
 }
 
-const coreNav = [
-  { key: 'overview', icon: '🏠', name: '学情总览', to: '/overview' },
-  { key: 'dialog', icon: '💬', name: '对话学习', to: '/dialog', badge: '1' },
-  { key: 'practice', icon: '🎯', name: '练题中心', to: '/practice', badge: '沉浸', badgeStyle: { background: 'var(--brand)' } },
-  { key: 'errors', icon: '📕', name: '错题本', to: '/errors', badge: '3' },
-  { key: 'kb', icon: '📚', name: '知识库', to: '/kb' },
-  { key: 'report', icon: '📈', name: '学情报告', to: '/report' },
-  { key: 'graph', icon: '🧠', name: '知识图谱', to: '/graph' },
+// 第二轮布局重构：导航 13→6（学情总览删/报告+图谱入"我的"/模拟考入练题/班级任务入课堂/资源入知识库）
+const mainNav = [
+  { key: 'home', icon: '🏠', name: '首页', to: '/dialog', badge: '1' },
+  { key: 'practice', icon: '✏️', name: '练题', to: '/practice', badge: '沉浸', badgeStyle: { background: 'var(--brand)' } },
+  { key: 'errors', icon: '📕', name: '错题', to: '/errors', badge: '3' },
+  { key: 'library', icon: '📚', name: '知识库', to: '/library' },
+  { key: 'classroom', icon: '🎓', name: '课堂', to: '/classroom' },
+  { key: 'me', icon: '👤', name: '我的', to: '/me' },
 ]
-const examNav = [
-  { key: 'exam', icon: '📝', name: '模拟考试', to: '/exam', new: 'NEW' },
-  { key: 'class', icon: '🏫', name: '我的班级', to: '/class', new: 'NEW' },
-  { key: 'tasks', icon: '📋', name: '课堂任务', to: '/tasks', new: 'NEW' },
-]
-const labNav = [
-  { key: 'dual', icon: '🎬', name: '双师课堂', to: '/dual', new: 'NEW' },
-  { key: 'resource', icon: '📚', name: '资源推荐', to: '/resource', new: 'NEW' },
-  { key: 'memories', icon: '🗂️', name: '记忆管理', to: '', unconfigured: true },
-  { key: 'voice', icon: '🎙️', name: '语音讲解', to: '', unconfigured: true },
-  { key: 'visual', icon: '📈', name: '可视化讲解', to: '/dialog', new: 'NEW' },
-  { key: 'derive', icon: '✅', name: '推导检查', to: '', unconfigured: true },
-  { key: 'replay', icon: '🔁', name: '课堂回溯', to: '', unconfigured: true },
-  { key: 'resource2', icon: '📖', name: '资源推荐', to: '', unconfigured: true },
-  { key: 'daily', icon: '👣', name: '每日任务', to: '', unconfigured: true },
-  { key: 'guest', icon: '🧪', name: '游客演示', to: '', unconfigured: true },
-]
-
-// S14：未配置占位项对学生隐藏（功能冗余清理；重复的"资源推荐"占位随之消失）
-const labNavVisible = labNav.filter((item) => !item.unconfigured)
 
 const isActive = (item) => route.path === item.to || (item.to && route.path.startsWith(item.to + '/'))
 

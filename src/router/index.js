@@ -3,23 +3,28 @@ import { useAuthStore } from '@/stores/auth'
 
 const studentMeta = (title) => ({ title, requiresRole: 'student' })
 const studentRoutes = [
-  { path: '/overview', component: () => import('@/pages/student/OverviewView.vue'), meta: studentMeta('学情总览') },
-  { path: '/dialog', component: () => import('@/pages/student/DialogView.vue'), meta: studentMeta('对话学习') },
-  { path: '/dialog/:id?', component: () => import('@/pages/student/DialogView.vue'), meta: studentMeta('对话学习') },
-  { path: '/practice', component: () => import('@/pages/student/PracticeView.vue'), meta: studentMeta('练题中心') },
-  { path: '/errors', component: () => import('@/pages/student/ErrorsView.vue'), meta: studentMeta('错题本') },
-  { path: '/kb', component: () => import('@/pages/student/KnowledgeView.vue'), meta: studentMeta('知识库') },
-  { path: '/report', component: () => import('@/pages/student/ReportView.vue'), meta: studentMeta('学情报告') },
-  { path: '/graph', component: () => import('@/pages/student/GraphView.vue'), meta: studentMeta('知识图谱') },
-  { path: '/exam', component: () => import('@/pages/student/ExamView.vue'), meta: studentMeta('模拟考试') },
-  { path: '/exam/:id', component: () => import('@/pages/student/ExamPaperView.vue'), meta: studentMeta('模拟考试') },
-  { path: '/class', component: () => import('@/pages/student/ClassView.vue'), meta: studentMeta('我的班级') },
-  { path: '/tasks', component: () => import('@/pages/student/TasksView.vue'), meta: studentMeta('课堂任务') },
+  // ===== 第二轮布局重构：6 大入口 + 旧地址全量重定向（V2 文档 §6 强制） =====
+  { path: '/dialog', component: () => import('@/pages/student/DialogView.vue'), meta: studentMeta('首页 · 对话学习') },
+  { path: '/dialog/:id?', component: () => import('@/pages/student/DialogView.vue'), meta: studentMeta('首页 · 对话学习') },
+  { path: '/practice', component: () => import('@/pages/student/PracticeView.vue'), meta: studentMeta('练题') },
+  { path: '/errors', component: () => import('@/pages/student/ErrorsView.vue'), meta: studentMeta('错题') },
+  { path: '/library', component: () => import('@/pages/student/LibraryHomeView.vue'), meta: studentMeta('知识库') },
+  { path: '/classroom', component: () => import('@/pages/student/ClassroomHomeView.vue'), meta: studentMeta('课堂') },
+  { path: '/me', component: () => import('@/pages/student/MeView.vue'), meta: studentMeta('我的') },
+  { path: '/exam/:id', component: () => import('@/pages/student/ExamPaperView.vue'), meta: studentMeta('模考作答') },
   { path: '/tasks/:id', component: () => import('@/pages/student/AssignmentView.vue'), meta: studentMeta('作业作答') },
   { path: '/dual', component: () => import('@/pages/student/DualView.vue'), meta: { ...studentMeta('双师课堂'), immersive: true } },
   { path: '/dual/:sessionId', component: () => import('@/pages/student/DualView.vue'), meta: { ...studentMeta('双师课堂'), immersive: true } },
-  { path: '/resource', component: () => import('@/pages/student/ResourceView.vue'), meta: studentMeta('资源推荐') },
-  { path: '/profile', component: () => import('@/pages/student/ProfileView.vue'), meta: studentMeta('个人中心') },
+  // 旧地址重定向（兼容历史深链与已发出的通知/作业路由）
+  { path: '/overview', redirect: '/me?tab=report' },
+  { path: '/report', redirect: '/me?tab=report' },
+  { path: '/graph', redirect: '/me?tab=graph' },
+  { path: '/profile', redirect: '/me?tab=profile' },
+  { path: '/exam', redirect: '/practice?tab=exam' },
+  { path: '/resource', redirect: '/library?tab=resources' },
+  { path: '/kb', redirect: '/library?tab=materials' },
+  { path: '/class', redirect: '/classroom?tab=class' },
+  { path: '/tasks', redirect: '/classroom?tab=tasks' },
 ]
 
 const routes = [
