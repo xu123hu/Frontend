@@ -110,6 +110,11 @@ export const researchAiApi = {
   selection: (payload, { onEvent, signal } = {}) =>
     streamChat(payload, { path: `/api${ai}/selection`, onEvent, signal }),
   webCandidates: (body) => api.post(`${ai}/search-candidates`, body),
+  // 对话记忆会话
+  sessions: () => api.get(`${ai}/sessions`),
+  createSession: (body) => api.post(`${ai}/sessions`, body || {}),
+  deleteSession: (id) => api.delete(`${ai}/sessions/${id}`),
+  sessionMessages: (id) => api.get(`${ai}/sessions/${id}/messages`),
 }
 
 // ---------------- 任务中心 ----------------
