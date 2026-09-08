@@ -232,7 +232,7 @@ describe('ButlerPanel 对话流', () => {
     const card = w.find('[data-testid="tv3-butler-card-formula"]')
     expect(card.html()).toContain('katex')
     expect(card.attributes('draggable')).toBe('true')
-    expect(card.text()).toContain('解析候选（演示）') // B0：不再显示伪造的精确置信度
+    expect(card.text()).toContain('解析候选') // B0：不再显示伪造的精确置信度（诚实化后文案=“解析候选”+“未打开课件”小按钮）
     expect(w.emitted('activity')).toBeTruthy()
   })
 
