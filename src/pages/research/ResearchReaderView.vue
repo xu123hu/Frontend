@@ -74,7 +74,7 @@
           <!-- canvas 常驻（v-show），避免 v-else-if 时序导致 ref 为 null -->
           <div class="re-pdf-page" v-show="pdf">
             <canvas ref="canvasRef"></canvas>
-            <div ref="textLayerRef" class="re-text-layer"></div>
+            <div ref="textLayerRef" class="re-text-layer textLayer"></div>
           </div>
           <div v-if="!pdf && !pdfError && !loading" class="re-empty"><div class="re-empty-icon">📄</div><p v-if="paper && !paper.has_pdf">该论文暂无 PDF 附件（仅元数据）。
             <br><button class="re-btn sm" style="margin-top:8px" @click="router.push('/research/library')">返回文献库</button></p></div>
@@ -177,6 +177,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getDocument, GlobalWorkerOptions, TextLayer } from 'pdfjs-dist'
+import 'pdfjs-dist/web/pdf_viewer.css' // 文本层官方样式：span 透明、按字形对齐（消除与 canvas 的重影/叠字）
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { researchLibraryApi, researchReaderApi, researchKbApi, researchAiApi } from '@/api/researchEnd'
 import { useToastStore } from '@/stores/toast'
@@ -440,7 +441,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .tiny { font-size: 11px; color: #9aa7b8; }
 .re-pdf-page { position: relative; }
-.re-text-layer { position: absolute; inset: 0; text-align: initial; opacity: 0.5; }
+.re-text-layer { position: absolute; inset: 0; text-align: initial; }
 .re-text-layer ::selection { background: rgba(69,104,231,0.28); }
 .re-kb-state { background: #f5f8fc; border: 1px solid #e7edf5; border-radius: 10px; padding: 12px; display: grid; gap: 8px; }
 .re-bibtex { font-size: 10px; background: #f5f8fc; border-radius: 6px; padding: 8px; margin-top: 8px; white-space: pre-wrap; overflow-x: auto; color: #5a6b85; }
