@@ -56,7 +56,12 @@ const mode = ref('sms'); const phone = ref(''); const code = ref(''); const pass
 const challengeId = ref(''); const remember = ref(false); const loading = ref(false); const error = ref('')
 const preferredRole = ref('student')
 const lastPhone = ref(''); const accountExists = ref(null)
-onMounted(() => { try { lastPhone.value = localStorage.getItem(LAST_PHONE_KEY) || '' } catch { lastPhone.value = '' } })
+onMounted(() => {
+  try { lastPhone.value = localStorage.getItem(LAST_PHONE_KEY) || '' } catch { lastPhone.value = '' }
+  // 科研端深链（/research 或 /research-app/…）直达：默认选中"科研端"身份，用户无需手动切换
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  if (redirect.startsWith('/research')) preferredRole.value = 'researcher'
+})
 watch(phone, () => { accountExists.value = null })
 const phoneError = computed(() => phone.value && !/^1[3-9]\d{9}$/.test(phone.value) ? '请输入有效的 11 位手机号' : '')
 const phoneMismatch = computed(() => /^1[3-9]\d{9}$/.test(phone.value) && lastPhone.value !== '' && phone.value !== lastPhone.value)
@@ -100,6 +105,9 @@ async function submit() {
     const destination = data.onboarding_required && activeRole === 'student'
         ? '/onboarding/student'
         : redirectFor(activeRole)
+    // 科研端深链：整页跳转（location.assign）直达 5176/research-app/… 科研应用；
+    // 平台 SPA 的 vue-router 不承载 /research-app 路径，SPA push 会被 catch-all 吞掉。
+    if (destination.startsWith('/research')) { window.location.assign(destination); return }
     await router.push(destination)
   } catch (value) { showError(value) } finally { loading.value = false }
 }
