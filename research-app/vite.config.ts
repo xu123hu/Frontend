@@ -15,6 +15,9 @@ export default defineConfig(({ mode, command }) => {
 
   return {
     plugins: [vue()],
+    // 统一入口集成：科研端挂载到主平台同源 /research-app/（静态构建产物由主前端服务）
+    // 独立开发（:5173）与主平台挂载共用同一 base，rest 一律相对 base 或 window.location
+    base: '/research-app/',
     define: {
       __USE_MOCK__: JSON.stringify(useMock),
     },
@@ -77,6 +80,12 @@ export default defineConfig(({ mode, command }) => {
         '/api/research/v1': {
           target: env.VITE_BACKEND_PROXY_TARGET || 'http://127.0.0.1:18010',
           changeOrigin: true,
+        },
+        // 统一入口 base 前缀（/research-app/）下的 API：独立 5173 与挂载同构
+        '/research-app/api/research/v1': {
+          target: env.VITE_BACKEND_PROXY_TARGET || 'http://127.0.0.1:18010',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/research-app/, ''),
         },
       },
     },

@@ -41,7 +41,8 @@ export function resolveAppConfig(
   const oidcIssuer = rawIssuer ? rawIssuer.replace(/\/+$/, '') : null;
   const oidcClientId = rawClientId || null;
   return {
-    apiBaseUrl: typeof env.VITE_API_BASE_URL === 'string' ? env.VITE_API_BASE_URL : '/api/research/v1',
+    apiBaseUrl: (import.meta.env.BASE_URL && import.meta.env.BASE_URL !== '/'
+      ? import.meta.env.BASE_URL.replace(/\/$/, '') + '/' : '/') + 'api/research/v1',
     useMock,
     runtimeMode,
     appName: '智学数研 · 科研端',

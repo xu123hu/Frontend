@@ -48,6 +48,11 @@ export async function sha256Base64Url(plain: string): Promise<string> {
   return base64UrlEncode(new Uint8Array(digest));
 }
 
+/** 统一入口同源挂载：OIDC 回调路径需带上基路径（/research-app/），否则回跳丢 base */
+function callbackLoginPath(): string {
+  const b = import.meta.env.BASE_URL && import.meta.env.BASE_URL !== '/' ? import.meta.env.BASE_URL : '';
+  return b + 'research/login';
+}
 function randomToken(byteLength = 32): string {
   const bytes = new Uint8Array(byteLength);
   globalThis.crypto.getRandomValues(bytes);
@@ -94,7 +99,7 @@ export async function beginOidcLogin(redirectTo = '/research/home'): Promise<voi
   // realm research 只定义了自定义 client scopes（tenant-id/research-api-audience/
   // projects:*），内建 profile/email 未建——scope 收窄为 openid，账户信息走 /users/me。
   authorizeUrl.searchParams.set('scope', 'openid');
-  authorizeUrl.searchParams.set('redirect_uri', `${window.location.origin}/research/login`);
+  authorizeUrl.searchParams.set('redirect_uri', `${window.location.origin}${callbackLoginPath()}`);
   authorizeUrl.searchParams.set('state', state);
   authorizeUrl.searchParams.set('nonce', nonce);
   authorizeUrl.searchParams.set('code_challenge', challenge);
@@ -138,7 +143,7 @@ export async function completeOidcLogin(query: Record<string, unknown>): Promise
         grant_type: 'authorization_code',
         client_id: config.oidcClientId!,
         code,
-        redirect_uri: `${window.location.origin}/research/login`,
+        redirect_uri: `${window.location.origin}${callbackLoginPath()}`,
         code_verifier: context.verifier,
       }),
     });
@@ -202,7 +207,7 @@ export function oidcLogout(): void {
   clearTokens();
   const logoutUrl = new URL(`${config.oidcIssuer}/protocol/openid-connect/logout`);
   logoutUrl.searchParams.set('client_id', config.oidcClientId!);
-  logoutUrl.searchParams.set('post_logout_redirect_uri', `${window.location.origin}/research/login`);
+  logoutUrl.searchParams.set('post_logout_redirect_uri', `${window.location.origin}${callbackLoginPath()}`);
   if (idToken) logoutUrl.searchParams.set('id_token_hint', idToken);
   window.location.assign(logoutUrl.toString());
 }
