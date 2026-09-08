@@ -5,6 +5,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs'
 import { join, normalize, extname } from 'node:path'
 import { request as httpRequest } from 'node:http'
 import { mockApi } from './src/mock/server'
+import { canonicalLocalOrigin } from './src/utils/localOrigin.js'
 
 // 默认：连真实后端（/api 代理到 127.0.0.1:8000）
 // 需要演示假数据时显式开启 mock：VITE_USE_MOCK=1 npm run dev（mock 中间件完整模拟 /api，代理不启用）
@@ -16,6 +17,23 @@ const agentProxyTarget = process.env.VITE_AGENT_API_PROXY_TARGET || 'http://127.
 const teacherApiProxyTarget = process.env.VITE_TEACHER_API_PROXY_TARGET || 'http://127.0.0.1:8100'
 // 兼容旧开关：VITE_REAL_API=1 无副作用（真实后端已是默认）
 const useRealApi = !useMock
+const devPort = Number(process.env.PORT) || 5176
+
+/** Keep the dev server on one origin so ma_refresh/ma_csrf are always sent. */
+function canonicalLocalHost() {
+  return {
+    name: 'canonical-local-auth-origin',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const location = canonicalLocalOrigin(req.url, req.headers.host, devPort)
+        if (!location) return next()
+        res.statusCode = 307
+        res.setHeader('Location', location)
+        res.end()
+      })
+    },
+  }
+}
 
 // 科研端同源挂载：把科研前端（research-app）构建产物作为 /research-app/* 由主前端服务。
 // 使学生/教师/科研都在 http://127.0.0.1:5176 一个地址上（含深链/刷新），
@@ -71,6 +89,7 @@ function researchMount() {
 export default defineConfig({
   plugins: [
     vue(),
+    canonicalLocalHost(),
     researchMount(),
     useMock && {
       name: 'mock-api-server',
@@ -89,7 +108,7 @@ export default defineConfig({
     // （显式绑定 IPv4，避免 localhost 解析成 ::1 导致 127.0.0.1 无法访问）
     // PORT 环境变量优先（预览面板 autoPort 派发）；缺省 5176 保持验收契约
     host: '127.0.0.1',
-    port: Number(process.env.PORT) || 5176,
+    port: devPort,
     proxy: useRealApi
       ? {
           // 教师平台优先命中（键序即匹配序，前缀更长者在前）
