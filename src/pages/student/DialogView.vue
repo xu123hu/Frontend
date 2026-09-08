@@ -198,7 +198,16 @@ const heroGreet = computed(() => {
   if (h < 18) return '下午好'
   return '晚上好'
 })
-const recentConvs = computed(() => (conv?.items || []).slice(0, 3))
+const recentConvs = computed(() => {
+  // B3（V2 文档）：按标题去重（两条同名会话只留最新一条），再取前 3
+  const seen = new Set()
+  return (conv?.items || []).filter((c) => {
+    const k = (c.title || '').trim()
+    if (!k || seen.has(k)) return false
+    seen.add(k)
+    return true
+  }).slice(0, 3)
+})
 function heroPhoto() {
   document.querySelector('button[title="拍照识题"]')?.click()
 }

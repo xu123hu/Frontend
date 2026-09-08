@@ -50,7 +50,7 @@
                 :title="n.kp_name || n.kp_code"
                 @click="selectNode(n, ch)"
               >
-                <span class="chip-dot"></span>{{ n.name }}<span v-if="n.mastery != null" class="chip-pct">{{ Math.round(n.mastery * 100) }}%</span>
+                <span class="chip-dot"></span>{{ stripLatex(n.name) }}<span v-if="n.mastery != null" class="chip-pct">{{ Math.round(n.mastery * 100) }}%</span>
               </button>
             </div>
           </div>
@@ -208,6 +208,14 @@ const chapters = ref([])
 // ===== S8（V2 文档）：章节卡片化——未学章节默认折叠，薄弱考点排前 =====
 const openChapters = ref(new Set())
 const initialised = ref(false)
+// B2（V2 文档）：节点名 LaTeX 源码剥壳（$n$→n、arphi→φ），禁止 $ 残留进 chip
+function stripLatex(s) {
+  let t = String(s || '')
+  const CMD = { varphi: 'φ', pi: 'π', alpha: 'α', beta: 'β', theta: 'θ', omega: 'ω', Delta: 'Δ', times: '×', ge: '≥', le: '≤' }
+  t = t.replace(/\$\\([A-Za-z]+)\$/g, (_m, cmd) => CMD[cmd] || cmd)
+  t = t.replace(/\$([^$]*)\$/g, '$1')
+  return t
+}
 function chapterStarted(ch) {
   return (ch.nodes || []).filter((n) => n.state && n.state !== 'unlearned')
 }

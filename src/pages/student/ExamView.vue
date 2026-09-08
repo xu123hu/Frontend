@@ -41,7 +41,7 @@
         <button v-for="y in filteredPapers" :key="y.year + y.vol" class="year-btn"
                 :disabled="generatingYear !== 0"
                 @click="startRealPaper(y)">
-          {{ generatingYear === y.year + y.vol ? '组卷中…' : `${y.year} ${y.vol} · 已收录 ${y.count} 题` }}
+          {{ generatingYear === y.year + y.vol ? '组卷中…' : `${y.year} ${y.vol} · ${y.count} 题（${y.choice || 0}选择 ${y.blank || 0}填空 ${y.solution || 0}解答）` }}
         </button>
         <span v-if="!realLoading && !realYears.length" style="font-size:12.5px;color:var(--ink3);">
           暂无可组卷年份（真题卷需题库该年份 ≥5 题）
