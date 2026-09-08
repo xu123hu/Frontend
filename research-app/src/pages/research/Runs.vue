@@ -24,13 +24,13 @@ const error = ref<string | null>(null);
 const selectedRunId = ref<string | null>(null);
 
 const STATUS_META: Record<string, { label: string; color: string; icon: typeof Clock }> = {
-  queued: { label: '排队中', color: '#64748b', icon: Clock },
-  running: { label: '运行中', color: '#6366f1', icon: Loader2 },
-  waiting_for_approval: { label: '待审批', color: '#f59e0b', icon: AlertCircle },
-  paused: { label: '已暂停', color: '#64748b', icon: Pause },
-  completed: { label: '已完成', color: '#10b981', icon: CheckCircle2 },
-  failed: { label: '失败', color: '#ef4444', icon: AlertCircle },
-  cancelled: { label: '已取消', color: '#64748b', icon: X },
+  queued: { label: '排队中', color: 'var(--ailp-gray-500)', icon: Clock },
+  running: { label: '运行中', color: 'var(--ailp-primary-500)', icon: Loader2 },
+  waiting_for_approval: { label: '待审批', color: 'var(--ailp-warning-500)', icon: AlertCircle },
+  paused: { label: '已暂停', color: 'var(--ailp-gray-500)', icon: Pause },
+  completed: { label: '已完成', color: 'var(--ailp-success-500)', icon: CheckCircle2 },
+  failed: { label: '失败', color: 'var(--ailp-error-500)', icon: AlertCircle },
+  cancelled: { label: '已取消', color: 'var(--ailp-gray-500)', icon: X },
 };
 
 const selectedRun = computed(() => runs.value.find((r) => r.id === selectedRunId.value) ?? null);
@@ -57,7 +57,7 @@ function formatTime(iso: string): string {
 }
 
 function statusMeta(status: string) {
-  return STATUS_META[status] ?? { label: status, color: '#64748b', icon: Clock };
+  return STATUS_META[status] ?? { label: status, color: 'var(--ailp-gray-500)', icon: Clock };
 }
 
 onMounted(() => {
@@ -224,30 +224,30 @@ onMounted(() => {
 <style scoped>
 .runs-center { padding: 24px; max-width: 1200px; margin: 0 auto; }
 .page-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-.page-head h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px; color: var(--s16-text, #0f172a); }
-.page-head p { margin: 0; color: var(--s16-text-secondary, #64748b); font-size: 14px; }
-.loading-state, .error-state, .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px 20px; color: var(--s16-text-secondary, #64748b); }
-.error-state { color: var(--s16-danger, #ef4444); }
+.page-head h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px; color: var(--s16-text, var(--ailp-gray-900)); }
+.page-head p { margin: 0; color: var(--s16-text-secondary, var(--ailp-gray-500)); font-size: 14px; }
+.loading-state, .error-state, .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px 20px; color: var(--s16-text-secondary, var(--ailp-gray-500)); }
+.error-state { color: var(--s16-danger, var(--ailp-error-500)); }
 .empty-hint { font-size: 13px; opacity: 0.7; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .runs-layout { display: grid; grid-template-columns: 360px 1fr; gap: 20px; }
 .runs-list { display: flex; flex-direction: column; gap: 10px; max-height: 70vh; overflow-y: auto; }
-.run-card { cursor: pointer; transition: all 0.15s; border: 1px solid var(--s16-border, #e2e8f0); }
-.run-card:hover { border-color: var(--s16-primary, #6366f1); }
-.run-card.active { border-color: var(--s16-primary, #6366f1); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
+.run-card { cursor: pointer; transition: all 0.15s; border: 1px solid var(--s16-border, var(--ailp-gray-200)); }
+.run-card:hover { border-color: var(--s16-primary, var(--ailp-primary-500)); }
+.run-card.active { border-color: var(--s16-primary, var(--ailp-primary-500)); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15); }
 .run-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.run-type { font-weight: 600; font-size: 14px; color: var(--s16-text, #0f172a); }
+.run-type { font-weight: 600; font-size: 14px; color: var(--s16-text, var(--ailp-gray-900)); }
 .run-status { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; }
 .run-card-body { display: flex; flex-direction: column; gap: 4px; }
-.run-id { font-family: monospace; font-size: 12px; color: var(--s16-text-secondary, #64748b); }
-.run-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--s16-text-secondary, #64748b); }
+.run-id { font-family: monospace; font-size: 12px; color: var(--s16-text-secondary, var(--ailp-gray-500)); }
+.run-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--s16-text-secondary, var(--ailp-gray-500)); }
 .run-detail { min-height: 400px; }
-.detail-card h2 { font-size: 18px; font-weight: 600; margin: 0 0 16px; color: var(--s16-text, #0f172a); }
+.detail-card h2 { font-size: 18px; font-weight: 600; margin: 0 0 16px; color: var(--s16-text, var(--ailp-gray-900)); }
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
 .detail-item { display: flex; flex-direction: column; gap: 4px; }
-.detail-item label { font-size: 12px; color: var(--s16-text-secondary, #64748b); font-weight: 500; }
-.detail-item value { font-size: 14px; color: var(--s16-text, #0f172a); word-break: break-all; }
+.detail-item label { font-size: 12px; color: var(--s16-text-secondary, var(--ailp-gray-500)); font-weight: 500; }
+.detail-item value { font-size: 14px; color: var(--s16-text, var(--ailp-gray-900)); word-break: break-all; }
 .detail-actions { display: flex; gap: 8px; }
-.empty-detail { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--s16-text-secondary, #64748b); border: 1px dashed var(--s16-border, #e2e8f0); border-radius: 12px; }
+.empty-detail { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--s16-text-secondary, var(--ailp-gray-500)); border: 1px dashed var(--s16-border, var(--ailp-gray-200)); border-radius: 12px; }
 </style>

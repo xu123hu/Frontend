@@ -232,23 +232,23 @@ const claimStats = computed(() => {
           >
             <span
               class="risk-item"
-              style="color:#ef4444"
+              style="color:var(--ailp-error-500)"
             >冲突 {{ claimStats.conflicting }}</span>
             <span
               class="risk-item"
-              style="color:#f59e0b"
+              style="color:var(--ailp-warning-500)"
             >不足 {{ claimStats.insufficient }}</span>
             <span
               class="risk-item"
-              style="color:#64748b"
+              style="color:var(--ailp-gray-500)"
             >未验 {{ claimStats.notVerified }}</span>
             <span
               class="risk-item"
-              style="color:#0ea5e9"
+              style="color:var(--ailp-accent-500)"
             >部分 {{ claimStats.partial }}</span>
             <span
               class="risk-item"
-              style="color:#10b981"
+              style="color:var(--ailp-success-500)"
             >支持 {{ claimStats.supported }}</span>
             <span class="risk-total">共 {{ claimStats.total }} 条</span>
           </div>
@@ -454,8 +454,8 @@ const claimStats = computed(() => {
   font-family: var(--mono);
 }
 
-.risk-sort-label { font-size: 12px; color: #64748b; font-weight: 400; }
-.risk-summary { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 8px 0 12px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; }
+.risk-sort-label { font-size: 12px; color: var(--ailp-gray-500); font-weight: 400; }
+.risk-summary { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 8px 0 12px; padding: 8px 12px; background: var(--ailp-gray-50); border-radius: 6px; }
 .risk-item { font-size: 13px; font-weight: 600; }
-.risk-total { font-size: 12px; color: #64748b; margin-left: auto; }
+.risk-total { font-size: 12px; color: var(--ailp-gray-500); margin-left: auto; }
 </style>

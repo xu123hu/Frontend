@@ -418,7 +418,7 @@ const VERSION_WARN: Record<string, string> = {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  color: #92400e;
+  color: var(--ailp-warning-600);
   background: var(--warning-bg);
   padding: 1px 7px;
   border-radius: 999px;
@@ -455,7 +455,7 @@ const VERSION_WARN: Record<string, string> = {
 }
 .tag.dup {
   background: var(--warning-bg);
-  color: #664718;
+  color: var(--ailp-warning-600);
 }
 .retry {
   border: 0;

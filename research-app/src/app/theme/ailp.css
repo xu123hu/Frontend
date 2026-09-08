@@ -53,6 +53,13 @@
   --ailp-error-500: #ef4444;
   --ailp-error-600: #dc2626;
 
+  /* ===== Violet 扩展阶（参考 HTML"选择模板"卡/最近列表第三项用色）===== */
+  --ailp-violet-50: #f5f3ff;
+  --ailp-violet-100: #ede9fe;
+  --ailp-violet-400: #a78bfa;
+  --ailp-violet-500: #8b5cf6;
+  --ailp-violet-600: #7c3aed;
+
   /* ===== Semantic aliases（light）===== */
   --ailp-background: #f8fafc;
   --ailp-foreground: #0f172a;

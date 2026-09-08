@@ -32,18 +32,18 @@ const STAGE_LABELS: Record<string, string> = {
 };
 const STAGE_ORDER = ['discovery', 'verification', 'writing', 'review', 'published'];
 const STAGE_COLORS: Record<string, string> = {
-  discovery: '#6366f1',
-  verification: '#0ea5e9',
-  writing: '#8b5cf6',
-  review: '#f59e0b',
-  published: '#10b981',
+  discovery: 'var(--ailp-primary-500)',
+  verification: 'var(--ailp-accent-500)',
+  writing: 'var(--ailp-violet-500)',
+  review: 'var(--ailp-warning-500)',
+  published: 'var(--ailp-success-500)',
 };
 function stageProgress(stage: string): number {
   const idx = STAGE_ORDER.indexOf(stage);
   return idx >= 0 ? ((idx + 1) / STAGE_ORDER.length) * 100 : 0;
 }
 function stageColor(stage: string): string {
-  return STAGE_COLORS[stage] ?? '#64748b';
+  return STAGE_COLORS[stage] ?? 'var(--ailp-gray-500)';
 }
 function formatDate(iso: string): string {
   try {
@@ -161,7 +161,7 @@ function onCreated(projectId: string): void {
                 v-for="s in STAGE_ORDER"
                 :key="s"
                 class="stage-dot"
-                :style="{ background: STAGE_ORDER.indexOf(s) <= STAGE_ORDER.indexOf(project.stage) ? stageColor(project.stage) : '#e2e8f0' }"
+                :style="{ background: STAGE_ORDER.indexOf(s) <= STAGE_ORDER.indexOf(project.stage) ? stageColor(project.stage) : 'var(--ailp-gray-200)' }"
               />
             </span>
           </span>
@@ -272,12 +272,12 @@ function onCreated(projectId: string): void {
 .card-cover { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; }
 .cover-dot { width: 8px; height: 8px; border-radius: 50%; }
 .stage-progress { margin: 10px 0; }
-.progress-track { display: block; height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+.progress-track { display: block; height: 4px; background: var(--ailp-gray-200); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
 .progress-fill { display: block; height: 100%; border-radius: 2px; transition: width 0.3s; }
 .progress-stages { display: flex; justify-content: space-between; }
 .stage-dot { width: 6px; height: 6px; border-radius: 50%; }
-.key-numbers { display: flex; gap: 16px; margin: 10px 0; padding: 8px 0; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+.key-numbers { display: flex; gap: 16px; margin: 10px 0; padding: 8px 0; border-top: 1px solid var(--ailp-gray-100); border-bottom: 1px solid var(--ailp-gray-100); }
 .kn-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.kn-num { font-size: 16px; font-weight: 700; color: #0f172a; }
-.kn-label { font-size: 11px; color: #64748b; }
+.kn-num { font-size: 16px; font-weight: 700; color: var(--ailp-gray-900); }
+.kn-label { font-size: 11px; color: var(--ailp-gray-500); }
 </style>

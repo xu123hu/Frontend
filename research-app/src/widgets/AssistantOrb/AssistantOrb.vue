@@ -85,8 +85,8 @@ const label = computed(() => {
   padding: 0 5px;
   border: 2px solid var(--ailp-card, #fff);
   border-radius: var(--ailp-radius-full, 9999px);
-  background: var(--ailp-warning-500, #f59e0b);
-  color: var(--ailp-gray-950, #020617);
+  background: var(--ailp-warning-500, var(--ailp-warning-500));
+  color: var(--ailp-gray-950, var(--ailp-gray-950));
   font-size: 10px;
   display: grid;
   place-items: center;

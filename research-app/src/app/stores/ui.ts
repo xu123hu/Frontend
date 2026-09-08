@@ -10,7 +10,9 @@ export const useUiStore = defineStore('ui', () => {
   const personalCenterOpen = ref(false);
   const agentOpen = ref(false);
   const agentTab = ref<'chat' | 'tasks'>('chat');
-  const currentProjectName = ref('演示项目');
+  // 空 = 尚未选定项目，切换器回落「选择项目」；演示/真实项目名都由页面写入，
+  // 不把 mock 时代的「演示项目」当默认值（live 模式下会误导）。
+  const currentProjectName = ref('');
   const systemHealthy = ref(true);
 
   const agentDrawerOpen = computed(() => agentOpen.value);

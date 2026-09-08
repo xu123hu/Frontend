@@ -285,15 +285,15 @@ function onImported(itemId?: string): void {
 
 .ai-recommend-panel { margin-bottom: 16px; }
 .ai-recommend-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.ai-recommend-title { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; color: var(--s16-text, #0f172a); }
+.ai-recommend-title { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; color: var(--s16-text, var(--ailp-gray-900)); }
 .ai-recommend-input { display: flex; gap: 8px; margin-bottom: 12px; }
 .ai-recommend-input .s16-input { flex: 1; }
-.ai-error { color: #ef4444; font-size: 13px; margin: 8px 0; padding: 8px; background: #fef2f2; border-radius: 6px; }
-.ai-results-label { font-size: 13px; color: #64748b; margin: 0 0 8px; }
+.ai-error { color: var(--ailp-error-500); font-size: 13px; margin: 8px 0; padding: 8px; background: var(--danger-bg); border-radius: 6px; }
+.ai-results-label { font-size: 13px; color: var(--ailp-gray-500); margin: 0 0 8px; }
 .ai-terms { display: flex; flex-wrap: wrap; gap: 8px; }
 .ai-term { cursor: pointer; transition: all 0.15s; }
 .ai-term:hover { opacity: 0.8; transform: translateY(-1px); }
-.ai-honesty-note { font-size: 11px; color: #94a3b8; margin: 12px 0 0; font-style: italic; }
+.ai-honesty-note { font-size: 11px; color: var(--ailp-gray-400); margin: 12px 0 0; font-style: italic; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>

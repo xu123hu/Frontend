@@ -189,9 +189,9 @@ function rejectWithParamsChanged(): void {
   font-size: var(--font-size-xs);
   font-weight: 800;
 }
-.risk[data-risk='high'] { background: var(--danger-bg); color: var(--danger); border: 1px solid #e6c0bc; }
-.risk[data-risk='moderate'] { background: var(--warning-bg); color: var(--warning); border: 1px solid #ead29e; }
-.risk[data-risk='low'] { background: var(--success-bg); color: var(--success); border: 1px solid #bfdfd0; }
+.risk[data-risk='high'] { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-bg); }
+.risk[data-risk='moderate'] { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-bg); }
+.risk[data-risk='low'] { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-bg); }
 .risk[data-risk='prohibited'] { background: var(--danger-bg); color: var(--danger); border: 1px dashed var(--danger); }
 .status {
   margin-left: auto;
@@ -260,8 +260,8 @@ function rejectWithParamsChanged(): void {
   font-weight: 700;
   cursor: pointer;
 }
-.btn.ok { color: var(--success); border-color: #bfdfd0; }
-.btn.danger { color: var(--danger); border-color: #e6c0bc; }
+.btn.ok { color: var(--success); border-color: var(--success-bg); }
+.btn.danger { color: var(--danger); border-color: var(--danger-bg); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .mono {
   font-family: var(--mono);

@@ -260,7 +260,7 @@ function renderLatex(src: string): string {
   background: var(--surface);
 }
 .unit.broken {
-  border-color: #ead29e;
+  border-color: var(--warning-bg);
   background: var(--warning-bg);
 }
 .unit-head {
@@ -280,12 +280,12 @@ function renderLatex(src: string): string {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #92400e;
+  color: var(--ailp-warning-600);
   font-size: 10px;
   font-weight: 800;
 }
 .ok {
-  color: #1c6a4a;
+  color: var(--ailp-success-600);
   font-size: 10px;
   font-weight: 800;
 }
@@ -301,7 +301,7 @@ function renderLatex(src: string): string {
 }
 .reason {
   margin: 5px 0 0;
-  color: #92400e;
+  color: var(--ailp-warning-600);
   font-size: var(--font-size-xs);
 }
 .locate {

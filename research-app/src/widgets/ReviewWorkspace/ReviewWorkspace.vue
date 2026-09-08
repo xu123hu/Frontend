@@ -146,9 +146,9 @@ const verdict = computed(() => (paperQuery.data.value ? VERDICT_LABELS[paperQuer
   color: var(--ink-2);
   background: var(--surface);
 }
-.verdict[data-verdict='needs_revision'] { border-color: #ead29e; color: var(--warning); background: var(--warning-bg); }
-.verdict[data-verdict='accepted'] { border-color: #bfdfd0; color: var(--success); background: var(--success-bg); }
-.verdict[data-verdict='rejected'] { border-color: #e6c0bc; color: var(--danger); background: var(--danger-bg); }
+.verdict[data-verdict='needs_revision'] { border-color: var(--warning-bg); color: var(--warning); background: var(--warning-bg); }
+.verdict[data-verdict='accepted'] { border-color: var(--success-bg); color: var(--success); background: var(--success-bg); }
+.verdict[data-verdict='rejected'] { border-color: var(--danger-bg); color: var(--danger); background: var(--danger-bg); }
 .panel {
   border: 1px solid var(--border);
   border-radius: var(--r);

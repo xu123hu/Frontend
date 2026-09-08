@@ -153,9 +153,15 @@ function formatUpdated(iso: string): string {
     <div class="home-inner">
       <!-- 问候区 -->
       <section class="greeting animate-fade-in-up">
-        <p class="greeting-text">{{ greeting }}，{{ displayName }} 👋</p>
-        <h1 class="greeting-title">今天想研究<span class="gradient-text">什么</span>？</h1>
-        <p class="greeting-sub">告诉我研究问题，AI 帮你检索、验证、写作</p>
+        <p class="greeting-text">
+          {{ greeting }}，{{ displayName }} 👋
+        </p>
+        <h1 class="greeting-title">
+          今天想研究<span class="gradient-text">什么</span>？
+        </h1>
+        <p class="greeting-sub">
+          告诉我研究问题，AI 帮你检索、验证、写作
+        </p>
       </section>
 
       <!-- 大输入框 -->
@@ -201,9 +207,15 @@ function formatUpdated(iso: string): string {
           @retry="submitQuestion"
         />
         <div class="input-hints">
-          <AppChip tone="neutral">自然语言研究问题</AppChip>
-          <AppChip tone="neutral">拖拽文献 PDF</AppChip>
-          <AppChip tone="neutral">选择学科</AppChip>
+          <AppChip tone="neutral">
+            自然语言研究问题
+          </AppChip>
+          <AppChip tone="neutral">
+            拖拽文献 PDF
+          </AppChip>
+          <AppChip tone="neutral">
+            选择学科
+          </AppChip>
         </div>
       </section>
 
@@ -229,14 +241,20 @@ function formatUpdated(iso: string): string {
               :size="24"
             />
           </div>
-          <h3 class="quick-title">{{ card.title }}</h3>
-          <p class="quick-sub">{{ card.subtitle }}</p>
+          <h3 class="quick-title">
+            {{ card.title }}
+          </h3>
+          <p class="quick-sub">
+            {{ card.subtitle }}
+          </p>
         </AppCard>
       </section>
 
       <!-- AI 正在为你做 -->
       <section class="dashboard-section animate-fade-in-up delay-300">
-        <h2 class="section-title">AI 正在为你做</h2>
+        <h2 class="section-title">
+          AI 正在为你做
+        </h2>
         <Skeleton
           v-if="dashboardQuery.isPending.value"
           label="Dashboard 加载中"
@@ -274,7 +292,9 @@ function formatUpdated(iso: string): string {
       <!-- 最近项目 -->
       <section class="recent-section animate-fade-in-up delay-400">
         <div class="section-head">
-          <h2 class="section-title">最近项目</h2>
+          <h2 class="section-title">
+            最近项目
+          </h2>
           <button
             class="view-all"
             type="button"
@@ -332,8 +352,12 @@ function formatUpdated(iso: string): string {
                 <span class="cover-letter">{{ project.title.charAt(0) }}</span>
               </div>
               <div class="project-info">
-                <h3 class="project-title">{{ project.title }}</h3>
-                <p class="project-rq">{{ project.research_question }}</p>
+                <h3 class="project-title">
+                  {{ project.title }}
+                </h3>
+                <p class="project-rq">
+                  {{ project.research_question }}
+                </p>
               </div>
               <div class="project-side">
                 <span class="updated">

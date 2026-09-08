@@ -202,11 +202,11 @@ function stageClass(status: string): string {
 }
 .stage.ok {
   background: var(--success-bg);
-  color: #1c6a4a;
+  color: var(--ailp-success-600);
 }
 .stage.bad {
   background: var(--danger-bg);
-  color: #a03030;
+  color: var(--ailp-error-600);
 }
 .stage.dim {
   background: var(--subtle-bg);
@@ -274,7 +274,7 @@ function stageClass(status: string): string {
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #1c6a4a;
+  color: var(--ailp-success-600);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -320,7 +320,7 @@ function stageClass(status: string): string {
   padding: 0 6px;
   border-radius: 999px;
   background: var(--warning-bg);
-  color: #664718;
+  color: var(--ailp-warning-600);
   font-size: 10px;
   font-weight: 800;
 }
@@ -343,5 +343,5 @@ function stageClass(status: string): string {
   cursor: pointer;
 }
 
-.runs-link { color: var(--s16-primary, #6366f1); cursor: pointer; text-decoration: underline; }
+.runs-link { color: var(--s16-primary, var(--ailp-primary-500)); cursor: pointer; text-decoration: underline; }
 .runs-link:hover { opacity: 0.8; }</style>

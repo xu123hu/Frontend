@@ -477,7 +477,7 @@ const cycleResultQuery = useCycleResult(
   line-height: 1.5;
 }
 .alternatives {
-  border: 1px dashed #ead29e;
+  border: 1px dashed var(--warning-bg);
   background: var(--warning-bg);
   border-radius: 7px;
   padding: 7px 9px;

@@ -122,8 +122,8 @@ function kindLabel(kind: ReviewClaim['kind']): string {
   background: var(--surface);
 }
 .evidence-row.conflicting {
-  border-color: #ef4444;
-  background: #fef2f2;
+  border-color: var(--ailp-error-500);
+  background: var(--danger-bg);
 }
 .evidence-main {
   display: flex;
@@ -140,7 +140,7 @@ function kindLabel(kind: ReviewClaim['kind']): string {
   align-items: center;
   gap: 3px;
   font-size: 11px;
-  color: #6366f1;
+  color: var(--ailp-primary-500);
   background: none;
   border: none;
   cursor: pointer;
@@ -152,9 +152,9 @@ function kindLabel(kind: ReviewClaim['kind']): string {
 .quote {
   margin: 0;
   font-size: 12px;
-  color: #64748b;
+  color: var(--ailp-gray-500);
   font-style: italic;
-  border-left: 2px solid #e2e8f0;
+  border-left: 2px solid var(--ailp-gray-200);
   padding-left: 8px;
 }
 .quote-label {
@@ -164,7 +164,7 @@ function kindLabel(kind: ReviewClaim['kind']): string {
 .conflict-note {
   margin: 0;
   font-size: 12px;
-  color: #ef4444;
+  color: var(--ailp-error-500);
   font-weight: 500;
 }
 .kind {

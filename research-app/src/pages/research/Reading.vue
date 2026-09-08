@@ -635,7 +635,7 @@ function goBack(): void {
 .evidence-highlight {
   position: absolute;
   background: rgba(240, 173, 78, 0.35);
-  border: 1.5px solid #b97f1c;
+  border: 1.5px solid var(--ailp-warning-600);
   border-radius: 3px;
   pointer-events: none;
   z-index: 5;
@@ -717,7 +717,7 @@ function goBack(): void {
   padding: 7px 9px;
 }
 .anno.broken {
-  border-color: #ead29e;
+  border-color: var(--warning-bg);
   background: var(--warning-bg);
 }
 .anchor-warn {
@@ -725,7 +725,7 @@ function goBack(): void {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #92400e;
+  color: var(--ailp-warning-600);
   font-size: var(--font-size-xs);
   font-weight: 800;
 }

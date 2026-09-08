@@ -145,7 +145,7 @@ function statusText(status: VerificationLayer['status']): string {
 .status-inconclusive .layer-status { color: var(--warning); }
 .status-not_run .layer-status { color: var(--muted); }
 .status-failed {
-  border-color: #e6c0bc;
+  border-color: var(--danger-bg);
   background: var(--danger-bg);
 }
 .layer-summary {

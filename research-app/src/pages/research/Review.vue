@@ -11,6 +11,7 @@ import { useReviewPapers } from '@features/review/queries';
 import ReviewWorkspace from '@widgets/ReviewWorkspace/ReviewWorkspace.vue';
 import Skeleton from '@shared/ui/Skeleton.vue';
 import EmptyState from '@shared/ui/EmptyState.vue';
+import ErrorState from '@shared/ui/AppButton/ErrorState.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -50,11 +51,11 @@ const sortedPapers = computed(() => {
 });
 const overallRating = computed(() => {
   const s = paperStats.value;
-  if (s.rejected > 0) return { label: '有拒稿风险', color: '#ef4444' };
-  if (s.needs_revision > 0) return { label: '需修订', color: '#f59e0b' };
-  if (s.in_review > 0) return { label: '评审中', color: '#6366f1' };
-  if (s.accepted > 0) return { label: '全部通过', color: '#10b981' };
-  return { label: '无数据', color: '#64748b' };
+  if (s.rejected > 0) return { label: '有拒稿风险', color: 'var(--ailp-error-500)' };
+  if (s.needs_revision > 0) return { label: '需修订', color: 'var(--ailp-warning-500)' };
+  if (s.in_review > 0) return { label: '评审中', color: 'var(--ailp-primary-500)' };
+  if (s.accepted > 0) return { label: '全部通过', color: 'var(--ailp-success-500)' };
+  return { label: '无数据', color: 'var(--ailp-gray-500)' };
 });
 
 function setMode(next: 'author' | 'reviewer'): void {
@@ -117,28 +118,28 @@ function setMode(next: 'author' | 'reviewer'): void {
         </div>
         <div
           class="stat-item"
-          style="color:#6366f1"
+          style="color:var(--ailp-primary-500)"
         >
           <span class="stat-num">{{ paperStats.in_review }}</span>
           <span class="stat-label">评审中</span>
         </div>
         <div
           class="stat-item"
-          style="color:#f59e0b"
+          style="color:var(--ailp-warning-500)"
         >
           <span class="stat-num">{{ paperStats.needs_revision }}</span>
           <span class="stat-label">需修订</span>
         </div>
         <div
           class="stat-item"
-          style="color:#10b981"
+          style="color:var(--ailp-success-500)"
         >
           <span class="stat-num">{{ paperStats.accepted }}</span>
           <span class="stat-label">已接受</span>
         </div>
         <div
           class="stat-item"
-          style="color:#ef4444"
+          style="color:var(--ailp-error-500)"
         >
           <span class="stat-num">{{ paperStats.rejected }}</span>
           <span class="stat-label">已拒绝</span>
@@ -153,6 +154,14 @@ function setMode(next: 'author' | 'reviewer'): void {
       <Skeleton
         v-if="papersQuery.isPending.value"
         label="评审批次加载中"
+      />
+      <ErrorState
+        v-else-if="papersQuery.isError.value"
+        title="评审批次加载失败"
+        :reason="papersQuery.error.value?.message || '服务暂时不可用。'"
+        tone="danger"
+        retryable
+        @retry="papersQuery.refetch()"
       />
       <EmptyState
         v-else-if="papersQuery.data.value && papersQuery.data.value.length === 0"
@@ -283,16 +292,16 @@ function setMode(next: 'author' | 'reviewer'): void {
   color: var(--ink-2);
   background: var(--surface);
 }
-.verdict[data-verdict='needs_revision'] { border-color: #ead29e; color: var(--warning); background: var(--warning-bg); }
-.verdict[data-verdict='accepted'] { border-color: #bfdfd0; color: var(--success); background: var(--success-bg); }
-.verdict[data-verdict='rejected'] { border-color: #e6c0bc; color: var(--danger); background: var(--danger-bg); }
+.verdict[data-verdict='needs_revision'] { border-color: var(--warning-bg); color: var(--warning); background: var(--warning-bg); }
+.verdict[data-verdict='accepted'] { border-color: var(--success-bg); color: var(--success); background: var(--success-bg); }
+.verdict[data-verdict='rejected'] { border-color: var(--danger-bg); color: var(--danger); background: var(--danger-bg); }
 
 .summary-bar { margin-bottom: 20px; padding: 16px 20px; }
 .summary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.summary-title { font-size: 16px; font-weight: 600; color: var(--s16-text, #0f172a); }
+.summary-title { font-size: 16px; font-weight: 600; color: var(--s16-text, var(--ailp-gray-900)); }
 .summary-stats { display: flex; gap: 24px; margin-bottom: 8px; }
 .stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .stat-num { font-size: 24px; font-weight: 700; }
-.stat-label { font-size: 12px; color: var(--s16-text-secondary, #64748b); }
-.summary-note { margin: 0; font-size: 12px; color: var(--s16-text-secondary, #64748b); }
+.stat-label { font-size: 12px; color: var(--s16-text-secondary, var(--ailp-gray-500)); }
+.summary-note { margin: 0; font-size: 12px; color: var(--s16-text-secondary, var(--ailp-gray-500)); }
 </style>

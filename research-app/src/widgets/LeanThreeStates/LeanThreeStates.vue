@@ -124,7 +124,7 @@ function toneOf(kind: 'ok' | 'warn' | 'bad' | 'idle'): string {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #ead29e;
+  border: 1px solid var(--warning-bg);
   background: var(--warning-bg);
   color: var(--warning);
   border-radius: var(--r);
@@ -132,12 +132,12 @@ function toneOf(kind: 'ok' | 'warn' | 'bad' | 'idle'): string {
   font-size: var(--font-size-sm);
 }
 .overall-banner.ok {
-  border-color: #bfdfd0;
+  border-color: var(--success-bg);
   background: var(--success-bg);
   color: var(--success);
 }
 .overall-banner.rejected {
-  border-color: #e6c0bc;
+  border-color: var(--danger-bg);
   background: var(--danger-bg);
   color: var(--danger);
 }

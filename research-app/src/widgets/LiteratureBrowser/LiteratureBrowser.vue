@@ -1016,7 +1016,7 @@ function formatDate(iso: string): string {
 }
 .mini-btn.danger {
   color: var(--danger);
-  border-color: #e6c0bc;
+  border-color: var(--danger-bg);
 }
 .undo-bar {
   display: flex;
@@ -1025,7 +1025,7 @@ function formatDate(iso: string): string {
   gap: 8px;
   padding: 7px 10px;
   background: var(--success-bg);
-  color: #1c6a4a;
+  color: var(--ailp-success-600);
   font-size: var(--font-size-xs);
   font-weight: 700;
   border-bottom: 1px solid var(--border);
@@ -1098,7 +1098,7 @@ function formatDate(iso: string): string {
   padding: 0 7px;
   border-radius: 999px;
   background: var(--warning-bg);
-  color: #664718;
+  color: var(--ailp-warning-600);
   font-size: var(--font-size-xs);
   font-weight: 800;
   flex-shrink: 0;
@@ -1135,7 +1135,7 @@ function formatDate(iso: string): string {
   margin: 0;
   padding: 7px 9px;
   background: var(--warning-bg);
-  color: #664718;
+  color: var(--ailp-warning-600);
   border-radius: 7px;
   font-size: var(--font-size-xs);
   font-weight: 700;
@@ -1156,7 +1156,7 @@ function formatDate(iso: string): string {
   overflow-wrap: anywhere;
 }
 .no-fulltext {
-  color: #664718;
+  color: var(--ailp-warning-600);
   font-weight: 700;
 }
 .detail-tags {
@@ -1191,7 +1191,7 @@ function formatDate(iso: string): string {
   padding: 6px 8px;
 }
 .chunk.suspect {
-  border-color: #ead29e;
+  border-color: var(--warning-bg);
   background: var(--warning-bg);
 }
 .chunk-head {
@@ -1212,7 +1212,7 @@ function formatDate(iso: string): string {
   font-weight: 700;
 }
 .chunk-state.done {
-  color: #1c6a4a;
+  color: var(--ailp-success-600);
 }
 .chunk-latex code,
 .chunk-text {
@@ -1278,7 +1278,7 @@ function formatDate(iso: string): string {
 }
 .btn.confirming {
   color: var(--danger);
-  border-color: #e6c0bc;
+  border-color: var(--danger-bg);
 }
 .btn.primary {
   background: var(--primary);

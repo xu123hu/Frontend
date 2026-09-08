@@ -575,7 +575,7 @@ function snapshotLabel(): string {
 }
 .steps li.done .step-no {
   background: var(--success-bg);
-  border-color: #bfdfd0;
+  border-color: var(--success-bg);
   color: var(--success);
 }
 .meta {
@@ -652,10 +652,10 @@ function snapshotLabel(): string {
 .note {
   margin: 12px 0 0;
   padding: 10px 12px;
-  border: 1px solid #ead29e;
+  border: 1px solid var(--warning-bg);
   border-radius: 7px;
   background: var(--warning-bg);
-  color: #664718;
+  color: var(--ailp-warning-600);
   font-size: var(--font-size-sm);
   line-height: 1.6;
 }
@@ -698,19 +698,19 @@ function snapshotLabel(): string {
 .approval {
   margin-top: 13px;
   padding: 12px;
-  border: 1px solid #ead29e;
+  border: 1px solid var(--warning-bg);
   border-radius: 8px;
   background: var(--warning-bg);
 }
 .approval h3 {
   margin: 0 0 4px;
   font-size: var(--font-size-sm);
-  color: #664718;
+  color: var(--ailp-warning-600);
 }
 .approval p {
   margin: 0;
   font-size: var(--font-size-xs);
-  color: #7a5a20;
+  color: var(--ailp-warning-600);
 }
 .field {
   display: grid;

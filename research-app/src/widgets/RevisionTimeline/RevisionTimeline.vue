@@ -213,8 +213,8 @@ async function decide(revision: Revision, status: 'approved' | 'needs_more_work'
   font-weight: 700;
   cursor: pointer;
 }
-.btn.ok { color: var(--success); border-color: #bfdfd0; }
-.btn.danger { color: var(--danger); border-color: #e6c0bc; }
+.btn.ok { color: var(--success); border-color: var(--success-bg); }
+.btn.danger { color: var(--danger); border-color: var(--danger-bg); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .empty {
   font-size: var(--font-size-sm);

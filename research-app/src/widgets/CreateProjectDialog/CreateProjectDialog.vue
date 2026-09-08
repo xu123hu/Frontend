@@ -403,7 +403,7 @@ fieldset.field {
   margin: 0;
   padding: 9px 11px;
   background: var(--danger-bg);
-  border: 1px solid #e6c0bc;
+  border: 1px solid var(--danger-bg);
   border-radius: 7px;
   color: var(--danger);
   font-size: var(--font-size-sm);

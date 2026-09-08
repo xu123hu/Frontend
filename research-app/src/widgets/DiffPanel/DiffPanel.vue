@@ -193,15 +193,15 @@ function statusLabel(status: AiSuggestion['status']): string {
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--warning-bg);
-  color: #664718;
+  color: var(--ailp-warning-600);
 }
 .sg-state.accepted {
   background: var(--success-bg);
-  color: #1c6a4a;
+  color: var(--ailp-success-600);
 }
 .sg-state.rejected {
   background: var(--danger-bg);
-  color: #a03030;
+  color: var(--ailp-error-600);
 }
 .sg-cols {
   display: grid;
@@ -216,11 +216,11 @@ function statusLabel(status: AiSuggestion['status']): string {
 }
 .sg-col.orig .code {
   background: var(--danger-bg);
-  border-color: #e6c0bc;
+  border-color: var(--danger-bg);
 }
 .sg-col.sugg .code {
   background: var(--success-bg);
-  border-color: #bfe6d3;
+  border-color: var(--success-bg);
 }
 .code {
   margin: 0;
@@ -274,12 +274,12 @@ function statusLabel(status: AiSuggestion['status']): string {
   cursor: not-allowed;
 }
 .mini-btn.ok {
-  color: #1c6a4a;
-  border-color: #bfe6d3;
+  color: var(--ailp-success-600);
+  border-color: var(--success-bg);
 }
 .mini-btn.no {
   color: var(--danger);
-  border-color: #e6c0bc;
+  border-color: var(--danger-bg);
 }
 @media (max-width: 1080px) {
   .sg-cols {

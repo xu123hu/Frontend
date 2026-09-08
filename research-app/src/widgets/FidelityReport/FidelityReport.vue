@@ -133,7 +133,7 @@ const ITEMS = computed(() => {
   padding: 7px 9px;
   border-radius: 7px;
   background: var(--warning-bg);
-  color: #664718;
+  color: var(--ailp-warning-600);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -142,7 +142,7 @@ const ITEMS = computed(() => {
   align-items: center;
   gap: 6px;
   margin: 0;
-  color: #1c6a4a;
+  color: var(--ailp-success-600);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -169,11 +169,11 @@ const ITEMS = computed(() => {
 }
 .mark.ok {
   background: var(--success-bg);
-  color: #1c6a4a;
+  color: var(--ailp-success-600);
 }
 .mark.bad {
   background: var(--danger-bg);
-  color: #a03030;
+  color: var(--ailp-error-600);
 }
 .label {
   font-weight: 700;
@@ -190,7 +190,7 @@ const ITEMS = computed(() => {
   margin: 0 0 5px;
   font-size: var(--font-size-xs);
   font-weight: 800;
-  color: #92400e;
+  color: var(--ailp-warning-600);
 }
 .failed-list {
   list-style: none;
@@ -204,7 +204,7 @@ const ITEMS = computed(() => {
   gap: 6px;
   align-items: flex-start;
   font-size: var(--font-size-xs);
-  color: #664718;
+  color: var(--ailp-warning-600);
   background: var(--warning-bg);
   border-radius: 6px;
   padding: 5px 8px;

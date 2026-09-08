@@ -9,6 +9,14 @@ import { useSession } from '@features/auth/use-session';
 import { ApiError } from '@app/api/client';
 import type { Account } from '@entities/session/types';
 
+// 宿主的 .env.local（OIDC 变量）按 Vite env 优先级泄漏进 vitest，会使
+// config.oidcEnabled=true 走 OIDC 分支。单元测试钉死演示模式，在任何宿主
+// 环境下行为一致。
+vi.mock('@app/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@app/config')>();
+  return { ...actual, config: { ...actual.config, oidcEnabled: false } };
+});
+
 const ACCOUNT: Account = {
   user_id: 'user-alpha-1',
   tenant_id: 'tenant-alpha-0001',

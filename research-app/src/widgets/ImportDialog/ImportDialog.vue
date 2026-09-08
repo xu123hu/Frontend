@@ -399,12 +399,12 @@ const failedCount = computed(() => queue.files.value.filter((f) => f.stage === '
   flex-shrink: 0;
 }
 .stage-queued { background: var(--subtle-bg); color: var(--text-muted); }
-.stage-upload { background: #e8eefb; color: #2c4d9c; }
-.stage-uploading { background: #e8eefb; color: #2c4d9c; }
-.stage-parsing { background: #e8eefb; color: #2c4d9c; }
-.stage-chunking { background: #f3ecfb; color: #5b3a8c; }
-.stage-completed { background: var(--success-bg); color: #1c6a4a; }
-.stage-failed { background: var(--danger-bg); color: #6f1d1d; }
+.stage-upload { background: var(--info-bg); color: var(--ailp-primary-700); }
+.stage-uploading { background: var(--info-bg); color: var(--ailp-primary-700); }
+.stage-parsing { background: var(--info-bg); color: var(--ailp-primary-700); }
+.stage-chunking { background: var(--ailp-violet-50); color: var(--ailp-violet-600); }
+.stage-completed { background: var(--success-bg); color: var(--ailp-success-600); }
+.stage-failed { background: var(--danger-bg); color: var(--ailp-error-600); }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .bar {

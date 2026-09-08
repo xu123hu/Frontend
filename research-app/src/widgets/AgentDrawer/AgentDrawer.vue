@@ -375,7 +375,7 @@ watch(
   padding: 0 4px;
   border-radius: 999px;
   background: var(--warning);
-  color: #172b4d;
+  color: var(--ailp-gray-800);
   font-size: 10px;
   font-weight: 800;
   display: inline-grid;

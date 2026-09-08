@@ -349,24 +349,47 @@ async function runRealCheck(claim: ReviewClaim): Promise<void> {
         </template>
         <template v-if="leanDirectResult">
           <h4>Lean 形式化验证结果（直连 POST /verification/lean）</h4>
-          <div class="lean-direct-result" :data-status="leanDirectResult.status">
-            <p class="lean-h9-note" role="note"><b>H9：形式化陈述已验证 ≠ 论文结论成立</b> — Lean 结果与 L0-L4 独立展示，永不合并为论文正确标志。</p>
+          <div
+            class="lean-direct-result"
+            :data-status="leanDirectResult.status"
+          >
+            <p
+              class="lean-h9-note"
+              role="note"
+            >
+              <b>H9：形式化陈述已验证 ≠ 论文结论成立</b> — Lean 结果与 L0-L4 独立展示，永不合并为论文正确标志。
+            </p>
             <div class="lean-direct-states">
               <div class="lean-state-item">
                 <span class="lean-state-label">内核状态 (kernel_state)</span>
-                <span class="lean-state-value" :class="'kernel-' + leanDirectResult.kernel_state.toLowerCase()">{{ leanDirectResult.kernel_state }}</span>
+                <span
+                  class="lean-state-value"
+                  :class="'kernel-' + leanDirectResult.kernel_state.toLowerCase()"
+                >{{ leanDirectResult.kernel_state }}</span>
               </div>
               <div class="lean-state-item">
                 <span class="lean-state-label">翻译忠实度 (translation_fidelity)</span>
-                <span class="lean-state-value" :class="'fidelity-' + leanDirectResult.translation_fidelity.toLowerCase()">{{ leanDirectResult.translation_fidelity }}</span>
+                <span
+                  class="lean-state-value"
+                  :class="'fidelity-' + leanDirectResult.translation_fidelity.toLowerCase()"
+                >{{ leanDirectResult.translation_fidelity }}</span>
               </div>
               <div class="lean-state-item">
                 <span class="lean-state-label">运行状态 (status)</span>
                 <span class="lean-state-value">{{ leanDirectResult.status }}</span>
               </div>
             </div>
-            <pre v-if="leanDirectResult.build_log" class="lean-build-log">{{ leanDirectResult.build_log }}</pre>
-            <p v-if="leanDirectResult.error_message" class="lean-error" role="alert">错误：{{ leanDirectResult.error_message }}</p>
+            <pre
+              v-if="leanDirectResult.build_log"
+              class="lean-build-log"
+            >{{ leanDirectResult.build_log }}</pre>
+            <p
+              v-if="leanDirectResult.error_message"
+              class="lean-error"
+              role="alert"
+            >
+              错误：{{ leanDirectResult.error_message }}
+            </p>
           </div>
         </template>
         <p
@@ -427,9 +450,9 @@ async function runRealCheck(claim: ReviewClaim): Promise<void> {
   font-weight: 700;
   color: var(--ink-2);
 }
-.support-badge[data-support='supported'] { border-color: #bfdfd0; color: var(--success); background: var(--success-bg); }
-.support-badge[data-support='partial'] { border-color: #ead29e; color: var(--warning); background: var(--warning-bg); }
-.support-badge[data-support='conflicting'] { border-color: #e6c0bc; color: var(--danger); background: var(--danger-bg); }
+.support-badge[data-support='supported'] { border-color: var(--success-bg); color: var(--success); background: var(--success-bg); }
+.support-badge[data-support='partial'] { border-color: var(--warning-bg); color: var(--warning); background: var(--warning-bg); }
+.support-badge[data-support='conflicting'] { border-color: var(--danger-bg); color: var(--danger); background: var(--danger-bg); }
 .expand-btn {
   margin-left: auto;
   display: inline-flex;
@@ -560,19 +583,19 @@ textarea {
 }
 
 .lean-direct-result {
-  border: 1px solid var(--ailp-border, #e5e7eb);
+  border: 1px solid var(--ailp-border, var(--ailp-gray-200));
   border-radius: 8px;
   padding: 12px 16px;
   margin: 8px 0;
-  background: var(--ailp-bg-subtle, #f9fafb);
+  background: var(--ailp-bg-subtle, var(--ailp-gray-50));
 }
 .lean-h9-note {
   font-size: 13px;
-  color: var(--ailp-text-secondary, #6b7280);
+  color: var(--ailp-text-secondary, var(--ailp-gray-500));
   margin: 0 0 12px 0;
   padding: 8px 12px;
-  background: var(--ailp-accent-subtle, #fef3c7);
-  border-left: 3px solid var(--ailp-accent, #f59e0b);
+  background: var(--ailp-accent-subtle, var(--warning-bg));
+  border-left: 3px solid var(--ailp-accent, var(--ailp-warning-500));
   border-radius: 4px;
 }
 .lean-direct-states {
@@ -588,7 +611,7 @@ textarea {
 }
 .lean-state-label {
   font-size: 12px;
-  color: var(--ailp-text-secondary, #6b7280);
+  color: var(--ailp-text-secondary, var(--ailp-gray-500));
 }
 .lean-state-value {
   font-size: 14px;
@@ -597,17 +620,17 @@ textarea {
   border-radius: 4px;
   display: inline-block;
 }
-.kernel-passed { background: #d1fae5; color: #065f46; }
-.kernel-failed { background: #fee2e2; color: #991b1b; }
-.kernel-timed_out { background: #fef3c7; color: #92400e; }
-.kernel-not_run { background: #f3f4f6; color: #6b7280; }
-.fidelity-confirmed { background: #d1fae5; color: #065f46; }
-.fidelity-partial { background: #fef3c7; color: #92400e; }
-.fidelity-diverged { background: #fee2e2; color: #991b1b; }
-.fidelity-not_run { background: #f3f4f6; color: #6b7280; }
+.kernel-passed { background: var(--success-bg); color: var(--ailp-success-600); }
+.kernel-failed { background: var(--danger-bg); color: var(--ailp-error-600); }
+.kernel-timed_out { background: var(--warning-bg); color: var(--ailp-warning-600); }
+.kernel-not_run { background: var(--ailp-gray-100); color: var(--ailp-gray-500); }
+.fidelity-confirmed { background: var(--success-bg); color: var(--ailp-success-600); }
+.fidelity-partial { background: var(--warning-bg); color: var(--ailp-warning-600); }
+.fidelity-diverged { background: var(--danger-bg); color: var(--ailp-error-600); }
+.fidelity-not_run { background: var(--ailp-gray-100); color: var(--ailp-gray-500); }
 .lean-build-log {
-  background: #1f2937;
-  color: #e5e7eb;
+  background: var(--ailp-gray-700);
+  color: var(--ailp-gray-200);
   padding: 12px;
   border-radius: 6px;
   font-size: 12px;
@@ -616,7 +639,7 @@ textarea {
   overflow-y: auto;
 }
 .lean-error {
-  color: #991b1b;
+  color: var(--ailp-error-600);
   font-size: 13px;
   margin: 8px 0 0 0;
 }</style>
