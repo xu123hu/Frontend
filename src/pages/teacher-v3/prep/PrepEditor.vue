@@ -226,7 +226,7 @@
  * PrepEditor —— 备课编辑器（P，用户定稿 HTML 移植 + P2 可编辑）
  * 文档式五区块 + 左锚点 + 右备小研。P2：全区块可编辑（编辑/完成切换，本机保存演示）
  * + 每个授课环节挂 AI 预配资源（题目=题库匹配 / 公式·图形=演示）。
- * 诚实位：AI 优化为后端能力提示；自动保存为本机演示；不伪造入库。
+ * 诚实位：AI 优化为后端能力提示；编辑保存已接后端 PATCH（不再本机演示）；push-to-deck 待 confirm+模板解析见 #2b
  */
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -310,8 +310,27 @@ watch([plan, () => chain.outline], () => initEdit(), { immediate: true, deep: fa
 function toggleEdit(block: string) {
   editMode[block] = !editMode[block]
   if (!editMode[block]) {
-    savedText.value = `已保存「${blocks.find((b) => b.id === block)?.label}」编辑 · 本机演示`
-    toast.success('编辑已保存（本机演示，不入库；入库属后端 M2）')
+    void persistPlan()
+  }
+}
+
+/** 真实保存（独立审查 #2a）：把编辑中的环节持久化到后端；失败如实报错，不再“本机演示”】
+ * 存储形：boards[] = 环节{id,name,minutes,goal,content{board,teacher_activity,student_activity}}；
+ * 后端按 id 合并 old_content，保留 key_points_backend/source_note/formula_hint/boards_metadata。
+ */
+async function persistPlan() {
+  const pid = plan.value?.id || chain.planId
+  if (!pid) { toast.error('尚未生成教案实体，无法保存'); return }
+  const sections = edit.steps.map((s) => ({
+    id: s.id, name: s.name, minutes: s.minutes, goal: s.goal,
+    content: { board: s.name, teacher_activity: [s.teacher || ''], student_activity: [s.student || ''] },
+  }))
+  try {
+    await v3Api.plans.patch(pid, { sections } as any)
+    savedText.value = `已保存到服务器：${new Date().toLocaleTimeString()}`
+    toast.success('教案已保存到服务器')
+  } catch (err) {
+    toast.error('保存失败：' + (err instanceof Error ? err.message : '未知错误'))
   }
 }
 function onScroll(ev: Event) {
@@ -333,10 +352,18 @@ async function pushToDeck() {
   const pid = plan.value?.id || chain.planId
   if (!pid) { toast.error('尚未生成教案实体，无法推送课件'); return }
   try {
+    // 独立审查 #2b：推送需先确认（后端 confirmed 门禁）；模板 slug 已由后端解析
+    const pAny = plan.value as any
+    if (!pAny?.confirmed) {
+      await v3Api.plans.confirm(pid)
+      if (pAny) pAny.confirmed = true
+    }
     const r = await v3Api.plans.pushToDeck(pid, { template_id: 'tpl-academic-blue' })
     toast.success('已推送为课件，正在打开课件工坊')
     router.push({ path: '/teacher-v3/slides', query: { deck: r.data.deck_id } })
-  } catch { toast.error('推送失败（mock 未启动？）') }
+  } catch (e:any) {
+    toast.error('推送失败：' + (e?.message || '服务端拒绝（教案需先确认，模板需有效）'))
+  }
 }
 
 async function send() {
