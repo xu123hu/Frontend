@@ -6,7 +6,7 @@ import { mkdirSync } from 'node:fs'
 const OUT = 'D:/math-arena/deliverables/student-refactor-v4/screenshots'
 mkdirSync(OUT, { recursive: true })
 
-const BASE = 'http://127.0.0.1:1532'
+const BASE = 'http://127.0.0.1:' + (process.env.CAP_PORT || '3000')
 const SHOTS = [
   ['/dialog', 'S1-首页即对话'],
   ['/practice', 'S3-练题中心'],
