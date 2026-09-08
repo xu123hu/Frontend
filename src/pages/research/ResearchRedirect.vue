@@ -1,26 +1,26 @@
 <script setup>
 /**
- * 科研端入口（同源挂载后）：由主平台跳转到 /research-app/（科研前端静态构建，
- * 与主平台同源，由主前端服务承担）。整体导航（location.assign）规避 Vue Router
- * 的 catch-all，保证 5176 单地址直连科研工作台。
+ * 科研端入口（并入统一前端）：跳转到平台内真实科研首页 /research。
+ * 以前指向独立 research-app（已弃用），现改为 SPA 内路由。
  */
 import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 onMounted(() => {
-  location.assign('/research-app/')
+  router.replace('/research')
 })
 </script>
 
 <template>
   <div class="rs-redir">
-    <div class="rs-redir__mark">ƒ</div>
-    <p class="rs-redir__title">正在打开科研工作台…</p>
-    <a class="rs-redir__sub" href="/research-app/">若未跳转，请点击此处进入</a>
+    <div class="rs-redir__mark">∫</div>
+    <p class="rs-redir__title">正在进入科研端…</p>
+    <button class="re-btn primary sm" @click="router.replace('/research')">进入科研端</button>
   </div>
 </template>
 
 <style scoped>
-.rs-redir { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: var(--ed-wash, #f5f4ef); color: var(--ed-ink, #202a26); font-family: var(--ed-font-sans, inherit); }
-.rs-redir__mark { font-family: var(--ed-font-serif, serif); font-size: 40px; color: var(--ed-pine, #174c3c); }
+.rs-redir { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #f7faff; color: #0d1830; font-family: Inter, "Microsoft YaHei", sans-serif; }
+.rs-redir__mark { font-size: 40px; font-weight: 700; color: #4169e1; }
 .rs-redir__title { font-size: 16px; }
-.rs-redir__sub { font-size: 13px; color: var(--ed-ink-3, #79857e); }
 </style>

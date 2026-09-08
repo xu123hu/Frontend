@@ -1,43 +1,56 @@
 <template>
-  <div class="research-app rs-app">
-    <!-- 顶栏 -->
-    <ResearchTopbar @toggle-evidence="evidenceOpen = !evidenceOpen" />
-
-    <!-- 侧栏 -->
-    <aside class="rs-sidebar" aria-label="科研端导航">
-      <ResearchNav />
-      <div class="rs-sidebar-footer">
-        <div class="rs-storage-info">
-          <span>存储空间</span>
-          <strong>34.2 / 100 GB</strong>
-        </div>
-        <div class="rs-storage-bar">
-          <div class="rs-storage-bar-fill"></div>
-        </div>
-        <button class="rs-help-link" type="button">帮助与文档 →</button>
+  <div class="research-end">
+    <header class="re-topbar">
+      <div class="re-brand">
+        <div class="re-logo">∫</div>
+        <div><b>智学数研</b><small>科研端 · 论文阅读与写作</small></div>
       </div>
-    </aside>
-
-    <!-- 主工作区 -->
-    <main class="rs-main">
-      <div class="rs-workspace">
-        <RouterView class="rs-view" />
+      <nav class="re-nav" aria-label="科研端导航">
+        <RouterLink class="re-nav-item" :class="{ active: isActive('/research') }" to="/research">首页</RouterLink>
+        <RouterLink class="re-nav-item" :class="{ active: isActive('/research/library') }" to="/research/library">文献库 <span v-if="paperTotal" class="re-count">{{ paperTotal }}</span></RouterLink>
+        <RouterLink class="re-nav-item" :class="{ active: isActive('/research/writing') }" to="/research/writing">写作</RouterLink>
+        <RouterLink class="re-nav-item" :class="{ active: isActive('/research/tasks') }" to="/research/tasks">任务</RouterLink>
+      </nav>
+      <div class="re-topbar-right">
+        <RouterLink to="/hub" class="re-sync" data-testid="rs-hub-entry">⇥ 统一工作入口</RouterLink>
+        <span class="re-user-chip" :title="`当前角色：${auth.activeRole || '—'}`">{{ displayName }}</span>
       </div>
+    </header>
+    <main class="re-main">
+      <RouterView />
     </main>
-
-    <!-- 证据面板 -->
-    <aside class="rs-evidence" :class="{ open: evidenceOpen }" aria-label="证据账本">
-      <EvidencePanel @close="evidenceOpen = false" />
-    </aside>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, provide } from 'vue'
-import ResearchTopbar from '@/components/research/ResearchTopbar.vue'
-import ResearchNav from '@/components/research/ResearchNav.vue'
-import EvidencePanel from '@/components/research/EvidencePanel.vue'
+<script setup>
+import { computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useResearchStore } from '@/stores/research'
 
-const evidenceOpen = ref(true)
-provide('evidenceOpen', evidenceOpen)
+const route = useRoute()
+const auth = useAuthStore()
+const rstore = useResearchStore()
+
+const displayName = computed(() => auth.nickname || '科研用户')
+const paperTotal = computed(() => rstore.total || '')
+
+function isActive(prefix) {
+  return route.path === prefix || (prefix !== '/research' && route.path.startsWith(prefix + '/'))
+}
+
+onMounted(async () => {
+  if (rstore.summaryLoaded) return
+  try {
+    await rstore.fetchSummary()
+    if (rstore.total && !rstore.collections.length) await rstore.fetchCollections()
+  } catch { /* 首页再积极重试 */ }
+})
+watch(() => route.path, () => {
+  if (rstore.total === 0 && !rstore.summaryLoaded) rstore.fetchSummary()
+})
 </script>
+
+<style scoped>
+.re-count { font-size: 10px; color: var(--re-green, #16a675); font-weight: 600; margin-left: 2px; }
+</style>
