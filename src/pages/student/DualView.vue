@@ -2474,10 +2474,16 @@ button { font-family: inherit; }
 .dcx-o-chip.active { background: linear-gradient(135deg, #722ed1, #a78bfa); border-color: transparent; color: #fff; }
 .dcx-o-chip.done { border-color: rgba(82, 196, 26, .5); color: #b7f4cf; }
 
+@media (max-width: 1100px) {
+  /* S11：≤1100 收侧栏大纲为横向页码条（课件立即全宽，不再被三栏挤丢） */
+  .dcx-body { grid-template-columns: minmax(0, 1fr); }
+  .dcx-left { display: none; }
+  .dcx-o-strip { display: flex; }
+  .dcx-right { grid-column: 1 / -1; }
+}
+
 @media (max-width: 900px) {
   .dcx-body { grid-template-columns: 1fr; overflow-y: auto; }
-  .dcx-left { display: none; }          /* 侧栏大纲收成横向页码条（课件立即全宽，不再被挤丢） */
-  .dcx-o-strip { display: flex; }
   .dcx-right { grid-template-columns: 1fr; }
   .dcx-lgrid { grid-template-columns: 1fr; }
   .dcx-course-name { max-width: 150px; }
