@@ -15,7 +15,7 @@
       <span class="imm-timer">⏱ {{ usedTime }}</span>
       <button class="imm-btn" @click="exitImmersive">⏸ 暂停（回页面，进度保留）</button>
     </div>
-    <div class="greeting">
+    <div class="greeting" v-show="pTab !== 'exam'">
       <div class="hello">今日训练 · <span style="color:var(--brand-deep);">{{ greetingTitle }}</span></div>
       <div class="sub" v-if="groupLoading">正在为你生成今日训练推荐…</div>
       <div class="sub" v-else-if="groupError">训练推荐加载失败：{{ groupError }}</div>
@@ -28,7 +28,14 @@
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+    <!-- S3 v2：页级 tab（今日推荐/自己选题/真题模考三态；模拟考试整体并入） -->
+    <div class="p-tabs">
+      <button :class="{ active: pTab === 'today' }" @click="pTab = 'today'">🎯 今日推荐</button>
+      <button :class="{ active: pTab === 'custom' }" @click="pTab = 'custom'">🔍 自己选题</button>
+      <button :class="{ active: pTab === 'exam' }" @click="pTab = 'exam'">📝 真题模考</button>
+    </div>
+
+    <div v-show="pTab === 'custom'" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
       <div class="practice-mode">
         <div
           v-for="m in modes" :key="m"
@@ -74,7 +81,7 @@
     </div>
 
     <!-- 今日主卡 -->
-    <div class="daily-quest">
+    <div class="daily-quest" v-show="pTab !== 'exam'">
       <template v-if="groupLoading">
         <div class="badge">🎯 今日推荐</div>
         <h2>推荐加载中…</h2>
@@ -127,11 +134,11 @@
     </div>
 
     <!-- 难度配比 + 当前题卡片 -->
-    <div class="section-head">
+    <div class="section-head" v-show="pTab !== 'exam' && quizState !== 'idle'">
       <h2>{{ quizHeadText }}</h2>
       <span style="font-size:12px;color:var(--ink3);">⏱ 已用 {{ usedTime }} · 平均每题 ~{{ avgMinutes }} 分钟</span>
     </div>
-    <div class="practice-row">
+    <div class="practice-row" v-show="pTab !== 'exam' && quizState !== 'idle'">
       <div class="quiz-card">
         <div v-if="quizState === 'idle'" style="padding:32px 0;text-align:center;color:var(--ink3);font-size:13px;">
           点击上方「开始训练」，AI 将按推荐难度配比为你生成今日题组。
@@ -247,8 +254,13 @@
       </div>
     </div>
 
+    <!-- S3 v2：真题模考 tab = 完整模拟考试页（整体并入练题） -->
+    <div v-if="pTab === 'exam'">
+      <ExamView />
+    </div>
+
     <!-- 总结卡（Khan 风格） -->
-    <div class="summary-card">
+    <div class="summary-card" v-show="summaryState !== 'idle'">
       <h4>📋 今日训练总结卡</h4>
       <div v-if="summaryState === 'idle'" style="background:rgba(255,255,255,.85);padding:12px 14px;border-radius:10px;font-size:13px;color:var(--ink3);line-height:1.6;">
         完成本组训练后，这里会生成你的升级 / 持平 / 降级总结。
@@ -296,6 +308,7 @@ import { useToastStore } from '@/stores/toast'
 import { setPageContext, clearPageContext } from '@/composables/usePageContext'
 import { useAuthStore } from '@/stores/auth'
 import LatexText from '@/components/LatexText.vue'
+import ExamView from '@/pages/student/ExamView.vue'
 import DynamicFigureViewer from '@/components/DynamicFigureViewer.vue'
 
 const route = useRoute()
@@ -303,6 +316,9 @@ const router = useRouter()
 const toast = useToastStore()
 const auth = useAuthStore()
 // S3（V2 文档）：意义不明的时长 tab 精简为两个明确模式——题量由后端推荐决定，时长只作限时参考
+// S3 v2：页级 tab（今日推荐/自己选题/真题模考=模拟考试并入）
+const pTab = ref('today')
+
 const modes = ['今日训练', '真题模考']
 const mode = ref('今日训练')
 const difficulty = ref('自适应 (推荐)')
@@ -859,4 +875,12 @@ onMounted(async () => {
 .sheet-cell:disabled { opacity: .45; }
 .sheet-empty { padding: 18px 0; text-align: center; color: var(--ink3); font-size: 12.5px; }
 .sheet-meta { font-size: 11px; color: var(--ink3); }
+
+/* S3 v2 页级 tab */
+.p-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.p-tabs button {
+  padding: 9px 20px; border-radius: 999px; border: 1px solid var(--line); background: var(--card);
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink2); cursor: pointer;
+}
+.p-tabs button.active { background: var(--primary-subtle); border-color: var(--primary-border); color: var(--primary); }
 </style>
