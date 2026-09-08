@@ -2,7 +2,7 @@
   <div class="view">
     <div class="greeting">
       <div class="hello">{{ nickname }}的错题本 · {{ totalErrors }} 道 · <span style="color:var(--warn-deep);">{{ dueTotal }} 道</span> 今天到期</div>
-      <div class="sub">FSRS 算法根据你的作答历史算出记忆曲线——最该复习的已置顶。其它题目暂不需要复习（过早复习=浪费时间）。</div>
+      <div class="sub">快忘的题自动排最前面提醒你复习；还没到期的不用刷——过早复习是浪费时间。</div>
     </div>
 
 
@@ -17,7 +17,7 @@
     <div class="card" style="padding:14px 18px;margin-bottom:14px;">
       <div style="display:flex;align-items:center;gap:10px;">
         <strong style="font-size:14px;">📷 拍错题入本</strong>
-        <span style="font-size:12px;color:var(--ink3);">把做错/不会的题拍下来自动识别题干——进本即按 FSRS 排期复习</span>
+        <span style="font-size:12px;color:var(--ink3);">把做错/不会的题拍下来自动识别题干——入本自动排期复习</span>
         <button v-if="!manualOpen" class="secondary" style="margin-left:auto;" @click="manualOpen = true">＋ 打开录入</button>
         <button v-else class="secondary" style="margin-left:auto;" @click="manualOpen = false">收起</button>
       </div>
@@ -44,40 +44,15 @@
         <div v-else-if="enhancing" style="font-size:11.5px;color:var(--ink3);margin-top:6px;">✨ 正在生成增强图…</div>
         <div style="display:flex;gap:10px;margin-top:10px;">
           <button class="primary" :disabled="manualSubmitting" @click="submitManual">📌 入本</button>
-          <span style="font-size:11.5px;color:var(--ink3);align-self:center;">入本后按 FSRS 自动排期，临到期自动提醒复习</span>
+          <span style="font-size:11.5px;color:var(--ink3);align-self:center;">入本后自动排期，到期自动提醒复习</span>
         </div>
       </template>
     </div>
     <!-- FSRS 记忆稳定性热力图（独家创新） -->
-    <div class="fsrs-section">
-      <h4>🌡️ 记忆稳定性热力图 · {{ totalErrors }} 道错题的"会忘程度"</h4>
-      <div class="sub">色越深 = 记忆越稳。<b class="ok">绿色稳定区</b>的题目系统认为你不会再忘，<b>红色衰减区</b>说明已临近期末，再不复习就会忘掉。点击格子查看具体题目。</div>
-      <div v-if="heatLoading" style="padding:24px;text-align:center;color:var(--ink3);font-size:13px;">记忆曲线加载中…</div>
-      <div v-else-if="heatError" style="padding:24px;text-align:center;color:var(--ink3);font-size:13px;">{{ heatError }}</div>
-      <div v-else-if="heatAllEmpty" style="padding:24px;text-align:center;color:var(--ink3);font-size:13px;">
-        做题后这里会长出记忆曲线 📈
-        <div style="margin-top:10px;"><button class="redo-btn" style="max-width:220px;margin:0 auto;" @click="goPractice">去练一组题</button></div>
-      </div>
-      <div v-else style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;">
-        <div>
-          <div style="display:grid;grid-template-columns:repeat(7,18px);gap:4px;font-size:10px;color:var(--ink3);margin-bottom:4px;">
-            <span v-for="d in ['一','二','三','四','五','六','日']" :key="d" class="heatmap-day">{{ d }}</span>
-          </div>
-          <div class="heatmap">
-            <div v-for="(c, i) in heatmap" :key="i" class="heatmap-cell" :class="c.level" @click="heatTip(c)">
-              <span class="cell-tip">{{ heatCellTip(c) }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="legend">
-          <span v-for="g in HEAT_LEGEND" :key="g.label" class="legend-item">
-            <span class="swatch" :style="g.swatch"></span>{{ g.label }}
-          </span>
-        </div>
-      </div>
-    </div>
 
     <!-- 今日待复习队列 -->
+    <div class="errors-split">
+    <div class="errors-left">
     <div class="due-queue">
       <div class="head">
         <h4>📌 今日到期 {{ dueTotal }} 道 · 按"再不做就忘"程度排序</h4>
@@ -87,7 +62,7 @@
       <div v-else-if="dueError" style="padding:20px;text-align:center;color:var(--ink3);font-size:13px;">{{ dueError }}</div>
       <div v-else-if="!dueItems.length" style="padding:24px;text-align:center;font-size:13px;">
         <div style="font-size:15px;font-weight:700;margin-bottom:4px;">🎉 今日无到期错题</div>
-        <div style="color:var(--ink3);">记忆保持得很好，去练新题吧！</div>
+        <div style="color:var(--ink3);">记忆还很稳，不用刷，去练新题吧！</div>
       </div>
       <div v-else class="items">
         <div v-for="d in dueItems" :key="d.record_id" class="item" @click="openDetail(d.record_id, d.seq)">
@@ -131,7 +106,7 @@
         <div class="head">
           <div class="lbl">
             <span class="num">{{ String(selectedSeq).padStart(2, '0') }} / {{ totalErrors }}</span>
-            <span class="topic">{{ detail.kp_name || detail.kp_code || '未标注知识点' }}</span>
+            <span class="topic">{{ kpZh(detail) }}</span>
             <span class="days">入本 {{ fmtMD(detail.entered_at) }} · 已答错 {{ detail.wrong_count }} 次 · 复习 {{ detail.review_count }} 次</span>
           </div>
         </div>
@@ -214,13 +189,13 @@
             <div class="tags">
               <span class="tag-pill err">{{ errorTypeZh(detail.error_type) }}</span>
               <span class="tag-pill warn">已答错 {{ detail.wrong_count }} 次</span>
-              <span class="tag-pill purple">{{ detail.kp_name || detail.kp_code || '未标注' }}</span>
+              <span class="tag-pill purple">{{ kpZh(detail) }}</span>
             </div>
             <!-- FSRS 稳定性区块（旧数据未回填时为 null，整块隐藏） -->
             <div v-if="detail.memory_stability != null" class="variants">
               <h6>🧠 记忆状态（FSRS）</h6>
               <ol>
-                <li><b>稳定度</b> · S ≈ {{ fmtStability(detail.memory_stability) }} 天</li>
+                <li><b>遗忘风险</b> · S ≈ {{ fmtStability(detail.memory_stability) }} 天</li>
                 <li><b>当前记得概率</b> · {{ pct(detail.retrievability) }}%</li>
                 <li><b>记忆等级</b> · {{ levelZh(detail.fsrs_level) }}</li>
               </ol>
@@ -239,12 +214,14 @@
     </div>
 
     <!-- 错题列表（多维筛选） -->
+    </div>
+    <div class="errors-right">
     <div class="card" style="padding:0;overflow:hidden;">
       <div style="padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;">
         <strong style="font-size:14px;">📚 全部 {{ listTotal }} 道 · 点击展开详情</strong>
         <span style="font-size:12px;color:var(--ink3);">按入本时间倒序</span>
       </div>
-      <!-- 维度取值（选中"按错因/知识点/时间/稳定度"后出现） -->
+      <!-- 维度取值（选中"按错因/知识点/时间/遗忘风险"后出现） -->
       <div v-if="activeTab !== '全部'" style="padding:10px 20px;border-bottom:1px dashed var(--line);display:flex;gap:8px;flex-wrap:wrap;">
         <button
           v-for="opt in subOptions" :key="opt.value"
@@ -275,6 +252,8 @@
       </div>
     </div>
   </div>
+    </div><!-- /errors-right -->
+    </div><!-- /errors-split -->
 </template>
 
 <script setup>
@@ -307,8 +286,8 @@ const HEAT_LEGEND = [
   { label: '刚收录', swatch: 'background:#e5e7eb;border:1px solid #d1d5db;' },
 ]
 
-/* ===== 维度筛选 tabs（全部/错因/知识点/时间/稳定度 → GET /error-records/filter） ===== */
-const tabs = ['全部', '按错因', '按知识点', '按时间', '按稳定度']
+/* ===== 维度筛选 tabs（全部/错因/知识点/时间/遗忘风险 → GET /error-records/filter） ===== */
+const tabs = ['全部', '按错因', '按知识点', '按时间', '按遗忘风险']
 const activeTab = ref('全部')
 const subFilter = ref('')
 
@@ -346,6 +325,11 @@ const listLoading = ref(true)
 const listError = ref('')
 const totalErrors = ref(0)
 const kpOptions = ref([])
+// B5（V2 文档）：题库父码→中文名（存量父码错题在 knowledge_points 无行，前端映射）
+const KP_ZH = { analytic: '解析几何', derivative: '导数与单调性', function: '函数', trig: '三角函数',
+  sequence: '数列', probability: '概率统计', geometry: '立体几何', exponential: '指数对数',
+  set_logic: '集合逻辑', inequality: '不等式', complex: '复数', custom: '自定义' }
+const kpZh = (d) => (d && (d.kp_name || KP_ZH[d.kp_code])) || '未标注知识点' 
 
 const detail = ref(null)
 // 手动拍照入本的原图 URL（file_id -> /files/{id}/content 预签名 URL）
@@ -404,7 +388,7 @@ const subOptions = computed(() => {
   if (activeTab.value === '按错因') return ERROR_TYPES
   if (activeTab.value === '按知识点') return kpOptions.value
   if (activeTab.value === '按时间') return TIME_OPTS
-  if (activeTab.value === '按稳定度') return STABILITY_OPTS
+  if (activeTab.value === '按遗忘风险') return STABILITY_OPTS
   return []
 })
 
@@ -479,7 +463,7 @@ function buildFilterQuery() {
   if (!subFilter.value) return q
   if (activeTab.value === '按错因') q.error_type = subFilter.value
   else if (activeTab.value === '按知识点') q.kp_code = subFilter.value
-  else if (activeTab.value === '按稳定度') q.stability = subFilter.value
+  else if (activeTab.value === '按遗忘风险') q.stability = subFilter.value
   else if (activeTab.value === '按时间') {
     const d = new Date()
     d.setDate(d.getDate() - Number(subFilter.value))
@@ -823,4 +807,9 @@ onMounted(() => {
 }
 .tutor-input input:focus { outline: none; border-color: var(--brand); }
 .tutor-input input:disabled { opacity: 0.5; }
+
+/* S5 v2：左右分栏（列表左/详情右 sticky），热力图已删除 */
+.errors-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .errors-split { grid-template-columns: 1fr; } }
+.errors-right { position: sticky; top: calc(var(--topbar-h, 60px) + 12px); max-height: calc(100vh - var(--topbar-h, 60px) - 24px); overflow-y: auto; }
 </style>
