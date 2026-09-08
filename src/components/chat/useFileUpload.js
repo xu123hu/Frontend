@@ -260,8 +260,7 @@ export function useFileUpload(toast) {
             .filter((a) => a.asset_type === 'markdown' || a.asset_type === 'text')
             .sort((x, y) => (x.page_no || 0) - (y.page_no || 0))
             .map((a) => a.content || '')
-            .join('
-')
+            .join('\n')
             .trim()
         } catch { task.ocrText = '' }
         scheduleKnowledgeIngest(task, d) // 上传即入库（S2/S4 链路）：静默进行，不阻断发送
