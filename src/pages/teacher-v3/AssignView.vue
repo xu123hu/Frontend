@@ -437,7 +437,13 @@ async function confirmCluster(c: { id: string; count?: number; sample: { feedbac
     steps: (smp.recognized_steps || []).map((st: { status: string }, ti: number) => ({ step: ti, verdict: stepMark(c.id, si, ti) || (st.status === 'ok' ? 'ok' : 'ai-flag') })),
   }))
   if (!window.confirm(`教师终审确认：将写入本聚类全部 ${n} 份成绩与评语。\n· 评分依据：标准答案 + 评分点 + 逐步骤判定（已逐生确认）\n· 演示数据不会发布给学生\n\n确认写入？`)) return
-  try { await v3Api.grading.confirmCluster(assignment.value.id, c.id, { feedback: fb, reviews } as any) } catch { /* mock */ }
+  // 独立审查：确认=教师终审写入；失败必须如实报错并中止，不得把失败标记为已确认（假成功）
+  try {
+    await v3Api.grading.confirmCluster(assignment.value.id, c.id, { feedback: fb, reviews } as any)
+  } catch (e: any) {
+    toastOf().error(`终审写入失败，未确认任何学生：${e?.message || '服务端拒绝'}`)
+    return
+  }
   c.sample.forEach((_smp, si) => { confirmedStudents.value[stuKey(c.id, si)] = true })
 }
 
