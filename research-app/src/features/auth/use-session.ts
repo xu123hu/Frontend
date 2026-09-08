@@ -17,6 +17,7 @@ import {
   fetchOidcAccount,
   oidcLogout,
 } from './oidc';
+import { fetchPlatformMe, platformLogout } from './platform-session';
 import type { Account } from '@entities/session/types';
 
 export function useSession() {
@@ -30,6 +31,22 @@ export function useSession() {
     await store.probe(async () => {
       probeDegraded.value = null;
       try {
+        if (config.identityMode === 'platform') {
+          // 统一平台身份：平台 cookie 换 token → 拉平台账户。无会话（null）按未登录处理。
+          const me = await fetchPlatformMe();
+          if (!me) {
+            store.setAnonymous();
+            return;
+          }
+          store.setAuthenticated({
+            user_id: me.id,
+            tenant_id: '',
+            display_name: (me.nickname || '').trim() || '科研用户',
+            email: undefined,
+            created_at: new Date().toISOString(),
+          });
+          return;
+        }
         const account = config.oidcEnabled ? await fetchOidcAccount() : await fetchMe();
         store.setAuthenticated(account);
       } catch (err) {
@@ -68,6 +85,12 @@ export function useSession() {
   }
 
   async function logout(): Promise<void> {
+    if (config.identityMode === 'platform') {
+      // 统一平台登出：撤平台会话 cookie + 本地清空。
+      await platformLogout();
+      store.setAnonymous();
+      return;
+    }
     if (config.oidcEnabled) {
       // 统一身份登出：清空本地令牌后整页跳转 end_session（不返回）。
       oidcLogout();

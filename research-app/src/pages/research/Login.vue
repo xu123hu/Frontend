@@ -5,7 +5,7 @@
  * 状态覆盖：提交中 / 字段校验错误 / 验证码错误可重试 / 账户禁用 / 探测降级（离线）提示。
  * 交互基线：F0 原型手机号 + OTP 结构 1:1 保留，接入真实会话用例。
  */
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useSession } from '@features/auth/use-session';
 import { ApiError } from '@app/api/client';
@@ -45,6 +45,14 @@ onMounted(() => {
   void session.probeSession();
 });
 
+// 平台统一登录完成回跳：平台登录页在当前页设置了会话 cookie，探测结束后自动进入工作台。
+watch(
+  () => session.isAuthenticated.value,
+  (authenticated) => {
+    if (authenticated) void router.replace(redirectTarget.value);
+  },
+);
+
 async function handleOidcCallback(): Promise<void> {
   oidcProcessing.value = true;
   oidcError.value = null;
@@ -76,6 +84,17 @@ async function startOidcLogin(): Promise<void> {
       retryable: false,
     };
   }
+}
+
+/** 平台统一登录：跳回平台登录页（保留 research 深链 redirect）。 */
+function goPlatformLogin(): void {
+  const redirect =
+    typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/research')
+      ? route.query.redirect
+      : '/research/home';
+  const url = new URL('/login', window.location.origin);
+  url.searchParams.set('redirect', redirect);
+  window.location.assign(url.toString());
 }
 
 function startCountdown(seconds = 60): void {
@@ -196,7 +215,24 @@ function backToPhone(): void {
         </p>
 
         <div
-          v-if="config.oidcEnabled"
+          v-if="config.identityMode === 'platform'"
+          class="form"
+        >
+          <p class="muted">
+            科研端与平台共用统一身份：使用平台手机号账号登录（选择"科研端"身份），
+            无需单独的科研账号。
+          </p>
+          <AppButton
+            block
+            size="lg"
+            @click="goPlatformLogin"
+          >
+            使用平台统一账号登录
+          </AppButton>
+        </div>
+
+        <template
+          v-else-if="config.oidcEnabled"
           class="form"
         >
           <p class="muted">
@@ -225,7 +261,7 @@ function backToPhone(): void {
           >
             {{ oidcProcessing ? '正在跳转统一身份…' : '使用统一身份登录' }}
           </AppButton>
-        </div>
+        </template>
 
         <form
           v-else

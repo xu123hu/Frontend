@@ -6,6 +6,7 @@
  * 本模块注入 Bearer 头，依赖方向必须保持单向。
  */
 import { config } from '@app/config';
+import { getPlatformAccessToken } from './platform-session';
 
 export interface OidcTokens {
   access_token: string;
@@ -143,6 +144,8 @@ async function requestToken(body: URLSearchParams): Promise<OidcTokens> {
 
 /** 取可用 access token：未过期直接返回；过期先刷新；无法恢复时清空并返回 null（不抛）。 */
 export async function getValidAccessToken(): Promise<string | null> {
+  // 三端统一平台身份：直接走平台 cookie → access token 桥接。
+  if (config.identityMode === 'platform') return getPlatformAccessToken();
   if (!config.oidcEnabled) return null;
   const tokens = read();
   if (!tokens) return null;

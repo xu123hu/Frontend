@@ -17,6 +17,8 @@ export interface AppConfig {
   oidcIssuer: string | null;
   oidcClientId: string | null;
   oidcEnabled: boolean;
+  /** 身份模式：platform=三端统一平台登录（默认产品路径）；oidc=独立 Keycloak；legacy=演示手机号。 */
+  identityMode: 'platform' | 'oidc' | 'legacy';
 }
 
 export function resolveAppConfig(
@@ -40,6 +42,11 @@ export function resolveAppConfig(
   const rawClientId = typeof env.VITE_OIDC_CLIENT_ID === 'string' ? env.VITE_OIDC_CLIENT_ID.trim() : '';
   const oidcIssuer = rawIssuer ? rawIssuer.replace(/\/+$/, '') : null;
   const oidcClientId = rawClientId || null;
+  const oidcEnabled = oidcIssuer !== null && oidcClientId !== null;
+  // 三端统一平台登录为产品默认身份；oidc/legacy 仅显式指定时启用。
+  const form = env.VITE_IDENTITY_MODE;
+  const identityMode: 'platform' | 'oidc' | 'legacy' =
+    form === 'oidc' ? 'oidc' : form === 'legacy' ? 'legacy' : 'platform';
   return {
     apiBaseUrl: (import.meta.env.BASE_URL && import.meta.env.BASE_URL !== '/'
       ? import.meta.env.BASE_URL.replace(/\/$/, '') + '/' : '/') + 'api/research/v1',
@@ -48,7 +55,8 @@ export function resolveAppConfig(
     appName: '智学数研 · 科研端',
     oidcIssuer,
     oidcClientId,
-    oidcEnabled: oidcIssuer !== null && oidcClientId !== null,
+    oidcEnabled,
+    identityMode,
   };
 }
 
