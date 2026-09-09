@@ -69,7 +69,7 @@ const statusColor = (s) => ({ ok: 'ok', auth: 'warn', error: 'err', down: 'err',
 const endpoints = computed(() => [
   { key: 'student', name: '学生端', sub: '对话 · 练题 · 错题复习', icon: '✎', href: '/dialog', allow: can('student'), statusKey: 'student', statusText: can('student') ? statusLabel(health.value.student) : '未授权', color: statusColor(health.value.student) },
   { key: 'teacher', name: '教师端', sub: '备课 · 课件 · 课堂 · 学情', icon: '§', href: '/teacher-v3/today', allow: can('teacher'), statusKey: 'teacher', statusText: can('teacher') ? statusLabel(health.value.teacher) : '未授权', color: statusColor(health.value.teacher) },
-  { key: 'research', name: '科研端', sub: '项目 · 文献 · 验证 · 写作', icon: 'ƒ', href: '/research-app/', allow: true, statusKey: 'research', statusText: '同源已接入', color: 'ok', mount: true },
+  { key: 'research', name: '科研端', sub: '文献库 · 阅读 · 写作 · AI 助手 · 任务', icon: 'ƒ', href: '/research', allow: true, statusKey: 'research', statusText: '已并入统一前端', color: 'ok' },
   { key: 'admin', name: '管理后台', sub: '用户 · 任务 · 模型 · 数据', icon: '▤', href: '/admin/overview', allow: can('admin'), statusKey: 'platform', statusText: can('admin') ? `平台 ${statusLabel(health.value.platform)}` : '未授权', color: can('admin') ? statusColor(health.value.platform) : 'mute' },
 ])
 
@@ -189,8 +189,8 @@ onMounted(() => {
         </div>
 
         <div class="hub-row">
-          <span class="hub-row__label">科研运行中心（独立身份）</span>
-          <button class="hub-btn hub-btn--quiet" type="button" @click="location.assign('/research-app/')">打开展示 →</button>
+          <span class="hub-row__label">科研端（并入三端 · 文献阅读与写作）</span>
+          <button class="hub-btn hub-btn--quiet" type="button" @click="router.push('/research')">进入科研端 →</button>
         </div>
 
         <div v-if="can('admin')" class="hub-row">

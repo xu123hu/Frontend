@@ -1,9 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
-import { readFileSync, existsSync, statSync } from 'node:fs'
-import { join, normalize, extname } from 'node:path'
-import { request as httpRequest } from 'node:http'
 import { mockApi } from './src/mock/server'
 import { canonicalLocalOrigin } from './src/utils/localOrigin.js'
 
@@ -35,62 +32,10 @@ function canonicalLocalHost() {
   }
 }
 
-// 科研端同源挂载：把科研前端（research-app）构建产物作为 /research-app/* 由主前端服务。
-// 使学生/教师/科研都在 http://127.0.0.1:5176 一个地址上（含深链/刷新），
-// 科研 API 走上面 proxy（剥 base 前缀 → :18010），科研身份为 Keycloak（同源内完成登录）。
-const RESEARCH_DIST = 'D:/科研端worktrees/agent-01-frontend/research-app/dist'
-const RESEARCH_API_TARGET = 'http://127.0.0.1:18010'
-const MIME = {
-  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
-  '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp',
-  '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.json': 'application/json',
-  '.map': 'application/json', '.ico': 'image/x-icon',
-}
-/** 转发科研 API 到 18010（剥 /research-app 基前缀），保证任意中间件次序都命中真实后端 */
-function forwardResearchApi(req, res) {
-  const url = new URL(req.url || '/', RESEARCH_API_TARGET)
-  const targetPath = url.pathname.replace(/^\/research-app/, '') + (url.search || '')
-  const out = httpRequest({ hostname: '127.0.0.1', port: 18010, method: req.method, path: targetPath, headers: { ...req.headers, host: '127.0.0.1:18010' } }, (up) => {
-    res.writeHead(up.statusCode || 502, up.headers)
-    up.pipe(res)
-  })
-  out.on('error', () => { if (!res.headersSent) { res.statusCode = 502; res.end('research API unreachable') } else res.end() })
-  req.pipe(out)
-}
-function researchMount() {
-  return {
-    name: 'research-app-mount',
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        // connect 全路径中间件（不挂路径，避免 req.url 被剥基前缀）
-        const full = req.originalUrl || req.url || '/'
-        if (!full.startsWith('/research-app')) return next()
-        try {
-          const url = new URL(full, 'http://localhost')
-          if (url.pathname.startsWith('/research-app/api/')) return forwardResearchApi(req, res)
-          let rel = decodeURIComponent(url.pathname)
-          if (rel.startsWith('/research-app')) rel = rel.slice('/research-app'.length)
-          if (!rel || rel === '/') rel = '/index.html'
-          let file = normalize(join(RESEARCH_DIST, rel))
-          if (!file.startsWith(normalize(RESEARCH_DIST))) { res.statusCode = 403; return res.end('forbidden') }
-          if (!existsSync(file) || statSync(file).isDirectory()) file = join(RESEARCH_DIST, 'index.html')
-          const ext = extname(file)
-          res.setHeader('Content-Type', MIME[ext] || MIME['.html'])
-          res.setHeader('Cache-Control', 'no-store')
-          res.end(readFileSync(file))
-        } catch (e) {
-          next(e)
-        }
-      })
-    },
-  }
-}
-
 export default defineConfig({
   plugins: [
     vue(),
     canonicalLocalHost(),
-    researchMount(),
     useMock && {
       name: 'mock-api-server',
       configureServer(server) {
@@ -112,10 +57,14 @@ export default defineConfig({
     proxy: useRealApi
       ? {
           // 教师平台优先命中（键序即匹配序，前缀更长者在前）
-          '/api/teacher-v3': { target: teacherApiProxyTarget, changeOrigin: true },
-          '/api/agent': { target: agentProxyTarget, changeOrigin: true },
-          '/api/v1': { target: agentProxyTarget, changeOrigin: true },
-          '/api': { target: apiProxyTarget, changeOrigin: true },
+          // 生成接口为真 LLM（大纲/教案/逐页），单次可长达 2-3 分钟：proxyTimeout 必须放开，
+          // 否则 Vite 默认 30s 断开 → 前端误报「mock 未启动」
+          '/api/teacher-v3': { target: teacherApiProxyTarget, changeOrigin: true, proxyTimeout: 300000, timeout: 300000 },
+          // P2-29：学生对话/引导解题/思考/直接看答案回接旧后端 :8000（agent_router+socratic_solver 全会话能力）；
+          // 知识库 /api/v1 继续走 :8012 集成服务
+          '/api/agent': { target: agentProxyTarget, changeOrigin: true, proxyTimeout: 300000, timeout: 300000 },
+          '/api/v1': { target: agentProxyTarget, changeOrigin: true, proxyTimeout: 300000, timeout: 300000 },
+          '/api': { target: apiProxyTarget, changeOrigin: true, proxyTimeout: 300000, timeout: 300000 },
         }
       : undefined,
     // research-repos 是克隆的参考仓库（工作材料，非本应用源码），不参与 Vite 监听，避免 full-reload 抖动
