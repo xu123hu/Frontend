@@ -270,13 +270,17 @@ async function loadSideData() {
   suggestions.value = sugs || []
 }
 async function createManuscript() {
-  const title = prompt('文稿标题：', '未命名论文')
+  const title = safePrompt('文稿标题：', '未命名论文')
   if (title === null) return
   try {
     const m = await researchWritingApi.createManuscript({ title: title || '未命名论文', format: 'latex', content: '\\documentclass{article}\n\\usepackage{amsmath,amssymb}\n\\begin{document}\n\n\\section{Introduction}\n\n\\end{document}\n', status: 'draft' })
     toast.success('文稿已创建')
     await loadManuscripts(m.id)
   } catch (e) { toast.error(e.message) }
+}
+/** window.prompt 在部分宿主（如自动化预览/受限 iframe）不可用 → 静默回退默认标题，不打断新建 */
+function safePrompt(msg, def) {
+  try { return window.prompt(msg, def) } catch { return def }
 }
 async function onImportTex(e) {
   const f = e.target.files?.[0]
@@ -345,7 +349,13 @@ function setMode(mode) {
   if (mode === 'pdf') loadPreview()
 }
 async function loadPreview() {
-  if (!currentMs.value?.compile_status === 'success' && !currentMs.value?.has_pdf) return
+  // 修复：旧守卫 `!ms?.compile_status === 'success'` 恒 false，未编译也尝试读 ms.id（null）→ 隐式 pdf 区报 null.id
+  if (!currentMs.value) { toast.info('请先新建或打开文稿'); editorMode.value = 'source'; return }
+  if (currentMs.value.compile_status !== 'success' || !currentMs.value.has_pdf) {
+    toast.info('需要先「编译 PDF」成功后才可预览')
+    pdfError.value = '尚未编译成功（compile_status=' + currentMs.value.compile_status + '）。点击顶部「编译 PDF」生成后再预览。'
+    return
+  }
   pdfError.value = ''
   previewLoading.value = true
   try {

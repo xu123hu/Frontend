@@ -35,9 +35,6 @@ const routes = [
   { path: '/onboarding/student', component: () => import('@/pages/StudentOnboarding.vue'), meta: { authFlow: true } },
   { path: '/identity/apply', component: () => import('@/pages/RoleApplication.vue'), meta: { authFlow: true } },
   { path: '/identity/pending', component: () => import('@/pages/PendingReview.vue'), meta: { authFlow: true } },
-  // 统一工作入口（三端汇聚；科研端为平台内应用）
-  { path: '/hub', name: 'hub', component: () => import('@/pages/HubView.vue'), meta: { authFlow: true, title: '统一工作入口' } },
-  { path: '/hub/research', name: 'hub-research', component: () => import('@/pages/research/ResearchRedirect.vue'), meta: { authFlow: true, title: '科研端入口' } },
   { path: '/account/security', component: () => import('@/pages/AccountSecurity.vue'), meta: { authFlow: true } },
   { path: '/admin/identity/applications', component: () => import('@/pages/admin/AdminIdentityReview.vue'), meta: { authFlow: true, admin: true, requiresRole: 'admin' } },
   /* ===== 科研端（论文阅读与写作平台，并入统一前端） ===== */
@@ -80,22 +77,15 @@ const routes = [
   { path: '/admin/kb-bench', name: 'admin-kb-bench', component: () => import('@/pages/admin/AdminKbBenchView.vue'), meta: { admin: true, requiresRole: 'admin', title: '检索试验台' } },
   { path: '/admin/butler', name: 'admin-butler', component: () => import('@/pages/admin/AdminButlerView.vue'), meta: { admin: true, requiresRole: 'admin', title: 'Butler 授权' } },
 
-  /* ===== 科研端（旧占位/假数据页面收敛：真实科研端为独立应用 :5173，统一经 /hub/research 入口） ===== */
-  { path: '/research/dashboard', name: 'research-dashboard', redirect: '/research', meta: { research: true, requiresRole: 'researcher', title: '科研端入口' } },
-  { path: '/research/project', name: 'research-project', redirect: '/research', meta: { research: true, requiresRole: 'researcher', title: '科研端入口' } },
-  { path: '/research/literature', name: 'research-literature', redirect: '/research', meta: { research: true, requiresRole: 'researcher', title: '科研端入口' } },
-  { path: '/research/verify', name: 'research-verify', redirect: '/research', meta: { research: true, requiresRole: 'researcher', title: '科研端入口' } },
-  { path: '/research/lean', name: 'research-lean', redirect: '/research', meta: { research: true, requiresRole: 'researcher', immersive: true, title: '科研端入口' } },
-  { path: '/research/writing', name: 'research-writing', redirect: '/research', meta: { research: true, requiresRole: 'researcher', immersive: true, title: '科研端入口' } },
-  { path: '/research/review', name: 'research-review', redirect: '/research', meta: { research: true, requiresRole: 'researcher', title: '科研端入口' } },
-  { path: '/research/education', name: 'research-education', redirect: '/research', meta: { research: true, requiresRole: 'researcher', title: '科研端入口' } },
-  { path: '/research/runs', name: 'research-runs', redirect: '/research', meta: { research: true, requiresRole: 'researcher', title: '科研端入口' } },
+  
+  /* ===== 科研端旧占位 stub 已随科研端并入三端移除（2026-09-09）：/research/* 全部由上方新路由承载，
+     旧 dashboard/project/literature/verify/lean/writing/review/education/runs 深链由 catch-all → '/' → roleHome 收敛。 ===== */
 
-  { path: '/:pathMatch(.*)*', redirect: '/' },
+{ path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
 export function roleHome(role) {
-  return role === 'teacher' ? '/teacher-v3/today' : role === 'researcher' ? '/research' : role === 'admin' ? '/admin/identity/applications' : '/overview'
+  return role === 'teacher' ? '/teacher-v3/today' : role === 'researcher' ? '/research' : role === 'admin' ? '/admin/identity/applications' : '/dialog'
 }
 
 export function resolveAuthNavigation(to, auth) {
