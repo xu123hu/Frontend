@@ -33,7 +33,7 @@ export function uuid() {
   })
 }
 
-export function newUserMsg({ text, clientMsgId, attachments = [], skillKeys = [], rawText = '' }) {
+export function newUserMsg({ text, clientMsgId, attachments = [], skillKeys = [], rawText = '', question = null }) {
   return {
     key: `u_${clientMsgId}`,
     role: 'user',
@@ -45,6 +45,7 @@ export function newUserMsg({ text, clientMsgId, attachments = [], skillKeys = []
     skillKeys, // 发送时点亮的技能 key 数组（[] 表示自由对话），气泡上显示技能徽标
     createdAt: new Date().toISOString(),
     versions: null,
+    question, // {text, options?} 题目白卡（讲解/变式消息把题干单独成白卡展示）
   }
 }
 

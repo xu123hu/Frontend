@@ -105,7 +105,12 @@ async function requestRaw(method, path, { body, query, headers = {}, signal, ide
     error.errorKey = json.error_key || ''
     throw error
   }
-  if (!res.ok) throw new ApiError(res.status, json?.detail || `HTTP ${res.status}`)
+  if (!res.ok) {
+    // detail 可能是对象（如 {code, message}）——转成字符串，避免页面渲染成 [object Object]
+    const d = json?.detail
+    const msg = typeof d === 'string' ? d : (d?.message || d?.detail?.message || `HTTP ${res.status}`)
+    throw new ApiError(res.status, msg)
+  }
   return { data: json, status: res.status, request_id: res.headers.get('x-request-id') || '' }
 }
 

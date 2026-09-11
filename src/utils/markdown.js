@@ -95,6 +95,7 @@ function normalizeOcrArtifacts(s) {
 /** 渲染单段 markdown → 消毒后 HTML（失败回退源码转义，绝不白屏） */
 export function renderMarkdown(src, { streamingTail = false, imgMode = 'question' } = {}) {
   let s = normalizeOcrArtifacts(src || '') // OCR 答案空位/转义美元先归一
+    .replace(/\\{2,}([a-zA-Z])/g, '\\$1') // P1：\\lg、\\sin 等双反斜杠+字母 → 单反斜杠（KaTeX 中 \\ 是换行命令，否则渲染乱码）
     .replace(/\\\(([\s\S]*?)\\\)/g, (_match, tex) => `$${tex}$`)  // S11：\( \)=课堂练习定界归一为 $..$
     .replace(/\\qquad|\\quad|\\;/g, ' ')  // S3（V2 文档）：老题库残留的 LaTeX 间距命令不进渲染
     .replace(/\\\./g, '')

@@ -134,8 +134,8 @@ export async function researchPdfBlob(path) {
 /** 上传本地 PDF（走平台 /api/files 上传 → 返回 file_id 供 research import file 模式） */
 export async function uploadPdf(file) {
   const bytes = new Uint8Array(await file.arrayBuffer())
-  const digest = await crypto.subtle.digest('SHA-256', bytes)
-  const sha = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+  const { sha256Hex } = await import('@/utils/sha256')
+  const sha = await sha256Hex(bytes)
   const up = await api.post('/files/upload', {
     filename: file.name, mime: 'application/pdf', size_bytes: bytes.byteLength, sha256: sha, multipart: false,
   })

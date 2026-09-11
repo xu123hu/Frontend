@@ -79,7 +79,12 @@ const boardHost = ref<HTMLElement | null>(null)
 let board: any = null
 let rebuildTimer: number | undefined
 
-const preset = computed(() => FIGURE_PRESETS.find((p) => p.id === props.presetId))
+// 容错：生成端可能给裸名（hyperbola/ellipse），回退匹配 conic/ 前缀 preset
+const preset = computed(
+  () =>
+    FIGURE_PRESETS.find((p) => p.id === props.presetId) ||
+    FIGURE_PRESETS.find((p) => p.id === `conic/${props.presetId}`),
+)
 const pxHeight = computed(() => `${props.height}px`)
 
 function numParam(key: string, def: number): number {

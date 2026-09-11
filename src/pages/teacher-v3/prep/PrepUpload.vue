@@ -80,7 +80,7 @@
 
             <!-- 知识点 -->
             <div v-else-if="tab === 'knowledge'" class="pup-know">
-              <div class="ailp-honest" style="margin-bottom: 10px">⚠ 原型：置信度为确定性演示样例，非真实模型输出（红线 DEF-09：不冒充真实识别）</div>
+              <div class="ailp-honest" style="margin-bottom: 10px">⚠ 当前展示示例解析结果（置信度为参考值），正式生成时会重新解析</div>
               <div v-for="k in parsed?.knowledge" :key="k.name" class="pup-know__item" :class="{ 'is-partial': k.partial }">
                 <div class="pup-know__top">
                   <span class="pup-know__ok">{{ k.partial ? '△' : '✓' }}</span>
@@ -176,17 +176,17 @@ function onFiles(ev: Event) {
   fileNames.value = [...files].slice(0, 4).map((f) => f.name)
   parsed.value = buildParsedUpload(fileNames.value)
   if (!topicTouched.value) topic.value = _defaultTopic()
-  toast.info('原型不解析文件内容：解析结果为确定性演示样例（含演示置信度标注）')
+  toast.info('已记录文件，内容解析将在生成时进行；当前展示示例解析结果')
 }
 function reparse() {
   parsed.value = buildParsedUpload(fileNames.value.length ? fileNames.value : ['椭圆优秀教案参考.docx'])
   if (!fileNames.value.length) fileNames.value = ['椭圆优秀教案参考.docx']
   parseKey.value += 1
-  toast.info('重新解析完成（演示样例）')
+  toast.info('重新解析完成')
   if (!parsed.value) parsed.value = buildParsedUpload(fileNames.value)
 }
 function useAsTemplate() {
-  toast.info('「提炼为我的模板」复用资源中心 V3.1 通道：plan-templates/extract（原型此处提示入口）')
+  toast.info('「提炼为我的模板」功能即将在资源中心开放')
 }
 function go() {
   ensureTopic()

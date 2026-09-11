@@ -8,6 +8,7 @@
 import { reactive } from 'vue'
 import { filesApi } from '@/api'
 import { getCachedUser, authHeaders } from '@/api/client'
+import { sha256Hex } from '@/utils/sha256'
 
 export const ALLOWED_MIMES = new Set([
   'application/pdf',
@@ -39,22 +40,9 @@ function resolveMime(file) {
   return file.type || ''
 }
 
-export async function sha256Hex(file) {
-  try {
-    const buf = await file.arrayBuffer()
-    const digest = await crypto.subtle.digest('SHA-256', buf)
-    return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
-  } catch {
-    // 老浏览器降级：随机 64 hex（放弃秒传），照常上传
-    try {
-      return [...crypto.getRandomValues(new Uint8Array(32))]
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('')
-    } catch {
-      return Array.from({ length: 64 }, () => '0123456789abcdef'[(Math.random() * 16) | 0]).join('')
-    }
-  }
-}
+// 再导出：HTTP 部署（http://IP 云端）无 crypto.subtle，sha256Hex 内部回退纯 JS 实现；
+// 绝不能用随机哈希兜底——后端校验 PUT 字节哈希，假哈希会被静默拒收导致"解析无输出"。
+export { sha256Hex }
 
 /** 预签名 URL 直传（XHR 以拿到上传进度与 ETag；不带业务鉴权头） */
 export function putPresigned(task, url) {

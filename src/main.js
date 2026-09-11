@@ -11,11 +11,12 @@ import './styles/editorial.css'
 import './styles/base.css'
 import './styles/v4.css'
 import './styles/teacher-v3.css'
+import './styles/teacher-tokens.css'
 import './styles/research.css'
 import './styles/research-end.css'
 
-// 本地预览便捷引导：只有 VITE_USE_MOCK=1 才预置 mock 身份（默认真实 API 模式绝不预置）。
-// VITE_MOCK_ROLE=teacher 预置教师；默认/student 保持学生。旧 VITE_REAL_API 遗留语义已由 VITE_USE_MOCK 取代。
+// 本地预览便捷引导：仅本地预览模式才预置 mock 身份（默认真实 API 模式绝不预置）。
+// VITE_MOCK_ROLE=teacher 预置教师；默认/student 保持学生。
 const useMock = import.meta.env.VITE_USE_MOCK === '1'
 let mockRole = (import.meta.env.VITE_MOCK_ROLE || 'student').toString()
 if (useMock) {

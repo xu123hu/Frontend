@@ -1,16 +1,11 @@
 <template>
-  <div data-testid="tv3-insights">
-    <div class="tv3-hero" style="margin-bottom: 18px">
-      <div style="display: flex; gap: 24px; align-items: center">
-        <div style="flex: 1">
-          <div class="tv3-hero__title">学情洞察 <span style="font-size: 14px; font-weight: 500; color: #9db4d8">· {{ data?.class_name || '高二(3)班' }}</span></div>
-          <div class="tv3-hero__sub">知识掌握热力 · 错因趋势 · 需关注名单 · 联动备课与组卷</div>
-        </div>
-        <select v-model="classId" class="tv3-input" style="width: 160px; background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.25); color: #fff">
-          <option v-for="c in classes" :key="c.class_id" :value="c.class_id" style="color: var(--tv3-ink)">{{ c.name }}</option>
-        </select>
-      </div>
-    </div>
+  <div class="tv3-page-shell" data-testid="tv3-insights">
+    <TeacherPageHeader title="学情洞察" subtitle="掌握班级学习情况" icon="📊">
+      <span v-if="data?.class_name" class="tv3-tag tv3-tag--primary" style="font-size: 12px">{{ data.class_name }}</span>
+      <select v-model="classId" class="tv3-input" style="width: 160px; background: #fff; border-color: var(--tv3-line); color: var(--tv3-ink)">
+        <option v-for="c in classes" :key="c.class_id" :value="c.class_id">{{ c.name }}</option>
+      </select>
+    </TeacherPageHeader>
 
     <div v-if="data" style="display: flex; flex-direction: column; gap: 14px">
       <!-- 顶部指标 -->
@@ -104,7 +99,12 @@
       </div>
     </div>
 
-    <div v-else class="tv3-card" style="padding: 60px; text-align: center; color: var(--tv3-ink3)">加载中…（mock 未启动时显示为空）</div>
+    <TeacherLoading v-else-if="loading" />
+    <TeacherEmptyState
+      v-else
+      title="暂无学情数据"
+      desc="布置一次作业或开展课堂互动后，这里会展示班级学习情况。"
+    />
   </div>
 </template>
 
@@ -116,12 +116,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { v3Api, type V3InsightOverview } from '@/api/teacherV3'
+import { TeacherPageHeader, TeacherEmptyState, TeacherLoading } from '@/components/teacherV3/common'
 import type { V3ClassInfo } from '@/types/teacherV3'
 
 const router = useRouter()
 const classes = ref<V3ClassInfo[]>([])
 const classId = ref('c2-03')
 const data = ref<V3InsightOverview | null>(null)
+const loading = ref(true)
 
 const weakest = computed(() => [...(data.value?.kp_heat || [])].sort((a, b) => a.mastery - b.mastery)[0])
 const topError = computed(() => [...(data.value?.error_tags || [])].sort((a, b) => b.count - a.count)[0])
@@ -146,7 +148,7 @@ async function load() {
   try {
     const r = await v3Api.catalog.insights(classId.value)
     data.value = r.data
-  } catch { data.value = null }
+  } catch { data.value = null } finally { loading.value = false }
 }
 onMounted(async () => {
   try {
@@ -158,6 +160,11 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.tv3-page-shell {
+  margin: -22px; padding: 22px; min-height: calc(100vh - var(--tv3-topbar-h));
+  background: var(--teacher-bg-gradient);
+  box-sizing: border-box;
+}
 .tv3-kpi__label { font-size: 11.5px; color: var(--tv3-ink3); }
 .tv3-kpi__num { font-family: var(--tv3-font-num); font-size: 26px; font-weight: 800; margin-top: 2px; }
 .tv3-kpi__spark { width: 100%; height: 26px; margin-top: 4px; }

@@ -6,6 +6,16 @@
         <div v-if="msg.attachments?.length" class="ub-atts">
           <AttachmentThumb v-for="a in msg.attachments" :key="a.file_id || a.name" :attachment="a" />
         </div>
+        <!-- 题目白卡：讲解/变式消息把题干独立成白色题目区（LaTeX 正常渲染） -->
+        <div v-if="msg.question?.text" class="ub-question">
+          <MarkdownView :text="msg.question.text" :zoomable="false" />
+          <div v-if="msg.question.options?.length" class="ub-q-opts">
+            <div v-for="(o, qi) in msg.question.options" :key="qi" class="ub-q-opt">
+              <span class="ub-q-key">{{ 'ABCDEF'[qi] }}</span>
+              <span class="ub-q-body"><MarkdownView :text="String(o)" :zoomable="false" /></span>
+            </div>
+          </div>
+        </div>
         <!-- 内联编辑态（M2 §4.2：textarea 保存调 edit 端点） -->
         <div v-if="editing" class="ub-edit">
           <textarea ref="editTaRef" v-model="editDraft" class="ub-edit-ta" rows="3" maxlength="4000"></textarea>
@@ -47,36 +57,20 @@
         </div>
       </details>
 
-      <!-- 思考过程（M2 重构：thinking 事件流式累积，可折叠面板） -->
-      <details v-if="msg.thinking" class="thinking-bar" :open="msg.status === 'streaming'">
-        <summary>
-          <span v-if="msg.status === 'streaming' && !msg.text" class="spinner"></span>
-          🧠 模型思考过程
-          <span class="sb-count">{{ Math.round((msg.thinking || '').length / 2) }} 字</span>
-        </summary>
-        <div class="thinking-content">{{ msg.thinking }}</div>
-      </details>
-
       <div class="bubble ai-bubble glass-card">
-        <!-- clarify 意图确认 / 附件未就绪提示 -->
+        <!-- 正文 markdown：增量流式渲染（AI 先提问/讲解，用户再看下方选项） -->
+        <IncrementalMarkdown v-if="msg.text" :text="msg.text" :streaming="msg.status === 'streaming'" />
+        <!-- P1-9：选项在正文之后（先让 AI 把问题讲清楚，用户再选择） -->
         <div v-if="msg.clarify" class="clarify-box">
-          <div class="clarify-q">{{ msg.clarify.question }}</div>
-          <div v-if="msg.clarify.options.length" class="clarify-opts">
-            <button
-              v-for="(o, i) in msg.clarify.options"
-              :key="i"
-              class="clarify-chip"
-              @click="$emit('clarify', o)"
-            >
-              {{ o }}
+          <div v-if="msg.clarify.question" class="clarify-q">
+            <MarkdownView :text="msg.clarify.question" :zoomable="false" />
+          </div>
+          <div v-if="clarifyOpts.length" class="clarify-opts">
+            <button v-for="(o, i) in clarifyOpts" :key="i" class="clarify-chip" @click="$emit('clarify', o)">
+              <span class="cc-key">{{ 'ABCD'[i] }}</span>
+              <span class="cc-body"><MarkdownView :text="o" :zoomable="false" /></span>
             </button>
           </div>
-        </div>
-
-        <!-- 正文 markdown：增量流式渲染（4.1；历史消息同一管线一次性渲染） -->
-        <IncrementalMarkdown v-if="msg.text" :text="msg.text" :streaming="msg.status === 'streaming'" />
-        <div v-if="!msg.text && !msg.clarify && msg.status === 'streaming'" class="typing">
-          <span class="spinner"></span> 思考中…
         </div>
 
         <!-- F11 graph block -->
@@ -119,7 +113,7 @@
         </template>
 
         <!-- 防泄题「直接看答案」二次确认条（ADR-033） -->
-        <div v-if="msg.answerConfirm && !msg.confirmDismissed && msg.status === 'done'" class="confirm-bar">
+        <div v-if="msg.answerConfirm && !msg.confirmDismissed" class="confirm-bar">
           <div class="cb-text">⚠️ 直接查看答案会失去逐步引导的机会，确定要看完整解答吗？</div>
           <div class="cb-btns">
             <button class="btn btn-sm btn-danger" @click="$emit('answerConfirm', msg)">确认查看完整解答</button>
@@ -250,6 +244,8 @@ import { copyText } from '@/utils/markdown'
 const props = defineProps({
   msg: { type: Object, required: true },
 })
+// P1-5：选项统一在 AI 消息卡片下方渲染（主题色、KaTeX）
+const clarifyOpts = computed(() => (props.msg?.clarify?.options || []))
 const emit = defineEmits([
   'clarify', 'regenerate', 'feedback', 'quizEnter', 'quizExplain', 'quizWrong', 'quizAnswered', 'quizMore', 'quizChainAction', 'tutorAction',
   'answerConfirm', 'thinkMore', 'edit', 'versionSwitch', 'action', 'completeAction',
@@ -384,6 +380,22 @@ function stageName(stage) {
   box-shadow: var(--shadow-sm);
 }
 .user-bubble :deep(.md-body) { color: #fff; }
+/* 题目白卡（与出题卡 qc-stem-box 同风格：暖白纸面+圆角）。注意在用户气泡内必须是深字（气泡本身是紫色渐变） */
+.ub-question {
+  background: #fff; color: var(--text-primary);
+  border: 1px solid rgba(120, 120, 160, .25);
+  border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+  font-size: 14px; line-height: 1.7; box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+}
+.ub-question :deep(.md-body p) { margin: 0 0 4px; }
+.ub-q-opts { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.ub-q-opt { display: flex; gap: 6px; align-items: flex-start; font-size: 13px; }
+.ub-q-key {
+  width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+  background: #EEF1FF; color: #5B5FC7; font-size: 11px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; margin-top: 2px;
+}
+.ub-q-body { flex: 1; min-width: 0; }
 .user-bubble :deep(.md-body code) { background: rgba(255, 255, 255, 0.18); color: #fff; }
 .ub-atts { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-2); }
 /* 内联编辑 */
@@ -435,16 +447,24 @@ function stageName(stage) {
   margin-top: var(--space-1); color: var(--text-muted);
 }
 
-.clarify-box { margin-bottom: var(--space-2); }
-.clarify-q { font-size: var(--text-sm); margin-bottom: var(--space-2); }
-.clarify-opts { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.clarify-box { margin-top: 8px; }
+.clarify-q { font-size: 12.5px; color: var(--ink3); margin-bottom: 8px; }
+.clarify-opts { display: flex; flex-direction: column; gap: 8px; }
 .clarify-chip {
-  padding: var(--space-2) var(--space-4); border-radius: var(--radius-full); font-size: var(--text-xs); cursor: pointer;
-  border: 1px solid var(--primary-border); color: var(--primary); background: var(--primary-subtle);
-  transition: all 0.15s; font-family: var(--font);
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--brand-soft); color: var(--ink); font-size: 13.5px; line-height: 1.55;
+  cursor: pointer; transition: all .15s; width: 100%;
 }
-.clarify-chip:hover { background: var(--primary); color: #fff; }
-
+.clarify-chip:hover { background: #E3E7FF; border-color: var(--brand-faint); }
+.cc-key {
+  width: 22px; height: 22px; border-radius: 7px; flex-shrink: 0;
+  background: var(--brand); color: #fff; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.cc-body { flex: 1; min-width: 0; }
+.cc-body :deep(.md-body p) { margin: 0; }
+.cc-body :deep(.katex) { font-size: 1.02em; color: var(--ink); }
 .soc-tag {
   margin-top: 8px; font-size: 12px; color: var(--primary); background: #EEF1FF;
   border-radius: var(--radius-sm); padding: 4px 10px; width: fit-content;

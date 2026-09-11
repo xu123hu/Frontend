@@ -1,15 +1,9 @@
 <template>
-  <div data-testid="tv3-bank">
-    <div class="tv3-hero" style="margin-bottom: 18px">
-      <div style="display: flex; gap: 24px; align-items: center">
-        <div style="flex: 1">
-          <div class="tv3-hero__title">题库</div>
-          <div class="tv3-hero__sub">三级分类树 · 多维标签 · 我的专题夹 · 拍照原样入库 · 自编结构化录入</div>
-        </div>
-        <span class="tv3-tag tv3-tag--gold">图片题原样入库 · 不强转文字公式</span>
-        <router-link to="/teacher-v3/quiz" class="tv3-btn tv3-btn--sm" data-testid="tv3-bank-to-quiz">去组卷 →</router-link>
-      </div>
-    </div>
+  <div class="tv3-page-shell" data-testid="tv3-bank">
+    <TeacherPageHeader title="题库" subtitle="管理和组卷你的题目资源" icon="📚">
+      <span class="tv3-tag tv3-tag--gold">图片题原样入库 · 不强转文字公式</span>
+      <router-link to="/teacher-v3/quiz" class="tv3-btn tv3-btn--sm" data-testid="tv3-bank-to-quiz">去组卷 →</router-link>
+    </TeacherPageHeader>
 
     <div style="display: flex; gap: 14px; align-items: flex-start">
       <!-- 左：知识点分类树 + 我的专题夹 -->
@@ -109,7 +103,14 @@
           <button class="tv3-btn tv3-btn--sm tv3-btn--gold" data-testid="tv3-bank-scan-open" @click="scanOpen = true">＋ 拍照入库</button>
         </div>
         <div class="tv3-card__body tv3-qscroll" data-testid="tv3-bank-list">
-          <div v-if="!filtered.length" class="tv3-empty">当前筛选下暂无题目。可「拍照入库」「自编录入」，或切换分类树 / 专题夹。</div>
+          <TeacherLoading v-if="loading" />
+          <TeacherEmptyState
+            v-else-if="!filtered.length"
+            :title="questions.length ? '暂无匹配题目' : '题库为空'"
+            :desc="questions.length ? '当前筛选下暂无题目，试试切换分类树 / 专题夹或调整筛选条件。' : '题库为空，上传教材自动切片入库，或手动录入题目。'"
+            :cta="questions.length ? '' : '＋ 自编录入'"
+            @cta-click="openCreate"
+          />
           <div v-for="q in filtered" :key="q.id" class="tv3-qrow" :class="{ 'tv3-qrow--image': q.q_type === 'image' }" :data-testid="`tv3-bank-q-${q.id}`">
             <div style="flex: 1; min-width: 0">
               <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap">
@@ -129,7 +130,7 @@
               </div>
               <div class="tv3-qrow__stem" v-html="stemOf(q)" />
               <div v-if="q.options" class="tv3-qrow__opts">
-                <span v-for="(o, i) in q.options" :key="i" class="tv3-qrow__opt" :class="{ 'is-answer': q.answer === String.fromCharCode(65 + i) }" v-html="renderLatex(o)" />
+                <span v-for="(o, i) in q.options" :key="i" class="tv3-qrow__opt" :class="{ 'is-answer': q.answer === String.fromCharCode(65 + i) }" v-html="renderStem(o)" />
               </div>
               <!-- 答案与解析（可折叠） -->
               <div class="tv3-bank__meta">
@@ -137,8 +138,8 @@
                   {{ detailOpen === q.id ? '收起答案解析 ▴' : '答案与解析 ▾' }}
                 </button>
                 <div v-if="detailOpen === q.id" class="tv3-bank__detail" :data-testid="`tv3-bank-detail-box-${q.id}`">
-                  <div><b>答案：</b><span v-html="renderLatex(q.answer)" /></div>
-                  <div v-if="q.analysis" style="margin-top: 4px"><b>解析：</b><span v-html="renderLatex(q.analysis)" /></div>
+                  <div><b>答案：</b><span v-html="renderStem(q.answer)" /></div>
+                  <div v-if="q.analysis" style="margin-top: 4px"><b>解析：</b><span v-html="renderStem(q.analysis)" /></div>
                   <div v-if="q.solution_image" style="margin-top: 6px" :data-testid="`tv3-bank-solution-${q.id}`">
                     <b>解答过程（原图）：</b>
                     <img :src="q.solution_image" alt="解答过程原图" style="max-width: 240px; border-radius: 6px; display: block; margin-top: 4px" />
@@ -266,7 +267,7 @@
           </div>
           <div class="tv3-form-label">题干（$..$ 实时预览公式）</div>
           <textarea v-model="createForm.stem_latex" class="tv3-textarea" rows="3" data-testid="tv3-bank-create-stem" placeholder="例如：过椭圆 $\frac{x^2}{4}+\frac{y^2}{3}=1$ 右焦点且斜率为 1 的直线交椭圆于 A、B，求 $|AB|$" />
-          <div class="tv3-bank__stem-preview" v-html="renderLatex(createForm.stem_latex || '题干预览')" data-testid="tv3-bank-create-preview" />
+          <div class="tv3-bank__stem-preview" v-html="renderStem(createForm.stem_latex || '题干预览')" data-testid="tv3-bank-create-preview" />
           <div class="tv3-form-label">答案</div>
           <textarea v-model="createForm.answer" class="tv3-textarea" rows="2" data-testid="tv3-bank-create-answer" placeholder="例如：$\frac{24}{7}$" />
           <div class="tv3-form-label">解析（选填）</div>
@@ -290,13 +291,15 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { v3Api, type V3QuizQuestion, type V3KpTreeNode, type V3QuestionFolder } from '@/api/teacherV3'
-import { renderLatex } from '@/components/mathx/latex'
+import { TeacherPageHeader, TeacherEmptyState, TeacherLoading } from '@/components/teacherV3/common'
+import { renderLatex, renderStem } from '@/components/mathx/latex'
 import { presignUpload } from '@/api/teacherV3Upload'
 import { updateTv3Context } from '@/stores/teacherContext'
 import { setReceipt, registerUndo } from '@/stores/companion'
 
 interface TreeItem { id: string; name: string; depth: number; leaf: boolean; codes: string[] | null }
 
+const loading = ref(true)
 const questions = ref<V3QuizQuestion[]>([])
 const tree = ref<V3KpTreeNode[]>([])
 const folders = ref<V3QuestionFolder[]>([])
@@ -384,7 +387,7 @@ const typeLabel = (t: string) => ({ choice: '选择', fill: '填空', solve: '�
 
 function stemOf(q: V3QuizQuestion): string {
   if (q.q_type === 'image') return escapeHtmlRaw(q.stem_latex ?? '')
-  return renderLatex(q.stem_latex)
+  return renderStem(q.stem_latex)
 }
 function escapeHtmlRaw(t: string): string {
   return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -404,13 +407,17 @@ async function loadFolders() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadQuestions(), loadFolders()])
-  updateTv3Context({ route: '/teacher-v3/bank', topic: '题库', extra: '题库列表 · 绘图可插入为题图' })
   try {
-    const tr = await v3Api.catalog.quizKpTree()
-    tree.value = tr.data.tree
-    if (kpLeafOptions.value.length) { scanKpCode.value = kpLeafOptions.value[0].code; createForm.value.kp_code = kpLeafOptions.value[0].code }
-  } catch { /* mock */ }
+    await Promise.all([loadQuestions(), loadFolders()])
+    updateTv3Context({ route: '/teacher-v3/bank', topic: '题库', extra: '题库列表 · 绘图可插入为题图' })
+    try {
+      const tr = await v3Api.catalog.quizKpTree()
+      tree.value = tr.data.tree
+      if (kpLeafOptions.value.length) { scanKpCode.value = kpLeafOptions.value[0].code; createForm.value.kp_code = kpLeafOptions.value[0].code }
+    } catch { /* mock */ }
+  } finally {
+    loading.value = false
+  }
 })
 
 /* ---------- C2 伴随工具层：绘图台插入 → 题图原样入库（与拍照入库同一通道，可撤销） ---------- */
@@ -671,6 +678,11 @@ async function doCreate() {
 </script>
 
 <style scoped>
+.tv3-page-shell {
+  margin: -22px; padding: 22px; min-height: calc(100vh - var(--tv3-topbar-h));
+  background: var(--teacher-bg-gradient);
+  box-sizing: border-box;
+}
 .tv3-treescroll { max-height: 430px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
 .tv3-qscroll { display: flex; flex-direction: column; gap: 8px; max-height: 620px; overflow-y: auto; }
 .tv3-empty { text-align: center; color: var(--tv3-ink4); padding: 60px 0; font-size: 13px; }

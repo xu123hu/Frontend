@@ -20,7 +20,7 @@ const recentErr = ref('')
   <div class="rs-entry">
     <header class="rs-top">
       <div class="rs-brand"><span class="rs-mark">ƒ</span>科研端 · 证据原生研究 OS</div>
-      <button class="rs-ghost" type="button" @click="$router.push('/hub')">← 返回统一入口</button>
+      <button class="rs-ghost" type="button" @click="$router.push('/research')">← 返回科研首页</button>
     </header>
 
     <main class="rs-body">

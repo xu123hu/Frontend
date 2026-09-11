@@ -330,12 +330,13 @@ export function useChat({
     displayText = '',
     skillKeys = [],
     skills = null,
+    question = null,
   } = {}) {
     if (streaming.value) return
     const cmid = clientMsgId || uuid()
     if (!replaceKey) {
       // rawText = 真实发送文本（displayText 仅展示；修 regenerate displayText bug 的关键）
-      messages.value.push(newUserMsg({ text: displayText || text, clientMsgId: cmid, attachments, skillKeys, rawText: text }))
+      messages.value.push(newUserMsg({ text: displayText || text, clientMsgId: cmid, attachments, skillKeys, rawText: text, question: question || null }))
     }
     const aiMsg = newAssistantMsg(cmid)
     if (replaceKey) {

@@ -29,12 +29,30 @@ const minFontOf = (e: V3Element): number | null => {
   return null
 }
 
+/** 与后端 rich lesson 去重保持同一类归一化：去定界符/空白/无语义括号差异。 */
+const normalizeFormula = (latex: string): string => latex
+  .replace(/^\s*(?:\$+|\\\(|\\\[)/, '')
+  .replace(/(?:\$+|\\\)|\\\])\s*$/, '')
+  .replace(/\\left|\\right/g, '')
+  .replace(/\\[,;!: ]/g, '')
+  .replace(/\s+/g, '')
+  .replace(/\^\{([^{}]+)\}/g, '^$1')
+
+const hasExecutableTask = (s: V3Slide): boolean => {
+  const task = s.task
+  if (!task) return false
+  return [task.goal, task.context, task.student_action, task.expected_output]
+    .every((value) => typeof value === 'string' && value.trim().length > 0)
+}
+
 export function checkDeck(deck: V3Deck): CheckIssue[] {
   const issues: CheckIssue[] = []
   let seq = 0
   const push = (i: CheckIssue['severity'], si: number, s: V3Slide, rule: string, why: string, elementId?: string, fix?: CheckIssue['fix']) => {
     issues.push({ id: `ck-${++seq}`, severity: i, slideIndex: si, slideTitle: slideTitle(s), elementId, rule, why, fix })
   }
+
+  const firstFormulaByKey = new Map<string, { slideIndex: number; elementId: string; title: string }>()
 
   deck.slides.forEach((s, si) => {
     const title = slideTitle(s)
@@ -49,6 +67,18 @@ export function checkDeck(deck: V3Deck): CheckIssue[] {
     for (const e of s.elements) {
       if (e.left + e.width > 1284 || e.top + e.height > 724 || e.left < -4 || e.top < -4) {
         push('error', si, s, '内容溢出画布', `「${title}」有元素超出 1280×720 画布——放映时会被裁掉，请拖回画布内。`, e.id, { kind: 'none' })
+      }
+    }
+    /* 2a. 公式语义去重：跨页完全相同的标准式不能机械填页。 */
+    for (const e of s.elements) {
+      if (e.type !== 'formula') continue
+      const key = normalizeFormula(e.latex)
+      if (!key) continue
+      const first = firstFormulaByKey.get(key)
+      if (first && first.slideIndex !== si) {
+        push('error', si, s, '公式机械重复', `「${title}」复用了第 ${first.slideIndex + 1} 页的同一归一化公式——应补充推导、变式或应用语境，不能用标准式填充空页。`, e.id, { kind: 'none' })
+      } else if (!first) {
+        firstFormulaByKey.set(key, { slideIndex: si, elementId: e.id, title })
       }
     }
     /* 3. 例题完整性：缺解答/答案（确定性） */
@@ -84,6 +114,11 @@ export function checkDeck(deck: V3Deck): CheckIssue[] {
   const first6 = deck.slides.slice(0, 6)
   if (deck.slides.length >= 6 && !first6.some((s) => checkLayouts.has(s.layout) || /检测|练|检查/.test(slideTitle(s)))) {
     push('info', 0, deck.slides[0], '缺少理解检查点', `连续 6 页都是讲授内容，没有任何当堂检查——建议在第 4–6 页之间插入 1 道 30 秒小题（当堂回收掌握度）。`, undefined, { kind: 'none' })
+  }
+
+  /* 7. 课堂任务：正文课件至少有一项可执行任务，且目标/行动/产出齐全。 */
+  if (deck.slides.length > 0 && !deck.slides.some(hasExecutableTask)) {
+    push('error', 0, deck.slides[0], '缺少课堂任务', '课件没有可执行课堂任务：必须明确任务目标、学生行动和可检查产出（并保留问题情境供教师引导）。', undefined, { kind: 'none' })
   }
 
   return issues

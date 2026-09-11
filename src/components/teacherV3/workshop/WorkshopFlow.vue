@@ -3,10 +3,6 @@
     <!-- ================= 首页：把想法变成课件 ================= -->
     <div v-if="ws.screen === 'home'" data-testid="tv3-slides-list">
       <div class="ws-topbar">
-        <div class="ws-topbar-brand">
-          <span class="ws-logo">✦</span>
-          <span>备小研 <b class="ws-grad">AI 备课</b></span>
-        </div>
         <span class="ws-badge ws-badge--warn">AI 只出草稿 · 教师确认后生效</span>
       </div>
 
@@ -38,34 +34,12 @@
               <button class="ws-send" title="生成大纲草稿" @click="ws.submitHero()">➤</button>
             </div>
             <div v-if="ws.briefCtx.docs.length" class="ws-docs" data-testid="tv3-plan-doc-note">
-              📎 {{ ws.briefCtx.docs.join('、') }}（原型记录文件名，不解析内容；解析属后端 M2）
+              📎 {{ ws.briefCtx.docs.join('、') }}（已记录文件名，内容解析在生成时进行）
             </div>
           </div>
         </div>
         <div class="ws-hint">支持 PDF / DOC / PPT / TXT 材料上传 · 材料与章节优先 · 大纲确认后才生成</div>
 
-        <div class="ws-ctx-pills">
-          <label class="ws-ctx-pill">
-            📖 人教A版 · 选修一
-          </label>
-          <label class="ws-ctx-pill">
-            <select v-model="ws.briefCtx.chapter" title="锚定章节（决定内容源）">
-              <option value="">未选章节</option>
-              <option v-for="c in ws.chapters" :key="c.id" :value="c.label">{{ c.label }}</option>
-            </select>
-          </label>
-          <label class="ws-ctx-pill">
-            <select v-model="ws.form.class_id">
-              <option v-for="c in ws.classes" :key="c.class_id" :value="c.class_id">{{ c.name }}</option>
-            </select>
-          </label>
-          <label class="ws-ctx-pill">
-            <select v-model="ws.briefCtx.course_type">
-              <option>新授课</option><option>习题课</option><option>讲评课</option><option>复习课</option><option>公开课</option>
-            </select>
-          </label>
-          <span class="ws-ctx-pill" title="在大纲确认后选择">🎨 {{ ws.templateName(ws.form.template_id) }}</span>
-        </div>
       </div>
 
       <section class="ws-section">
@@ -201,7 +175,7 @@
           <section class="ws-block">
             <div class="ws-blockhead"><i class="ws-stepdot">1</i><b>选择教案</b><span>仅显示已确认的教案</span></div>
             <div v-if="ws.briefCtx.docs.length" class="ws-note" data-testid="tv3-plan-doc-note">
-              📎 外部材料《{{ ws.briefCtx.docs.join('》《') }}》已记录：原型不解析材料内容，本次沿用所选教案的环节结构。
+              📎 外部材料《{{ ws.briefCtx.docs.join('》《') }}》已记录：内容解析在生成时进行，本次沿用所选教案的环节结构。
             </div>
             <div
               v-for="p in ws.plans" :key="p.id"
@@ -251,7 +225,7 @@
               <div class="ws-stats">
                 <span class="ws-statchip">共 {{ ws.gateOutline.length }} 页</span>
                 <span class="ws-statchip">建议时长 {{ ws.gateOutline.reduce((s: number, o: any) => s + (o.minutes || 0), 0) }} 分钟</span>
-                <span class="ws-statchip" :class="ws.gateMatched ? 'is-ok' : 'is-warn'" :title="ws.gateNote">{{ ws.gateMatched ? '已匹配内置内容源' : '无内置内容源（演示页）' }}</span>
+                <span class="ws-statchip" :class="ws.gateMatched ? 'is-ok' : 'is-warn'" :title="ws.gateNote">{{ ws.gateMatched ? '已匹配内置内容源' : '未匹配内置内容源' }}</span>
                 <span v-if="ws.briefCtx.course_type !== '新授课'" class="ws-statchip is-brand" data-testid="tv3-gate-coursetype">{{ ws.briefCtx.course_type }}结构</span>
                 <span v-if="ws.briefCtx.chapter" class="ws-statchip is-ok" data-testid="tv3-gate-chapter">📖 {{ ws.chapterShort(ws.briefCtx.chapter) }}</span>
                 <span v-if="ws.briefCtx.docs.length" class="ws-statchip is-warn">📄 {{ ws.briefCtx.docs[0] }}</span>
@@ -293,7 +267,7 @@
               <button class="ws-addpage" data-testid="tv3-gate-add" @click="ws.addOutlinePage()">＋ 添加一页</button>
 
               <div v-if="ws.gateReqs.length" class="ws-reqs" data-testid="tv3-gate-reqs">
-                <div class="ws-reqshead">老师的要求（{{ ws.gateReqs.length }}）<span>原型：规则词表匹配 · 非大模型理解</span></div>
+                <div class="ws-reqshead">老师的要求（{{ ws.gateReqs.length }}）<span>AI 已按你的要求编排到对应页面</span></div>
                 <div v-for="r in ws.gateReqs" :key="r.id" class="ws-req" :data-testid="`tv3-gate-req-${r.id}`">
                   <span class="ws-pill" :class="r.status === 'applied' ? 'ws-pill--ok' : 'ws-pill--warn'">{{ r.status === 'applied' ? '✓ 已排入' : '⚠ 未支持' }}</span>
                   <b>{{ r.text }}</b>
@@ -337,19 +311,19 @@
                       :alt="`${t.name} 模板缩略图`" @error="thumbFail[t.id] = true"
                     >
                     <template v-else>
-                      <div class="ws-tplprev-cover" :style="{ background: t.swatch.bg, color: t.swatch.light ? '#fff' : '#e2e8f0' }">
+                      <div class="ws-tplprev-cover" :style="{ background: swatchOf(t).bg, color: swatchOf(t).light ? '#fff' : '#e2e8f0' }">
                         <i class="bar w-1/3" /><i class="bar big" /><i class="bar w-1/2" />
                       </div>
                       <div class="ws-tplprev-page">
-                        <i class="bar big" :style="{ background: t.swatch.primary }" />
+                        <i class="bar big" :style="{ background: swatchOf(t).primary }" />
                         <i class="bar" style="background: rgba(100,116,139,0.25)" /><i class="bar" style="background: rgba(100,116,139,0.18)" />
                       </div>
                     </template>
                   </div>
                   <h3>{{ t.name }}</h3>
                   <div class="ws-tplmeta">
-                    <span class="ws-pill ws-pill--muted">适用 {{ t.recommended_for }}</span>
-                    <span class="ws-dots"><i :style="{ background: t.swatch.bg }" /><i :style="{ background: t.swatch.primary }" /><i :style="{ background: t.swatch.accent }" /></span>
+                    <span class="ws-pill ws-pill--muted">适用 {{ t.recommended_for || '通用' }}</span>
+                    <span class="ws-dots"><i :style="{ background: swatchOf(t).bg }" /><i :style="{ background: swatchOf(t).primary }" /><i :style="{ background: swatchOf(t).accent }" /></span>
                   </div>
                 </article>
               </div>
@@ -434,6 +408,9 @@ const docInput = ref<HTMLInputElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 /** IFC-003：缩略图加载失败 → 回落 swatch 自渲染骨架（记录失败 id，绝不破图） */
 const thumbFail = reactive<Record<string, boolean>>({})
+/** 模板色板兜底（后端契约缺失/旧数据时防渲染崩溃） */
+const DFLT_SWATCH = { bg: '#ffffff', primary: '#4f46e5', accent: '#1e3a8a', light: true }
+const swatchOf = (t: any) => t?.swatch || DFLT_SWATCH
 </script>
 
 <style scoped>

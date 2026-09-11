@@ -12,6 +12,8 @@ const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:80
 const agentProxyTarget = process.env.VITE_AGENT_API_PROXY_TARGET || 'http://127.0.0.1:8012'
 // 教师平台独立栈（02-ARCHITECTURE §1.3）：/api/teacher-v3 优先于 /api 命中 :8100
 const teacherApiProxyTarget = process.env.VITE_TEACHER_API_PROXY_TARGET || 'http://127.0.0.1:8100'
+// PPT Studio V2（8200 独立服务）：开发代理仅由统一路径进入 8200（R15；V2 不并入 8100 legacy 域）
+const pptStudioProxyTarget = process.env.VITE_PPT_STUDIO_API_PROXY_TARGET || 'http://127.0.0.1:8200'
 // 兼容旧开关：VITE_REAL_API=1 无副作用（真实后端已是默认）
 const useRealApi = !useMock
 const devPort = Number(process.env.PORT) || 5176
@@ -60,6 +62,8 @@ export default defineConfig({
           // 生成接口为真 LLM（大纲/教案/逐页），单次可长达 2-3 分钟：proxyTimeout 必须放开，
           // 否则 Vite 默认 30s 断开 → 前端误报「mock 未启动」
           '/api/teacher-v3': { target: teacherApiProxyTarget, changeOrigin: true, proxyTimeout: 300000, timeout: 300000 },
+          // PPT Studio V2（8200）：统一路径 /api/ppt-studio-v2 进入独立服务；浏览器不可直连 8201
+          '/api/ppt-studio-v2': { target: pptStudioProxyTarget, changeOrigin: true, proxyTimeout: 300000, timeout: 300000 },
           // P2-29：学生对话/引导解题/思考/直接看答案回接旧后端 :8000（agent_router+socratic_solver 全会话能力）；
           // 知识库 /api/v1 继续走 :8012 集成服务
           '/api/agent': { target: agentProxyTarget, changeOrigin: true, proxyTimeout: 300000, timeout: 300000 },

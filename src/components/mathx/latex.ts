@@ -62,6 +62,18 @@ export function renderRich(src: string | undefined): string {
   return DOMPurify.sanitize(out, { USE_PROFILES: { html: true, mathMl: true } })
 }
 
+/**
+ * 题干/答案渲染（V3 题库数据源）：兼容两种格式
+ * - 含 \$..\$ 定界符的富文本（与教案/评语同构）→ renderRich
+ * - 纯 LaTeX（无 \$）→ renderLatex
+ * 修复：此前直接 renderLatex 会把富文本里的 \$ 定界符原样输出（组卷/题库/课堂乱码）。
+ */
+export function renderStem(latex: string | undefined): string {
+  const s = String(latex ?? '')
+  if (s.includes('\$')) return renderRich(s)
+  return renderLatex(s)
+}
+
 /** LaTeX 粗校验：花括号配对 + 非空（供表单校验） */
 export function latexOk(latex: string | undefined): boolean {
   const s = String(latex ?? '').trim()

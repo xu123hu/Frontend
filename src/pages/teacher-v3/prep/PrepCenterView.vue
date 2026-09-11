@@ -38,6 +38,9 @@ function onNav(target: 'textbook' | 'upload' | 'templates' | 'continue') {
 }
 
 onMounted(() => {
-  if (chain.stage !== 'home' && chain.stage !== 'editor') gotoStage('home')
+  /* 生成流程恢复：链状态为模块级（prepChain），切换页面不丢——
+     保留 generating/outline（进行中/待确认大纲），只有无效态才回 home。 */
+  if (chain.stage !== 'home' && chain.stage !== 'editor'
+      && chain.stage !== 'generating' && chain.stage !== 'outline') gotoStage('home')
 })
 </script>

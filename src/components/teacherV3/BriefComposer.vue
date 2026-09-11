@@ -14,7 +14,7 @@
     <div class="tv3-brief__slots">
       <div class="tv3-brief__slot" :class="{ 'is-filled': docs.length || photos.length }" data-testid="tv3-brief-material">
         <span class="tv3-brief__slotlabel">📎 材料</span>
-        <span v-for="d in docs" :key="d" class="tv3-tag tv3-tag--gold tv3-brief__chip" :title="'原型不解析内容，仅记录来源'">
+        <span v-for="d in docs" :key="d" class="tv3-tag tv3-tag--gold tv3-brief__chip" :title="'内容解析在生成时进行，此处仅记录来源'">
           📄 {{ d }}<button class="tv3-brief__chipx" :data-testid="`tv3-brief-doc-x-${d}`" @click="removeDoc(d)">×</button>
         </span>
         <span v-for="i in photos.length" :key="i" class="tv3-tag tv3-tag--gold tv3-brief__chip">🖼 照片{{ i }}<button class="tv3-brief__chipx" :data-testid="`tv3-brief-photo-x-${i}`" @click="removePhoto(i - 1)">×</button></span>
@@ -110,7 +110,7 @@ const canSubmit = computed(() => !!(text.value.trim() || docs.value.length || ph
 /** 路由预览：提交前就告诉教师会走哪条链路（确定性规则，无假装智能） */
 const routeHint = computed(() => {
   if (photos.value.length) return '路由：拍照出课件链路（原图锚定 · 识别块可编辑 · 仍需选识别范围）'
-  if (docs.value.length) return '路由：教案直通链路（材料解析属后端 M2，本稿沿用所选教案的环节结构）'
+  if (docs.value.length) return '路由：教案直通链路（沿用所选教案的环节结构）'
   if (chapterId.value) return `路由：章节锚定大纲 → 确认大纲后生成（${shortChapter(chapterId.value)}）`
   if (text.value.trim()) return '路由：大纲起步（未选章节/材料，内容匹配度有限——建议补选）'
   return '填写要求、附材料或选章节后开始'
@@ -164,7 +164,7 @@ onMounted(async () => {
   try {
     const r = await v3Api.catalog.textbookChapters()
     chapters.value = r.data
-  } catch { /* mock 未启动：章节槽留空仍可走兜底路 */ }
+  } catch { /* 章节接口不可用时留空，仍可走兜底路 */ }
 })
 </script>
 

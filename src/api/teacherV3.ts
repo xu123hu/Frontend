@@ -11,7 +11,7 @@ import { redirectTeacherDenied } from './teacher/client'
 import { teacherGet, teacherPost, teacherRequest } from './teacher/client'
 import type {
   V3ButlerAction, V3ButlerCard, V3ButlerChatInput, V3ButlerContext, V3ClassInfo, V3ClassroomActivity, V3ClassroomActivityKind, V3ClassroomJoinResult, V3ClassroomParticipant, V3ClassroomSession, V3ClassroomSnapshot, V3Deck, V3DeckTemplate, V3DrawRecord, V3ElementDiff, V3FigureLibraryItem, V3FigurePreset, V3FigureRebuildCandidate, V3GradingAssignment,
-  V3LessonPlan, V3LessonTemplate, V3PlanGenForm, V3PlanOutline, V3Recipe, V3RecognizePageResult, V3Slide, V3Task, V3TemplateQualityReport, V3TodayData, V3VoiceFormulaInput,
+  V3LessonPlan, V3LessonTemplate, V3PlanGenForm, V3PlanOutline, V3Recipe, V3RecognizePageResult, V3RichLessonSlide, V3Slide, V3Task, V3TemplateQualityReport, V3TodayData, V3VoiceFormulaInput,
 } from '@/types/teacherV3'
 
 /* ============ 试卷/学情/资源 等目录数据的本地形状（catalog 域返回） ============ */
@@ -177,7 +177,12 @@ export const v3Api = {
     patchSlide: (deckId: string, slideId: string, patch: Partial<V3Slide>) =>
       teacherRequest<V3Deck>('PATCH', `/teacher-v3/decks/${deckId}/slides/${slideId}`, { body: patch }),
     export: (deckId: string, format: 'pptx' | 'pdf') =>
-      teacherPost<{ task_id: string }>(`/teacher-v3/decks/${deckId}/export`, { format }),
+      teacherPost<{ task_id: string; job_id: string }>(`/teacher-v3/decks/${deckId}/export`, { format }),
+    /** 导出任务状态轮询：done 时返回 presign 下载地址（teacher-exports） */
+    exportJob: (jobId: string) =>
+      teacherGet<{ job_id: string; status: string; file_key: string; download_url: string; error: string }>(
+        `/teacher-v3/export-jobs/${jobId}`,
+      ),
   },
 
   /* ==================== 教案 plans ==================== */
@@ -234,9 +239,21 @@ export const v3Api = {
     /* B3 大纲 Gate 第一段（mock 增量端点；正式契约随 IFC-PRODUCT-01a 评审）
        C1：+chapter（内容源锚定）/ course_type（环节语义大纲结构），随 IFC-C1-a 评审
        C1.1：+requirements（教师自然语言要求，server 词表编译进大纲并返回 reqs 回应台账） */
-    deckOutline: (body: { topic: string; class_id?: string; chapter?: string; course_type?: string; requirements?: string[] }) =>
+    deckOutline: (body: { topic: string; class_id?: string; template_id?: string; textbook_version?: string; page_budget?: number; class_name?: string; chapter?: string; course_type?: string; requirements?: string[] }) =>
       teacherPost('/teacher-v3/generation/deck-outline', body),
-    deck: (body: { topic: string; class_id: string; template_id: string }, onEvent: (event: string, data: any) => void, signal?: AbortSignal) =>
+    deck: (body: {
+      topic: string
+      class_id: string
+      template_id: string
+      outline?: { title: string; kind: string; ord?: number; intent?: string; carries?: string[] }[]
+      textbook_version?: string
+      chapter?: string
+      course_type?: string
+      class_name?: string
+      material_name?: string
+      /** 可选：来自学生双师课堂的 RichLessonSlide v1；服务端仍走教师分页/编辑/导出。 */
+      rich_slides?: V3RichLessonSlide[]
+    }, onEvent: (event: string, data: any) => void, signal?: AbortSignal) =>
       v3Sse('POST', '/teacher-v3/generation/deck', body, onEvent, signal),
     /**
      * V3.1 两段式第一段：五件套 → 大纲（环节 / 时长预算 / 目标草案 / 例题建议）。

@@ -27,7 +27,7 @@
             <MarkdownView v-if="it.variant_note" class="qc-vnote" :text="texInline(it.variant_note)" :zoomable="false" />
             <span class="tag gray">{{ DIFF_ZH[it.difficulty] || it.difficulty || '' }}</span>
           </div>
-          <MarkdownView :text="tex(it.question_text)" />
+          <div class="qc-stem-box"><MarkdownView :text="tex(it.question_text)" /></div>
 
           <div class="qc-options grid">
             <div
@@ -113,12 +113,12 @@
           <span class="qc-no">第 {{ it.item_no ?? idx + 1 }} 题</span>
           <span class="tag">{{ QTYPE_ZH[it.q_type] || it.q_type || '题目' }}</span>
           <span class="tag gray">{{ DIFF_ZH[it.difficulty] || it.difficulty || '' }}</span>
-          <span v-if="it.kp_name || it.kp_code" class="tag cyan">{{ it.kp_name || it.kp_code }}</span>
+          <span v-if="kpZh(it)" class="tag cyan">{{ kpZh(it) }}</span>
           <span v-if="it.source === 'kb_variant' || it.source === 'user_variant'" class="tag orange" :title="it.variant_note || it.kb_ref || ''">变式题</span>
           <MarkdownView v-if="it.variant_note" class="qc-vnote" :text="texInline(it.variant_note)" :zoomable="false" />
           <span v-if="it.verified === false" class="tag red">未校验</span>
         </div>
-        <MarkdownView :text="tex(it.question_text)" />
+        <div class="qc-stem-box"><MarkdownView :text="tex(it.question_text)" /></div>
 
         <!-- 选择题：对话内直接作答 -->
         <div v-if="Array.isArray(it.options) && it.options.length" class="qc-options">
@@ -251,7 +251,7 @@
 import { computed, reactive, ref } from 'vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import { wrapBareLatex } from '@/utils/latex'
-import { DIFFICULTIES } from '@/components/student/labels'
+import { DIFFICULTIES, KP_ZH } from '@/components/student/labels'
 import { studentApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useSolutionPhoto } from '@/components/student/useSolutionPhoto'
@@ -265,7 +265,11 @@ const toast = useToastStore()
 const sp = useSolutionPhoto(toast)
 
 // 裸 LaTeX（无 $ 定界符）智能包装；选项用行内模式避免展示模式撑开选项行
-const tex = (v) => wrapBareLatex(v ?? '')
+// 题干清洗：剥掉（MATH-PEP-BIXI2-…）等来源编码，避免"教材ID"当知识点/标题显示
+const stripSourceMark = (v) => String(v ?? '').replace(/[（(]?MATH-[A-Z0-9]+[A-Z0-9-]*[)）]?/g, '').replace(/^[，。、\s]+/, '')
+const tex = (v) => wrapBareLatex(stripSourceMark(v ?? ''))
+// kp 英文代码 → 中文（geometry→立体几何），无映射则不显示
+const kpZh = (it) => (it.kp_name || KP_ZH[String(it.kp_code || '')] || '')
 const texInline = (v) => wrapBareLatex(v ?? '', { inline: true })
 
 const QTYPE_ZH = { choice: '选择', blank: '填空', solution: '解答' }
@@ -445,6 +449,13 @@ function trailMark(ti) {
 .qc-vnote :deep(p) { margin: 0; display: inline; }
 .qc-vnote :deep(.katex) { font-size: 1em; }
 .qc-item { padding: 8px 0; border-top: 1px dashed var(--border); }
+.qc-stem-box {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px; margin: 4px 0 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05); font-size: 14px; line-height: 1.7;
+}
+.qc-stem-box :deep(.md-body p) { margin: 0 0 4px; }
+.qc-stem-box:empty { display: none; }
 .qc-item:first-of-type { border-top: none; }
 .qc-item-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
 .qc-no { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
@@ -507,6 +518,7 @@ function trailMark(ti) {
 .qc-explain-btn.subtle:hover { background: #DFE6FF; }
 
 .qc-answer { margin-top: 6px; font-size: 13px; }
+.qc-answer :deep(.md-body) { max-height: 300px; overflow-y: auto; }
 .qc-answer summary { cursor: pointer; color: var(--primary); font-weight: 600; font-size: 12px; }
 .qc-ana-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin: 6px 0 2px; }
 .qc-foot { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }

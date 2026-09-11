@@ -33,7 +33,7 @@ export interface V3BriefPayload {
   course_type: string
   class_id: string
   template_id: string
-  /** 附带文档的文件名（原型不解析，仅记录；解析属后端 M2） */
+  /** 附带文档的文件名（仅记录文件名，内容解析由后端进行） */
   docs: string[]
   /** 附带照片（dataURL，进拍照出课件链路） */
   photos: string[]
@@ -53,6 +53,51 @@ export interface V3Slide {
   notes?: string
   anchor_bar?: string        // 分页续页锚条："接上页 S=½·|AB|·d"
   fill_rate?: number         // 0-1 装填率（分页引擎写入）
+  /** 学生双师课堂 rich lesson 的语义保留；教师端只投影，不复制学生双栏 UI。 */
+  ir_version?: string
+  semantic_blocks?: Record<string, unknown>[]
+  source_evidence?: V3SourceEvidence[]
+  verification_result?: V3VerificationResult
+  task?: V3ClassroomTask
+  formula_key?: string | null
+}
+
+export interface V3SourceEvidence {
+  source_id: string
+  source_type?: string
+  locator?: string
+  used?: boolean
+}
+
+export interface V3VerificationResult {
+  status: 'verified' | 'needs_review' | 'failed' | string
+  reasons?: string[]
+  checks?: { item: string; ok: boolean; detail?: string }[]
+}
+
+export interface V3ClassroomTask {
+  goal: string
+  context: string
+  student_action: string
+  expected_output: string
+  teacher_prompt?: string
+  feedback?: string
+}
+
+/** 学生双师课堂与教师课件工坊之间的共享语义载荷；教师端只投影 blocks，不复制 DualView UI。 */
+export interface V3RichLessonSlide {
+  order?: number
+  title?: string
+  subtitle?: string
+  blocks: Record<string, unknown>[]
+  narration?: string
+  key_points?: string[]
+  required_blocks?: string[]
+  figure_kind?: string
+  math_claims?: Record<string, unknown> | Record<string, unknown>[]
+  geometry_claims?: Record<string, unknown> | Record<string, unknown>[]
+  source_evidence?: V3SourceEvidence[]
+  verification_result?: V3VerificationResult
 }
 
 export interface V3ElementBase {
@@ -68,10 +113,11 @@ export interface V3ElementBase {
 export type V3Element =
   | (V3ElementBase & { type: 'text'; html: string; font_size: number; color?: string; bold?: boolean })
   | (V3ElementBase & { type: 'formula'; latex: string; font_size: number; display?: boolean })
-  | (V3ElementBase & { type: 'geometry'; preset_id: string; params: Record<string, number>; toggles?: Record<string, boolean>; recipe_id?: string })
+  | (V3ElementBase & { type: 'geometry'; preset_id: string; params: Record<string, number>; toggles?: Record<string, boolean>; recipe_id?: string; board_json?: Record<string, unknown> })
   | (V3ElementBase & { type: 'functionPlot'; expr: string; params: Record<string, { value: number; min: number; max: number; step: number }>; domain: [number, number]; live_sliders?: boolean })
   | (V3ElementBase & { type: 'dynamicDemo'; demo_id: string; caption?: string })
   | (V3ElementBase & { type: 'image'; src: string; alt?: string; draw_recipe?: V3DrawRecipe })
+  | (V3ElementBase & { type: 'figure3d'; scene: Record<string, unknown>; caption?: string })
   | (V3ElementBase & { type: 'anchorPhoto'; src: string; upgrade_state: 'none' | 'library' | 'rebuilt' | 'demo'; upgrade_target?: string })
   | (V3ElementBase & { type: 'pageNo'; no: number })
 
@@ -435,6 +481,7 @@ export interface V3ButlerContext {
 export interface V3ButlerChatInput {
   message: string
   context: V3ButlerContext
+  history?: { role: 'user' | 'assistant'; text: string }[]  // 多轮上下文（本地会话前 N 轮，后端注入 LLM）
   images?: string[]                   // 题目照片等（dataURL）
   files?: string[]                    // 文件名列表（PDF/Word/PPT）
   web_search?: boolean

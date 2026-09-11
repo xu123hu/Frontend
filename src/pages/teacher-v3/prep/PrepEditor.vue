@@ -9,7 +9,7 @@
       <span class="ailp-tag ailp-tag--muted">{{ chain.brief?.textbook || '人教A版' }}</span>
       <div style="flex:1" />
       <span class="ped-top__save"><i />{{ savedText }}</span>
-      <button class="ped-top__btn" title="导出（原型：教案导出属后端能力）" @click="toastInfo('教案导出属后端能力，原型不做假文件')">⬇</button>
+      <button class="ped-top__btn" title="导出为 Word 文档" data-testid="ailp-ed-export" @click="exportDoc()">⬇ 导出</button>
       <button class="ped-top__btn" title="推送为课件" data-testid="ailp-ed-push" @click="pushToDeck">🎞 推送为课件</button>
     </header>
 
@@ -129,7 +129,7 @@
                       <span class="poc-res__kind is-g">📐</span>
                       <div class="poc-res__body">
                         <div class="poc-res__fig" v-html="resOf(s.id).figure!.svg" />
-                        <small>{{ resOf(s.id).figure!.name }}（演示图形）</small>
+                        <small>{{ resOf(s.id).figure!.name }}（示意图）</small>
                       </div>
                     </div>
                   </div>
@@ -253,7 +253,7 @@ const plan = ref<V3LessonPlan | null>(null)
 const activeBlock = ref('objectives')
 const draft = ref('')
 const pending = ref(false)
-const savedText = ref('已自动保存 · 演示')
+const savedText = ref('已自动保存')
 const msgs = ref<{ role: 'user' | 'ai'; text: string }[]>([
   { role: 'ai', text: '李老师，教案初稿已就绪。每个区块都可以点「✎ 编辑」直接改；也可以让我调整，或点「资源推荐」按当前环节找素材。' },
 ])
@@ -360,6 +360,37 @@ function openCompanion() {
 }
 function toastInfo(msg: string) { toast.info(msg) }
 
+/** 教案导出：生成 Word 兼容 HTML 并下载 .doc（真实可打开的文档，无需后端） */
+function exportDoc() {
+  const topic = plan.value?.topic || chain.brief?.topic || '数学教案'
+  const esc = (t: string) => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const h2 = (t: string) => `<h2 style="font-size:16pt;font-weight:bold;color:#1f2937;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin:18px 0 8px;">${t}</h2>`
+  const ol = (arr: string[]) => arr?.length ? `<ol style="margin:6px 0 12px 18px;">${arr.map((x) => `<li style="margin:3px 0;">${esc(x)}</li>`).join('')}</ol>` : '<p style="color:#9ca3af">（待补充）</p>'
+  const steps = edit.steps || []
+  const hw = edit.hw || []
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head><meta charset="utf-8"><title>${esc(topic)}</title></head>
+<body style="font-family:'SimSun','宋体',serif;font-size:12pt;color:#1e293b;line-height:1.6;">
+<h1 style="font-size:20pt;text-align:center;margin-bottom:4px;">${esc(topic)}</h1>
+<p style="text-align:center;color:#6b7280;font-size:11pt;">${esc(plan.value?.lesson_type || chain.brief?.courseType || '新授课')} · ${chain.brief?.className || '高中数学'} · 共 ${totalMinutes.value} 分钟</p>
+${h2('一、教学目标')}${ol(edit.objectives)}
+${h2('二、教学重点与难点')}<p><b>重点：</b></p>${ol(edit.major)}<p><b>难点：</b></p>${ol(edit.hard)}
+${h2('三、教学过程')}<ol style="margin:6px 0 12px 18px;">${steps.map((st) => `<li style="margin:8px 0;"><b>${esc(st.name)}</b>（${st.minutes || 0} 分钟）
+<div style="margin:4px 0 4px 18px;"><p>教学意图：${esc(st.goal || '—')}</p><p>教师活动：${esc(st.teacher || '—')}</p><p>学生活动：${esc(st.student || '—')}</p></div></li>`).join('')}</ol>
+${h2('四、板书设计')}<p><b>主板书：</b></p>${ol(edit.boardMain)}<p><b>副板书：</b></p>${ol(edit.boardSide)}
+${h2('五、作业布置')}${hw.map((tier) => `<p><b>${esc(tier.label || tier.tier)}</b>${tier.minutes ? '（' + esc(tier.minutes) + '）' : ''}</p>${ol(tier.items)}`).join('')}
+</body></html>`
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `${topic.replace(/[\\/:*?"<>|]/g, '_')}.doc`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(a.href)
+  toast.success('教案已导出为 Word 文档')
+}
+
 async function pushToDeck() {
   const pid = plan.value?.id || chain.planId
   if (!pid) { toast.error('尚未生成教案实体，无法推送课件'); return }
@@ -397,7 +428,7 @@ async function send() {
     })
     msgs.value.push({ role: 'ai', text: buf || '（备小研没有返回内容）' })
   } catch {
-    msgs.value.push({ role: 'ai', text: '备小研暂不可用（mock 未启动？）——可以直接在「✎ 编辑」里改文档。' })
+    msgs.value.push({ role: 'ai', text: '备小研助手暂时不可用，你可以直接在「✎ 编辑」里修改教案。' })
   } finally {
     pending.value = false
     void nextTick(() => { if (chatRef.value) chatRef.value.scrollTop = chatRef.value.scrollHeight })

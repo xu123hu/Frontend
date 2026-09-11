@@ -19,14 +19,6 @@
             <span v-if="streakDays > 0"><span class="num">{{ streakDays }}</span> 连击</span>
             <span v-else>开始第 1 天</span>
           </span>
-          <button
-            v-if="auth.roles.includes('teacher')"
-            class="topbar-btn"
-            type="button"
-            title="切换到教师端"
-            @click="switchToTeacher"
-          >教师端</button>
-          <button class="topbar-btn topbar-btn--hub" type="button" title="统一工作入口" @click="router.push('/hub')">统一入口</button>
           <router-link to="/profile" class="user-chip" title="点击进入个人中心">
             <div class="avatar">{{ avatarChar }}</div>
             <div class="text">
@@ -81,7 +73,7 @@
     </aside>
 
     <!-- ===== 主内容区（折叠时自动占满剩余宽度） ===== -->
-    <main class="main">
+    <main class="main" :class="{ 'main--dialog': isDialogRoute }">
       <router-view v-slot="{ Component }">
         <transition name="view-fade" mode="out-in">
           <component :is="Component" />
@@ -112,14 +104,6 @@ const toast = useToastStore()
 const auth = useAuthStore()
 const conv = useConvStore()
 const skillStore = useSkillStore()
-
-/** 角色切换（学生 → 教师）：换发 JWT 后进入教师工作台 */
-async function switchToTeacher() {
-  try {
-    await auth.switchRole('teacher')
-    router.push('/teacher-v3/today')
-  } catch { /* 未绑定教师角色时静默 */ }
-}
 
 const collapsed = ref(localStorage.getItem('ma_sidebar_collapsed') === '1')
 // v4 原文件实验室默认收起
@@ -158,6 +142,7 @@ function go(item) {
 
 /** 是否处于对话学习路由（控制侧边栏历史模块的显隐） */
 const isDialogRoute = computed(() => route.path.startsWith('/dialog'))
+// P1-8:对话页 main 去掉全局内边距,让对话区直接贴边铺满(去掉白色卡片与左右大留白)
 function info(text) {
   toast.info(text)
 }
@@ -175,7 +160,8 @@ const streakDays = computed(() => {
 })
 const streakTitle = computed(() =>
   streakDays.value > 0 ? `连续学习 ${streakDays.value} 天 · 继续加油 🔥` : '今天开始第 1 天学习')
-const avatarChar = computed(() => auth.user?.avatar || (auth.nickname || '同').slice(0, 1))
+// 头像字符：username 优先，其次 nickname 首字（用户要求显示用户名）
+const avatarChar = computed(() => auth.user?.avatar || (auth.user?.username || auth.nickname || '同').slice(0, 1))
 
 const independentRateText = computed(() => {
   const r = panel.value?.week_brief?.independent_rate

@@ -111,7 +111,14 @@ async function load() {
     docs.value = r.data?.items || []
     schedulePoll()
   } catch (e) {
-    loadError.value = e?.message || '加载失败'
+    // 首次使用/未建库：kb_not_found（404）是正常空态，不是错误
+    const msg = e?.message || ''
+    if (e?.code === 404 || e?.status === 404 || /不存在/.test(msg)) {
+      docs.value = []
+      loadError.value = ''
+    } else {
+      loadError.value = typeof msg === 'string' ? msg : '加载失败'
+    }
   } finally {
     loading.value = false
   }

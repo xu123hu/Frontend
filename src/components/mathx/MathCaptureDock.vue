@@ -46,7 +46,7 @@
         </div>
 
         <footer class="mxd-photo__foot">
-          <span class="mcd__note">原型说明：识别/语音为确定性演示（未接入真实服务），结果必须经过上方校对后才插入</span>
+          <span class="mcd__note">识别/语音为示例识别，插入前请在上方校对区确认</span>
           <span class="mcd__spacer" />
           <button class="tv3-btn tv3-btn--sm" type="button" @click="clearField" :disabled="!fieldLatex">清空</button>
           <button class="tv3-btn tv3-btn--sm" type="button" data-testid="mcd-cancel" @click="$emit('close')">取消</button>

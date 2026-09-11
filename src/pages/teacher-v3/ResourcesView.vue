@@ -1,13 +1,16 @@
 <template>
-  <div class="tv3-resources-v2" data-testid="tv3-resources">
-    <!-- 左侧分类导航 -->
-    <aside class="rv2-sidebar">
-      <div class="rv2-sidebar__head">
-        <div class="rv2-logo">
-          <span class="rv2-logo__icon">📚</span>
-          <span class="rv2-logo__text">资源中心</span>
-        </div>
-        <button class="rv2-new-folder" title="新建文件夹">＋</button>
+  <div class="tv3-resources-shell" data-testid="tv3-resources">
+    <TeacherPageHeader title="资源中心" subtitle="教材、课件与模板统一管理" icon="📁" />
+
+    <div class="tv3-resources-v2">
+      <!-- 左侧分类导航 -->
+      <aside class="rv2-sidebar">
+        <div class="rv2-sidebar__head">
+          <div class="rv2-logo">
+            <span class="rv2-logo__icon">📚</span>
+            <span class="rv2-logo__text">资源中心</span>
+          </div>
+          <button class="rv2-new-folder" title="新建文件夹">＋</button>
       </div>
 
       <!-- 一级导航 -->
@@ -215,7 +218,7 @@
                   </div>
                   <div class="rv2-res-card__footer">
                     <span class="rv2-res-card__owner">{{ item.owner }}</span>
-                    <span class="rv2-res-card__date">{{ item.updated_at }}</span>
+                    <span class="rv2-res-card__date">{{ fmtDate(item.updated_at) }}</span>
                   </div>
                   <div v-if="item.tags?.length" class="rv2-res-card__tags">
                     <span v-for="(t, i) in item.tags.slice(0, 3)" :key="i" class="rv2-mini-tag">{{ t }}</span>
@@ -237,7 +240,7 @@
                   <span v-for="(t, i) in item.tags?.slice(0, 2)" :key="i" class="rv2-mini-tag">{{ t }}</span>
                 </div>
                 <span class="rv2-list-item__size">{{ formatSize(item.size_bytes) }}</span>
-                <span class="rv2-list-item__date">{{ item.updated_at }}</span>
+                <span class="rv2-list-item__date">{{ fmtDate(item.updated_at) }}</span>
                 <button v-if="item.shared" class="rv2-list-item__shared" title="已共享">🔗</button>
               </div>
             </div>
@@ -262,7 +265,7 @@
                 </div>
                 <div class="rv2-res-card__footer">
                   <span class="rv2-res-card__owner">{{ item.owner }}</span>
-                  <span class="rv2-res-card__date">{{ item.updated_at }}</span>
+                  <span class="rv2-res-card__date">{{ fmtDate(item.updated_at) }}</span>
                 </div>
                 <div v-if="item.tags?.length" class="rv2-res-card__tags">
                   <span v-for="(t, i) in item.tags.slice(0, 3)" :key="i" class="rv2-mini-tag">{{ t }}</span>
@@ -284,19 +287,22 @@
                 <span v-for="(t, i) in item.tags?.slice(0, 2)" :key="i" class="rv2-mini-tag">{{ t }}</span>
               </div>
               <span class="rv2-list-item__size">{{ formatSize(item.size_bytes) }}</span>
-              <span class="rv2-list-item__date">{{ item.updated_at }}</span>
+              <span class="rv2-list-item__date">{{ fmtDate(item.updated_at) }}</span>
               <button v-if="item.shared" class="rv2-list-item__shared" title="已共享">🔗</button>
             </div>
           </div>
         </template>
 
         <!-- 空状态 -->
-        <div v-if="!filteredResources.length" class="rv2-empty">
-          <div class="rv2-empty__icon">📭</div>
-          <div class="rv2-empty__title">暂无资源</div>
-          <div class="rv2-empty__desc">换个筛选条件试试，或上传新的资源</div>
-          <button class="rv2-btn rv2-btn--primary" @click="showUpload = true">上传资源</button>
-        </div>
+        <TeacherLoading v-if="resLoading" />
+        <TeacherEmptyState
+          v-else-if="!filteredResources.length"
+          :title="resources.length ? '没有匹配的资源' : '资源库为空'"
+          :desc="resources.length ? '换个筛选条件试试，或上传新的资源。' : '上传教材/课件/模板，AI 将自动解析入库。'"
+          cta="上传资源"
+          icon="📁"
+          @cta-click="showUpload = true"
+        />
       </section>
     </main>
 
@@ -320,6 +326,7 @@
       :visible="showAiPanel"
       @close="showAiPanel = false"
     />
+    </div>
   </div>
 </template>
 
@@ -339,6 +346,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { v3Api } from '@/api/teacherV3'
+import { TeacherPageHeader, TeacherEmptyState, TeacherLoading } from '@/components/teacherV3/common'
 import { FIGURE_PRESETS } from '@/components/mathx/presets'
 import type { V3Recipe } from '@/types/teacherV3'
 import ResourceUploadPanel from '@/components/teacherV3/ResourceUploadPanel.vue'
@@ -362,6 +370,7 @@ const sortBy = ref('updated')
 
 // ===== 数据 =====
 const recipes = ref<V3Recipe[]>([])
+const resLoading = ref(true)
 const resources = ref<Array<{
   id: string
   name: string
@@ -455,6 +464,14 @@ function typeIcon(t: string): string {
   return map[t] || '📎'
 }
 
+function fmtDate(iso: string): string {
+  if (!iso || iso === '刚刚') return iso || ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return String(iso).slice(0, 10)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
 function formatSize(bytes: number): string {
   if (bytes < 1024) return bytes + ' B'
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
@@ -503,10 +520,11 @@ function onScanComplete(data: { name: string; pages: number }) {
 
 // ===== 初始化（M3 接真：资源来自 catalog/resources；演示数据在演示服务端 fixture 中） =====
 onMounted(async () => {
-  const [rc, rs] = await Promise.all([
-    v3Api.catalog.recipes().then((r) => r.data.items).catch(() => []),
-    v3Api.catalog.resources().then((r) => r.data.items).catch(() => []),
-  ])
+  try {
+    const [rc, rs] = await Promise.all([
+      v3Api.catalog.recipes().then((r) => r.data.items).catch(() => []),
+      v3Api.catalog.resources().then((r) => r.data.items).catch(() => []),
+    ])
   recipes.value = rc
   // V3ResourceItem（契约）→ 视图条目：size/status/tags 为呈现层默认值，真实数据以后端为准
   resources.value = (rs as Array<Record<string, unknown>>).map((x) => ({
@@ -523,11 +541,14 @@ onMounted(async () => {
     tags: [],
   }))
   // 导航计数一律来自真实列表，不再伪造「校本 128 / 收藏 12」
-  navItems[0].count = resources.value.length
-  navItems[1].count = resources.value.filter((r) => r.shared).length
-  navItems[2].count = 0
-  navItems[3].count = 0
-  navItems[4].count = 0
+    navItems[0].count = resources.value.length
+    navItems[1].count = resources.value.filter((r) => r.shared).length
+    navItems[2].count = 0
+    navItems[3].count = 0
+    navItems[4].count = 0
+  } finally {
+    resLoading.value = false
+  }
 })
 </script>
 
@@ -535,10 +556,21 @@ onMounted(async () => {
 /* ==========================================================================
    整体布局
    ========================================================================== */
+.tv3-resources-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: -22px;
+  padding: 22px;
+  height: calc(100vh - var(--tv3-topbar-h));
+  box-sizing: border-box;
+  background: var(--teacher-bg-gradient);
+}
 .tv3-resources-v2 {
   display: flex;
-  height: 100%;
-  background: var(--tv3-bg, #f5f7fa);
+  flex: 1;
+  min-height: 0;
+  background: var(--teacher-bg-gradient);
   overflow: hidden;
 }
 
@@ -548,8 +580,11 @@ onMounted(async () => {
 .rv2-sidebar {
   width: 240px;
   flex-shrink: 0;
-  background: #fff;
-  border-right: 1px solid var(--tv3-line2, #e5e9f0);
+  background:
+    radial-gradient(360px 280px at 100% -8%, rgba(6, 182, 212, 0.10) 0%, transparent 55%),
+    radial-gradient(320px 260px at -8% 108%, rgba(79, 70, 229, 0.08) 0%, transparent 55%),
+    #ffffff;
+  border-right: 1px solid var(--tv3-line);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -574,7 +609,7 @@ onMounted(async () => {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--tv3-gold, #06b6d4), var(--tv3-gold-deep, #b8862e));
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
   display: grid;
   place-items: center;
   font-size: 16px;
@@ -584,7 +619,7 @@ onMounted(async () => {
 .rv2-logo__text {
   font-size: 15px;
   font-weight: 700;
-  color: var(--tv3-ink, #1a2332);
+  color: var(--tv3-ink);
 }
 
 .rv2-new-folder {
@@ -595,7 +630,7 @@ onMounted(async () => {
   border-radius: 6px;
   cursor: pointer;
   font-size: 16px;
-  color: var(--tv3-ink3, #8899aa);
+  color: var(--tv3-primary);
   display: grid;
   place-items: center;
   transition: all .15s ease;
@@ -627,34 +662,35 @@ onMounted(async () => {
   transition: all .15s ease;
 }
 .rv2-nav__item:hover {
-  background: var(--tv3-bg2, #f0f4f8);
+  background: rgba(129, 140, 248, 0.16);
 }
 .rv2-nav__item.is-active {
-  background: linear-gradient(135deg, var(--tv3-gold-soft, #fdf6e8), #fff);
-  border: 1px solid var(--tv3-gold-border, #e8d5a8);
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  border: 1px solid transparent;
   font-weight: 600;
+  box-shadow: 0 6px 16px -6px rgba(79, 70, 229, 0.45);
 }
 .rv2-nav__item.is-active .rv2-nav__label {
-  color: var(--tv3-gold-deep, #b8862e);
+  color: #fff;
 }
 
 .rv2-nav__icon { font-size: 16px; flex-shrink: 0; }
 .rv2-nav__label {
   flex: 1;
   font-size: 13px;
-  color: var(--tv3-ink2, #4a5568);
+  color: var(--tv3-ink2);
   min-width: 0;
 }
 .rv2-nav__count {
   font-size: 11px;
-  color: var(--tv3-ink3, #8899aa);
-  background: var(--tv3-bg2, #f0f4f8);
+  color: var(--tv3-ink3);
+  background: var(--tv3-bg2);
   padding: 1px 7px;
   border-radius: 999px;
   flex-shrink: 0;
 }
 .rv2-nav__item.is-active .rv2-nav__count {
-  background: var(--tv3-gold, #06b6d4);
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
   color: #fff;
 }
 
@@ -717,15 +753,15 @@ onMounted(async () => {
 }
 .rv2-folder:hover { background: var(--tv3-bg2, #f0f4f8); }
 .rv2-folder.is-active {
-  background: var(--tv3-primary-soft, #e8f0fb);
-  color: var(--tv3-navy, #4f46e5);
+  background: var(--tv3-primary-soft);
+  color: var(--tv3-primary);
 }
 
 .rv2-folder__icon { font-size: 14px; flex-shrink: 0; }
 .rv2-folder__name {
   flex: 1;
   font-size: 12.5px;
-  color: var(--tv3-ink2, #4a5568);
+  color: var(--tv3-ink2);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -951,17 +987,20 @@ onMounted(async () => {
   background: var(--tv3-primary-soft, #e8f0fb);
   color: var(--tv3-navy, #4f46e5);
 }
+:root {
+  --rv2-btn-var: 1;
+}
 .rv2-btn--primary {
-  background: linear-gradient(135deg, var(--tv3-gold, #06b6d4), var(--tv3-gold-deep, #b8862e));
-  border-color: var(--tv3-gold, #06b6d4);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  border-color: #4f46e5;
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(212, 165, 74, 0.3);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
 }
 .rv2-btn--primary:hover {
-  background: linear-gradient(135deg, var(--tv3-gold-deep, #b8862e), var(--tv3-gold, #06b6d4));
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(212, 165, 74, 0.4);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
   transform: translateY(-1px);
 }
 .rv2-btn--ghost { background: transparent; }

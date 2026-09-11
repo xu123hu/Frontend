@@ -7,6 +7,15 @@
   >
     <div v-if="slide.anchor_bar" class="v3sc__anchor" :title="slide.anchor_bar">⚓ {{ slide.anchor_bar }}</div>
 
+    <!-- rich lesson 课堂任务：保留教师投影可见语义，学生互动仍留在学生端播放器。 -->
+    <aside v-if="slide.task" class="v3sc__task" aria-label="课堂任务">
+      <strong>课堂任务</strong>
+      <span>任务目标：{{ slide.task.goal }}</span>
+      <span>问题情境：{{ slide.task.context }}</span>
+      <span>学生行动：{{ slide.task.student_action }}</span>
+      <span>可检查产出：{{ slide.task.expected_output }}</span>
+    </aside>
+
     <div
       v-for="elx in slide.elements" :key="elx.id"
       class="v3sc__el"
@@ -32,10 +41,18 @@
       <!-- 几何（结构化 preset，编辑画布用 JSXGraph，缩略图用 miniSvg） -->
       <template v-else-if="elx.type === 'geometry'">
         <GeoFigure
-          v-if="!thumb"
+          v-if="!thumb && !elx.board_json"
           :preset-id="elx.preset_id" :params="elx.params" :toggles="elx.toggles"
           :height="sc(elx.height)" :interactive="presenting" :boxed="false" :show-badge="editable"
         />
+        <div
+          v-else-if="elx.board_json"
+          class="v3sc__geo-fallback"
+          :title="geometryFallbackDetail(elx.board_json)"
+        >
+          <strong>{{ geometryFallbackTitle(elx.board_json) }}</strong>
+          <span>{{ geometryFallbackDetail(elx.board_json) }}</span>
+        </div>
         <div v-else class="v3sc__geo-thumb" v-html="miniSvgOf(elx)" />
         <span v-if="elx.recipe_id" class="v3sc__recipe-tag" title="来自构造配方">⚙ 配方</span>
       </template>
@@ -44,6 +61,15 @@
       <template v-else-if="elx.type === 'functionPlot'">
         <div class="v3sc__fx" v-html="fxSvg(elx)" />
         <span v-if="elx.live_sliders" class="v3sc__fx-live" :class="{ 'tv3-pulse-dot': presenting }">⟳ 放映可拖参数</span>
+      </template>
+
+      <!-- 立体几何 3D 配图（确定性场景，静态化显示：只取图片边界，无工具栏） -->
+      <template v-else-if="elx.type === 'figure3d'">
+        <MathFigure3D
+          v-if="!thumb"
+          :figure="elx.scene" :height="sc(elx.height)" bare
+        />
+        <div v-else class="v3sc__geo-thumb v3sc__figure3d-thumb" title="立体图形" v-html="figure3dMiniSvg(elx.scene)" />
       </template>
 
       <!-- 动态演示卡 -->
@@ -104,6 +130,7 @@ import { renderLatex, renderRich } from '@/components/mathx/latex'
 import { FIGURE_PRESETS } from '@/components/mathx/presets'
 import { makeFn, parseLatexExpr } from '@/components/mathx/expr'
 import GeoFigure from '@/components/mathx/GeoFigure.vue'
+import MathFigure3D from '@/components/chat/MathFigure3D.vue'
 import type { V3Element, V3Slide } from '@/types/teacherV3'
 
 const props = withDefaults(defineProps<{
@@ -160,13 +187,147 @@ function textStyle(elx: Extract<V3Element, { type: 'text' }>) {
     fontWeight: elx.bold ? 700 : undefined,
   }
 }
-const isMathEl = (elx: V3Element) => ['formula', 'geometry', 'functionPlot', 'dynamicDemo'].includes(elx.type)
+const isMathEl = (elx: V3Element) => ['formula', 'geometry', 'functionPlot', 'dynamicDemo', 'figure3d'].includes(elx.type)
 const demoName = (id: string) => DEMO_NAMES[id] || id
+
+type Point3 = [number, number, number]
+function asPoint3(value: unknown): Point3 | null {
+  if (!Array.isArray(value) || value.length < 3) return null
+  const point = value.slice(0, 3).map(Number)
+  return point.every(Number.isFinite) ? point as Point3 : null
+}
+function escSvg(value: string): string {
+  return value.replace(/[&<>\"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch] || ch))
+}
+
+/** 3D 缩略图只作结构预览；主画布继续使用 MathFigure3D，PPTX 由后端静态化。 */
+function figure3dMiniSvg(scene: Record<string, unknown>): string {
+  const points: Point3[] = []
+  const edges: [number, number][] = []
+  const polygons: number[][] = []
+  const curves: { points: Point3[]; color: string; closed: boolean }[] = []
+  const planes: { points: Point3[]; color: string }[] = []
+  const addPoint = (point: Point3) => { points.push(point); return points.length - 1 }
+  const addLoop = (ids: number[]) => ids.forEach((id, index) => edges.push([id, ids[(index + 1) % ids.length]]))
+  for (const raw of (Array.isArray(scene?.solids) ? scene.solids : [])) {
+    if (!raw || typeof raw !== 'object') continue
+    const solid = raw as Record<string, unknown>
+    const kind = String(solid.kind || '')
+    if (kind === 'pyramid') {
+      const base = (Array.isArray(solid.base) ? solid.base : []).map(asPoint3).filter(Boolean) as Point3[]
+      const apex = asPoint3(solid.apex)
+      if (base.length >= 3 && apex) {
+        const ids = base.map(addPoint); const apexId = addPoint(apex)
+        polygons.push(ids); addLoop(ids); ids.forEach((id) => edges.push([id, apexId]))
+      }
+    } else if (kind === 'prism') {
+      const bottom = (Array.isArray(solid.bottom) ? solid.bottom : []).map(asPoint3).filter(Boolean) as Point3[]
+      const top = (Array.isArray(solid.top) ? solid.top : []).map(asPoint3).filter(Boolean) as Point3[]
+      if (bottom.length >= 3 && top.length === bottom.length) {
+        const a = bottom.map(addPoint); const b = top.map(addPoint)
+        polygons.push(a, b); addLoop(a); addLoop(b); a.forEach((id, index) => edges.push([id, b[index]]))
+      }
+    } else if (kind === 'polyhedron') {
+      const rawVerts = Array.isArray(solid.vertices) ? solid.vertices : []
+      const verts = rawVerts
+        .map((item) => asPoint3(item && typeof item === 'object' ? (item as Record<string, unknown>).pos : item))
+        .filter(Boolean) as Point3[]
+      const ids = verts.map(addPoint)
+      const name2i = new Map<string, number>()
+      rawVerts.forEach((item, index) => {
+        if (item && typeof item === 'object' && typeof (item as Record<string, unknown>).name === 'string') {
+          name2i.set(String((item as Record<string, unknown>).name), index)
+        }
+      })
+      const edgeIndex = (value: unknown): number | null => {
+        if (Number.isInteger(value)) return Number(value)
+        const index = name2i.get(String(value))
+        return index === undefined ? null : index
+      }
+      for (const edge of (Array.isArray(solid.edges) ? solid.edges : [])) {
+        if (!Array.isArray(edge) || edge.length < 2) continue
+        const a = edgeIndex(edge[0]); const b = edgeIndex(edge[1])
+        if (a !== null && b !== null && ids[a] !== undefined && ids[b] !== undefined) edges.push([ids[a], ids[b]])
+      }
+    }
+  }
+  for (const raw of (Array.isArray(scene?.curves) ? scene.curves : [])) {
+    if (!raw || typeof raw !== 'object') continue
+    const curve = raw as Record<string, unknown>
+    const curvePoints = (Array.isArray(curve.points) ? curve.points : [])
+      .map(asPoint3).filter(Boolean) as Point3[]
+    if (curvePoints.length < 2) continue
+    curves.push({
+      points: curvePoints,
+      color: typeof curve.color === 'string' ? curve.color : '#dc2626',
+      closed: !!curve.closed,
+    })
+    points.push(...curvePoints)
+  }
+  for (const raw of (Array.isArray(scene?.planes) ? scene.planes : [])) {
+    if (!raw || typeof raw !== 'object') continue
+    const plane = raw as Record<string, unknown>
+    const planePoints = (Array.isArray(plane.points) ? plane.points : [])
+      .map(asPoint3).filter(Boolean) as Point3[]
+    if (planePoints.length < 3) continue
+    planes.push({
+      points: planePoints,
+      color: typeof plane.color === 'string' ? plane.color : '#f59e0b',
+    })
+    points.push(...planePoints)
+  }
+  const labels = (Array.isArray(scene?.labels) ? scene.labels : [])
+    .map((raw) => raw && typeof raw === 'object' ? raw as Record<string, unknown> : null)
+    .map((label) => ({ point: asPoint3(label?.pos), text: String(label?.text || '') }))
+    .filter((label): label is { point: Point3; text: string } => !!label.point)
+  const projected = (point: Point3): [number, number] => [point[0] - point[2] * 0.32, point[1] - point[2] * 0.22]
+  const all = [...points, ...labels.map((label) => label.point)]
+  if (!all.length) return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70"><text x="50" y="38" text-anchor="middle" font-size="10">暂无图形</text></svg>'
+  const xy = all.map(projected)
+  const minX = Math.min(...xy.map((p) => p[0])); const maxX = Math.max(...xy.map((p) => p[0]))
+  const minY = Math.min(...xy.map((p) => p[1])); const maxY = Math.max(...xy.map((p) => p[1]))
+  const sx = (x: number) => 10 + ((x - minX) / Math.max(maxX - minX, 0.1)) * 80
+  const sy = (y: number) => 60 - ((y - minY) / Math.max(maxY - minY, 0.1)) * 48
+  const lineSvg = edges.map(([a, b]) => {
+    const p = points[a]; const q = points[b]
+    return p && q ? `<line x1="${sx(projected(p)[0]).toFixed(1)}" y1="${sy(projected(p)[1]).toFixed(1)}" x2="${sx(projected(q)[0]).toFixed(1)}" y2="${sy(projected(q)[1]).toFixed(1)}" />` : ''
+  }).join('')
+  const polygonSvg = polygons.map((ids) => `<polygon points="${ids.map((id) => { const p = points[id]; const [x, y] = projected(p); return `${sx(x).toFixed(1)},${sy(y).toFixed(1)}` }).join(' ')}" />`).join('')
+  const curveSvg = curves.map((curve) => {
+    const curvePoints = curve.closed ? [...curve.points, curve.points[0]] : curve.points
+    const coords = curvePoints.map((point) => {
+      const [x, y] = projected(point)
+      return `${sx(x).toFixed(1)},${sy(y).toFixed(1)}`
+    }).join(' ')
+    return `<polyline points="${coords}" fill="none" stroke="${escSvg(curve.color)}" stroke-width="1.5" />`
+  }).join('')
+  const planeSvg = planes.map((plane) => {
+    const coords = plane.points.map((point) => {
+      const [x, y] = projected(point)
+      return `${sx(x).toFixed(1)},${sy(y).toFixed(1)}`
+    }).join(' ')
+    return `<polygon points="${coords}" fill="${escSvg(plane.color)}" fill-opacity=".22" stroke="${escSvg(plane.color)}" stroke-width="1" />`
+  }).join('')
+  const labelSvg = labels.map(({ point, text }) => { const [x, y] = projected(point); return `<text x="${sx(x).toFixed(1)}" y="${sy(y).toFixed(1)}">${escSvg(text)}</text>` }).join('')
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70"><g fill="#dbeafe" fill-opacity=".65" stroke="#2563eb" stroke-width="1.2">${polygonSvg}${lineSvg}</g>${planeSvg}${curveSvg}<g fill="#0f172a" font-size="6">${labelSvg}</g></svg>`
+}
 
 function miniSvgOf(elx: Extract<V3Element, { type: 'geometry' }>) {
   const def = FIGURE_PRESETS.find((p) => p.id === elx.preset_id)
   if (!def) return ''
   try { return def.miniSvg(elx.params, elx.toggles) } catch { return '' }
+}
+function geometryFallbackTitle(board: Record<string, unknown>): string {
+  const kind = String(board.type || board.kind || 'boardJson')
+  return `结构化图形 · ${kind}`
+}
+function geometryFallbackDetail(board: Record<string, unknown>): string {
+  const kind = String(board.type || board.kind || 'boardJson')
+  const caption = typeof board.caption === 'string' ? board.caption.trim() : ''
+  if (kind === 'ggb' && Array.isArray(board.commands)) {
+    return `${board.commands.length} 个作图命令${caption ? ` · ${caption}` : ''}`
+  }
+  return caption || '保留原始结构，可在绘图工作台继续编辑'
 }
 const upgradeLabel = (s: string) => (s === 'library' ? '↑ 图形库' : s === 'rebuilt' ? '✓ 已重建' : s === 'demo' ? '▶ 动态演示' : '')
 
@@ -271,6 +432,28 @@ function onDrop(ev: DragEvent) {
 .v3sc__formula { line-height: 1.4; }
 .v3sc__geo-thumb, .v3sc__fx { width: 100%; height: 100%; }
 .v3sc__geo-thumb :deep(svg) { width: 100%; height: 100%; }
+.v3sc__geo-fallback {
+  width: 100%; height: 100%; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  padding: 18px; text-align: center; color: var(--tv3-ink2, #334155);
+  background: linear-gradient(135deg, #eff6ff, #f8fafc);
+  border: 1px dashed var(--tv3-primary-border, #c7d2fe); border-radius: 8px;
+}
+.v3sc__geo-fallback strong { color: var(--tv3-primary, #4f46e5); font-size: 14px; }
+.v3sc__geo-fallback span { font-size: 12px; color: var(--tv3-ink3, #64748b); }
+.v3sc__figure3d-thumb {
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, #eef2ff, #f0f9ff);
+  border: 1px solid var(--tv3-ai-border, #c7d2fe);
+  border-radius: 6px;
+}
+.v3sc__figure3d-chip {
+  font-size: 13px; font-weight: 800; letter-spacing: 1px;
+  color: var(--tv3-ai, #4f46e5);
+  border: 1.5px dashed var(--tv3-ai-border, #c7d2fe);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
 .v3sc__recipe-tag {
   position: absolute; left: 4px; top: 4px; z-index: 4;
   font-size: 10px; padding: 1px 6px; border-radius: 999px;
@@ -319,5 +502,14 @@ function onDrop(ev: DragEvent) {
   padding: 4px 10px; border-bottom: 1px solid var(--tv3-primary-border);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.v3sc__task {
+  position: absolute; right: 28px; bottom: 18px; z-index: 19;
+  width: 360px; max-height: 112px; overflow: hidden;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 12px; border: 1px solid var(--tv3-primary-border, #c7d2fe);
+  border-radius: 8px; background: rgba(248, 250, 255, 0.96); color: var(--tv3-ink2, #334155);
+  font-size: 12px; line-height: 1.35; box-shadow: 0 2px 8px rgba(30, 58, 95, 0.08);
+}
+.v3sc__task strong { color: var(--tv3-primary, #4f46e5); font-size: 13px; }
 .v3sc__fillnote { position: absolute; right: 8px; bottom: 6px; width: 90px; z-index: 20; }
 </style>

@@ -22,7 +22,7 @@
       <button class="tv3-btn tv3-btn--sm tv3-btn--primary" data-testid="tv3-present" @click="presenting = true">▶ 预演</button>
       <button class="tv3-btn tv3-btn--sm" data-testid="tv3-add-bank-q" @click="openBankPick">＋ 题库题目</button>
       <button class="tv3-btn tv3-btn--sm" data-testid="tv3-deck-check-open" @click="openDeckCheck">🩺 体检</button>
-      <button class="tv3-btn tv3-btn--sm" @click="exportDeck">导出</button>
+      <button class="tv3-btn tv3-btn--sm" :disabled="exporting" @click="exportDeck">{{ exporting ? '导出中…' : '导出' }}</button>
     </div>
 
     <div class="tv3-editor__main">
@@ -252,7 +252,7 @@
         <div v-for="q in bankQuestions" :key="q.id" class="tv3-row" style="cursor: pointer; align-items: flex-start" :data-testid="`tv3-bankq-${q.id}`" @click="insertBankQuestion(q)">
           <span class="tv3-tag" :class="q.difficulty === 'hard' ? 'tv3-tag--danger' : q.difficulty === 'medium' ? 'tv3-tag--warn' : 'tv3-tag--ok'" style="font-size: 10px; flex-shrink: 0; margin-top: 2px">{{ q.difficulty === 'hard' ? '较难' : q.difficulty === 'medium' ? '中等' : '容易' }}</span>
           <div style="flex: 1; min-width: 0">
-            <div style="font-size: 12.5px; line-height: 1.6" v-html="renderLatex(q.stem_latex)" />
+            <div style="font-size: 12.5px; line-height: 1.6" v-html="renderStem(q.stem_latex)" />
             <div style="font-size: 10.5px; color: var(--tv3-ink4); margin-top: 2px">{{ q.kp_name }} · {{ q.source }}</div>
           </div>
           <span class="tv3-btn tv3-btn--sm tv3-btn--gold" style="flex-shrink: 0">插入本页</span>
@@ -273,7 +273,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { useRoute } from 'vue-router'
 import { v3Api, type V3TextbookChapters, type V3DeckSummary, type V3PlanSummary, type V3QuizQuestion } from '@/api/teacherV3'
 import { FIGURE_PRESETS, type FigurePresetDef } from '@/components/mathx/presets'
-import { cleanPlaceholder, renderLatex } from '@/components/mathx/latex'
+import { cleanPlaceholder, renderLatex, renderStem } from '@/components/mathx/latex'
 import { useToastStore } from '@/stores/toast'
 import SlideCanvasV3 from '@/components/teacherV3/SlideCanvasV3.vue'
 import MathField from '@/components/mathx/MathField.vue'
@@ -359,7 +359,7 @@ async function runRecogPreview() {
     const d = r.data as { items: typeof recogCards.value; note: string }
     recogCards.value = d.items
     recogNote.value = d.note
-  } catch { recogCards.value = []; recogNote.value = '识别预览失败（mock 未启动？用 VITE_USE_MOCK=1 npm run dev）' } finally { recogLoading.value = false }
+  } catch { recogCards.value = []; recogNote.value = '识别服务暂时不可用，请稍后重试' } finally { recogLoading.value = false }
 }
 function nextPhoto() { if (photos.value.length) step.value = 2 }
 /** 教案直通：选定教案 → 拉环节结构 → 页数映射行 */
@@ -463,6 +463,74 @@ const genFailed = ref(false)
 const genBlocks = ref<{ type: string; latex?: string; text?: string; confidence: number }[]>([])
 let sseCtrl: { abort: () => void } | null = null
 
+/* ---------- 生成流程持久化（P：切换界面/刷新不丢，重挂载恢复） ---------- */
+const WS_DRAFT_KEY = 'tv3-slides-draft-v1'
+interface WsDraft {
+  view: 'new'
+  newMode: 'photo' | 'topic' | 'plan'
+  step: number
+  form: typeof form.value
+  briefCtx: typeof briefCtx.value
+  heroText: string
+  gateOutline: typeof gateOutline.value
+  gateReqs: typeof gateReqs.value
+  gateNote: string
+  gateMatched: boolean
+  genStage: string
+  genProgress: number
+  genFailed: boolean
+  savedAt: number
+}
+function persistWorkshopDraft() {
+  if (view.value !== 'new') { try { localStorage.removeItem(WS_DRAFT_KEY) } catch { /* ignore */ } return }
+  const d: WsDraft = {
+    view: 'new', newMode: newMode.value, step: step.value,
+    form: JSON.parse(JSON.stringify(form.value)),
+    briefCtx: JSON.parse(JSON.stringify(briefCtx.value)),
+    heroText: heroText.value,
+    gateOutline: JSON.parse(JSON.stringify(gateOutline.value)),
+    gateReqs: JSON.parse(JSON.stringify(gateReqs.value)),
+    gateNote: gateNote.value, gateMatched: gateMatched.value,
+    genStage: genStage.value, genProgress: genProgress.value, genFailed: genFailed.value,
+    savedAt: Date.now(),
+  }
+  try { localStorage.setItem(WS_DRAFT_KEY, JSON.stringify(d)) } catch { /* ignore */ }
+}
+function restoreWorkshopDraft(): void {
+  let d: WsDraft | null = null
+  try {
+    const raw = localStorage.getItem(WS_DRAFT_KEY)
+    d = raw ? (JSON.parse(raw) as WsDraft) : null
+  } catch { d = null }
+  if (!d || d.view !== 'new') return
+  // 只恢复进行中的流程（步骤 ≥ 大纲确认；已完成的生成由落库后的列表承载，不残留）
+  if (d.step < 4 && d.step !== 3) { try { localStorage.removeItem(WS_DRAFT_KEY) } catch { /* ignore */ } return }
+  view.value = 'new'
+  newMode.value = d.newMode
+  step.value = d.step
+  form.value = { ...form.value, ...d.form }
+  briefCtx.value = d.briefCtx
+  heroText.value = d.heroText
+  gateOutline.value = d.gateOutline
+  gateReqs.value = d.gateReqs
+  gateNote.value = d.gateNote
+  gateMatched.value = d.gateMatched
+  genStage.value = d.genStage
+  genProgress.value = d.genProgress
+  genFailed.value = d.genFailed
+  // 恢复到步骤4（大纲确认）但大纲为空（可能是生成中切走）→ 自动重新拉取大纲
+  if (step.value === 4 && !gateOutline.value.length && !genFailed.value) {
+    step.value = 1
+    void prepareOutline()
+  }
+  // 恢复到步骤3（逐页生成中）→ 基于已确认的大纲自动重新发起生成
+  if (step.value === 3 && gateOutline.value.length && !genFailed.value) {
+    genStage.value = '检测到未完成的生成任务，正在继续…'
+    genProgress.value = 4
+    void startGenerate()
+  }
+}
+
 const templates = ref<{ id: string; name: string; style: string; swatch: { bg: string; primary: string; accent: string; light: boolean }; page_kinds: string[]; recommended_for: string }[]>([])
 /* V3.3：模板兜底——即使接口加载失败也始终渲染多套主题，杜绝「只有一档/空白」 */
 const DECK_TEMPLATE_FALLBACK: typeof templates.value = [
@@ -554,6 +622,7 @@ if (routeQ.get('deck')) {
 onMounted(async () => {
   window.addEventListener('tv3-butler-insert', onButlerInsert as EventListener)
   window.addEventListener('tv3-butler-quick', onButlerQuick as EventListener)
+  restoreWorkshopDraft()
   const [d, c, p, t, td] = await Promise.all([
     v3Api.decks.list().then((r) => r.data.items).catch(() => []),
     v3Api.catalog.classes().then((r) => r.data.items).catch(() => []),
@@ -566,7 +635,7 @@ onMounted(async () => {
   plans.value = p
   templates.value = (t && t.length ? t : DECK_TEMPLATE_FALLBACK) as typeof templates.value
   todaySchedule.value = td?.schedule || []
-  void v3Api.catalog.textbookChapters().then((r) => { chapters.value = r.data }).catch(() => { /* mock 未启动：章节 pill 留空 */ })
+  void v3Api.catalog.textbookChapters().then((r) => { chapters.value = r.data }).catch(() => { /* 章节接口不可用时 pill 留空 */ })
 
   /* 管家 navigate 落点（剧本A）：
    *  deck=<id>          → 直接打开该课件编辑器
@@ -608,6 +677,7 @@ const gateAdjust = ref('')
 async function prepareOutline(adjust?: string) {
   step.value = 4
   outlineLoading.value = true
+  persistWorkshopDraft()
   try {
     /* C1.1：教师的原始要求 + 追加调整指令一起送编译（词表规则，server 诚实回台账） */
     const requirements = [briefCtx.value.requirements, adjust]
@@ -617,6 +687,7 @@ async function prepareOutline(adjust?: string) {
     const r = await v3Api.generation.deckOutline({
       topic: form.value.topic,
       class_id: form.value.class_id,
+      template_id: form.value.template_id,
       chapter: briefCtx.value.chapter || undefined,
       course_type: briefCtx.value.course_type,
       requirements: requirements.length ? requirements : undefined,
@@ -625,14 +696,16 @@ async function prepareOutline(adjust?: string) {
     gateMatched.value = !!(r.data as { matched?: boolean }).matched
     gateNote.value = (r.data as { note?: string }).note || ''
     gateReqs.value = (r.data as { reqs?: { id: number; text: string; status: string; pages: number[]; note?: string }[] }).reqs || []
+    persistWorkshopDraft()
   } catch {
     gateOutline.value = [
       { title: '情境引入', kind: 'cover' }, { title: '概念定义', kind: 'definition' },
       { title: '例题精讲', kind: 'example' }, { title: '变式训练', kind: 'variation' }, { title: '课堂小结', kind: 'summary' },
     ]
     gateMatched.value = false
-    gateNote.value = '大纲草稿生成失败（mock 未启动？），已回退默认结构'
+    gateNote.value = '大纲生成服务暂时不可用，已为你加载标准课件结构，可手动调整'
     gateReqs.value = []
+    persistWorkshopDraft()
   } finally { outlineLoading.value = false }
 }
 function regenWithAdjust() {
@@ -690,8 +763,8 @@ function insertBankQuestion(q: V3QuizQuestion) {
   if (!deck.value) return
   const sid = Date.now()
   currentSlide.value.elements.push(
-    { id: `ebq-${sid}-s`, type: 'text', left: 70, top: 120, width: 940, height: 130, z: 5, html: renderLatex(q.stem_latex), font_size: 20, teacher_confirmed: false } as V3Element,
-    { id: `ebq-${sid}-a`, type: 'text', left: 70, top: 300, width: 940, height: 44, z: 5, html: `<b>参考答案：</b>${renderLatex(q.answer || '待补')}`, font_size: 15, color: '#0e9488', teacher_confirmed: false } as V3Element,
+    { id: `ebq-${sid}-s`, type: 'text', left: 70, top: 120, width: 940, height: 130, z: 5, html: renderStem(q.stem_latex), font_size: 20, teacher_confirmed: false } as V3Element,
+    { id: `ebq-${sid}-a`, type: 'text', left: 70, top: 300, width: 940, height: 44, z: 5, html: `<b>参考答案：</b>${renderStem(q.answer || '待补')}`, font_size: 15, color: '#0e9488', teacher_confirmed: false } as V3Element,
   )
   bankPickOpen.value = false
   toast.success(`已把「${q.kp_name}」题目插入当前页（题干可编辑，答案为参考小字）`)
@@ -706,6 +779,7 @@ function openNew(mode: 'photo' | 'topic' | 'plan') {
   genBlocks.value = []
   genFailed.value = false
   view.value = 'new'
+  persistWorkshopDraft()
 }
 
 function onFileChange(ev: Event) {
@@ -731,6 +805,7 @@ async function startGenerate() {
   step.value = 3
   genProgress.value = 4
   genBlocks.value = []
+  persistWorkshopDraft()
   const onEvent = (event: string, data: any) => {
     if (event === 'meta') { genStage.value = '已接收任务，开始处理…'; genProgress.value = 10 }
     else if (event === 'photo') { genStage.value = `接收原图 ${data.index + 1}：${data.note}`; genProgress.value = Math.min(24, genProgress.value + 8) }
@@ -755,6 +830,7 @@ async function startGenerate() {
       }
       genProgress.value = 100
       genStage.value = '完成，正在打开编辑器…'
+      try { localStorage.removeItem(WS_DRAFT_KEY) } catch { /* ignore */ }
       window.setTimeout(() => openDeck(data.deck_id), 500)
     }
   }
@@ -797,6 +873,20 @@ const wsScreen = computed(() => {
   if (step.value === 2) return 'template'
   return newMode.value
 })
+/** 模板缩略图加载失败标记（WorkshopFlow template 页使用；缺失会导致渲染 TypeError） */
+const thumbFail = ref<Record<string, boolean>>({})
+/** 工坊顶栏副标题（按当前屏幕给文案） */
+const screenTitleSub = computed(() => {
+  const map: Record<string, string> = {
+    home: '从需求或教案一键出课件',
+    photo: '拍照/选择题目图片，识别后生成课件',
+    plan: '从已有教案直通课件',
+    outline: '逐页确认结构，可增删排序后进入模板选择',
+    template: '选择版式风格，生成后可更换',
+    generating: 'AI 正在逐页生成，可稍后回来查看',
+  }
+  return map[wsScreen.value] || ''
+})
 const tplFiltered = computed(() => {
   const f = tplFilter.value
   if (f === '全部') return templates.value
@@ -813,6 +903,7 @@ const ws = reactive({
   plans, planDetail, planMap, decks, todaySchedule, classes, chapters, templates,
   gateOutline, gateReqs, gateAdjust, gateMatched, gateNote, outlineLoading,
   genStage, genProgress, genBlocks, genFailed, retryGenerate, applyScope, tplFilter, currentTemplate, previewTopic, className, tplFiltered,
+  thumbFail, screenTitleSub, onFileChange,
   kindLabel, chapterShort, sourceLabel, templateName, renderLatex, scopeCards, modeCards, fontCards,
   openHome, openNew, submitHero, onDocFiles, adaptFromDeck, prefillLesson, openDeck,
   removePhoto, nextPhoto, selectPlan, nextPlan, prepareOutline, regenWithAdjust, quickAdjust,
@@ -1012,13 +1103,46 @@ async function saveDeck() {
     genStage.value = '已保存'
   } catch { /* mock */ }
 }
+/**
+ * 导出 PPTX：提交导出任务 → 轮询 export-jobs → done 后触发浏览器下载。
+ * 后端在 API 进程内异步生成并上传 MinIO（teacher-exports），
+ * 前端通过 GET /export-jobs/{job_id} 获取 presign 下载地址。
+ */
+const exporting = ref(false)
 async function exportDeck() {
-  if (!deck.value) return
+  if (!deck.value || exporting.value) return
+  exporting.value = true
   try {
-    await v3Api.decks.export(deck.value.id, 'pptx')
-    /* B3 导出真实性：文件生成（PPTX 渲染）属 M2-B 后端生死门，任务留在排队态并如实标注，不伪装完成 */
-    toast.info('已进入「生成与导出进度」：文件生成服务未接入（后端 M2-B），当前任务仅演示进度流，不产出文件。')
-  } catch { /* mock */ }
+    const r = await v3Api.decks.export(deck.value.id, 'pptx')
+    toast.info('正在生成 PPTX，请稍候…')
+    const jobId = (r.data as { job_id?: string }).job_id
+    if (!jobId) throw new Error('导出任务未返回 job_id')
+    // 轮询导出任务状态（最长 90s，1s 间隔）
+    const deadline = Date.now() + 90_000
+    while (Date.now() < deadline) {
+      await new Promise((res) => setTimeout(res, 1000))
+      const st = (await v3Api.decks.exportJob(jobId)).data as { status?: string; download_url?: string; error?: string }
+      if (st.status === 'done' && st.download_url) {
+        const a = document.createElement('a')
+        a.href = st.download_url
+        a.download = `${deck.value.title || '课件'}.pptx`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        toast.success('PPTX 导出完成')
+        return
+      }
+      if (st.status === 'failed') {
+        toast.error(st.error || 'PPTX 导出失败，请重试')
+        return
+      }
+    }
+    toast.error('导出超时，请稍后在任务中心查看')
+  } catch (e: any) {
+    toast.error(e?.message ? String(e.message) : '导出失败，请检查网络后重试')
+  } finally {
+    exporting.value = false
+  }
 }
 
 /* ---------- 原图重建（P1 升级链路） ---------- */
@@ -1158,7 +1282,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('tv3-companion-insert', onCompanionInsert as EventListener)
   window.removeEventListener('tv3-companion-locate', onCompanionLocate as EventListener)
   window.removeEventListener('tv3-butler-insert', onButlerInsert as EventListener)
-  sseCtrl?.abort()
+  /* 生成任务后台化：离开页面不中断 SSE——生成继续在后端跑并落库（done 落 decks 行），
+     回列表页可见，不会「一离开就没了」。只有用户显式取消时才 abort。 */
 })
 </script>
 

@@ -1,5 +1,7 @@
 <template>
-  <div data-testid="tv3-classroom">
+  <div class="tv3-page-shell" data-testid="tv3-classroom">
+    <TeacherPageHeader title="课堂互动" subtitle="双师课堂与互动教学" icon="🎓" />
+
     <!-- 未开课 -->
     <div v-if="!session" class="tv3-card" style="max-width: 640px; margin: 40px auto; text-align: center; padding: 40px">
       <div style="font-size: 44px; margin-bottom: 10px">🎓</div>
@@ -45,6 +47,14 @@
         <div class="tv3-card">
           <div class="tv3-card__head"><span class="tv3-card__title">发题</span><span class="tv3-card__sub">题干公式结构化推送 · 限时 {{ fmtClock(qTimeLeft) }}<template v-if="extendedTimes"> · 已续 {{ extendedTimes }} 次</template></span></div>
           <div class="tv3-card__body" style="display: flex; flex-direction: column; gap: 8px">
+            <TeacherLoading v-if="poolLoading" />
+            <TeacherEmptyState
+              v-else-if="!quizPool.length"
+              title="暂无题目可发"
+              desc="发题池来自题库中的选择题，先去题库录入题目吧。"
+              cta="去题库录入"
+              @cta-click="$router.push('/teacher-v3/bank')"
+            />
             <div
               v-for="q in quizPool" :key="q.id"
               class="tv3-row" :class="{ 'is-selected': activeQ?.id === q.id }" style="cursor: pointer; align-items: flex-start"
@@ -53,7 +63,7 @@
             >
               <span class="tv3-tag" :class="q.difficulty === 'hard' ? 'tv3-tag--danger' : q.difficulty === 'medium' ? 'tv3-tag--warn' : 'tv3-tag--ok'">{{ diffLabel(q.difficulty) }}</span>
               <div style="flex: 1; min-width: 0">
-                <div style="font-size: 12.5px; line-height: 1.5" v-html="renderLatex(q.stem_latex)" />
+                <div style="font-size: 12.5px; line-height: 1.5" v-html="renderStem(q.stem_latex)" />
                 <div v-if="q.options" style="font-size: 11.5px; color: var(--tv3-ink3); margin-top: 2px">{{ q.options.length }} 个选项</div>
               </div>
               <span v-if="activeQ?.id === q.id" class="tv3-tag" :class="sessionStatus === 'collecting' ? 'tv3-tag--gold tv3-pulse-dot' : 'tv3-tag'">
@@ -168,7 +178,7 @@
       </div>
       <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; padding: 0 6vw">
         <template v-if="activeQ">
-          <div style="color: #fff; font-size: clamp(24px, 3.4vw, 44px); font-weight: 800; text-align: center; line-height: 1.4" data-testid="tv3-podium-question" v-html="renderLatex(activeQ.stem_latex)" />
+          <div style="color: #fff; font-size: clamp(24px, 3.4vw, 44px); font-weight: 800; text-align: center; line-height: 1.4" data-testid="tv3-podium-question" v-html="renderStem(activeQ.stem_latex)" />
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3vh 4vw; width: 100%; max-width: 1200px; margin-top: 5vh">
             <div v-for="(o, i) in activeOptions" :key="i" style="display: flex; align-items: center; gap: 16px">
               <span style="width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font-size: 26px; font-weight: 800; flex-shrink: 0; background: sessionStatus === 'revealed' && activeQ.answer === String.fromCharCode(65 + i) ? '#1f8a5f' : 'rgba(255,255,255,.14)'; color: #fff">{{ String.fromCharCode(65 + i) }}</span>
@@ -215,7 +225,8 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { v3Api, type V3QuizQuestion } from '@/api/teacherV3'
-import { renderLatex } from '@/components/mathx/latex'
+import { TeacherPageHeader, TeacherEmptyState, TeacherLoading } from '@/components/teacherV3/common'
+import { renderLatex, renderStem } from '@/components/mathx/latex'
 import GeoFigure from '@/components/mathx/GeoFigure.vue'
 import { useToastStore } from '@/stores/toast'
 import type { V3ClassInfo, V3ClassroomActivity, V3Slide } from '@/types/teacherV3'
@@ -228,6 +239,7 @@ let toast: ReturnType<typeof useToastStore> | null = null
 const toastOf = () => (toast ??= useToastStore())
 const classes = ref<V3ClassInfo[]>([])
 const quizPool = ref<V3QuizQuestion[]>([])
+const poolLoading = ref(true)
 const pickClass = ref('c2-03')
 const topicDraft = ref('椭圆及其标准方程 · 习题课')
 const sessionTopic = ref('')
@@ -328,10 +340,11 @@ async function saveDeck() {
 }
 
 onMounted(async () => {
-  const [c, q] = await Promise.all([
-    v3Api.catalog.classes().then((r) => r.data.items).catch(() => []),
-    v3Api.catalog.quizQuestions().then((r) => r.data.items).catch(() => []),
-  ])
+  try {
+    const [c, q] = await Promise.all([
+      v3Api.catalog.classes().then((r) => r.data.items).catch(() => []),
+      v3Api.catalog.quizQuestions().then((r) => r.data.items).catch(() => []),
+    ])
   classes.value = c
   quizPool.value = q.filter((x) => x.q_type === 'choice').slice(0, 6)
   // 刷新/重进恢复（S16 审计：此前刷新即丢会话）——本地只存 session_id 锚点，
@@ -353,6 +366,9 @@ onMounted(async () => {
       }
     }
   } catch { /* 快照取不到就当无历史课堂 */ }
+  } finally {
+    poolLoading.value = false
+  }
 })
 onBeforeUnmount(() => { clearTimers(); streamAbort?.(); streamAbort = null })
 function clearTimers() {
@@ -564,6 +580,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPodiumKey))
 </script>
 
 <style scoped>
+.tv3-page-shell {
+  margin: -22px; padding: 22px; min-height: calc(100vh - var(--tv3-topbar-h));
+  background: var(--teacher-bg-gradient);
+  box-sizing: border-box;
+}
 .tv3-podium {
   position: fixed; inset: 0; z-index: 1500;
   background: radial-gradient(1200px 700px at 50% 30%, #123a6d, #071a35 75%);

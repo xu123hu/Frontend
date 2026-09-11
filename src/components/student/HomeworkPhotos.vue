@@ -59,6 +59,9 @@ const inputEl = ref(null)
 function setInput(el) { inputEl.value = el }
 function pick() { if (!busy.value) inputEl.value?.click() }
 
+defineExpose({ pick })
+
+
 function sync() {
   emit(
     'update:modelValue',

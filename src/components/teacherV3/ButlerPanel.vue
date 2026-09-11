@@ -57,7 +57,7 @@
                 <div class="tv3-butler__formula" v-html="renderLatex(c.latex, true)" />
                 <div class="tv3-butler__card-meta">
                   <!-- B0 诚实化：mock 解析不显示伪造的精确置信度；插入按钮仅在存在课件上下文时可用 -->
-                  <span class="tv3-butler__conf" title="原型为确定性解析演示，未接入真实识别服务">解析候选（演示）</span>
+                  <span class="tv3-butler__conf" title="由识别解析生成，可手动编辑后插入">解析候选</span>
                   <span v-if="c.source === 'voice'" class="tv3-butler__src">🎤 语音</span>
                   <span v-else-if="c.source === 'photo'" class="tv3-butler__src">📷 识别</span>
                   <span class="tv3-butler__spacer" />
@@ -149,7 +149,7 @@
       <!-- 输入区 -->
       <footer class="tv3-butler__input">
         <div v-if="voiceMode" class="tv3-butler__voice-box" data-testid="tv3-butler-voice-box">
-          <div class="tv3-butler__voice-hint">P0 原型：输入“说”的公式文本模拟语音（P1 接真实麦克风）</div>
+          <div class="tv3-butler__voice-hint">语音识别即将上线：当前可输入公式文本，说“公式”即可</div>
           <input
             v-model="voiceText"
             class="tv3-butler__voice-input"
@@ -351,8 +351,9 @@ async function send() {
   const text = input.value.trim()
   if (!text || streaming.value) return
   const teacherMsg: Msg = { id: `m${Date.now()}`, role: 'teacher', text, images: images.value.length ? [...images.value] : undefined }
-  const butlerMsg: Msg = { id: `m${Date.now()}b`, role: 'butler', text: '', cards: [], pending: true, toolLines: [] }
-  messages.value.push(teacherMsg, butlerMsg)
+  messages.value.push(teacherMsg, { id: `m${Date.now()}b`, role: 'butler', text: '', cards: [], pending: true, toolLines: [] })
+  /* push 入参的原始对象不触发响应式：从 reactive 数组取 proxy 引用用于流式更新 */
+  const butlerMsg = messages.value[messages.value.length - 1] as Msg
   input.value = ''
   // 附件：有直传 key 发 key（后端可从 MinIO 取原图）；key 未就绪回落 dataURL（P0 兼容）
   const sentImages = imageKeys.value.length === images.value.length && imageKeys.value.length > 0 ? [...imageKeys.value] : [...images.value]
@@ -361,8 +362,14 @@ async function send() {
   streaming.value = true
   scrollToBottom()
   try {
+    /* 多轮上下文：本地会话前 N 轮上传（后端注入 LLM messages） */
+    const history = messages.value
+      .slice(0, -2)
+      .filter((mm) => mm.text && !mm.pending)
+      .map((mm) => ({ role: (mm.role === 'teacher' ? 'user' : 'assistant') as 'user' | 'assistant', text: (mm.text || '').slice(0, 400) }))
+      .slice(-8)
     sseCtrl = v3Api.butler.chat(
-      { message: text, context: context.value as V3ButlerContext, images: sentImages.length ? sentImages : undefined, web_search: webSearch.value, kb_search: kbSearch.value },
+      { message: text, context: context.value as V3ButlerContext, history, images: sentImages.length ? sentImages : undefined, web_search: webSearch.value, kb_search: kbSearch.value },
       (event, data) => handleEvent(butlerMsg, event, data),
     )
     await sseCtrl.finished

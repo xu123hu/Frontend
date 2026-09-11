@@ -15,12 +15,22 @@
         <div class="es-lbl">记得较牢</div>
       </div>
       <div class="es-ops">
-        <button class="es-primary" @click="manualOpen = true">📷 拍错题入本</button>
-        <button v-if="!flashcardMode && (listTotal > 0 || dueTotal > 0)" class="es-ghost" @click="flashcardMode = true">🎴 闪卡复习<template v-if="dueTotal > 0"> · {{ dueTotal }} 张到期</template></button>
+        <button class="es-primary" @click="openEntryCard">📷 拍错题入本</button>
+        <!-- 闪卡复习按钮已移除：点错题即进浮窗复习（P1-14） -->
       </div>
     </div>
 
     <FlashcardReview v-if="flashcardMode" @close="onFcClose" />
+
+    <!-- P1-14 入本方式引导卡：先让用户选择拍照/相册 / 手动录入 -->
+    <div v-if="entryCard" class="entry-card">
+      <div class="entry-card-box">
+        <div class="entry-title">✍ 如何把这道错题入本？</div>
+        <button class="entry-btn" @click="pickPhoto">📷 拍照 / 选择图片（OCR 自动识别）</button>
+        <button class="entry-btn plain" @click="pickManual">⌨ 手动录入（粘贴/输入题干）</button>
+        <button class="entry-close" @click="entryCard = false">取消</button>
+      </div>
+    </div>
 
     <!-- 拍错题入本（Vision03：主动收录闭环；OCR 识别题干 + 原图随记录保存） -->
     <div class="card" style="padding:14px 18px;margin-bottom:14px;">
@@ -44,7 +54,7 @@
           </select>
           <button class="secondary" style="flex:0 0 auto;" :disabled="kpGuessing || !manual.question.trim()" title="根据题干自动识别知识点（可修改，S5：AI 分类+人工修正）" @click="guessKp(manual.question, true)">🔍 AI 识别知识点</button>
         </div>
-        <HomeworkPhotos v-model="manual.photos" :max="1" @ocr="onManualOcr" />
+        <HomeworkPhotos ref="hpRef" v-model="manual.photos" :max="1" @ocr="onManualOcr" />
         <div v-if="ocrNote" style="font-size:12px;margin-top:6px;" :style="{ color: ocrNote.ok ? 'var(--ok,#16a34a)' : 'var(--err,#dc2626)' }">{{ ocrNote.msg }}</div>
         <div v-if="enhancedUrl" style="display:flex;gap:8px;margin-top:6px;align-items:center;">
           <span style="font-size:11.5px;color:var(--ink3);">✨ 已生成增强图（更清晰，原图仍保留）：</span>
@@ -61,7 +71,7 @@
 
     <!-- 今日待复习队列 -->
     <div class="errors-split">
-    <div class="errors-left">
+    <div class="errors-left" :class="{ 'modal-mode': detailModalOpen }" @click.self="clickMask">
     <div class="due-queue">
       <div class="head">
         <h4>📌 今日到期 {{ dueTotal }} 道 · 按"再不做就忘"程度排序</h4>
@@ -89,11 +99,14 @@
       </div>
     </div>
 
+    <div class="detail-modal-wrap">
     <!-- 视图切换 -->
     <div class="section-head">
       <h2>错题详情 · 第 {{ String(selectedSeq).padStart(2, '0') }} 题</h2>
       <button v-if="detail" class="del-err" style="margin-right:10px;color:var(--err,#dc2626);background:transparent;border:none;cursor:pointer;font-size:12px;padding:4px 6px;border-radius:8px;" title="删除这道错题（移出错题本，不再复习）" @click="onDelClick">
         {{ delConfirming ? '确认删除？再点一次' : '🗑 删除' }}</button>
+      <button class="modal-close next" title="下一题" @click="openNextInList" :disabled="!hasNextInList">⏭ 下一题</button>
+      <button class="modal-close" title="关闭详情" @click="detailModalOpen = false">✕ 关闭</button>
       <div class="view-tabs" style="margin:0;">
         <button
           v-for="t in tabs" :key="t"
@@ -224,6 +237,7 @@
         </div>
       </template>
     </div>
+    </div>
 
     <!-- 错题列表（多维筛选） -->
     </div>
@@ -257,6 +271,7 @@
           @click="openDetail(o.record_id, i + 1)"
         >
           <span class="tag-pill" :class="levelTagCls(o.fsrs_level)" style="flex-shrink:0;">{{ levelZh(o.fsrs_level) }}</span>
+          <div class="list-thumb" title="题目图片（点击查看原图与详情）">🖼</div>
           <LatexText style="flex:1;font-size:13px;font-weight:600;" :style="o.fsrs_level === 'lv4' || o.fsrs_level === 'lv3' ? { fontWeight: 400 } : {}" :text="o.question_preview" />
           <span style="font-size:11.5px;color:var(--ink3);">{{ o.kp_name || o.kp_code || '未标注' }} · 复习 {{ o.review_count }} 次 · 记得 {{ pct(o.retrievability) }}%</span>
           <span style="color:var(--ink3);">›</span>
@@ -269,7 +284,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { butlerApi, filesApi, studentApi } from '@/api'
@@ -355,6 +370,10 @@ const KP_ZH = { analytic: '解析几何', derivative: '导数与单调性', func
   set_logic: '集合逻辑', inequality: '不等式', complex: '复数', custom: '自定义' }
 const kpZh = (d) => (d && (d.kp_name || KP_ZH[d.kp_code])) || '未标注知识点' 
 
+const detailModalOpen = ref(false) // P1-13：详情浮窗开关（初始不弹出，列表为主）
+const selectedRecordId = ref('') // 当前详情 record_id（浮窗内下一题导航）
+const hpRef = ref(null) // 拍错题入本：HomeworkPhotos 实例（相册/拍照 pick）
+const entryCard = ref(false) // P1-14：入本方式引导卡
 const detail = ref(null)
 // 手动拍照入本的原图 URL（file_id -> /files/{id}/content 预签名 URL）
 const photoUrl = ref('')
@@ -527,8 +546,29 @@ async function loadFilter() {
   }
 }
 
+function closeDetailModal() { detailModalOpen.value = false }
+function openEntryCard() { entryCard.value = true }
+function pickPhoto() {
+  entryCard.value = false
+  // 表单在 v-if="manualOpen" 内：先展开再触发选图，否则 hpRef 未挂载导致 pick 静默失效
+  manualOpen.value = true
+  nextTick(() => hpRef.value?.pick())
+}
+function pickManual() { entryCard.value = false; manualOpen.value = true }
+// P1-14：浮窗内下一题（按当前列表顺序）
+const hasNextInList = computed(() => listItems.value.length > 1)
+function openNextInList() {
+  if (!hasNextInList.value) return
+  const idx = listItems.value.findIndex((o) => o.record_id === detail.value?.id || o.record_id === selectedRecordId.value)
+  const nxt = listItems.value[(idx + 1) % listItems.value.length]
+  if (nxt) openDetail(nxt.record_id, ((idx + 1) % listItems.value.length) + 1)
+}
+function clickMask() { if (detailModalOpen.value) detailModalOpen.value = false }
+
 async function openDetail(recordId, seq = 1) {
   if (!recordId) return
+  detailModalOpen.value = true
+  selectedRecordId.value = recordId
   selectedSeq.value = seq
   reviewing.value = false
   detailLoading.value = true
@@ -793,6 +833,38 @@ onMounted(() => {
 .legend-item { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
 /* 格子 hover 弹层：显示该格题数（不拦截点击，点格子仍打开详情） */
 .heatmap-cell { position: relative; }
+/* ===== P1-14 入本方式引导卡 ===== */
+.entry-card { position: fixed; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center; background: rgba(15,23,42,.45); }
+.entry-card-box { width: min(420px, 92vw); background: var(--bg-white); border-radius: 16px; padding: 22px 24px; box-shadow: 0 18px 60px rgba(0,0,0,.28); text-align: center; }
+.entry-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: var(--ink); }
+.entry-btn { display: block; width: 100%; margin-bottom: 10px; padding: 12px 14px; border-radius: 10px; border: none; background: var(--brand); color: #fff; font-size: 14px; cursor: pointer; }
+.entry-btn.plain { background: var(--brand-soft); color: var(--brand-deep); }
+.entry-btn:hover { filter: brightness(1.05); }
+.entry-close { margin-top: 4px; background: none; border: none; color: var(--ink3); cursor: pointer; font-size: 12.5px; }
+/* ===== P1-13 浮窗模式：点击列表项后弹出，不再平铺割裂 ===== */
+.errors-left.modal-mode {
+  position: fixed; inset: 0; z-index: 90;
+  display: flex; align-items: flex-start; justify-content: center;
+  background: rgba(15, 23, 42, .5); padding: 26px 16px;
+}
+.errors-left.modal-mode .detail-modal-wrap {
+  width: min(1080px, 96vw); max-height: 86vh; overflow-y: auto;
+  background: var(--bg-white); border-radius: 18px;
+  padding: 18px 22px 22px; box-shadow: 0 18px 60px rgba(0, 0, 0, .28);
+}
+.errors-left.modal-mode .due-queue { display: none; }
+.errors-left:not(.modal-mode) .detail-modal-wrap { display: none; }
+.modal-close {
+  margin-right: 4px; border: 1px solid var(--line); background: var(--bg2);
+  color: var(--ink2); border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 12px;
+}
+.modal-close:hover { border-color: var(--brand); color: var(--brand); }
+.list-thumb {
+  width: 46px; height: 58px; flex-shrink: 0; border-radius: 8px;
+  background: var(--brand-soft); border: 1px solid var(--line);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
 .q-fig { margin: 10px 0; text-align: center; }
 .q-fig img { max-width: 100%; max-height: 260px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 .heatmap-cell .cell-tip {
@@ -838,9 +910,9 @@ onMounted(() => {
 .tutor-input input:disabled { opacity: 0.5; }
 
 /* S5 v2：左右分栏（列表左/详情右 sticky），热力图已删除 */
-.errors-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
+.errors-split { display: block; }
 @media (max-width: 1100px) { .errors-split { grid-template-columns: 1fr; } }
-.errors-right { position: sticky; top: calc(var(--topbar-h, 60px) + 12px); max-height: calc(100vh - var(--topbar-h, 60px) - 24px); overflow-y: auto; }
+.errors-right { margin-top: 14px; }
 
 /* S5 v3：统计三卡 + 主操作行 */
 .err-stats { display: flex; gap: 12px; align-items: stretch; margin-bottom: 14px; flex-wrap: wrap; }

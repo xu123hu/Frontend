@@ -12,6 +12,12 @@
         @click.stop="openLightbox(url)" @error="onImgError"
       />
     </template>
+    <template v-else-if="isImage">
+      <div class="att-missing" title="" @click.stop>
+        <UiIcon name="image" :size="18" />
+        <span>原图已丢失（存储缺失），请在新对话中重新上传/拍照该题目图片</span>
+      </div>
+    </template>
     <template v-else>
       <div class="att-doc" :class="{ clickable: docUrl }" :title="chipTitle" @click.stop="openDoc">
         <UiIcon :name="isImage ? 'image' : 'file'" :size="18" class="att-doc-icon" />
@@ -72,10 +78,16 @@ function openDoc() {
 <style scoped>
 .att-thumb { display: inline-block; }
 .att-img {
-  width: 120px; height: 120px; object-fit: cover; display: block;
+  width: 100%; max-width: 460px; height: auto; object-fit: contain; display: block;
   border-radius: var(--radius-md); border: 1px solid rgba(255, 255, 255, 0.35);
   cursor: zoom-in; transition: transform var(--transition-fast);
   background: rgba(255, 255, 255, 0.15);
+}
+.att-missing {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: 8px 12px; border-radius: var(--radius-md);
+  background: rgba(160, 120, 40, 0.18); color: #8a6d1a;
+  font-size: var(--text-xs); line-height: 1.5; max-width: 420px;
 }
 .att-img:hover { transform: scale(1.02); }
 .att-doc {

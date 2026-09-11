@@ -2,7 +2,7 @@
   <div class="view">
     <div class="greeting">
       <div class="hello">个人中心 <span style="color:var(--brand-deep);">· {{ auth.nickname }}</span></div>
-      <div class="sub">学习账号与偏好设置都在这里。修改实时同步到所有设备（演示）。</div>
+      <div class="sub">学习账号与偏好设置都在这里。修改实时同步到所有设备。</div>
     </div>
 
     <!-- 用户名片 -->
@@ -20,7 +20,7 @@
           </template>
         </div>
       </div>
-      <button class="btn" @click="toast.info('编辑资料（演示）')">✏️ 编辑资料</button>
+      <button class="btn" @click="toast.info('编辑资料功能即将开放')">✏️ 编辑资料</button>
     </div>
 
     <!-- 学习数据 -->
@@ -122,7 +122,7 @@ const toast = useToastStore()
 
 /* ===== 用户资料（GET /api/auth/me，经 auth store 刷新缓存） ===== */
 const meError = ref(false)
-const avatarChar = computed(() => auth.user?.avatar || (auth.nickname || '同').slice(0, 1))
+const avatarChar = computed(() => auth.user?.avatar || (auth.user?.username || auth.nickname || '同').slice(0, 1))
 const gradeText = computed(() => auth.user?.grade || auth.user?.roles?.[0]?.org_name || '')
 const phoneText = computed(() => {
   const p = auth.user?.phone
@@ -174,13 +174,13 @@ const actions = computed(() => [
 
 function onAction(a) {
   if (a.name.includes('清除对话')) {
-    toast.warn('已清除本地所有对话记录（演示）')
+    toast.warn('已清除本地所有对话记录')
   } else if (a.name.includes('服务协议')) {
-    toast.info('已打开用户协议（演示）')
+    toast.info('已打开用户协议')
   } else if (a.name.includes('关于')) {
     toast.info('智学数研 v4 · 暖琥珀设计语言')
   } else {
-    toast.info(`已进入「${a.name}」（演示）`)
+    toast.info(`已进入「${a.name}」`)
   }
 }
 

@@ -90,7 +90,7 @@
             <div v-else class="ptx-preview__empty">← 在章节树中选择一个课时</div>
           </div>
         </div>
-        <div class="ptx-tip">💡 选择课时后，AI 将基于新课标要求自动生成完整教案、PPT 和同步练习（原型：内容源为内置演示）。</div>
+        <div class="ptx-tip">💡 选择课时后，AI 将基于新课标要求自动生成完整教案、PPT 和同步练习（当前为内置演示内容，上传教材后替换为教材内容）。</div>
       </aside>
     </main>
   </div>

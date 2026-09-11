@@ -146,7 +146,7 @@ async function saveRecipe() {
     await v3Api.figures.saveRecipe({ name: task.value.title + '（导演）', preset_id: task.value.presetId, params: { ...params.value }, school_shared: true, note: task.value.capability })
     toastOf().success('配方已存入备课组共享（可在资源中心查看）')
   } catch {
-    toastOf().error('保存失败（mock 服务未启动？）')
+    toastOf().error('保存失败，请检查网络后重试')
   } finally {
     savingRecipe.value = false
   }

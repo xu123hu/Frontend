@@ -12,8 +12,19 @@
         <RouterLink class="re-nav-item" :class="{ active: isActive('/research/tasks') }" to="/research/tasks">任务</RouterLink>
       </nav>
       <div class="re-topbar-right">
-        <RouterLink to="/hub" class="re-sync" data-testid="rs-hub-entry">⇥ 统一工作入口</RouterLink>
-        <span class="re-user-chip" :title="`当前角色：${auth.activeRole || '—'}`">{{ displayName }}</span>
+        <div class="re-user" @mouseleave="menuOpen = false">
+          <button type="button" class="re-user-chip" :title="`当前角色：${auth.activeRole || '—'}`" @click="menuOpen = !menuOpen">
+            {{ displayName }} <span class="re-user-caret">▾</span>
+          </button>
+          <div v-if="menuOpen" class="re-user-menu" @click.stop>
+            <div class="re-user-menu__head">
+              <b>{{ displayName }}</b>
+              <span>身份：{{ roleLabel }}</span>
+              <span v-if="auth.user?.phone">手机：{{ auth.user.phone }}</span>
+            </div>
+            <button type="button" class="re-user-menu__item re-user-menu__item--danger" @click="onLogout">退出登录</button>
+          </div>
+        </div>
       </div>
     </header>
     <main class="re-main">
@@ -23,20 +34,29 @@
 </template>
 
 <script setup>
-import { computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useResearchStore } from '@/stores/research'
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const rstore = useResearchStore()
 
+const menuOpen = ref(false)
 const displayName = computed(() => auth.nickname || '科研用户')
+const roleLabel = computed(() => auth.activeRole === 'teacher' ? '教师' : auth.activeRole === 'researcher' ? '科研人员' : auth.activeRole === 'admin' ? '管理员' : '学生')
 const paperTotal = computed(() => rstore.total || '')
 
 function isActive(prefix) {
   return route.path === prefix || (prefix !== '/research' && route.path.startsWith(prefix + '/'))
+}
+
+async function onLogout() {
+  menuOpen.value = false
+  try { await auth.logout() } catch { /* 令牌已失效时也照常跳转 */ }
+  router.push('/login')
 }
 
 onMounted(async () => {

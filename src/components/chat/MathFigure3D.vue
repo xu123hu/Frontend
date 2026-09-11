@@ -2,8 +2,8 @@
   <!-- MathFigure3D：双师课堂交互配图（three.js + OrbitControls）
        输入 scene（受控 DSL，后端已采样折线点集），支持拖拽旋转 / 滚轮缩放 / 右键平移，
        工具栏：重置视角 / 放大 / 缩小 / 网格开关。无 WebGL 时优雅降级，绝不白屏。 -->
-  <div class="mf3d">
-    <div class="mf3d__bar">
+  <div class="mf3d" :class="{ 'mf3d--bare': bare }">
+    <div v-if="!bare" class="mf3d__bar">
       <span class="mf3d__title">🧊 交互图形</span>
       <span class="mf3d__caption">{{ caption || '（无图注）' }}</span>
       <span class="mf3d__hint">拖拽旋转 · 滚轮缩放 · 右键平移</span>
@@ -42,6 +42,8 @@ const props = defineProps({
   figure: { type: Object, default: null },
   caption: { type: String, default: '' },
   height: { type: Number, default: 360 },
+  /** 教师课件静态化：只显示图片边界，不显示工具栏、不响应交互 */
+  bare: { type: Boolean, default: false },
 })
 
 const host = ref(null)
@@ -128,7 +130,14 @@ function addEdgeSegments(segments3, color, opacity = 1) {
   return line
 }
 
+const _SUB = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉']
+// P1-16B：标签清洗——数字转下标字符（S4→S₄、A0→A₀、SA40→SA₄₀），避免数字贴尾的"乱码"观感
+function cleanLabel(raw) {
+  const t = String(raw ?? '').replace(/\s+/g, '').slice(0, 6)
+  return t.replace(/\d/g, (d) => _SUB[+d] ?? d)
+}
 function makeLabel(text, pos) {
+  text = cleanLabel(text)
   const c = document.createElement('canvas')
   const ctx = c.getContext('2d')
   const fs = 64
@@ -445,6 +454,11 @@ function initThree() {
   controls.minDistance = 0.5
   controls.maxDistance = 80
   controls.target.set(0, 0, 0)
+  if (props.bare) {
+    controls.enableRotate = false
+    controls.enableZoom = false
+    controls.enablePan = false
+  }
 
   // 三点照明 + 半球补光
   scene.add(new THREE.HemisphereLight(0xffffff, 0xe2e8f0, 0.55))
@@ -573,6 +587,15 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background: #fbfcfe;
   box-shadow: var(--shadow-sm, none);
+}
+.mf3d--bare {
+  border: none;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+}
+.mf3d--bare .mf3d__canvas {
+  cursor: default;
 }
 .mf3d__bar {
   display: flex;

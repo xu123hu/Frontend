@@ -566,7 +566,7 @@ async function onTextbookFile(e: Event) {
     kbNote.value = r.data.note || ''
     form.value.textbook_version = r.data.textbooks[0]?.name || form.value.textbook_version
     if (chapterOptions.value.length && !chapterOptions.value.some((c) => c.path === form.value.chapter)) form.value.chapter = chapterOptions.value[0].path
-  } catch { kbNote.value = '重建失败：mock 服务未启动？' }
+  } catch { kbNote.value = '教材重建失败，请稍后重试' }
 }
 
 /* ============ V3.1 两段式：大纲生成 → 教师确认/编辑 → SSE 成稿 ============ */
@@ -585,7 +585,7 @@ async function genOutline() {
     outline.value = {
       topic: form.value.topic, duration: form.value.duration, total_minutes: 0,
       sections: V3_TEN_BOARDS.map((b) => ({ id: b.id, name: b.name, minutes: b.minutes, goal: '', example_suggestion: undefined })),
-      notes: ['大纲生成失败，已回退十板块骨架（mock 服务未启动？）'],
+      notes: ['大纲生成失败，已回退十板块骨架，可手动调整'],
     }
   } finally { outlineLoading.value = false }
 }
@@ -817,7 +817,10 @@ onMounted(async () => {
   kbSource.value = tbRes?.provenance || 'preset'
   if (!chapterOptions.value.some((c) => c.path === form.value.chapter) && chapterOptions.value.length) form.value.chapter = chapterOptions.value[0].path
 })
-onBeforeUnmount(() => sseCtrl?.abort())
+onBeforeUnmount(() => {
+  /* 教案生成后台化：离开页面不中断 SSE——生成继续在后端跑并落库（done 落 plans 行），
+     回列表页可见。只有用户点「上一步/取消」才 abort。 */
+})
 
 async function openPlan(id: string) {
   try {
@@ -859,7 +862,7 @@ async function generate() {
       },
     )
   } catch {
-    genStage.value = '生成失败（mock 服务未启动？）'
+    genStage.value = '生成失败，请重试'
   }
 }
 

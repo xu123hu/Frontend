@@ -4,7 +4,7 @@
     <div class="ailp-blob" style="width:400px;height:400px;background:#a5f3fc;top:300px;right:-100px;opacity:0.3"></div>
     <div class="pgn-main">
       <div class="pgn-center ailp-fade">
-        <div class="pgn-icon">
+        <div class="pgn-icon" :class="{ 'is-idle': phase === 'failed' }">
           <div class="pgn-icon__ring" />
           <div class="pgn-icon__pulse" />
           <div class="pgn-icon__pulse" style="animation-delay:1s" />
@@ -12,25 +12,24 @@
         </div>
         <h2>AI 正在为你生成教案...</h2>
         <p>{{ chain.brief?.topic }} · {{ chain.brief?.courseType }} · {{ chain.brief?.duration }}分钟</p>
-        <p class="ailp-honest" style="margin-top:10px">原型：演示进度流 + 确定性大纲编排（真实生成属后端 M2）</p>
+        <p class="ailp-honest" style="margin-top:10px">大纲生成后将进入确认，确认后并行生成全部模块</p>
 
         <div class="pgn-card">
-          <div v-for="(s, i) in STEPS" :key="s.name" class="pgn-step" :class="stepCls(i)">
-            <div class="pgn-step__dot" :class="stepCls(i)">
-              <span v-if="i < current">✓</span>
-              <i v-else-if="i === current" class="pgn-step__live" />
+          <div v-for="(s, i) in STEPS" :key="s.name" class="pgn-step" :class="stepStateCls(i)">
+            <div class="pgn-step__dot" :class="stepStateCls(i)">
+              <span v-if="stepState(i) === 'done'">✓</span>
+              <i v-else-if="stepState(i) === 'run'" class="pgn-step__live" />
               <span v-else class="pgn-step__pendingdot" />
             </div>
             <div class="pgn-step__body">
               <div class="pgn-step__row">
-                <b :class="{ 'is-active': i === current, 'is-done': i < current }">{{ s.name }}</b>
-                <span v-if="i < current" class="pgn-step__state is-done">已完成</span>
-                <span v-else-if="i === current" class="pgn-step__state is-run">生成中</span>
+                <b :class="{ 'is-active': stepState(i) === 'run', 'is-done': stepState(i) === 'done' }">{{ s.name }}</b>
+                <span v-if="stepState(i) === 'done'" class="pgn-step__state is-done">已完成</span>
+                <span v-else-if="stepState(i) === 'run'" class="pgn-step__state is-run">正在生成大纲</span>
               </div>
-              <div v-if="i === current" class="pgn-step__bar"><i /></div>
+              <div v-if="stepState(i) === 'run'" class="pgn-step__bar"><i /></div>
             </div>
           </div>
-          <div class="pgn-eta">⏱ 预计还需 <b>{{ remaining }}</b> 秒（演示计时）</div>
           <div v-if="errorMsg" class="pgn-error" role="alert">
             <p>{{ errorMsg }}</p>
             <button type="button" class="ailp-btn-primary" @click="retry">重新生成</button>
@@ -44,11 +43,11 @@
 
 <script setup lang="ts">
 /**
- * PrepGenerating —— AI 生成中（P，用户定稿 HTML 移植）
- * 六步演示进度（分析教材→…→板书作业），期间真实调用 generation/planOutline，
- * 完成后 setOutline 进入大纲确认。诚实标注：进度为演示流。
+ * PrepGenerating —— AI 生成中
+ * 生成清单：大纲请求进行中仅点亮第 1 步「分析教材与知识点」，其余模块待生成；
+ * 请求成功 setOutline 进入大纲确认；请求失败立即停止动画，只展示错误卡片。
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { v3Api } from '@/api/teacherV3'
 import { setOutline, usePrepChain } from './prepChain'
 
@@ -61,19 +60,20 @@ const STEPS = [
   { name: '选配例题与习题' },
   { name: '生成板书与作业设计' },
 ]
-const current = ref(0)
-const remaining = ref(10)
+/** 生成阶段：generating = 大纲请求进行中（仅第 1 步点亮）；failed = 立即停止动画，只显示错误卡片 */
+const phase = ref<'generating' | 'failed'>('generating')
 const errorMsg = ref('')
-let timer: number | undefined
-let etaTimer: number | undefined
-let done = false
 let reqPromise: Promise<any> | null = null
 
-const stepCls = (i: number) => (i < current.value ? 'completed' : i === current.value ? 'current' : 'pending')
+const stepState = (i: number): 'done' | 'run' | 'pending' =>
+  phase.value === 'failed' ? 'pending' : i === 0 ? 'run' : 'pending'
+const stepStateCls = (i: number) =>
+  stepState(i) === 'done' ? 'completed' : stepState(i) === 'run' ? 'current' : 'pending'
 
-/** 调用真实大纲接口；失败/空结果如实报错，绝不回填空演示大纲冒充成功（独立审查 #2c） */
+/** 调用真实大纲接口；失败/空结果如实报错并立即停止生成动画，绝不回填空演示大纲冒充成功 */
 function runOutline(): Promise<any> {
   errorMsg.value = ''
+  phase.value = 'generating'
   if (reqPromise) return reqPromise
   reqPromise = (async () => {
     try {
@@ -91,6 +91,7 @@ function runOutline(): Promise<any> {
       } as any)
       const data = r.data
       if (!data || !Array.isArray(data.sections) || data.sections.length === 0) {
+        phase.value = 'failed'
         errorMsg.value = '教案大纲生成失败，请重试或返回修改备课信息。'
         return null
       }
@@ -101,6 +102,7 @@ function runOutline(): Promise<any> {
       })
       return data
     } catch {
+      phase.value = 'failed'
       errorMsg.value = '教案大纲生成失败，请重试或返回修改备课信息。'
       return null
     }
@@ -111,20 +113,12 @@ function runOutline(): Promise<any> {
 function retry() {
   reqPromise = null
   errorMsg.value = ''
-  current.value = 0
-  remaining.value = 10
+  phase.value = 'generating'
   runOutline()
 }
 
-onMounted(() => {
-  runOutline()
-  timer = window.setInterval(() => {
-    if (current.value < STEPS.length - 1) current.value += 1
-  }, 1100)
-  etaTimer = window.setInterval(() => { if (remaining.value > 0) remaining.value -= 1 }, 1000)
-})
-onBeforeUnmount(() => { window.clearInterval(timer); window.clearInterval(etaTimer) })
-void computed
+onMounted(() => { runOutline() })
+onBeforeUnmount(() => { reqPromise = null })
 </script>
 
 <style scoped>
@@ -135,6 +129,7 @@ void computed
 .pgn-icon__ring { position: absolute; inset: -12px; border-radius: 50%; background: conic-gradient(from 0deg, rgba(79, 70, 229, 0.12), rgba(6, 182, 212, 0.4), rgba(139, 92, 246, 0.3), rgba(79, 70, 229, 0.12)); filter: blur(8px); animation: ailp-spin 8s linear infinite; }
 .pgn-icon__pulse { position: absolute; inset: -18px; border-radius: 50%; border: 2px solid rgba(99, 102, 241, 0.3); animation: ailp-pulse 2s ease-out infinite; }
 .pgn-icon__core { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; font-size: 40px; color: #fff; background: linear-gradient(135deg, #4f46e5, #7c3aed 50%, #06b6d4); box-shadow: 0 8px 32px rgba(79, 70, 229, 0.4); animation: ailp-pulse 2.4s ease-in-out infinite; }
+.pgn-icon.is-idle .pgn-icon__ring, .pgn-icon.is-idle .pgn-icon__pulse, .pgn-icon.is-idle .pgn-icon__core { animation: none; }
 .pgn-center h2 { font-size: 26px; font-weight: 800; margin-bottom: 8px; }
 .pgn-center > p { color: var(--ailp-gray-500); font-size: 14px; }
 .pgn-card { margin-top: 30px; background: rgba(255, 255, 255, 0.9); border: 1px solid var(--ailp-gray-200); border-radius: 18px; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08); padding: 18px; text-align: left; display: flex; flex-direction: column; gap: 4px; }
@@ -158,8 +153,6 @@ void computed
 .pgn-step__bar { height: 4px; border-radius: 2px; background: var(--ailp-gray-100); overflow: hidden; margin-top: 8px; }
 .pgn-step__bar i { display: block; height: 100%; width: 55%; border-radius: 2px; background: linear-gradient(90deg, #4f46e5, #06b6d4); position: relative; overflow: hidden; }
 .pgn-step__bar i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent); background-size: 200% 100%; animation: ailp-shimmer 1.8s linear infinite; }
-.pgn-eta { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--ailp-gray-200); text-align: center; font-size: 12.5px; color: var(--ailp-gray-500); }
-.pgn-eta b { color: var(--ailp-primary-600); }
 .pgn-error { margin-top: 14px; padding: 12px 14px; border: 1px solid #f3c4b9; background: #fdf0ec; border-radius: 8px; }
 .pgn-error p { margin: 0 0 10px; color: #9c3a28; font-size: 13px; }
 .pgn-error .ailp-btn-ghost { margin-left: 10px; border: 1px solid #d4d4d8; background: #fff; color: #333; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; }

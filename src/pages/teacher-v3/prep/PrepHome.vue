@@ -4,19 +4,6 @@
     <div class="ailp-blob" style="width:400px;height:400px;background:#a5f3fc;top:200px;right:-100px;opacity:0.3"></div>
     <div class="ailp-blob" style="width:600px;height:600px;background:#e0e7ff;bottom:-200px;left:33%;opacity:0.5"></div>
 
-    <!-- 顶部导航（备小研） -->
-    <nav class="ph-nav">
-      <div class="ph-nav__brand">
-        <div class="ph-nav__logo">✦</div>
-        <span class="ph-nav__name">备小研 <span class="ailp-gradient-text" style="font-weight:700">AI 备课</span></span>
-      </div>
-      <div class="ph-nav__user">
-        <span class="ph-nav__bell">🔔<i /></span>
-        <div class="ph-nav__avatar">李</div>
-        <span class="ph-nav__uname">李老师</span>
-      </div>
-    </nav>
-
     <main class="ph-main">
       <!-- 欢迎 -->
       <div class="ph-welcome ailp-fade">
@@ -141,15 +128,15 @@ onMounted(async () => {
 
 <style scoped>
 .ph { padding-bottom: 60px; }
-.ph-nav { position: relative; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; }
-.ph-nav__brand { display: flex; align-items: center; gap: 10px; }
-.ph-nav__logo { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #4f46e5, #06b6d4); }
-.ph-nav__name { font-size: 16px; font-weight: 600; }
-.ph-nav__user { display: flex; align-items: center; gap: 10px; }
-.ph-nav__bell { position: relative; font-size: 15px; }
-.ph-nav__bell i { position: absolute; top: -2px; right: -4px; width: 7px; height: 7px; border-radius: 50%; background: var(--ailp-error-500); }
-.ph-nav__avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 600; background: linear-gradient(135deg, #818cf8, #c084fc); }
-.ph-nav__uname { font-size: 13px; font-weight: 500; }
+
+
+
+
+
+
+
+
+
 .ph-main { position: relative; z-index: 5; max-width: 900px; margin: 0 auto; padding: 36px 24px 80px; }
 .ph-welcome { text-align: center; margin-bottom: 36px; }
 .ph-welcome__hi { color: var(--ailp-gray-500); margin-bottom: 10px; }

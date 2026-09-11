@@ -60,11 +60,7 @@
             @action="onActionClick"
             @complete-action="onCompleteAction"
           />
-          <!-- AI 思考中（v4 动效） -->
-          <div v-if="chat.streaming.value" class="v4-thinking">
-            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-            AI 正在根据你的答题表现生成变式题（难度递进）…
-          </div>
+
         </template>
 
         <div v-else class="empty-state welcome">
@@ -127,8 +123,10 @@ import { useToastStore } from '@/stores/toast'
 import { useSkillStore } from '@/stores/skill'
 import { useConvStore } from '@/stores/conv'
 import { SKILL_ID_BY_KEY } from '@/config/skills'
+import { KP_ZH } from '@/components/student/labels'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
 import IncrementalMarkdown from '@/components/chat/IncrementalMarkdown.vue'
+import MarkdownView from '@/components/MarkdownView.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
 import SuggestionsGrid from '@/components/chat/SuggestionsGrid.vue'
 import UiIcon from '@/components/common/UiIcon.vue'
@@ -414,6 +412,7 @@ function onVersionSwitch(msg, targetId) {
 }
 
 /* ===== 引导式解题 ===== */
+// 引导选项条：取最后一条带选项的 AI 消息（选项统一在底部显示）
 function onTutorAction(action) {
   if (action === 'hint') chat.doSend('来点提示', { tutorAction: 'hint' })
   else if (action === 'answer') chat.doSend('直接看答案', { tutorAction: 'answer' })
@@ -505,11 +504,11 @@ async function startReview(item) {
   reviewStarting.value = true
   reviewNudge.value = null
   reviewCtx.value = { record_id: item.record_id }
-  const kp = item.kp_name ? `「${item.kp_name}」` : ''
+  const kp = item.kp_name || KP_ZH[String(item.kp_code || '')] ? `「${item.kp_name || KP_ZH[String(item.kp_code || '')]}」` : ''
   chat.doSend(
     `我在复习一道${kp}错题，请基于它出一道变式题（换掉数字或条件，不要出原题）让我重新作答巩固：\n${item.question_text}` +
       (item.file_id ? '\n（原题图片已随消息附上，请先看图再审题）' : ''),
-    { displayText: '🔄 错题复习 · 换个条件再试试', skillKeys: ['quiz_gen'], attachments: item.file_id ? [{ file_id: item.file_id, kind: 'image' }] : [] },
+    { displayText: '🔄 错题复习 · 换个条件再试试', skillKeys: ['quiz_gen'], attachments: item.file_id ? [{ file_id: item.file_id, kind: 'image' }] : [], question: { text: item.question_text || '' } },
   )
   reviewStarting.value = false
 }
@@ -526,17 +525,15 @@ async function checkReviewNudge() {
 function onQuizExplain(card, item, idx, outcome) {
   if (chat.streaming.value) return
   const q = String(item?.question_text || '').slice(0, 500)
-  const kp = item?.kp_name || item?.kp_code || ''
+  const kp = item?.kp_name || KP_ZH[String(item?.kp_code || '')] || ''
   const chosenInfo =
     outcome && !outcome.correct && outcome.chosen
       ? `我刚刚选了 ${outcome.chosen}（错误）`
       : outcome && !outcome.correct
         ? '我刚刚答错了'
         : '我刚刚答过'
-  const text = q
-    ? `请讲解这道题并帮我举一反三：\n${q}\n（这是一道${kp ? `「${kp}」相关` : ''}题，${chosenInfo}，请先用苏格拉底方式引导我理解——可以先问问我当时是怎么想的，再出 2-3 道变式确认我真正掌握）`
-    : '请基于刚才的题给我逐一举一反三讲解，并出变式确认掌握'
-  chat.doSend(text, { displayText: '💬 讲解这道错题 · 举一反三', skillKeys: ['socratic'] })
+  const text = `请讲解这道题并帮我举一反三：${kp ? `（${kp}相关题，` : ''}${chosenInfo}，请先用引导式方式和我互动，我会通过选项方式推进）`
+  chat.doSend(text, { displayText: '💬 讲解这道错题 · 举一反三', skillKeys: ['socratic'], question: { text: q || '', options: item?.options || [] } })
 }
 
 function onQuizMore(card) {
@@ -545,7 +542,7 @@ function onQuizMore(card) {
   const q = String(it?.question_text || '').slice(0, 400)
   chat.doSend(
     q ? `请基于这道题再来一组难度递进的变式巩固：\n${q}` : '再来一组变式巩固',
-    { displayText: '🔄 再来一组变式', skillKeys: ['quiz_gen'], attachments: it?.file_id ? [{ file_id: it.file_id, kind: 'image' }] : [] },
+    { displayText: '🔄 再来一组变式', skillKeys: ['quiz_gen'], attachments: it?.file_id ? [{ file_id: it.file_id, kind: 'image' }] : [], question: { text: q || '', options: it?.options || [] } },
   )
 }
 
@@ -666,7 +663,13 @@ watch(
 
 <style scoped>
 .dialog-page { height: calc(100vh - 52px); }
-.dialog-page .dialog-main { height: 100%; }
+.dialog-page { padding: 0; }
+.dialog-page .dialog-main {
+  height: 100%; max-width: none; margin: 0; background: transparent;
+  border: none; box-shadow: none; border-radius: 0;
+}
+.dialog-messages { padding: 20px 36px 8px; }
+.dialog-messages { padding: 18px 28px; }
 .list-loading { display: flex; align-items: center; gap: 8px; color: var(--ink3); padding: 40px 0; justify-content: center; font-size: 13px; }
 .history-more { display: flex; justify-content: center; margin-bottom: 8px; }
 .welcome { padding-top: 60px; }

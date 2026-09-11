@@ -1,4 +1,4 @@
-/** 仅 VITE_USE_MOCK=1 时使用的本地预览身份；默认真实 API 模式绝不预置 mock 身份 */
+/** 仅本地预览模式使用的本地预览身份；默认真实 API 模式绝不预置 mock 身份 */
 export const MOCK_TOKEN_STUDENT = 'mock-token-preview'
 export const MOCK_TOKEN_TEACHER = 'mock-token-teacher-preview'
 export const MOCK_TOKEN_RESEARCHER = 'mock-token-researcher-preview'

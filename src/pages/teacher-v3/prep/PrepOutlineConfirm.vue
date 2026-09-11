@@ -29,7 +29,7 @@
         <div class="poc-card__head">
           <div class="poc-card__headic">📄</div>
           <div><h3>教案大纲预览</h3><p>共 5 个模块 · {{ outline?.sections.length || 0 }} 个教学环节</p></div>
-          <span class="ailp-honest" style="margin-left:auto">原型：确定性编排 · 内容源演示 · 教师可全改</span>
+          <span class="ailp-honest" style="margin-left:auto">AI 已按课标与课题编排，确认后并行生成全部模块</span>
         </div>
         <div class="poc-card__body">
           <!-- 教学目标 -->
@@ -91,7 +91,7 @@
                     <span class="poc-res__kind is-g">📐</span>
                     <div class="poc-res__body">
                       <div class="poc-res__fig" v-html="resOf(s.id).figure!.svg" />
-                      <small>{{ resOf(s.id).figure!.name }}（演示图形）</small>
+                      <small>{{ resOf(s.id).figure!.name }}（示意图）</small>
                     </div>
                   </div>
                 </div>
@@ -132,7 +132,7 @@
 
       <!-- AI 快捷调整 -->
       <div class="poc-adjust ailp-fade" style="animation-delay:0.25s">
-        <h4>✦ AI 快捷调整 <small>点击快速微调，AI 重新编排对应部分（原型：规则词表编译，非大模型理解）</small></h4>
+        <h4>✦ AI 快捷调整 <small>点击快速微调，AI 将重新编排对应部分</small></h4>
         <div class="poc-adjust__chips">
           <button class="ailp-chip" data-testid="ailp-oc-chip-难度" @click="adjust('难度再加深一些')">🎚 调整难度</button>
           <button class="ailp-chip" data-testid="ailp-oc-chip-例题" @click="adjust('增加例题')">➕ 增加例题</button>

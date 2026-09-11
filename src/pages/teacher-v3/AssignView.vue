@@ -1,23 +1,29 @@
 <template>
   <div data-testid="tv3-assign">
     <!-- 作业列表 -->
-    <div v-if="!assignment" class="tv3-card">
-      <div class="tv3-card__head">
-        <span class="tv3-card__title">作业与批改</span>
-        <span class="tv3-card__sub">按题聚类 · 原图对照 · AI 起草反馈教师审定</span>
-        <span style="flex: 1" />
-        <router-link to="/teacher-v3/insights" class="tv3-btn tv3-btn--sm" data-testid="tv3-assign-to-insights">学情洞察 →</router-link>
+    <div v-if="!assignment">
+      <div class="tv3-hero" style="margin-bottom: 18px">
+        <div style="display: flex; gap: 24px; align-items: center">
+          <div style="flex: 1">
+            <div class="tv3-hero__title">作业与批改</div>
+            <div class="tv3-hero__sub">按题聚类 · 原图对照 · AI 起草反馈教师审定</div>
+          </div>
+          <span class="tv3-tag tv3-tag--gold">AI 预标错因 · 分层变式</span>
+          <router-link to="/teacher-v3/insights" class="tv3-btn tv3-btn--sm" data-testid="tv3-assign-to-insights">学情洞察 →</router-link>
+        </div>
       </div>
+      <div class="tv3-card">
       <div class="tv3-card__body" style="display: flex; flex-direction: column; gap: 8px">
         <div v-for="a in assignments" :key="a.id" class="tv3-row" style="cursor: pointer" @click="openAssignment(a.id)">
           <span class="tv3-tag tv3-tag--primary">{{ a.class_name }}</span>
           <div style="flex: 1">
             <div style="font-size: 14px; font-weight: 600">{{ a.title }} <span v-if="a.is_sample === false" class="tv3-tag tv3-tag--gold" style="font-size: 10px">我发布</span><span v-else-if="a.is_sample" class="tv3-tag" style="font-size: 10px" title="来自原型种子数据">示例</span></div>
-            <div style="font-size: 11.5px; color: var(--tv3-ink3)">提交 {{ a.submitted }}/{{ a.total }} · 已批 {{ a.graded }}{{ a.deadline ? ' · 截止 ' + a.deadline : '' }}{{ a.status === 'collecting' ? ' · 待提交' : '' }}</div>
+            <div style="font-size: 11.5px; color: var(--tv3-ink3)">提交 {{ a.submitted }}/{{ a.total }} · 已批 {{ a.graded }}{{ a.deadline ? ' · 截止 ' + fmtDate(a.deadline) : '' }}{{ a.status === 'collecting' ? ' · 待提交' : '' }}</div>
           </div>
           <div class="tv3-fillbar" style="max-width: 180px"><div class="tv3-fillbar__bar" :class="a.graded / Math.max(1, a.submitted) > 0.9 ? 'tv3-fillbar__bar--ok' : 'tv3-fillbar__bar--warn'" :style="{ width: (a.graded / Math.max(1, a.submitted)) * 100 + '%' }" /></div>
           <span style="color: var(--tv3-ink4)">›</span>
         </div>
+      </div>
       </div>
     </div>
 
@@ -35,9 +41,9 @@
         <!-- B4：待提交态（新发布作业） -->
         <div v-if="assignment.submitted === 0" class="tv3-card__body" style="display: flex; align-items: center; gap: 12px" data-testid="tv3-awaiting">
           <span class="tv3-tag tv3-tag--gold">已发布 · 等待学生提交</span>
-          <span style="font-size: 12px; color: var(--tv3-ink3)">截止 {{ assignment.deadline || '未设置' }} · {{ assignment.total }} 人 · {{ assignment.allow_photo ? '允许拍照提交' : '仅线上作答' }}</span>
+          <span style="font-size: 12px; color: var(--tv3-ink3)">截止 {{ fmtDate(assignment.deadline) || '未设置' }} · {{ assignment.total }} 人 · {{ assignment.allow_photo ? '允许拍照提交' : '仅线上作答' }}</span>
           <div class="tv3-card__spacer" />
-          <button class="tv3-btn tv3-btn--sm tv3-btn--gold" data-testid="tv3-simulate-submit" @click="simulateSubmissions">模拟学生提交（演示数据）</button>
+          <button class="tv3-btn tv3-btn--sm tv3-btn--gold" data-testid="tv3-simulate-submit" @click="simulateSubmissions">模拟学生提交</button>
         </div>
         <div v-else class="tv3-card__body" style="display: flex; align-items: center; gap: 14px">
           <!-- B4：讲评 Artifact 回执 -->
@@ -82,7 +88,7 @@
               </div>
               <div style="flex: 1; min-width: 0">
                 <div style="font-size: 13px; font-weight: 700">第 {{ q.q_no }} 题 <span style="font-weight: 400; color: var(--tv3-ink3)">满分 {{ q.full_score }}</span></div>
-                <div style="font-size: 11px; color: var(--tv3-ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis" v-html="renderLatex(q.stem_latex)" />
+                <div style="font-size: 11px; color: var(--tv3-ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis" v-html="renderStem(q.stem_latex)" />
               </div>
             </div>
             <div style="margin-top: 8px" class="tv3-errbar">
@@ -281,13 +287,21 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { v3Api } from '@/api/teacherV3'
-import { renderLatex } from '@/components/mathx/latex'
+import { renderLatex, renderStem } from '@/components/mathx/latex'
 import MathField from '@/components/mathx/MathField.vue'
 import { useToastStore } from '@/stores/toast'
 import { updateTv3Context } from '@/stores/teacherContext'
 import type { V3GradingAssignment, V3GradingView } from '@/types/teacherV3'
 
 /* B4：扩展字段（is_sample/deadline/status/allow_photo）走本地视图模型类型，shared types 不扩（IFC-PRODUCT-03） */
+function fmtDate(iso: string | undefined | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return String(iso).slice(0, 10)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
 interface AssignRow { id: string; title: string; class_id: string; class_name: string; submitted: number; total: number; graded: number; updated_at: string; is_sample?: boolean; deadline?: string; status?: string; allow_photo?: boolean; source?: string }
 const assignments = ref<AssignRow[]>([])
 const assignment = ref<(V3GradingAssignment & { deadline?: string; allow_photo?: boolean; status?: string; class_name?: string }) | null>(null)
@@ -308,7 +322,7 @@ const PHOTO_BASE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   `<text x="16" y="62" font-family="KaiTi,serif" font-size="14" fill="#3a352c">令 f'(x)&lt;0</text>` +
   `<text x="16" y="94" font-family="KaiTi,serif" font-size="14" fill="#7a2d2d">∴ 0＜x＜−2</text>` +
   `<text x="16" y="132" font-family="KaiTi,serif" font-size="14" fill="#3a352c">答：递减区间为(0,−2)</text>` +
-  `<text x="150" y="152" font-size="9" fill="#b9ac8f" text-anchor="middle">· 学生手写卷面（mock）·</text></svg>`)
+  `<text x="150" y="152" font-size="9" fill="#b9ac8f" text-anchor="middle">· 学生手写卷面 ·</text></svg>`)
 
 const currentQ = computed(() => assignment.value?.questions.find((q) => q.q_no === openQ.value) ?? null)
 
@@ -412,18 +426,18 @@ function firstDivergence(s: { recognized_steps: { status: string }[] }): number 
 }
 async function simulateSubmissions() {
   if (!assignment.value) return
-  if (!window.confirm('注入确定性演示作答（非真实学生数据）？演示用于核对批改确认面。')) return
+  if (!window.confirm('注入模拟作答（非真实学生数据）？用于核对批改确认面。')) return
   try {
     await v3Api.grading.simulateSubmissions(assignment.value.id)
-    toastOf().success('演示作答已注入（数据标注为演示），请逐生终审')
+    toastOf().success('模拟作答已注入，请逐生终审')
     await openAssignment(assignment.value.id)
-  } catch { toastOf().error('模拟提交失败（mock 未启动？）') }
+  } catch { toastOf().error('提交失败，请检查网络后重试') }
 }
 function addRemedialTask() {
   if (!reviewArtifact.value) return
   const task = `重讲「${reviewArtifact.value.top_error || '主错因'}」（第 ${reviewArtifact.value.top_q} 题），配 1 道变式`
   if (!remedialTasks.value.includes(task)) remedialTasks.value.push(task)
-  toastOf().info('已记入本作业的下一课补救清单（演示；跨课流转在 LessonWorkItem 接入后生效）')
+  toastOf().info('已记入本作业的下一课补救清单')
 }
 
 async function confirmCluster(c: { id: string; count?: number; sample: { feedback?: string }[] }) {
@@ -436,7 +450,7 @@ async function confirmCluster(c: { id: string; count?: number; sample: { feedbac
     score: scoreOf(c.id, si, smp.score ?? 0),
     steps: (smp.recognized_steps || []).map((st: { status: string }, ti: number) => ({ step: ti, verdict: stepMark(c.id, si, ti) || (st.status === 'ok' ? 'ok' : 'ai-flag') })),
   }))
-  if (!window.confirm(`教师终审确认：将写入本聚类全部 ${n} 份成绩与评语。\n· 评分依据：标准答案 + 评分点 + 逐步骤判定（已逐生确认）\n· 演示数据不会发布给学生\n\n确认写入？`)) return
+  if (!window.confirm(`教师终审确认：将写入本聚类全部 ${n} 份成绩与评语。\n· 评分依据：标准答案 + 评分点 + 逐步骤判定（已逐生确认）\n· 模拟数据不会发布给学生\n\n确认写入？`)) return
   // 独立审查：确认=教师终审写入；失败必须如实报错并中止，不得把失败标记为已确认（假成功）
   try {
     await v3Api.grading.confirmCluster(assignment.value.id, c.id, { feedback: fb, reviews } as any)

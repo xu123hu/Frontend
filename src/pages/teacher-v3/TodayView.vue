@@ -1,10 +1,12 @@
-﻿<template>
+<template>
   <div class="tv3-today-ai" data-testid="tv3-today">
     <div class="tv3-ai-bg-blob tv3-ai-bg-blob--1"></div>
     <div class="tv3-ai-bg-blob tv3-ai-bg-blob--2"></div>
     <div class="tv3-ai-bg-blob tv3-ai-bg-blob--3"></div>
 
     <div class="tv3-ai-wrap">
+      <TeacherPageHeader title="今日工作台" subtitle="查看今日教学安排" icon="☀️" />
+
       <div class="tv3-ai-welcome">
         <p class="tv3-ai-welcome__sub">{{ greeting }}，{{ today?.teacher.name || '李老师' }} 👋</p>
         <h1 class="tv3-ai-welcome__title">今天想<span class="tv3-gradient-text">做点什么</span>？</h1>
@@ -16,7 +18,8 @@
           <div class="tv3-ai-input-card">
             <textarea v-model="inputText" placeholder="描述你的任务，例如：帮我备《椭圆及其标准方程》第 1 课时，或把这道题拍照入库" rows="1" class="tv3-ai-textarea" @keydown.enter.exact.prevent="onSend"></textarea>
             <div class="tv3-ai-input-bar">
-              <button class="tv3-ai-icon-btn" title="添加附件">
+              <input ref="photoInput" type="file" accept="image/*" hidden @change="onPhotoChange" />
+              <button class="tv3-ai-icon-btn" title="添加附件" @click="photoInput?.click()">
                 <n-icon :size="16"><AttachOutline /></n-icon>
               </button>
               <div class="tv3-ai-chips">
@@ -33,13 +36,35 @@
         </div>
       </div>
 
+      <!-- 首页内嵌 AI 对话（流式气泡 + 卡片；navigate 动作就地跳转） -->
+      <div v-if="chatMessages.length" class="tv3-ai-chat" data-testid="tv3-home-chat">
+        <div v-for="m in chatMessages" :key="m.id" class="tv3-ai-msg" :class="'tv3-ai-msg--' + m.role">
+          <div class="tv3-ai-msg-bubble">
+            <p v-if="m.thinking && m.role === 'butler'" class="tv3-ai-msg-thinking">💭 {{ m.thinking }}</p>
+            <p class="tv3-ai-msg-text">{{ m.text }}</p>
+            <div v-if="m.cards && m.cards.length" class="tv3-ai-msg-cards">
+              <button v-for="c in msgCards(m, 'link')" :key="c.id" class="tv3-ai-chat-card" @click="goLink(c)">
+                <b>{{ c.title }}</b><span v-if="c.note">{{ c.note }}</span>
+              </button>
+              <button v-for="c in msgCards(m, 'tool')" :key="c.id" class="tv3-ai-chat-card" @click="openToolCard(c)">
+                <b>{{ c.title }}</b><span>{{ c.summary }}</span>
+              </button>
+              <button v-for="c in msgCards(m, 'action')" :key="c.id" class="tv3-ai-chat-card" :class="{ 'is-done': c.status === 'executed' }" @click="execCard(c)">
+                <b>{{ c.title }}</b><span>{{ c.summary }}</span>
+              </button>
+            </div>
+            <span v-if="m.pending" class="tv3-ai-msg-pending">…</span>
+          </div>
+        </div>
+      </div>
+
       <div v-if="loadError" class="tv3-ai-load-error" data-testid="tv3-today-error">
         <span>今日课表与待办加载失败：AI 服务暂时不可用，你的数据没有丢失。</span>
         <button @click="loadToday">点此重试</button>
       </div>
 
       <div class="tv3-ai-context">
-        <button v-for="ctx in contextPills" :key="ctx.key" class="tv3-ai-ctx-pill">
+        <button v-for="ctx in contextPills" :key="ctx.key" class="tv3-ai-ctx-pill" @click="onPillClick(ctx)">
           <n-icon :size="13"><component :is="ctx.icon" /></n-icon>
           <span>{{ ctx.label }}</span>
           <n-icon :size="12"><ChevronDownOutline /></n-icon>
@@ -87,7 +112,7 @@
               进入工作台 <n-icon :size="14"><ChevronForwardOutline /></n-icon>
             </router-link>
           </div>
-          <div class="tv3-ai-schedule-grid">
+          <div v-if="todayLoaded && schedule.length" class="tv3-ai-schedule-grid">
             <div v-for="(s, i) in schedule" :key="i" class="tv3-ai-sch-item" :data-status="s.status">
               <div class="tv3-ai-sch-top">
                 <span class="tv3-ai-sch-time">{{ s.time }}</span>
@@ -101,6 +126,17 @@
               </div>
             </div>
           </div>
+          <TeacherEmptyState
+            v-else-if="todayLoaded && !loadError"
+            title="今日暂无排课"
+            desc="今天没有课程安排，去备课中心准备下一节课吧。"
+            cta="去备课"
+            @cta-click="router.push('/teacher-v3/prep')"
+          />
+          <div v-else-if="todayLoaded && loadError" style="text-align: center; color: var(--tv3-ink3); padding: 20px 0; font-size: 12.5px">
+            今日课表加载失败，请点击上方提示重试。
+          </div>
+          <TeacherLoading v-else />
           <div v-if="todos.length" class="tv3-ai-todo-row">
             <span class="tv3-ai-todo-label">
               <n-icon :size="14"><CheckmarkCircleOutline /></n-icon> 待办
@@ -124,7 +160,7 @@
             查看全部 <n-icon :size="14"><ChevronForwardOutline /></n-icon>
           </router-link>
         </div>
-        <div class="tv3-ai-recent-list">
+        <div v-if="recentItems.length" class="tv3-ai-recent-list">
           <div v-for="(item, i) in recentItems" :key="i" class="tv3-ai-recent-item">
             <div class="tv3-ai-recent-icon" :style="{ background: item.iconBg }">
               <n-icon :size="18" class="tv3-ai-recent-icon-inner"><component :is="item.icon" /></n-icon>
@@ -144,6 +180,14 @@
             </div>
           </div>
         </div>
+        <TeacherEmptyState
+          v-else-if="recentLoaded"
+          title="还没有最近工作"
+          desc="创建教案或课件后，会显示在这里。"
+          cta="去备课"
+          @cta-click="router.push('/teacher-v3/prep')"
+        />
+        <TeacherLoading v-else />
       </div>
     </div>
   </div>
@@ -151,7 +195,10 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
+import { useToastStore } from '@/stores/toast'
+import { TeacherPageHeader, TeacherEmptyState, TeacherLoading } from '@/components/teacherV3/common'
 import {
   AttachOutline, SendOutline, BookOutline, EaselOutline, ScanOutline,
   DocumentTextOutline, ClipboardOutline, MicOutline, AppsOutline,
@@ -163,6 +210,8 @@ import { v3Api } from '@/api/teacherV3'
 import type { V3TodayData } from '@/types/teacherV3'
 
 const today = ref<V3TodayData | null>(null)
+const todayLoaded = ref(false)
+const recentLoaded = ref(false)
 const schedule = computed(() => today.value?.schedule ?? [])
 const todos = computed(() => today.value?.todos ?? [])
 const greeting = computed(() => new Date().getHours() < 12 ? '上午好' : new Date().getHours() < 18 ? '下午好' : '晚上好')
@@ -181,7 +230,7 @@ async function loadToday() {
   try {
     const r = await v3Api.catalog.today()
     today.value = r.data
-  } catch (e) { loadError.value = true }
+  } catch (e) { loadError.value = true } finally { todayLoaded.value = true }
 }
 onMounted(() => { void loadToday(); void loadRecent() })
 
@@ -246,7 +295,7 @@ async function loadRecent() {
     }
     items.sort((a, b) => (b.time || '').localeCompare(a.time || ''))
     recentItems.value = items.slice(0, 6)
-  } catch { /* 失败如实空列表（加载失败已有全局错误态） */ }
+  } catch { /* 失败如实空列表（加载失败已有全局错误态） */ } finally { recentLoaded.value = true }
 }
 
 function openRecent(item: { deckId?: string; planId?: string }) {
@@ -259,13 +308,81 @@ async function openDeckById(id: string) {
   window.location.hash = `/teacher-v3/slides?deck=${id}`
 }
 
-function onSend() {
-  const text = inputText.value.trim()
-  if (!text) return
-  /* S1 P0 修复：大输入框真实调 AI 管家（事件桥 → ButlerPanel.ask，SSE 真模型） */
-  window.dispatchEvent(new CustomEvent('tv3-butler-ask', { detail: { message: text } }))
-  inputText.value = ''
+/* ---------- 首页内嵌 AI 对话（直接 SSE，不再桥接悬浮球） ---------- */
+const router = useRouter()
+const toast = useToastStore()
+const photoInput = ref<HTMLInputElement | null>(null)
+const chatImages = ref<string[]>([])
+interface HomeMsg { id: string; role: 'teacher' | 'butler'; text: string; thinking?: string; cards?: any[]; pending?: boolean }
+const chatMessages = ref<HomeMsg[]>([])
+const streaming = ref(false)
+let sseCtrl: { finished: Promise<unknown> } | null = null
+
+function msgCards(m: HomeMsg, type: string) {
+  return (m.cards || []).filter((c) => c.type === type)
 }
+function chatContext() {
+  return { route: '/teacher-v3/today', route_title: '今日工作台' }
+}
+function runAction(a: any) {
+  if (a.action === 'navigate' && a.route) void router.push({ path: a.route, query: a.query || {} })
+}
+function goLink(c: any) { void router.push({ path: c.route, query: c.query || {} }) }
+function openToolCard(c: any) { toast.info(c.summary || '该工具需在对应工作台打开') }
+function execCard(c: any) {
+  if (c.status === 'executed' || c.status === 'cancelled') return
+  void v3Api.butler.confirmAction(c.id, { params: c.params })
+    .then(() => { c.status = 'executed'; toast.success(`${c.title}已完成，可在对应模块继续编辑`) })
+    .catch((e: Error) => toast.error(`执行失败：${e.message}`))
+}
+function onPhotoChange(ev: Event) {
+  const files = (ev.target as HTMLInputElement).files
+  if (!files?.length) return
+  const rd = new FileReader()
+  rd.onload = () => { if (typeof rd.result === 'string') chatImages.value.push(rd.result) }
+  rd.readAsDataURL(files[0])
+  ;(ev.target as HTMLInputElement).value = ''
+}
+function onPillClick(ctx: { label: string }) { toast.info(`「${ctx.label}」将随对话上下文发送给 AI（教材/章节精确选择在备课中心）`) }
+
+function sendChat(text?: string) {
+  const msg = (text ?? inputText.value).trim()
+  if (!msg || streaming.value) return
+  chatMessages.value.push({ id: `t${Date.now()}`, role: 'teacher', text: msg })
+  chatMessages.value.push({ id: `b${Date.now()}`, role: 'butler', text: '', cards: [], pending: true })
+  /* 必须从 reactive 数组取 proxy 引用：push 入参的原始对象修改不触发响应式渲染 */
+  const bm = chatMessages.value[chatMessages.value.length - 1] as HomeMsg
+  inputText.value = ''
+  const sentImages = [...chatImages.value]
+  chatImages.value = []
+  streaming.value = true
+  /* 多轮上下文：本地会话前 N 轮（去重当前轮），后端注入 LLM */
+  const history = chatMessages.value
+    .slice(0, -2)
+    .filter((m) => m.text && !m.pending)
+    .map((m) => ({ role: (m.role === 'teacher' ? 'user' : 'assistant') as 'user' | 'assistant', text: (m.text || '').slice(0, 400) }))
+    .slice(-8)
+  try {
+    sseCtrl = v3Api.butler.chat(
+      { message: msg, context: chatContext(), history, images: sentImages.length ? sentImages : undefined },
+      (event, data) => handleChatEvent(bm, event, data),
+    )
+    void sseCtrl.finished.then(() => { bm.pending = false; streaming.value = false }).catch(() => { bm.pending = false; streaming.value = false })
+  } catch (err) {
+    bm.text = (bm.text || '') + `\n\n（连接中断：${(err as Error).message}）`
+    bm.pending = false
+    streaming.value = false
+  }
+}
+function handleChatEvent(m: HomeMsg, event: string, data: any) {
+  if (event === 'thinking') { m.thinking = data.text; return }
+  if (event === 'token') { m.text = (m.text || '') + String(data.text); return }
+  if (event === 'card') { m.cards = [...(m.cards || []), data]; return }
+  if (event === 'citation') { return }
+  if (event === 'action') { runAction(data); return }
+}
+
+function onSend() { void sendChat() }
 
 function onChipClick(c: { key: string; path: string }) {
   if (c.path) window.location.hash = c.path
@@ -273,6 +390,7 @@ function onChipClick(c: { key: string; path: string }) {
 
 function applyPrompt(text: string) {
   inputText.value = text
+  void sendChat(text)
 }
 
 function statusLabel(s: string) {
@@ -294,7 +412,7 @@ function statusClass(s: string) {
   margin: -22px;
   padding: 22px;
   min-height: calc(100vh - var(--tv3-topbar-h) - 44px);
-  background: var(--tv3-bg);
+  background: var(--teacher-bg-gradient);
   overflow: hidden;
 }
 .tv3-ai-bg-blob {
@@ -557,5 +675,34 @@ function statusClass(s: string) {
   padding: 4px 12px; font-size: 12px; cursor: pointer;
 }
 .tv3-ai-load-error button:hover { background: #b1382c; color: #fff; }
+
+/* ---- 首页内嵌 AI 对话 ---- */
+.tv3-ai-chat { margin-top: 18px; display: flex; flex-direction: column; gap: 12px; max-height: 420px; overflow-y: auto; }
+.tv3-ai-msg { display: flex; }
+.tv3-ai-msg--teacher { justify-content: flex-end; }
+.tv3-ai-msg--butler { justify-content: flex-start; }
+.tv3-ai-msg-bubble {
+  max-width: 78%; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.7;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06); white-space: pre-wrap; word-break: break-word;
+}
+.tv3-ai-msg--teacher .tv3-ai-msg-bubble {
+  background: linear-gradient(135deg, #4f46e5, #06b6d4); color: #fff; border-bottom-right-radius: 4px;
+}
+.tv3-ai-msg--butler .tv3-ai-msg-bubble {
+  background: #fff; border: 1px solid #eef1f6; border-bottom-left-radius: 4px; color: #1e293b;
+}
+.tv3-ai-msg-thinking { font-size: 12px; color: #8b5cf6; margin: 0 0 4px; }
+.tv3-ai-msg-text { margin: 0; }
+.tv3-ai-msg-pending { display: inline-block; width: 14px; height: 14px; border: 2px solid #c7d2fe; border-top-color: #4f46e5; border-radius: 50%; margin-top: 6px; animation: tv3-ai-spin .8s linear infinite; }
+@keyframes tv3-ai-spin { to { transform: rotate(360deg); } }
+.tv3-ai-msg-cards { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.tv3-ai-chat-card {
+  display: block; text-align: left; padding: 9px 12px; border-radius: 10px; cursor: pointer;
+  border: 1px solid #c7d2fe; background: #eef2ff; color: #3730a3; font: inherit; font-size: 12.5px;
+}
+.tv3-ai-chat-card b { display: block; font-weight: 700; margin-bottom: 2px; }
+.tv3-ai-chat-card span { color: #64748b; }
+.tv3-ai-chat-card.is-done { opacity: .6; cursor: default; }
+
 </style>
 

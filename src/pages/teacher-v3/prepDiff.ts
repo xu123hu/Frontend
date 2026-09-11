@@ -31,7 +31,7 @@ const BASIS_LABEL: Record<DiffBasis, string> = {
   class_evidence: '本班学情',
   teacher_directive: '教师指令',
   duration: '课时变化',
-  ai_suggest: 'AI 建议（演示）',
+  ai_suggest: 'AI 建议',
 }
 export const basisLabel = (b: DiffBasis) => BASIS_LABEL[b]
 
@@ -73,7 +73,7 @@ export function generateDiff(oldPlan: V3LessonPlan, ctx: DiffContext): DiffItem[
       id: 'd-example', kind: 'replace', basis: 'class_evidence',
       target: { sectionId: examples.id, field: 'examples', index: 0 },
       title: `替换「${examples.name}」例 1：从"已知参数求方程"升级为本班错因变式`,
-      reason: `往年该例正确率高（演示数据），边际价值低；本班聚类显示「${weak}」错误集中，换为对应的判别/关系变式`,
+      reason: `往年该例正确率高，边际价值低；本班聚类显示「${weak}」错误集中，换为对应的判别/关系变式`,
       newExample: {
         label: '例 1（二备换入）',
         stem_latex: `结合本班「${weak}」易错点设置：先判别焦轴（或实轴）位置，再求标准方程；要求写出判别依据。`,
@@ -92,7 +92,7 @@ export function generateDiff(oldPlan: V3LessonPlan, ctx: DiffContext): DiffItem[
       id: 'd-pitfall', kind: 'add', basis: 'class_evidence',
       target: { sectionId: pitfalls.id, field: 'teacher_activity' },
       title: `「${pitfalls.name}」追加一条本班高频错例`,
-      reason: `作业聚类显示「概念混淆」人次上升（演示数据），补一个针对「${weak}」的错例辨析`,
+      reason: `作业聚类显示「概念混淆」人次上升，补一个针对「${weak}」的错例辨析`,
       newValue: `${pitfalls.teacher_activity}\n【二备追加】出示错例：混淆判别方式（套用椭圆"看分母大小"），让学生先判断错在哪一步，再说正确判别依据。`,
       status: 'pending',
     })
@@ -130,7 +130,7 @@ export function generateDiff(oldPlan: V3LessonPlan, ctx: DiffContext): DiffItem[
       id: 'd-objective', kind: 'replace', basis: 'ai_suggest',
       target: { field: 'objectives', index: oldPlan.objectives.length - 1 },
       title: '最后一条教学目标改写为可检验行为',
-      reason: 'AI 建议（演示）：目标含"理解/掌握"等不可观察动词，建议改为"能根据条件求…并写出判别依据"这类可出题的行为动词表述',
+      reason: 'AI 建议：目标含"理解/掌握"等不可观察动词，建议改为"能根据条件求…并写出判别依据"这类可出题的行为动词表述',
       newValue: `能根据条件求${oldPlan.topic.replace(/（.*）/, '')}的标准方程，并写出焦轴（实轴）位置的判别依据`,
       status: 'pending',
     })

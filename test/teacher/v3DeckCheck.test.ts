@@ -75,6 +75,42 @@ describe('deckCheck · 确定性规则', () => {
     expect(issues.some((i) => i.rule === '缺少理解检查点')).toBe(true)
   })
 
+  it('跨页重复同一归一化公式 → error，定位后页公式', () => {
+    const deck = baseDeck([
+      slide('definition', [
+        el({ type: 'text', left: 70, top: 50, width: 500, height: 40, html: '定义', font_size: 28 }),
+        el({ type: 'formula', id: 'formula-first', left: 70, top: 140, width: 500, height: 50, latex: '$x^{2} + y^{2}=1$', font_size: 22 }),
+      ]),
+      slide('summary', [
+        el({ type: 'text', left: 70, top: 50, width: 500, height: 40, html: '小结', font_size: 28 }),
+        el({ type: 'formula', id: 'formula-repeat', left: 70, top: 140, width: 500, height: 50, latex: 'x^2+y^2=1', font_size: 22 }),
+      ]),
+    ])
+    const issues = checkDeck(deck)
+    const repeated = issues.find((i) => i.rule === '公式机械重复')
+    expect(repeated).toBeTruthy()
+    expect(repeated!.severity).toBe('error')
+    expect(repeated!.slideIndex).toBe(1)
+    expect(repeated!.elementId).toBe('formula-repeat')
+  })
+
+  it('正文课件没有可执行课堂任务 → error，提示目标/行动/产出', () => {
+    const deck = baseDeck([
+      slide('definition', [el({ type: 'text', left: 70, top: 50, width: 500, height: 40, html: '定义', font_size: 28 })]),
+      slide('example', [
+        el({ type: 'text', left: 70, top: 50, width: 600, height: 40, html: '例 1：求方程', font_size: 28 }),
+        el({ type: 'text', left: 70, top: 140, width: 600, height: 50, html: '解：列式并计算，答案见下页', font_size: 22 }),
+      ]),
+    ])
+    const issues = checkDeck(deck)
+    const missingTask = issues.find((i) => i.rule === '缺少课堂任务')
+    expect(missingTask).toBeTruthy()
+    expect(missingTask!.severity).toBe('error')
+    expect(missingTask!.why).toContain('目标')
+    expect(missingTask!.why).toContain('行动')
+    expect(missingTask!.why).toContain('产出')
+  })
+
   it('合格课件零 error', () => {
     const deck = baseDeck([
       slide('cover', [el({ type: 'text', left: 90, top: 200, width: 700, height: 80, html: '标题', font_size: 44 })]),
@@ -84,6 +120,12 @@ describe('deckCheck · 确定性规则', () => {
       slide('summary', [el({ type: 'text', left: 70, top: 50, width: 600, height: 40, html: '小结', font_size: 26 })]),
       slide('blank', [el({ type: 'text', left: 70, top: 50, width: 600, height: 40, html: '当堂检测', font_size: 26 })]),
     ])
+    deck.slides[5].task = {
+      goal: '检验本节掌握情况',
+      context: '根据刚学的定义完成检测题',
+      student_action: '独立列式并说明依据',
+      expected_output: '提交答案和关键计算式',
+    }
     const issues = checkDeck(deck)
     expect(issues.filter((i) => i.severity === 'error')).toHaveLength(0)
   })

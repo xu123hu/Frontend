@@ -47,16 +47,15 @@
             </div>
           </div>
         </div>
-        <button class="tv3-btn tv3-btn--sm tv3-hub-entry" type="button" data-testid="tv3-hub-entry" @click="router.push('/hub')">
-          统一入口
-        </button>
-        <div class="tv3-teacher-chip">
-          <div class="tv3-teacher-chip__avatar">{{ teacherInitial }}</div>
-          <div class="tv3-teacher-chip__meta">
-            <div class="tv3-teacher-chip__name">{{ teacherName }}</div>
-            <div class="tv3-teacher-chip__sub">高中数学 · 教师</div>
+        <n-dropdown trigger="click" :options="userMenuOptions" @select="onUserMenuSelect">
+          <div class="tv3-teacher-chip" data-testid="tv3-teacher-chip" style="cursor: pointer">
+            <div class="tv3-teacher-chip__avatar">{{ teacherInitial }}</div>
+            <div class="tv3-teacher-chip__meta">
+              <div class="tv3-teacher-chip__name">{{ teacherName }}</div>
+              <div class="tv3-teacher-chip__sub">高中数学 · 教师</div>
+            </div>
           </div>
-        </div>
+        </n-dropdown>
       </header>
 
       <main class="tv3-page">
@@ -89,12 +88,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NIcon } from 'naive-ui'
+import { NDropdown, NIcon } from 'naive-ui'
 import {
   BookOutline, ClipboardOutline, EaselOutline,
   FolderOpenOutline, LibraryOutline, NotificationsOutline, SchoolOutline, TodayOutline,
 } from '@vicons/ionicons5'
 import { v3Api } from '@/api/teacherV3'
+import { useAuthStore } from '@/stores/auth'
 import ButlerPanel from '@/components/teacherV3/ButlerPanel.vue'
 import TeacherCompanionDock from '@/components/teacherV3/TeacherCompanionDock.vue'
 import ResourceCompanionPanel from '@/components/teacherV3/ResourceCompanionPanel.vue'
@@ -106,9 +106,20 @@ import type { V3Task } from '@/types/teacherV3'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const taskOpen = ref(false)
 const tasks = ref<V3Task[]>([])
 let timer: number | undefined
+
+/** 头像下拉菜单：退出登录（此前教师端无任何登出入口） */
+const userMenuOptions = [{ label: '退出登录', key: 'logout' }]
+function onUserMenuSelect(key: string) {
+  if (key !== 'logout') return
+  if (!window.confirm('确定要退出登录吗？')) return
+  void auth.logout().finally(() => {
+    router.push('/login')
+  })
+}
 
 const butlerOpen = ref(false)
 const butlerRef = ref<InstanceType<typeof ButlerPanel> | null>(null)

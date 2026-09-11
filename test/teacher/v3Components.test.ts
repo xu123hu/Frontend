@@ -87,4 +87,113 @@ describe('SlideCanvasV3：结构化元素渲染', () => {
     await els[1].trigger('click')
     expect(w.emitted('select-element')![0]).toEqual(['e2'])
   })
+
+  it('rich 课堂任务 metadata 在教师投影画布上可见', () => {
+    const slide = {
+      ...makeSlide(),
+      task: {
+        goal: '掌握代入条件',
+        context: '求点 E 到平面的距离',
+        student_action: '独立列式',
+        expected_output: '距离值和关键式',
+      },
+    } as V3Slide
+    const w = mount(SlideCanvasV3, { props: { slide, width: 640 } })
+
+    expect(w.find('.v3sc__task').exists()).toBe(true)
+    expect(w.find('.v3sc__task').text()).toContain('学生行动')
+    expect(w.find('.v3sc__task').text()).toContain('可检查产出')
+  })
+
+  it('figure3d 缩略图显示由 scene 生成的静态结构预览', () => {
+    const slide: V3Slide = {
+      id: 's3d',
+      layout: 'definition',
+      elements: [{
+        id: 'g3d', type: 'figure3d', left: 700, top: 120, width: 420, height: 320, z: 2,
+        scene: {
+          solids: [{ kind: 'pyramid', base: [[0, 0, 0], [3, 0, 0], [3, 2, 0], [0, 2, 0]], apex: [1.5, 1, 3] }],
+          labels: [{ pos: [1.5, 1, 3], text: 'S' }],
+        },
+      }],
+    }
+    const w = mount(SlideCanvasV3, { props: { slide, width: 640, thumb: true } })
+
+    expect(w.find('.v3sc__figure3d-thumb svg').exists()).toBe(true)
+    expect(w.find('.v3sc__figure3d-chip').exists()).toBe(false)
+  })
+
+  it('无教师预设的结构化图形在缩略图保留 board_json 语义，不静默空白', () => {
+    const slide = {
+      id: 'sggb',
+      layout: 'definition',
+      elements: [{
+        id: 'ggb1', type: 'geometry', left: 700, top: 120, width: 420, height: 320, z: 2,
+        preset_id: '', params: {}, board_json: { type: 'ggb', commands: ['Point((0,0))'], caption: '作图步骤' },
+      }],
+    } as unknown as V3Slide
+    const w = mount(SlideCanvasV3, { props: { slide, width: 640, thumb: true } })
+
+    expect(w.find('.v3sc__geo-fallback').exists()).toBe(true)
+    expect(w.find('.v3sc__geo-fallback').text()).toContain('ggb')
+  })
+
+  it('polyhedron 缩略图兼容学生端使用顶点名称引用的棱', () => {
+    const slide: V3Slide = {
+      id: 'spoly',
+      layout: 'definition',
+      elements: [{
+        id: 'poly1', type: 'figure3d', left: 700, top: 120, width: 420, height: 320, z: 2,
+        scene: {
+          solids: [{
+            kind: 'polyhedron',
+            vertices: [
+              { name: 'A', pos: [0, 0, 0] }, { name: 'B', pos: [3, 0, 0] },
+              { name: 'C', pos: [3, 2, 0] }, { name: 'D', pos: [0, 2, 0] },
+            ],
+            edges: [['A', 'B'], ['B', 'C'], ['C', 'D'], ['D', 'A']],
+          }],
+        },
+      }],
+    }
+    const w = mount(SlideCanvasV3, { props: { slide, width: 640, thumb: true } })
+
+    expect(w.findAll('.v3sc__figure3d-thumb svg line')).toHaveLength(4)
+  })
+
+  it('figure3d 缩略图显示学生端物化的 polyline 曲线', () => {
+    const slide: V3Slide = {
+      id: 'sconic',
+      layout: 'definition',
+      elements: [{
+        id: 'curve1', type: 'figure3d', left: 700, top: 120, width: 420, height: 320, z: 2,
+        scene: {
+          solids: [],
+          curves: [{ kind: 'polyline', points: [[-2, 0, 0], [0, 1, 0], [2, 0, 0]], closed: false }],
+        },
+      }],
+    }
+    const w = mount(SlideCanvasV3, { props: { slide, width: 640, thumb: true } })
+
+    expect(w.find('.v3sc__figure3d-thumb svg polyline').exists()).toBe(true)
+    expect(w.find('.v3sc__figure3d-thumb').text()).not.toContain('暂无图形')
+  })
+
+  it('figure3d 缩略图显示学生端辅助平面', () => {
+    const slide: V3Slide = {
+      id: 'splane',
+      layout: 'definition',
+      elements: [{
+        id: 'plane1', type: 'figure3d', left: 700, top: 120, width: 420, height: 320, z: 2,
+        scene: {
+          solids: [],
+          planes: [{ points: [[0, 0, 0], [3, 0, 0], [0, 2, 0]], color: '#f59e0b' }],
+        },
+      }],
+    }
+    const w = mount(SlideCanvasV3, { props: { slide, width: 640, thumb: true } })
+
+    expect(w.find('.v3sc__figure3d-thumb svg polygon').exists()).toBe(true)
+    expect(w.find('.v3sc__figure3d-thumb').text()).not.toContain('暂无图形')
+  })
 })

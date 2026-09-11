@@ -1,15 +1,9 @@
 <template>
-  <div data-testid="tv3-quiz">
-    <div class="tv3-hero" style="margin-bottom: 18px">
-      <div style="display: flex; gap: 24px; align-items: center">
-        <div style="flex: 1">
-          <div class="tv3-hero__title">组卷中心</div>
-          <div class="tv3-hero__sub">知识点分类树筛选 · 公式题干结构化 · A4 版式预览</div>
-        </div>
-        <span class="tv3-tag tv3-tag--gold">题库选题 · 图片题照常入卷</span>
-        <router-link to="/teacher-v3/bank" class="tv3-btn tv3-btn--sm" data-testid="tv3-quiz-to-bank">题库管理 →</router-link>
-      </div>
-    </div>
+  <div class="tv3-page-shell" data-testid="tv3-quiz">
+    <TeacherPageHeader title="组卷中心" subtitle="按知识点与难度组合试卷" icon="📝">
+      <span class="tv3-tag tv3-tag--gold">题库选题 · 图片题照常入卷</span>
+      <router-link to="/teacher-v3/bank" class="tv3-btn tv3-btn--sm" data-testid="tv3-quiz-to-bank">题库管理 →</router-link>
+    </TeacherPageHeader>
 
     <div style="display: flex; gap: 14px; align-items: flex-start">
       <!-- 知识点分类树 -->
@@ -46,7 +40,14 @@
           <button class="tv3-btn tv3-btn--sm tv3-btn--gold" data-testid="tv3-scan-open" @click="scanOpen = true">＋ 扫描入库</button>
         </div>
         <div class="tv3-card__body tv3-qscroll" data-testid="tv3-quiz-list">
-          <div v-if="!filtered.length" class="tv3-empty">当前分类下暂无题目，可「扫描入库」添加，或切换分类。</div>
+          <TeacherLoading v-if="loading" />
+          <TeacherEmptyState
+            v-else-if="!filtered.length"
+            :title="questions.length ? '暂无匹配题目' : '题库为空'"
+            :desc="questions.length ? '当前分类下暂无题目，试试切换知识点或调整难度筛选。' : '题库为空，可「扫描入库」添加题目，或先去题库录入。'"
+            :cta="questions.length ? '' : '＋ 扫描入库'"
+            @cta-click="scanOpen = true"
+          />
           <div v-for="q in filtered" :key="q.id" class="tv3-qrow" :class="{ 'is-picked': paper.includes(q.id), 'tv3-qrow--image': q.q_type === 'image' }" :data-testid="`tv3-quiz-q-${q.id}`">
             <button class="tv3-qrow__pick" :data-testid="`tv3-pick-${q.id}`" @click="togglePick(q.id)">
               {{ paper.includes(q.id) ? '✓' : '＋' }}
@@ -65,7 +66,7 @@
               </div>
               <div class="tv3-qrow__stem" v-html="stemOf(q)" />
               <div v-if="q.options" class="tv3-qrow__opts">
-                <span v-for="(o, i) in q.options" :key="i" class="tv3-qrow__opt" :class="{ 'is-answer': q.answer === String.fromCharCode(65 + i) }" v-html="renderLatex(o)" />
+                <span v-for="(o, i) in q.options" :key="i" class="tv3-qrow__opt" :class="{ 'is-answer': q.answer === String.fromCharCode(65 + i) }" v-html="renderStem(o)" />
               </div>
             </div>
           </div>
@@ -102,7 +103,7 @@
               <div class="tv3-paper__stem" v-html="stemOf(q)" />
               <div v-if="q.options" class="tv3-paper__opts">
                 <span v-for="(o, j) in q.options" :key="j" class="tv3-paper__opt">
-                  <b>{{ String.fromCharCode(65 + j) }}.</b> <span v-html="renderLatex(o)" />
+                  <b>{{ String.fromCharCode(65 + j) }}.</b> <span v-html="renderStem(o)" />
                 </span>
               </div>
               <div v-if="q.q_type === 'solve'" class="tv3-paper__solve">（解答区 · 留白 8 行）</div>
@@ -231,6 +232,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToastStore } from '@/stores/toast'
+import { TeacherPageHeader, TeacherEmptyState, TeacherLoading } from '@/components/teacherV3/common'
 import { updateTv3Context } from '@/stores/teacherContext'
 import { setReceipt, registerUndo } from '@/stores/companion'
 import type { CompanionCandidate } from '@/pages/teacher-v3/companionData'
@@ -241,12 +243,13 @@ function dynamicToast() { return useToastStore() }
 const router = { push: (loc: string) => dynamicRouter().push(loc) }
 function dynamicRouter() { return useRouter() }
 import { v3Api, type V3QuizQuestion, type V3KpTreeNode } from '@/api/teacherV3'
-import { renderLatex } from '@/components/mathx/latex'
+import { renderLatex, renderStem } from '@/components/mathx/latex'
 import { presignUpload } from '@/api/teacherV3Upload'
 
 /** 扁平化的分类树节点（用于渲染与筛选） */
 interface TreeItem { id: string; name: string; depth: number; leaf: boolean; codes: string[] | null }
 
+const loading = ref(true)
 const questions = ref<V3QuizQuestion[]>([])
 const tree = ref<V3KpTreeNode[]>([])
 const diffFilter = ref('')
@@ -308,7 +311,7 @@ const diffLabel = (d: string) => ({ easy: '容易', medium: '中等', hard: '较
 /** 图片题的题干文字是说明性 caption，不送 KaTeX（避免中文进 math mode 的告警） */
 function stemOf(q: V3QuizQuestion): string {
   if (q.q_type === 'image') return escapeHtmlRaw(q.stem_latex ?? '')
-  return renderLatex(q.stem_latex)
+  return renderStem(q.stem_latex)
 }
 function escapeHtmlRaw(t: string): string {
   return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -381,16 +384,20 @@ onMounted(async () => {
   const kpQuery = new URLSearchParams(window.location.search).get('kp')
 
   try {
-    const [qr, tr] = await Promise.all([v3Api.catalog.quizQuestions(), v3Api.catalog.quizKpTree()])
-    questions.value = qr.data.items
-    tree.value = tr.data.tree
-    if (kpQuery) {
-      // 按知识点名称匹配叶子 → 选中该知识点（与点击分类树同路径）
-      const leaf = treeItems.value.find((t) => t.leaf && t.name === kpQuery)
-      if (leaf) selectedKp.value = leaf
-    }
-    if (kpLeafOptions.value.length) scanKpCode.value = kpLeafOptions.value[0].code
-  } catch { /* mock */ }
+    try {
+      const [qr, tr] = await Promise.all([v3Api.catalog.quizQuestions(), v3Api.catalog.quizKpTree()])
+      questions.value = qr.data.items
+      tree.value = tr.data.tree
+      if (kpQuery) {
+        // 按知识点名称匹配叶子 → 选中该知识点（与点击分类树同路径）
+        const leaf = treeItems.value.find((t) => t.leaf && t.name === kpQuery)
+        if (leaf) selectedKp.value = leaf
+      }
+      if (kpLeafOptions.value.length) scanKpCode.value = kpLeafOptions.value[0].code
+    } catch { /* mock */ }
+  } finally {
+    loading.value = false
+  }
 })
 
 function collectCodes(nodes: V3KpTreeNode[]): string[] {
@@ -529,6 +536,11 @@ async function runSuggest() {
 </script>
 
 <style scoped>
+.tv3-page-shell {
+  margin: -22px; padding: 22px; min-height: calc(100vh - var(--tv3-topbar-h));
+  background: var(--teacher-bg-gradient);
+  box-sizing: border-box;
+}
 .tv3-treescroll { max-height: 560px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
 .tv3-qscroll { display: flex; flex-direction: column; gap: 8px; max-height: 560px; overflow-y: auto; }
 .tv3-empty { text-align: center; color: var(--tv3-ink4); padding: 60px 0; font-size: 13px; }

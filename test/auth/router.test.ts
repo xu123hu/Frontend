@@ -20,7 +20,7 @@ describe('role-aware auth navigation', () => {
   it('requires an approved active role for privileged workspaces', () => {
     expect(resolveAuthNavigation(route('/teacher/today', { requiresRole: 'teacher' }), {
       status: 'authenticated', activeRole: 'student', roles: ['student'],
-    })).toEqual({ path: '/overview' })
+    })).toEqual({ path: '/dialog' })
     expect(resolveAuthNavigation(route('/admin/identity/applications', { requiresRole: 'admin' }), {
       status: 'authenticated', activeRole: 'admin', roles: ['student', 'admin'],
     })).toBe(true)

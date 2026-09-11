@@ -91,3 +91,15 @@ export function normalizeOptions(options) {
   }
   return []
 }
+
+/** kp 英文代码 → 中文名（出题卡/知识点标签/推荐文案统一中文；geometry→立体几何等） */
+export const KP_ZH = {
+  geometry: '立体几何', solid_geometry: '立体几何', solid: '立体几何',
+  function: '函数', trig: '三角函数', trigonometry: '三角函数',
+  sequence: '数列', sequences: '数列', probability: '概率与统计', stats: '统计',
+  inequality: '不等式', derivative: '导数', conic: '圆锥曲线', cone: '圆锥曲线',
+  set_logic: '集合与逻辑', sets: '集合', vectors: '平面向量', complex: '复数',
+  exponent_log: '指对数', polynomial: '多项式', plane: '平面几何', analytic: '解析几何',
+  general: '综合', combination: '计数原理', binomial: '二项式', matrix: '矩阵',
+  kp_general: '综合',
+}
